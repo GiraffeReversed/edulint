@@ -4,31 +4,23 @@ from typing import List, Dict, Union, Optional
 from process_handler import ProcessHandler
 import argparse
 import json
-from functools import partial
+from dataclasses import dataclass, asdict
 # import time
 
 
 ProblemJson = Dict[str, Union[str, int]]
 
+
+@dataclass
 class Problem:
-    def __init__(self,
-                 source : str,
-                 path : str,
-                 line : int,
-                 column : int,
-                 code : str,
-                 text : str,
-                 end_line : Optional[int] = None,
-                 end_column : Optional[int] = None
-                 ):
-        self.source = source
-        self.path = path
-        self.line = line
-        self.column = column
-        self.end_line = end_line
-        self.end_column = end_column
-        self.code = code
-        self.text = text
+    source: str
+    path: str
+    line: int
+    column: int
+    code: str
+    text: str
+    end_line: Optional[int] = None
+    end_column: Optional[int] = None
 
     def __str__(self):
         return f"{self.path}:{self.line}:{self.column}: " \
@@ -37,7 +29,7 @@ class Problem:
 
 class ProblemEncoder(json.JSONEncoder):
     def default(self, o):
-        return o.__dict__
+        return asdict(o)
 
 
 def flake8_to_problem(raw : ProblemJson) -> Problem:
