@@ -31,7 +31,7 @@ class Problem:
         self.text = text
 
     def __str__(self):
-        return f"{self.path}:{self.line}:{self.column}:" \
+        return f"{self.path}:{self.line}:{self.column}: " \
                f"{self.code} {self.text}"
 
 
@@ -82,12 +82,22 @@ def lint(filename : str) -> List[Problem]:
     return lint_flake8(filename) + lint_pylint(filename)
 
 
-def main() -> None:
+def setup_argparse():
     parser = argparse.ArgumentParser(description="Lint provided code.")
     parser.add_argument("file", metavar="FILE", help="the file to lint")
-    args = parser.parse_args()
+    parser.add_argument("--json", action="store_true",
+                        help="should output problems in json format")
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = setup_argparse()
     result = lint(args.file)
-    print(json.dumps(result, indent=1, cls=ProblemEncoder))
+    if args.json:
+        print(json.dumps(result, indent=1, cls=ProblemEncoder))
+    else:
+        for problem in result:
+            print(problem)
 
 
 # If you are going to execute multiple commands / multiple times, add some
