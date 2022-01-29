@@ -75,6 +75,9 @@ def lint_pylint(filename: str) -> List[Problem]:
 
 
 def lint(filename: str) -> List[Problem]:
+    result = lint_flake8(filename) + lint_pylint(filename)
+    result.sort(key=lambda problem: (problem.line, problem.column))
+    return result
 
 
 def setup_argparse():
