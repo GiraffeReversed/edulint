@@ -1,0 +1,12 @@
+.breakpoints {width: .8em;}
+.breakpoint { color: #822; }
+
+.CodeMirror {
+    font-size: 13px;
+    max-width: 90ch;
+    border: 1px solid #eee;
+}
+
+li {
+    font-size: 13px;
+}

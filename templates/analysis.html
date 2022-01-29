@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+
+<div id="analysis-block" class="container-fluid row">
+  <div id="code-block" class="col">
+    <form action="{{ url_for('upload_code') }}" method=post enctype="multipart/form-data">
+      <textarea name="code" id="myTextarea" placeholder="Enter your code here">{{ textarea_text }}</textarea>
+      <script>
+        var editor = CodeMirror.fromTextArea(myTextarea, {
+          lineNumbers: true,
+          gutters: ["CodeMirror-linenumbers", "breakpoints"]
+        });
+        editor.setOption("theme", "base16-light");
+        editor.on("gutterClick", function (cm, n) {
+          var info = cm.lineInfo(n);
+          cm.setGutterMarker(n, "breakpoints", info.gutterMarkers ? null : makeMarker());
+          // editor.doc.setGutterMarker(11, "breakpoints", makeMarker());
+        });
+
+        function makeMarker() {
+          var marker = document.createElement("div");
+          marker.style.color = "#822";
+          marker.innerHTML = "●";
+          return marker;
+        }
+      </script>
+
+      <input type="submit">
+    </form>
+  </div>
+  <div id="problems-block" class="col">
+    <ul>
+      {% for problem in problems %}
+      <li>{{ problem.line }}: {{ problem.code }} {{ problem.text }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+{% endblock %}
