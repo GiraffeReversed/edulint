@@ -59,6 +59,8 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
 def lint_flake8(filename: str) -> List[Problem]:
     flake8_command = ["python3", "-m", "flake8", "--format=json", filename]
     return_code, outs, errs = ProcessHandler.run(flake8_command)
+    if not outs:
+        return []
     flake8_result = json.loads(outs)[filename]
     return list(map(flake8_to_problem, flake8_result))
 
@@ -66,6 +68,8 @@ def lint_flake8(filename: str) -> List[Problem]:
 def lint_pylint(filename: str) -> List[Problem]:
     pylint_command = ["python3", "-m", "pylint", "--output-format=json", filename]
     return_code, outs, errs = ProcessHandler.run(pylint_command)
+    if not outs:
+        return []
     pylint_result = json.loads(outs)
     return list(map(pylint_to_problem, pylint_result))
 
