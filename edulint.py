@@ -32,7 +32,7 @@ class ProblemEncoder(json.JSONEncoder):
         return asdict(o)
 
 
-def flake8_to_problem(raw : ProblemJson) -> Problem:
+def flake8_to_problem(raw: ProblemJson) -> Problem:
     return Problem(
         "flake8",
         raw["filename"],
@@ -43,7 +43,7 @@ def flake8_to_problem(raw : ProblemJson) -> Problem:
     )
 
 
-def pylint_to_problem(raw : ProblemJson) -> Problem:
+def pylint_to_problem(raw: ProblemJson) -> Problem:
     return Problem(
         "pylint",
         raw["path"],
@@ -56,22 +56,21 @@ def pylint_to_problem(raw : ProblemJson) -> Problem:
     )
 
 
-def lint_flake8(filename : str) -> List[Problem]:
+def lint_flake8(filename: str) -> List[Problem]:
     flake8_command = ["python3", "-m", "flake8", "--format=json", filename]
     return_code, outs, errs = ProcessHandler.run(flake8_command)
     flake8_result = json.loads(outs)[filename]
     return list(map(flake8_to_problem, flake8_result))
 
 
-def lint_pylint(filename : str) -> List[Problem]:
+def lint_pylint(filename: str) -> List[Problem]:
     pylint_command = ["python3", "-m", "pylint", "--output-format=json", filename]
     return_code, outs, errs = ProcessHandler.run(pylint_command)
     pylint_result = json.loads(outs)
     return list(map(pylint_to_problem, pylint_result))
 
 
-def lint(filename : str) -> List[Problem]:
-    return lint_flake8(filename) + lint_pylint(filename)
+def lint(filename: str) -> List[Problem]:
 
 
 def setup_argparse():
