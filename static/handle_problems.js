@@ -31,7 +31,6 @@ function setupEditor() {
     });
 
     editor.setOption("theme", "base16-light");
-    editor.setSize("90ch", "80vh");
 
     editor.on("gutterClick", (_, n) => { toggleActiveProblem(n); });
 }
