@@ -2,12 +2,48 @@
 
 let editor;
 
+function assert(condition, message = "") {
+    if (!condition) {
+        throw message || "Assertion failed";
+    }
+}
+
 function setupEditor() {
     editor = CodeMirror.fromTextArea(code, {
         lineNumbers: true,
         gutters: ["CodeMirror-linenumbers", "breakpoints"]
     });
     editor.setOption("theme", "base16-light");
+}
+
+function oneLineProblemsHTML(oneLineProblems) {
+    assert(oneLineProblems.length >= 1);
+
+    let lineIndex = Number(oneLineProblems[0].line) - 1;
+    let result = "<li id='problem" + lineIndex + "' line=" + lineIndex + " class=\"list-group-item\">";
+
+    for (let problem of oneLineProblems) {
+        result += problem.source + " " + problem.line + ": " + problem.code + " " + problem.text + "<br>";
+    }
+
+    result += "</li>";
+
+    editor.doc.setGutterMarker(lineIndex, "breakpoints", makeMarker());
+    return result;
+}
+
+function problemsHTML(problems) {
+    let result = "<ul class=\"list-group\">";
+
+    let firstUnprocessed = 0;
+    for (let i = 1; i <= problems.length; i++) {
+        if (i === problems.length || problems[i].line !== problems[firstUnprocessed].line) {
+            result += oneLineProblemsHTML(problems.slice(firstUnprocessed, i));
+            firstUnprocessed = i;
+        }
+    }
+    result += "</ul>";
+    return result;
     editor.on("gutterClick", function (cm, n) {
         let info = cm.lineInfo(n);
         cm.setGutterMarker(n, "breakpoints", info.gutterMarkers ? null : makeMarker());
@@ -16,8 +52,8 @@ function setupEditor() {
 }
 
 function analyze() {
-    let problems = document.getElementById("problems-block");
-    problems.innerHTML = ""
+    let problemsBlock = document.getElementById("problems-block");
+    problemsBlock.innerHTML = ""
     fetch("/upload_code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -26,14 +62,8 @@ function analyze() {
         })
     })
         .then(response => response.json()) // .json() for Objects vs text() for raw
-        .then(data => {
-            problems.innerHTML = "<ul>";
-            for (let problem of data) {
-                problems.innerHTML += "<li>" +
-                    problem.source + " " + problem.line + ": " + problem.code + " " + problem.text +
-                    "</li>"
-            }
-            problems.innerHTML += "</ul>"
+        .then(problems => {
+            problemsBlock.innerHTML = problemsHTML(problems);
         }
         )
 }
