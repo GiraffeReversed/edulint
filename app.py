@@ -15,13 +15,17 @@ def full_path(filename: str) -> str:
     return os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
 
-def new_filename() -> str:
-    return datetime.now().strftime("%Y-%m-%d_%H%M%S_") + str(uuid4())[:8]
+def code_path(code_hash: str) -> str:
+    return full_path(code_hash) + ".py"
+
+
+def problems_path(code_hash: str) -> str:
+    return full_path(code_hash) + ".json"
 
 
 @app.route("/")
-def hello_world():
-    return redirect("analyze", code=302)
+def default_path():
+    return redirect("editor", code=302)
 
 
 @app.route("/upload_code", methods=["POST"])
@@ -56,15 +60,17 @@ def upload_file():
         return redirect(url_for("analyze", file_id=filename))
 
 
-@app.route("/analyze", methods=["GET"])
-@app.route("/analyze/<string:file_id>", methods=["GET"])
-def analyze(file_id: Optional[str] = None):
-    if file_id is None:
-        return render_template("analysis.html")
-    result = lint(full_path(file_id))
-    with open(full_path(file_id)) as f:
-        contents = f.read()
-    return render_template("analysis.html", problems=result, textarea_text=contents)
+@app.route("/editor", methods=["GET"])
+def editor():
+    return render_template("editor.html")
+
+
+@app.route("/analyze/<string:code_hash>", methods=["GET"])
+def analyze(code_hash: str):
+
+    result = lint(code_path(code_hash))
+
+    return jsonify(result)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block head %}
+
+<script src="/static/handle_problems.js"></script>
+
+{% endblock %}
+
+{% block header %}
+<h1>{% block title %}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+
+<div id="analysis-block" class="container-fluid row">
+  <div id="code-block" class="col">
+    <textarea name="code" id="code" placeholder="Enter your code here">{{ textarea_text }}</textarea>
+    <button id="analysisSubmit">Submit</button>
+  </div>
+  <div id="problems-block" class="col">
+  </div>
+</div>
+
+{% endblock %}
