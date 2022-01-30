@@ -23,13 +23,8 @@ li {
     animation-duration: 1700ms;
 }
 
-#analysis-block {
-    max-height: 90vh;
-    overflow: hidden;
-}
-
 #problems-block {
-    max-height: 80vh;
+    max-height: 85vh;
     overflow-y: auto;
 }
 
