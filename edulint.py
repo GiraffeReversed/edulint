@@ -67,7 +67,7 @@ def lint_flake8(filename: str) -> List[Problem]:
 
 def lint_pylint(filename: str) -> List[Problem]:
     pylint_command = ["python3", "-m", "pylint", "--output-format=json", filename]
-    return_code, outs, errs = ProcessHandler.run(pylint_command)
+    return_code, outs, errs = ProcessHandler.run(pylint_command, timeout=10)
     if not outs:
         return []
     pylint_result = json.loads(outs)
