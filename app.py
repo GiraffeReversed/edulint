@@ -4,11 +4,16 @@ import os
 import json
 from hashlib import sha256
 from os import path
+from flask_talisman import Talisman
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "uploaded_files"
 app.secret_key = "super secret key"
+
+Talisman(app, content_security_policy=None, strict_transport_security=False)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
 
 
 def full_path(filename: str) -> str:

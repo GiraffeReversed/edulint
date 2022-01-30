@@ -4,6 +4,7 @@ python3 -m pip install flake8
 python3 -m pip install flake8-json
 python3 -m pip install pylint
 python3 -m pip install flask
+python3 -m pip install flask-talisman
 
 ## Linter usage notes
 
