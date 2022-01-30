@@ -8,6 +8,7 @@ from os import path
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "uploaded_files"
+app.secret_key = "super secret key"
 
 
 def full_path(filename: str) -> str:
@@ -51,7 +52,7 @@ def analyze(code_hash: str):
 
     if not path.exists(code_path(code_hash)):
         flash('No such file uploaded')
-        return redirect("editor", code=302)
+        return redirect("/editor", code=302)
 
     if path.exists(problems_path(code_hash)):
         with open(problems_path(code_hash), encoding="utf8") as f:
