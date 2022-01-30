@@ -27,7 +27,8 @@ function toggleActiveProblem(lineIndex) {
 function setupEditor() {
     editor = CodeMirror.fromTextArea(code, {
         lineNumbers: true,
-        gutters: ["CodeMirror-linenumbers", "breakpoints"]
+        gutters: ["CodeMirror-linenumbers", "breakpoints"],
+        rulers : [{color: "#ddd", column: 79, lineStyle : "dotted"}]
     });
 
     editor.setOption("theme", "base16-light");
