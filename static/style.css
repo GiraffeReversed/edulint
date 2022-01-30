@@ -3,7 +3,7 @@
 
 .CodeMirror {
     font-size: 13px;
-    width: min(66vh, 90ch);
+    width: min(66vw, 90ch);
     height: 80vh;
     border: 1px solid #eee;
 }
