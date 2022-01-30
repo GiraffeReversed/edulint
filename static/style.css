@@ -11,14 +11,15 @@ li {
     font-size: 13px;
 }
 
-@keyframes example {
-    from {background-color: #ddd;}
-    to {background-color: rgb(245, 245, 245);}
+@keyframes fade {
+    from {background-color: rgb(200, 200, 200);}
+    to {background-color: rgba(200, 200, 200, 0);}
 }
 
 .highlighted-line {
-    animation-name: example;
-    animation-duration: 1s;
+    background-color: rgb(200, 200, 200);
+    animation-name: fade;
+    animation-duration: 1700ms;
 }
 
 #analysis-block {

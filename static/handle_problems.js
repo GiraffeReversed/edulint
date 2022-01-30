@@ -80,7 +80,7 @@ function problemClick(e) {
         editor.addLineClass(lineIndex, "background", "highlighted-line");
         setTimeout(() => {
             editor.removeLineClass(lineIndex, "background", "highlighted-line")
-        }, 1000);
+        }, 1700);
         jumpToLine(lineIndex);
     }
 }
