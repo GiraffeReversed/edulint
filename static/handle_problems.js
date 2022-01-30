@@ -109,9 +109,23 @@ function analyze() {
         )
 }
 
+function loadFile() {
+    let file = this.files[0];
+    console.log(file);
+    if (!file || file.type !== "text/x-python") {
+        alert("Upload Python file");
+        return;
+    }
+    let reader = new FileReader();
+    reader.onload=function(){ editor.setValue(reader.result); }
+    reader.readAsText(file);
+    document.getElementById("inputFileLabel").innerText = file.name;
+}
+
 function setup() {
     setupEditor();
     document.getElementById("analysisSubmit").addEventListener("click", analyze);
+    document.getElementById('inputFile').addEventListener('change', loadFile);
 }
 
 function makeMarker() {

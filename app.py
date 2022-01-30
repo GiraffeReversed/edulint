@@ -39,33 +39,6 @@ def upload_code():
     return redirect(url_for("analyze", code_hash=code_hash))
 
 
-@app.route("/upload_file", methods=["GET"])
-def upload_get():
-    return render_template("upload.html")
-
-
-@app.route("/upload_file", methods=["POST"])
-def upload_file():
-    # check if the post request has the file part
-    if "file" not in request.files:
-        flash('No file part')
-        return redirect(request.url)
-    
-    file = request.files['file']
-    # If the user does not select a file, the browser submits an
-    # empty file without a filename.
-    if not file or file.filename == "":
-        flash('No selected file')
-        return redirect(request.url)
-
-    code_hash = sha256(file.read()).hexdigest()
-
-    if not path.exists(code_path(code_hash)):
-        file.save(code_path(code_hash))
-
-    return redirect(url_for("analyze", code_hash=code_hash))
-
-
 @app.route("/editor", methods=["GET"])
 def editor():
     return render_template("editor.html")
