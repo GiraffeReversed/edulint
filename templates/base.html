@@ -4,34 +4,34 @@
 <head>
   <title>{% block title %}{% endblock %}EduLint</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/codemirror.min.js"
     integrity="sha512-UczTlJPfdNqI2hb02wot6lMzwUNtjywtRSz+Ut/Q+aR0/D6tLkIxRB+GgjxjX6PSA+0KrQJuwn4z6J+3EExilg=="
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/codemirror.min.css"
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/codemirror.min.css"
     integrity="sha512-uf06llspW44/LZpHzHT6qBOIVODjWtv4MxCricRxkzvopAlSWnTf6hpZTFxuuZcuNE9CBQhqE0Seu1CoRk84nQ=="
     crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/addon/display/placeholder.min.js"
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/addon/display/placeholder.min.js"
     integrity="sha512-RO2holrH2sTvI9eanK0s+luhPF+J7sdzmk0lMosgrSaUSEjRUfyFiSaERSXHPcIJfQNqeVermdLvQRqUe4sSIQ=="
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/python/python.min.js"
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/python/python.min.js"
     integrity="sha512-/mavDpedrvPG/0Grj2Ughxte/fsm42ZmZWWpHz1jCbzd5ECv8CB7PomGtw0NAnhHmE/lkDFkRMupjoohbKNA1Q=="
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/theme/neo.min.css" integrity="sha512-n6DpN0Uo6L9yIU4MeX5hhnCX6NejvEBxXQ2GNmBl8febWyt1Fdh7C4EiDQvBeGtFOaOIBxZAf/VQZjjUvs04ng==" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/theme/base16-light.min.css"
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/theme/neo.min.css" integrity="sha512-n6DpN0Uo6L9yIU4MeX5hhnCX6NejvEBxXQ2GNmBl8febWyt1Fdh7C4EiDQvBeGtFOaOIBxZAf/VQZjjUvs04ng==" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/theme/base16-light.min.css"
     integrity="sha512-UCcyAfcA/pJ4lD8YMo+fhwFdJeGNN5QrBlHvTQ1BopVjHWh35HD2JRV3tbwxtabH5ymri426oTfa1UF9Z63B3g=="
     crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
-      crossorigin="anonymous"></script>
-    {% block head %}{% endblock %}
-  </head>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+    crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
+</head>
 
-  <body>
-    <nav class="navbar navbar-expand navbar-light bg-light">
+<body>
+  <nav class="navbar navbar-expand navbar-light bg-light">
     <a class="navbar-brand" href="{{ url_for('editor') }}">EduLint</a>
 
     <ul class="navbar-nav mr-auto">

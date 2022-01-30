@@ -32,3 +32,12 @@ li {
     max-height: 80vh;
     overflow-y: auto;
 }
+
+body {
+    background-color: #eeeeee;
+    background-image: url("cutcube.png");    
+}
+
+#analysis-block {
+    background-color: white;
+}
