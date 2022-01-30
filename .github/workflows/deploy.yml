@@ -4,4 +4,4 @@ jobs:
   Start-remote-deploy:
     runs-on: ubuntu-latest
     steps:
-      - run: curl https://${{ DEPLOY_HTTP_AUTH }}@docker_restarter.rechtackova.cz/edulint
+      - run: curl https://${{ secrets.DEPLOY_HTTP_AUTH }}@docker_restarter.rechtackova.cz/edulint
