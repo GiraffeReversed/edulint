@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./uploaded_files:/app/uploaded_files
 
 networks:
   default:
