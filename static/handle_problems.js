@@ -8,12 +8,29 @@ function assert(condition, message = "") {
     }
 }
 
+function toggleActiveProblem(lineIndex) {
+    let problem = document.getElementById("problem" + lineIndex);
+    let shouldActivate = true;
+    for (let stale of document.getElementsByClassName("active")) {
+        if (problem.id === stale.id)
+            shouldActivate = false;
+        stale.classList.remove("active");
+    }
+
+    if (problem !== null && shouldActivate) {
+        problem.classList.add("active");
+        return true;
+    }
+    return false;
+}
+
 function setupEditor() {
     editor = CodeMirror.fromTextArea(code, {
         lineNumbers: true,
         gutters: ["CodeMirror-linenumbers", "breakpoints"]
     });
     editor.setOption("theme", "base16-light");
+    editor.on("gutterClick", (_, n) => { toggleActiveProblem(n); });
 }
 
 function oneLineProblemsHTML(oneLineProblems) {
@@ -44,11 +61,31 @@ function problemsHTML(problems) {
     }
     result += "</ul>";
     return result;
-    editor.on("gutterClick", function (cm, n) {
-        let info = cm.lineInfo(n);
-        cm.setGutterMarker(n, "breakpoints", info.gutterMarkers ? null : makeMarker());
-        // editor.doc.setGutterMarker(11, "breakpoints", makeMarker());
-    });
+}
+
+function jumpToLine(n) {
+    var t = editor.charCoords({ line: n, ch: 0 }, "local").top;
+    var middleHeight = editor.getScrollerElement().offsetHeight / 3;
+    editor.scrollTo(null, t - middleHeight - 5);
+}
+
+function problemClick(e) {
+    let lineIndex = Number(e.target.getAttribute("line"));
+    let activated = toggleActiveProblem(lineIndex);
+
+    if (activated) {
+        editor.addLineClass(lineIndex, "background", "highlighted-line");
+        setTimeout(() => {
+            editor.removeLineClass(lineIndex, "background", "highlighted-line")
+        }, 1000);
+        jumpToLine(lineIndex);
+    }
+}
+
+function registerProblemCallbacks() {
+    for (let problemLi of document.getElementsByClassName("list-group-item")) {
+        problemLi.addEventListener("click", problemClick);
+    }
 }
 
 function analyze() {
@@ -64,6 +101,7 @@ function analyze() {
         .then(response => response.json()) // .json() for Objects vs text() for raw
         .then(problems => {
             problemsBlock.innerHTML = problemsHTML(problems);
+            registerProblemCallbacks();
         }
         )
 }

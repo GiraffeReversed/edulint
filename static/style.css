@@ -10,3 +10,14 @@
 li {
     font-size: 13px;
 }
+
+@keyframes example {
+    from {background-color: #ddd;}
+    to {background-color: rgb(245, 245, 245);}
+}
+
+.highlighted-line {
+    animation-name: example;
+    animation-duration: 1s;
+}
+
