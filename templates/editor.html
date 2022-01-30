@@ -12,20 +12,28 @@
 
 {% block content %}
 
-<div id="analysis-block" class="container-fluid row">
-  <div id="code-block" class="col">
-    <textarea name="code" id="code" placeholder="Enter your code here">{{ textarea_text }}</textarea>
-    <div class="input-group">
-      <div class="custom-file">
-        <input type="file" class="custom-file-input" id="inputFile">
-        <label class="custom-file-label" for="inputFile" id="inputFileLabel">Choose file</label>
+<div id="analysis-block" class="container">
+  <div class="row">
+    <div id="code-block" class="col">
+      <div class="row">
+        <textarea name="code" id="code" placeholder="Enter your code here"></textarea>
       </div>
-      <div class="input-group-append">
-        <button class="btn btn-primary" type="button" id="analysisSubmit">Lint</button>
+
+      <div class="row">
+        <div class="input-group">
+          <div class="custom-file">
+            <input type="file" class="custom-file-input" id="inputFile">
+            <label class="custom-file-label" for="inputFile" id="inputFileLabel">Choose file</label>
+          </div>
+          <div class="input-group-append">
+            <button class="btn btn-primary" type="button" id="analysisSubmit">Lint</button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-  <div id="problems-block" class="col">
+
+    <div id="problems-block" class="col">
+    </div>
   </div>
 </div>
 
