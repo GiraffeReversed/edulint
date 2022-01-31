@@ -31,17 +31,11 @@ function setupEditor() {
     });
 }
 
-function makeMarker(lineIndex, count) {
+function makeMarker() {
     var marker = document.createElement("div");
-    let result =
-        `<a data-bs-toggle="collapse" href="#collapse${lineIndex}" role="button" aria-expanded="false"
-      data-bs-target=".multi-collapse${lineIndex}" class="problemMarker collapsed" aria-controls="`;
-    for (let i = 0; i < count; i++) {
-        result += `collapse${lineIndex}_${i} `;
-    }
-    result += `">●</a>`;
-    marker.innerHTML = result;
-    return marker.firstElementChild;
+    marker.classList.add("problemMarker");
+    marker.innerHTML = "●";
+    return marker;
 }
 
 function oneLineProblemsHTML(oneLineProblems) {
@@ -54,13 +48,15 @@ function oneLineProblemsHTML(oneLineProblems) {
         let problem = oneLineProblems[i];
         result +=
             `<div class="accordion-item problem" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
-                <h5 class="accordion-header" id="heading${lineIndex}_${i}">
-                    <button class="accordion-button collapsed btn-outline-primary" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#collapse${lineIndex}_${i}" aria-expanded="false"
-                    aria-controls="collapse${lineIndex}_${i}">
-                    ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
+                <div class="btn-group accordion-header w-100" role="group">
+                    <button class="btn btn-secondary problemGotoBtn w-100" type="button" data-line=${lineIndex}>
+                        ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
                     </button>
-                </h5>
+                    <button class="btn btn-secondary dropdown-toggle problemInfoBtn" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapse${lineIndex}_${i}" aria-expanded="false" data-line=${lineIndex}
+                        aria-controls="collapse${lineIndex}_${i}" id="heading${lineIndex}_${i}">
+                    </button>
+                </div>
                 <div id="collapse${lineIndex}_${i}" class="accordion-collapse collapse multi-collapse${lineIndex}"
                     aria-labelledby="heading${lineIndex}_${i}" data-bs-parent="#problemsAccordion">
                     <div class="accordion-body">
@@ -74,7 +70,7 @@ function oneLineProblemsHTML(oneLineProblems) {
 
     result += `</div>`;
 
-    editor.doc.setGutterMarker(lineIndex, "breakpoints", makeMarker(lineIndex, oneLineProblems.length));
+    editor.doc.setGutterMarker(lineIndex, "breakpoints", makeMarker());
     return result;
 }
 
@@ -98,21 +94,30 @@ function jumpToLine(n) {
     editor.scrollTo(null, t - middleHeight - 5);
 }
 
+function gotoClick(e) {
+    let problemInfoBtn = e.currentTarget;
+    let lineIndex = Number(problemInfoBtn.dataset.line);
+    editor.addLineClass(lineIndex, "background", "highlighted-line");
+    setTimeout(() => {
+        editor.removeLineClass(lineIndex, "background", "highlighted-line")
+    }, 1700);
+    jumpToLine(lineIndex);
+}
+
 function problemClick(e) {
-    let problem = e.currentTarget;
-    if (problem.getElementsByClassName("accordion-button")[0].ariaExpanded === "true") {
-        let lineIndex = Number(problem.dataset.line);
-        editor.addLineClass(lineIndex, "background", "highlighted-line");
-        setTimeout(() => {
-            editor.removeLineClass(lineIndex, "background", "highlighted-line")
-        }, 1700);
-        jumpToLine(lineIndex);
+    let problemInfoBtn = e.currentTarget;
+    if (problemInfoBtn.ariaExpanded === "true") {
+        gotoClick(e);
     }
 }
 
 function registerProblemCallbacks() {
-    for (let problem of document.getElementsByClassName("problem")) {
-        problem.addEventListener("click", problemClick);
+    for (let problemInfoBtn of document.getElementsByClassName("problemInfoBtn")) {
+        problemInfoBtn.addEventListener("click", problemClick);
+    }
+
+    for (let problemGotoBtn of document.getElementsByClassName("problemGotoBtn")) {
+        problemGotoBtn.addEventListener("click", gotoClick);
     }
 }
 
