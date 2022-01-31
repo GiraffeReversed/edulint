@@ -1,5 +1,9 @@
 .breakpoints {width: .8em;}
-.breakpoint { color: #822; }
+
+.problemMarker {
+    color: #822;
+    text-decoration: none;
+}
 
 .CodeMirror {
     font-size: 13px;
@@ -31,4 +35,13 @@ body {
 
 #analysis-block {
     background-color: white;
+}
+
+.accordion-button:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.accordion-button {
+    font-size: 13px;
 }
