@@ -94,7 +94,7 @@ function jumpToLine(n) {
     editor.scrollTo(null, t - middleHeight - 5);
 }
 
-function gotoClick(e) {
+function gotoCodeClick(e) {
     let problemInfoBtn = e.currentTarget;
     let lineIndex = Number(problemInfoBtn.dataset.line);
     editor.addLineClass(lineIndex, "background", "highlighted-line");
@@ -107,7 +107,7 @@ function gotoClick(e) {
 function problemClick(e) {
     let problemInfoBtn = e.currentTarget;
     if (problemInfoBtn.ariaExpanded === "true") {
-        gotoClick(e);
+        gotoCodeClick(e);
     }
 }
 
@@ -117,7 +117,7 @@ function registerProblemCallbacks() {
     }
 
     for (let problemGotoBtn of document.getElementsByClassName("problemGotoBtn")) {
-        problemGotoBtn.addEventListener("click", gotoClick);
+        problemGotoBtn.addEventListener("click", gotoCodeClick);
     }
 }
 
