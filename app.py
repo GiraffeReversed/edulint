@@ -70,5 +70,11 @@ def analyze(code_hash: str):
     return jsonify(result)
 
 
+@app.route("/editor/default", methods=["GET"])
+def editor_default():
+    with open(code_path("default")) as f:
+        return render_template("editor.html", textarea=f.read())
+
+
 if __name__ == "__main__":
     app.run(debug=True)
