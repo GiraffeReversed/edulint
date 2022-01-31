@@ -21,23 +21,26 @@ function setupEditor() {
         var info = cm.lineInfo(n);
         if (info.gutterMarkers) {
             info.gutterMarkers.breakpoints.click();
-            document.getElementById("problem" + n).scrollIntoView(
+            document.getElementById("problemGroup" + n).scrollIntoView(
                 {
                     behavior: "smooth",
-                    block: "nearest",
+                    block: "center",
                 }
             );
         }
     });
 }
 
-function makeMarker(lineIndex) {
+function makeMarker(lineIndex, count) {
     var marker = document.createElement("div");
-    marker.innerHTML =
+    let result =
         `<a data-bs-toggle="collapse" href="#collapse${lineIndex}" role="button" aria-expanded="false"
-      aria-controls="collapse${lineIndex}" class="problemMarker">
-    ●
-    </a>`;
+      data-bs-target=".multi-collapse${lineIndex}" class="problemMarker collapsed" aria-controls="`;
+    for (let i = 0; i < count; i++) {
+        result += `collapse${lineIndex}_${i} `;
+    }
+    result += `">●</a>`;
+    marker.innerHTML = result;
     return marker.firstElementChild;
 }
 
@@ -45,20 +48,21 @@ function oneLineProblemsHTML(oneLineProblems) {
     assert(oneLineProblems.length >= 1);
 
     let lineIndex = Number(oneLineProblems[0].line) - 1;
-    let result = "";
+    let result = `<div id="problemGroup${lineIndex}" data-line=${lineIndex} class="problemGroup">`;
 
-    for (let problem of oneLineProblems) {
+    for (let i = 0; i < oneLineProblems.length; i++) {
+        let problem = oneLineProblems[i];
         result +=
-            `<div id="problem${lineIndex}" data-line=${lineIndex} class="accordion-item problem">
-                <h5 class="accordion-header" id="heading${lineIndex}">
+            `<div class="accordion-item problem" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
+                <h5 class="accordion-header" id="heading${lineIndex}_${i}">
                     <button class="accordion-button collapsed btn-outline-primary" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#collapse${lineIndex}" aria-expanded="false"
-                    aria-controls="collapse${lineIndex}">
+                    data-bs-target="#collapse${lineIndex}_${i}" aria-expanded="false"
+                    aria-controls="collapse${lineIndex}_${i}">
                     ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
                     </button>
                 </h5>
-                <div id="collapse${lineIndex}" class="accordion-collapse collapse"
-                    aria-labelledby="heading${lineIndex}" data-bs-parent="#problemsAccordion">
+                <div id="collapse${lineIndex}_${i}" class="accordion-collapse collapse multi-collapse${lineIndex}"
+                    aria-labelledby="heading${lineIndex}_${i}" data-bs-parent="#problemsAccordion">
                     <div class="accordion-body">
                         WHY?!
                         <hr>
@@ -68,7 +72,9 @@ function oneLineProblemsHTML(oneLineProblems) {
             </div>`;
     }
 
-    editor.doc.setGutterMarker(lineIndex, "breakpoints", makeMarker(lineIndex));
+    result += `</div>`;
+
+    editor.doc.setGutterMarker(lineIndex, "breakpoints", makeMarker(lineIndex, oneLineProblems.length));
     return result;
 }
 
