@@ -33,6 +33,11 @@ def default_path():
     return redirect("editor", code=302)
 
 
+@app.route("/editor", methods=["GET"])
+def editor():
+    return render_template("editor.html")
+
+
 @app.route("/upload_code", methods=["POST"])
 def upload_code():
     code = request.get_json()["code"]
@@ -42,12 +47,7 @@ def upload_code():
         with open(code_path(code_hash), "w", encoding="utf8") as f:
             f.write(code)
 
-    return redirect(url_for("analyze", code_hash=code_hash))
-
-
-@app.route("/editor", methods=["GET"])
-def editor():
-    return render_template("editor.html")
+    return { "filename" : code_hash }
 
 
 @app.route("/analyze/<string:code_hash>", methods=["GET"])
@@ -68,6 +68,12 @@ def analyze(code_hash: str):
         f.write(json.dumps(result, cls=ProblemEncoder))
 
     return jsonify(result)
+
+
+@app.route("/analyze", methods=["POST"])
+def combine():
+    code_hash = upload_code()["filename"]
+    return analyze(code_hash)
 
 
 @app.route("/editor/default", methods=["GET"])
