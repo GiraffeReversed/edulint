@@ -3,13 +3,9 @@
 
 .CodeMirror {
     font-size: 13px;
-    width: min(66vw, 90ch);
+    width: min(66vw, 100ch);
     height: 80vh;
     border: 1px solid #eee;
-}
-
-li {
-    font-size: 13px;
 }
 
 @keyframes fade {
