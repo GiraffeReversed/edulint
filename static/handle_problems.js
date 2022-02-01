@@ -121,7 +121,9 @@ function registerProblemCallbacks() {
     }
 }
 
-function analyze() {
+function analyze(e) {
+    let lintButton = e.currentTarget;
+    lintButton.firstElementChild.hidden = false;
     let problemsBlock = document.getElementById("problems-block");
     problemsBlock.innerHTML = ""
     fetch("/analyze", {
@@ -135,6 +137,7 @@ function analyze() {
         .then(problems => {
             problemsBlock.innerHTML = problemsHTML(problems);
             registerProblemCallbacks();
+            lintButton.firstElementChild.hidden = true;
         }
         );
 }
