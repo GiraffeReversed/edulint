@@ -48,13 +48,20 @@ function oneLineProblemsHTML(oneLineProblems) {
         let problem = oneLineProblems[i];
         result +=
             `<div class="accordion-item problem" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
-                <div class="btn-group accordion-header w-100" role="group">
-                    <button class="btn btn-secondary problemGotoBtn w-100" type="button" data-line=${lineIndex}>
-                        ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
+                <div class="btn-group problemBtn w-100" role="group">
+                    <button class="btn btn-outline-warning problemGotoBtn p-2" type="button" data-line=${lineIndex}>
+                        <i class="bi bi-bullseye"></i>
                     </button>
-                    <button class="btn btn-secondary dropdown-toggle problemInfoBtn" type="button" data-bs-toggle="collapse"
+                    <span class="p-1 small w-100 align-middle">
+                        ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
+                    </span>
+                    <button class="btn btn-outline-secondary problemInfoBtn p-2" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapse${lineIndex}_${i}" aria-expanded="false" data-line=${lineIndex}
                         aria-controls="collapse${lineIndex}_${i}" id="heading${lineIndex}_${i}">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <button class="btn btn-outline-success problemSolvedBtn p-2" type="button" data-line=${lineIndex}>
+                        <i class="bi bi-check2"></i>
                     </button>
                 </div>
                 <div id="collapse${lineIndex}_${i}" class="accordion-collapse collapse multi-collapse${lineIndex}"

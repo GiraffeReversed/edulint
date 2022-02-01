@@ -36,6 +36,14 @@
     overflow-y: auto;
 }
 
+.problemBtn > .btn {
+    border: none;
+}
+
+.problemInfoBtn {
+    color: rgb(150, 150, 150);
+}
+
 body {
     background-color: #eeeeee;
     background-image: url("cutcube.png");    
