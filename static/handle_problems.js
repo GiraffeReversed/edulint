@@ -141,7 +141,6 @@ function analyze() {
 
 function loadFile() {
     let file = this.files[0];
-    console.log(file);
     if (!file || file.type !== "text/x-python") {
         alert("Upload Python file");
         return;
@@ -150,7 +149,7 @@ function loadFile() {
     let reader = new FileReader();
     reader.onload = function () { editor.setValue(reader.result); }
     reader.readAsText(file);
-    document.getElementById("inputFileLabel").innerText = file.name;
+    document.getElementById("problems-block").innerText = "";
 }
 
 function setup() {
