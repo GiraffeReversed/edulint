@@ -15,14 +15,11 @@
 
 {% block content %}
 
-<div id="analysis-block" class="container-lg">
-  <div class="row">
-    <div id="code-block" class="col">
-      <div class="row">
+<div id="analysis-block" class="container-lg h-100">
+  <div class="row h-100">
+    <div id="code-block" class="col h-100">
         <textarea name="code" id="code" placeholder="Enter your code here">{{textarea}}</textarea>
-      </div>
 
-      <div class="row">
         <div class="input-group">
           <input type="file" class="form-control" id="inputFile" aria-describedby="analysisSubmit" aria-label="Upload">
           <button class="btn btn-primary" type="button" id="analysisSubmit">
@@ -30,10 +27,9 @@
             Lint
           </button>
         </div>
-      </div>
     </div>
 
-    <div id="problems-block" class="col">
+    <div id="problems-block" class="col h-100">
     </div>
   </div>
 </div>

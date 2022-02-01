@@ -1,14 +1,23 @@
 .breakpoints {width: .8em;}
 
+.content {
+    height: 89vh;
+}
+
 .problemMarker {
     color: #822;
     text-decoration: none;
 }
 
+#code-block {
+    display: flex;
+    flex-direction: column;
+}
+
 .CodeMirror {
     font-size: 13px;
-    width: min(66vw, 100ch);
-    height: 80vh;
+    max-width: min(60vw, 100ch);
+    flex-grow: 1;
     border: 1px solid #eee;
 }
 
@@ -24,7 +33,6 @@
 }
 
 #problems-block {
-    max-height: 85vh;
     overflow-y: auto;
 }
 
