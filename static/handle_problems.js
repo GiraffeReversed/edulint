@@ -42,7 +42,7 @@ function oneLineProblemsHTML(oneLineProblems) {
     assert(oneLineProblems.length >= 1);
 
     let lineIndex = Number(oneLineProblems[0].line) - 1;
-    let result = `<div id="problemGroup${lineIndex}" data-line=${lineIndex} class="problemGroup">`;
+    let result = `<div id="problemGroup${lineIndex}" data-line=${lineIndex} class="problemGroup mb-2">`;
 
     for (let i = 0; i < oneLineProblems.length; i++) {
         let problem = oneLineProblems[i];
