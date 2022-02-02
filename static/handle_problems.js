@@ -15,7 +15,7 @@ function setupEditor() {
         rulers: [{ color: "#ddd", column: 79, lineStyle: "dotted" }]
     });
 
-    editor.setOption("theme", "base16-light");
+    // editor.setOption("theme", "base16-light");
 
     editor.on("gutterClick", (cm, n) => {
         var info = cm.lineInfo(n);
@@ -169,7 +169,8 @@ function loadFile() {
 function setup() {
     setupEditor();
     Split({
-        minSize: 240,
+        minSize: 255,
+        snapOffset: 0,
         columnGutters: [{
             track: 1,
             element: document.querySelector('#gutter'),
