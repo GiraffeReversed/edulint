@@ -16,7 +16,6 @@
 
 .CodeMirror {
     font-size: 13px;
-    max-width: min(60vw, 100ch);
     flex-grow: 1;
     border: 1px solid #eee;
 }
@@ -46,4 +45,20 @@ body {
 
 #analysis-block {
     background-color: white;
+}
+
+.split {
+    display: flex;
+    flex-direction: row;
+}
+
+.gutter {
+    background-color: #eee;
+    background-repeat: no-repeat;
+    background-position: 50%;
+}
+
+.gutter.gutter-horizontal {
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+    cursor: col-resize;
 }
