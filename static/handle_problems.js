@@ -43,6 +43,14 @@ function makeMarker(lineIndex) {
     return marker;
 }
 
+// TODO warn on shift
+function approximateCurrentLineIndex(problemLine) {
+    let marker = document.getElementById("problemMarker" + problemLine);
+    if (!marker)
+        return problemLine;
+    return Number(marker.parentElement.previousElementSibling.innerText) - 1;
+}
+
 function oneLineProblemsHTML(oneLineProblems) {
     assert(oneLineProblems.length >= 1);
 
@@ -112,7 +120,7 @@ function jumpToLine(n) {
 
 function gotoCodeClick(e) {
     let problemInfoBtn = e.currentTarget;
-    let lineIndex = Number(problemInfoBtn.dataset.line);
+    let lineIndex = approximateCurrentLineIndex(Number(problemInfoBtn.dataset.line));
     editor.addLineClass(lineIndex, "background", "highlighted-line");
     setTimeout(() => {
         editor.removeLineClass(lineIndex, "background", "highlighted-line")
