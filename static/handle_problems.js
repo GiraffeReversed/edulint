@@ -50,7 +50,7 @@ function oneLineProblemsHTML(oneLineProblems) {
             `<div class="accordion-item problem" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
                 <div class="btn-group problemBtn w-100" role="group">
                     <button class="btn btn-outline-warning problemGotoBtn p-2" type="button" data-line=${lineIndex}>
-                        <i class="bi bi-bullseye"></i>
+                        <h5 class="bi bi-bullseye mb-0"></h5>
                     </button>
                     <div class="p-1 small w-100 d-flex align-items-center">
                         ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
@@ -58,10 +58,10 @@ function oneLineProblemsHTML(oneLineProblems) {
                     <button class="btn btn-outline-secondary problemInfoBtn p-2" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapse${lineIndex}_${i}" aria-expanded="false" data-line=${lineIndex}
                         aria-controls="collapse${lineIndex}_${i}" id="heading${lineIndex}_${i}">
-                        <i class="bi bi-chevron-down"></i>
+                        <h5 class="bi bi-chevron-down mb-0"></h5>
                     </button>
                     <button class="btn btn-outline-success problemSolvedBtn p-2" type="button" data-line=${lineIndex}>
-                        <i class="bi bi-check2"></i>
+                        <h5 class="bi bi-check2 mb-0"></h5>
                     </button>
                 </div>
                 <div id="collapse${lineIndex}_${i}" class="accordion-collapse collapse multi-collapse${lineIndex}"
