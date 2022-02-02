@@ -12,6 +12,7 @@
 #code-block {
     display: flex;
     flex-direction: column;
+    overflow-x: auto;
 }
 
 .CodeMirror {
@@ -47,18 +48,22 @@ body {
     background-color: white;
 }
 
-.split {
-    display: flex;
-    flex-direction: row;
+.grid-main {
+    display: grid;
+    grid-template-columns: 4fr 10px 3fr;
 }
 
-.gutter {
-    background-color: #eee;
-    background-repeat: no-repeat;
-    background-position: 50%;
-}
-
-.gutter.gutter-horizontal {
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+.gutter-col {
+    grid-row: 1/-1;
     cursor: col-resize;
+}
+
+#gutter {
+    grid-column: 2;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: #eee;
+    cursor: col-resize;
+    height: 100%;
 }

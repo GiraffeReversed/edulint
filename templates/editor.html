@@ -6,9 +6,9 @@
   integrity="sha512-sF+AF3zpVOHMt4f4mN1dVS2/Hon6pr/7h1gc7rDHtga0SeD9z0UiL1J0k3umDFEz5qkY06ARcNzi45NkJ9GsYw=="
   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.2/split.min.js"
-integrity="sha512-to2k78YjoNUq8+hnJS8AwFg/nrLRFLdYYalb18SlcsFRXavCOTfBF3lNyplKkLJeB8YjKVTb1FPHGSy9sXfSdg=="
-crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/split-grid@1.0.11/dist/split-grid.min.js"
+  integrity="sha256-siGqMw4yMN/OhqeqX3ZhaXOP6wXKrzSJ2AoPdIEttXE=" crossorigin="anonymous"></script>
+
 <script src="/static/handle_problems.js"></script>
 
 {% endblock %}
@@ -20,8 +20,9 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {% block content %}
 
 <div id="analysis-block" class="container-lg h-100 p-3">
-  <div class="row h-100 g-3 split">
-    <div id="code-block" class="col h-100">
+  <div class="row h-100 g-3 grid-main">
+    <div id="code-block" class="h-100">
+
       <textarea name="code" id="code" placeholder="Enter your code here">{{textarea}}</textarea>
 
       <div class="input-group pt-3">
@@ -33,7 +34,9 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
       </div>
     </div>
 
-    <div id="problems-block" class="col h-100">
+    <div class="gutter-col" id="gutter"></div>
+
+    <div id="problems-block" class="h-100">
     </div>
   </div>
 </div>

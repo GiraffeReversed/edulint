@@ -164,12 +164,12 @@ function loadFile() {
 
 function setup() {
     setupEditor();
-    Split(["#code-block", "#problems-block"], {
-        sizes: [60, 40],
-        minSize: [20, 180],
-        maxSize: Infinity,
-        gutterAlign: 'center',
-        snapOffset: 0,
+    Split({
+        minSize: 240,
+        columnGutters: [{
+            track: 1,
+            element: document.querySelector('#gutter'),
+        }],
     });
     document.getElementById("analysisSubmit").addEventListener("click", analyze);
     document.getElementById('inputFile').addEventListener('change', loadFile);
