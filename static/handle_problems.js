@@ -58,7 +58,7 @@ function oneLineProblemsHTML(oneLineProblems) {
     let result =
         `<div id="problemGroup${lineIndex}" data-line=${lineIndex} class="problemGroup mb-2 btn-group border rounded w-100">`;
     result +=
-        `<button class="btn btn-outline-warning problemGotoBtn p-2" type="button" data-line=${lineIndex}>
+        `<button class="btn btn-outline-warning problemGotoBtn p-1 px-2" type="button" data-line=${lineIndex}>
             <h5 class="bi bi-bullseye mb-0"></h5>
         </button>`;
     result += `<div class="d-flex flex-column w-100">`;
@@ -71,12 +71,12 @@ function oneLineProblemsHTML(oneLineProblems) {
                     <div class="p-1 small w-100">
                         ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
                     </div>
-                    <button class="btn btn-outline-secondary problemInfoBtn p-2" type="button" data-bs-toggle="collapse"
+                    <button class="btn btn-outline-secondary problemInfoBtn p-1" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapse${lineIndex}_${i}" aria-expanded="false" data-line=${lineIndex}
                         aria-controls="collapse${lineIndex}_${i}" id="heading${lineIndex}_${i}">
                         <h5 class="bi bi-chevron-down mb-0"></h5>
                     </button>
-                    <button class="btn btn-outline-success problemSolvedBtn p-2" type="button" data-line=${lineIndex}>
+                    <button class="btn btn-outline-success problemSolvedBtn p-1" type="button" data-line=${lineIndex}>
                         <h5 class="bi bi-check2 mb-0"></h5>
                     </button>
                 </div>
