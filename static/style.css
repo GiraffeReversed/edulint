@@ -40,24 +40,10 @@
     border: none;
 }
 
-.problemInfoBtn {
-    color: rgb(150, 150, 150);
-}
-
 body {
-    background-color: #eeeeee;
-    background-image: url("cutcube.png");    
+    background-image: url("cutcube.png");
 }
 
 #analysis-block {
     background-color: white;
-}
-
-.accordion-button:focus {
-    outline: none;
-    box-shadow: none;
-}
-
-.accordion-button {
-    font-size: 13px;
 }
