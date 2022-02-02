@@ -33,13 +33,14 @@
 
 <body>
   <nav class="navbar navbar-expand navbar-light bg-light">
-    <a class="navbar-brand" href="{{ url_for('editor') }}">EduLint</a>
-
-    <ul class="navbar-nav mr-auto">
-      <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('editor') }}">Editor</a>
-      </li>
-    </ul>
+    <div class="container-lg">
+      <a class="navbar-brand" href="{{ url_for('editor') }}">EduLint</a>
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="{{ url_for('editor') }}">Editor</a>
+        </li>
+      </ul>
+    </div>
   </nav>
   <section class="content mx-3 mt-3">
     <header>
