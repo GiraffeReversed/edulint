@@ -52,9 +52,9 @@ function oneLineProblemsHTML(oneLineProblems) {
                     <button class="btn btn-outline-warning problemGotoBtn p-2" type="button" data-line=${lineIndex}>
                         <i class="bi bi-bullseye"></i>
                     </button>
-                    <span class="p-1 small w-100 align-middle">
+                    <div class="p-1 small w-100 d-flex align-items-center">
                         ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
-                    </span>
+                    </div>
                     <button class="btn btn-outline-secondary problemInfoBtn p-2" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapse${lineIndex}_${i}" aria-expanded="false" data-line=${lineIndex}
                         aria-controls="collapse${lineIndex}_${i}" id="heading${lineIndex}_${i}">
