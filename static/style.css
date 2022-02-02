@@ -1,12 +1,16 @@
-.breakpoints {width: .8em;}
+.problemMarkers {
+    width: 1.2em;
+}
 
 .content {
     height: 89vh;
 }
 
 .problemMarker {
-    color: #822;
+    color: var(--bs-danger);
     text-decoration: none;
+    cursor: pointer;
+    padding-left: 2px;
 }
 
 #code-block {

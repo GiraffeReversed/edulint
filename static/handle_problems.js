@@ -11,7 +11,7 @@ function assert(condition, message = "") {
 function setupEditor() {
     editor = CodeMirror.fromTextArea(code, {
         lineNumbers: true,
-        gutters: ["CodeMirror-linenumbers", "breakpoints"],
+        gutters: ["problemMarkers", "CodeMirror-linenumbers"],
         rulers: [{ color: "#ddd", column: 79, lineStyle: "dotted" }]
     });
 
@@ -20,7 +20,7 @@ function setupEditor() {
     editor.on("gutterClick", (cm, n) => {
         var info = cm.lineInfo(n);
         if (info.gutterMarkers) {
-            info.gutterMarkers.breakpoints.click();
+            info.gutterMarkers.problemMarkers.click();
             document.getElementById("problemGroup" + n).scrollIntoView(
                 {
                     behavior: "smooth",
@@ -31,10 +31,11 @@ function setupEditor() {
     });
 }
 
-function makeMarker() {
+function makeMarker(lineIndex) {
     var marker = document.createElement("div");
     marker.classList.add("problemMarker");
-    marker.innerHTML = "●";
+    marker.id = "problemMarker" + lineIndex;
+    marker.innerHTML = `<h5 class="bi bi-arrow-right-short"></h5>`;
     return marker;
 }
 
@@ -81,7 +82,7 @@ function oneLineProblemsHTML(oneLineProblems) {
     result += `</div>`;
     result += `</div>`;
 
-    editor.doc.setGutterMarker(lineIndex, "breakpoints", makeMarker());
+    editor.doc.setGutterMarker(lineIndex, "problemMarkers", makeMarker(lineIndex));
     return result;
 }
 
