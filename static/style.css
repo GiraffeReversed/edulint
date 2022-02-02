@@ -36,6 +36,12 @@
     animation-duration: 1700ms;
 }
 
+.highlighted-problem-group {
+    background-color: rgb(200, 200, 200);
+    animation-name: fade;
+    animation-duration: 1700ms;
+}
+
 #problems-block {
     overflow-y: auto;
 }

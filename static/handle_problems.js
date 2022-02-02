@@ -20,13 +20,17 @@ function setupEditor() {
     editor.on("gutterClick", (cm, n) => {
         var info = cm.lineInfo(n);
         if (info.gutterMarkers) {
-            info.gutterMarkers.problemMarkers.click();
-            document.getElementById("problemGroup" + n).scrollIntoView(
+            let problemGroup = document.getElementById("problemGroup" + n);
+            problemGroup.scrollIntoView(
                 {
                     behavior: "smooth",
-                    block: "center",
+                    block: "nearest",
                 }
             );
+            problemGroup.classList.add("highlighted-problem-group");
+            setTimeout(() => {
+                problemGroup.classList.remove("highlighted-problem-group");
+            }, 1700);
         }
     });
 }
