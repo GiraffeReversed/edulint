@@ -69,7 +69,7 @@ function oneLineProblemsHTML(oneLineProblems) {
         `<div class="problem border-bottom w-100 h-100 d-flex flex-column justify-content-center" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
                 <div class="btn-group problemBtn w-100 align-self-center" role="group">
                     <div class="p-1 small w-100">
-                        ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
+                        ${problem.line}: ${problem.text}
                     </div>
                     <button class="btn btn-outline-secondary problemInfoBtn p-1" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapse${lineIndex}_${i}" aria-expanded="false" data-line=${lineIndex}
@@ -82,10 +82,12 @@ function oneLineProblemsHTML(oneLineProblems) {
                 </div>
                 <div id="collapse${lineIndex}_${i}" class="accordion-collapse collapse multi-collapse${lineIndex}"
                     aria-labelledby="heading${lineIndex}_${i}" data-bs-parent="#problemsAccordion">
-                    <div class="accordion-body">
+                    <div class="accordion-body small">
                         WHY?!
                         <hr>
                         Examples
+                        <hr>
+                        <small>${problem.source} ${problem.code}</small>
                     </div>
                 </div>
             </div>`;
