@@ -50,7 +50,7 @@ body {
 
 .grid-main {
     display: grid;
-    grid-template-columns: 4fr 10px 3fr;
+    grid-template-columns: 4fr 15px 3fr;
 }
 
 .gutter-col {
