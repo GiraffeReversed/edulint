@@ -50,7 +50,7 @@
     border: none;
 }
 
-.button-group-vertical .problem:last-child {
+.d-flex .problem:last-child {
     border-bottom: none!important;
 }
 

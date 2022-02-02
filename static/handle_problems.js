@@ -61,14 +61,14 @@ function oneLineProblemsHTML(oneLineProblems) {
         `<button class="btn btn-outline-warning problemGotoBtn p-2" type="button" data-line=${lineIndex}>
             <h5 class="bi bi-bullseye mb-0"></h5>
         </button>`;
-    result += `<div class="button-group-vertical w-100">`;
+    result += `<div class="d-flex flex-column w-100">`;
 
     for (let i = 0; i < oneLineProblems.length; i++) {
         let problem = oneLineProblems[i];
         result +=
-        `<div class="problem border-bottom w-100" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
-                <div class="btn-group problemBtn w-100" role="group">
-                    <div class="p-1 small w-100 d-flex align-items-center">
+        `<div class="problem border-bottom w-100 h-100 d-flex flex-column justify-content-center" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
+                <div class="btn-group problemBtn w-100 align-self-center" role="group">
+                    <div class="p-1 small w-100">
                         ${problem.source} ${problem.line}: ${problem.code} ${problem.text}
                     </div>
                     <button class="btn btn-outline-secondary problemInfoBtn p-2" type="button" data-bs-toggle="collapse"
