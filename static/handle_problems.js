@@ -128,16 +128,9 @@ function gotoCodeClick(e) {
     jumpToLine(lineIndex);
 }
 
-function problemClick(e) {
-    let problemInfoBtn = e.currentTarget;
-    if (problemInfoBtn.ariaExpanded === "true") {
-        gotoCodeClick(e);
-    }
-}
-
 function registerProblemCallbacks() {
     for (let problemInfoBtn of document.getElementsByClassName("problemInfoBtn")) {
-        problemInfoBtn.addEventListener("click", problemClick);
+        problemInfoBtn.addEventListener("click", gotoCodeClick);
     }
 
     for (let problemGotoBtn of document.getElementsByClassName("problemGotoBtn")) {
