@@ -36,8 +36,12 @@
     overflow-y: auto;
 }
 
-.problemBtn > .btn {
+.problemGroup .btn {
     border: none;
+}
+
+.button-group-vertical .problem:last-child {
+    border-bottom: none!important;
 }
 
 body {
