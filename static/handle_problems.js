@@ -127,7 +127,9 @@ function gotoCodeClick(e) {
     setTimeout(() => {
         editor.removeLineClass(lineIndex, "background", "highlighted-line")
     }, 1700);
+    editor.focus();
     jumpToLine(lineIndex);
+    editor.setCursor({line: lineIndex, ch: 0});
 }
 
 function registerProblemCallbacks() {
