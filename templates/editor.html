@@ -6,8 +6,9 @@
   integrity="sha512-sF+AF3zpVOHMt4f4mN1dVS2/Hon6pr/7h1gc7rDHtga0SeD9z0UiL1J0k3umDFEz5qkY06ARcNzi45NkJ9GsYw=="
   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
-<script src="https://cdn.jsdelivr.net/npm/split-grid@1.0.11/dist/split-grid.min.js"
-  integrity="sha256-siGqMw4yMN/OhqeqX3ZhaXOP6wXKrzSJ2AoPdIEttXE=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.2/split.min.js"
+  integrity="sha512-to2k78YjoNUq8+hnJS8AwFg/nrLRFLdYYalb18SlcsFRXavCOTfBF3lNyplKkLJeB8YjKVTb1FPHGSy9sXfSdg=="
+  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script src="/static/handle_problems.js"></script>
 
@@ -19,30 +20,24 @@
 
 {% block content %}
 
-<div id="analysis-block" class="container-lg h-100 p-3 rounded-bottom">
-  <div class="row h-100 g-3 grid-main">
-    <div id="code-block" class="col h-100">
-      <h5>Code</h5>
+<div class="d-flex flex-row flex-fill" id="analysis-block">
+  <div id="code-block" class="flex-column me-2">
+    <h5>Code</h5>
 
-      <textarea name="code" id="code" placeholder="Enter your code here">{{textarea}}</textarea>
+    <textarea name="code" id="code" placeholder="Enter your code here">{{textarea}}</textarea>
 
-      <div class="input-group pt-3">
-        <input type="file" class="form-control" id="inputFile" aria-describedby="analysisSubmit" aria-label="Upload">
-        <button class="btn btn-primary" type="button" id="analysisSubmit">
-          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" hidden></span>
-          Lint
-        </button>
-      </div>
+    <div class="input-group pt-3">
+      <input type="file" class="form-control" id="inputFile" aria-describedby="analysisSubmit" aria-label="Upload">
+      <button class="btn btn-primary" type="button" id="analysisSubmit">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" hidden></span>
+        Lint
+      </button>
     </div>
-
-    <div class="gutter-col col" id="gutter"></div>
-
-    <div id="problems-block" class="col h-100 d-flex flex-column">
-        <h5>Problems</h5>
-        <div id="problems">
-
-        </div>
-      </div>
+  </div>
+  <div id="problems-block" class="d-flex flex-column ms-2">
+    <h5>Problems</h5>
+    <div id="problems">
+    </div>
   </div>
 </div>
 

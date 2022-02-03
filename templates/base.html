@@ -45,14 +45,16 @@
       </ul>
     </div>
   </nav>
-  <section class="content mx-3 d-flex">
-    <header>
-      {% block header %}{% endblock %}
-    </header>
+  <section class="container-lg p-0">
+    <div class="content d-flex flex-column p-3 pt-1 rounded-bottom align-items-stretch">
+      <header>
+        {% block header %}{% endblock %}
+      </header>
     {% for message in get_flashed_messages() %}
     <div class="flash">{{ message }}</div>
     {% endfor %}
-    {% block content %}{% endblock %}
+      {% block content %}{% endblock %}
+    </div>
   </section>
 </body>
 

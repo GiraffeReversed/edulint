@@ -240,13 +240,10 @@ function loadFile() {
 
 function setup() {
     setupEditor();
-    Split({
-        minSize: 255,
+    Split(['#code-block', '#problems-block'], {
+        minSize: 250,
         snapOffset: 0,
-        columnGutters: [{
-            track: 1,
-            element: document.querySelector('#gutter'),
-        }],
+        sizes: [60, 40],
     });
     document.getElementById("analysisSubmit").addEventListener("click", analyze);
     document.getElementById('inputFile').addEventListener('change', loadFile);
