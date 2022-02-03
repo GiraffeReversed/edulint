@@ -255,6 +255,10 @@ function loadFile() {
     document.getElementById("problems").innerText = "";
 }
 
+function resetFile() {
+    this.value = null;
+}
+
 function setup() {
     setupEditor();
     Split(['#code-block', '#problems-block'], {
@@ -264,6 +268,7 @@ function setup() {
     });
     document.getElementById("analysisSubmit").addEventListener("click", analyze);
     document.getElementById('inputFile').addEventListener('change', loadFile);
+    document.getElementById('inputFile', false).addEventListener('click', resetFile);
 }
 
 document.addEventListener("DOMContentLoaded", setup)
