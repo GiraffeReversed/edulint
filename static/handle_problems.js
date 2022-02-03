@@ -39,15 +39,23 @@ function makeMarker(lineIndex) {
     var marker = document.createElement("div");
     marker.classList.add("problemMarker");
     marker.id = "problemMarker" + lineIndex;
+    marker.dataset.line = lineIndex;
     marker.innerHTML = `<h5 class="bi bi-arrow-right-short"></h5>`;
     return marker;
 }
 
-// TODO warn on shift
-function approximateCurrentLineIndex(problemLine) {
+function getCurrentLineIndex(problemLine) {
+    jumpToLine(problemLine);
     let marker = document.getElementById("problemMarker" + problemLine);
-    if (!marker)
-        return problemLine;
+    if (!marker) {
+        for (let i = 0; i < editor.lineCount(); i++) {
+            let gutterM = editor.lineInfo(i).gutterMarkers;
+            if (gutterM && gutterM.problemMarkers.dataset.line == problemLine) {
+                return i;
+            }
+        }
+        assert(false, "unreachable");
+    }
     return Number(marker.parentElement.previousElementSibling.innerText) - 1;
 }
 
@@ -122,7 +130,7 @@ function jumpToLine(n) {
 
 function gotoCodeClick(e) {
     let problemInfoBtn = e.currentTarget;
-    let lineIndex = approximateCurrentLineIndex(Number(problemInfoBtn.dataset.line));
+    let lineIndex = getCurrentLineIndex(Number(problemInfoBtn.dataset.line));
     editor.addLineClass(lineIndex, "background", "highlighted-line");
     setTimeout(() => {
         editor.removeLineClass(lineIndex, "background", "highlighted-line")
