@@ -15,7 +15,7 @@ function updateActiveProblems(from, to) {
     for (let problemGroup of document.querySelectorAll("#problems-block .problemGroup.active")) {
         problemGroup.classList.remove("active");
     }
-    
+
     for (let i = from; i <= to; i++) {
         let info = editor.lineInfo(i);
         if (info.gutterMarkers) {
@@ -98,7 +98,7 @@ function oneLineProblemsHTML(oneLineProblems) {
     for (let i = 0; i < oneLineProblems.length; i++) {
         let problem = oneLineProblems[i];
         result +=
-        `<div class="problem border-bottom w-100 h-100 d-flex flex-column justify-content-center" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
+            `<div class="problem border-bottom w-100 h-100 d-flex flex-column justify-content-center" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
                 <div class="btn-group problemBtn w-100 align-self-center" role="group">
                     <div class="p-1 small w-100">
                         ${problem.line}: ${problem.text}
@@ -157,7 +157,7 @@ function gotoCodeClick(e) {
     let lineIndex = getCurrentLineIndex(Number(problemInfoBtn.dataset.line));
     editor.focus();
     jumpToLine(lineIndex);
-    editor.setCursor({line: lineIndex, ch: 0});
+    editor.setCursor({ line: lineIndex, ch: 0 });
 }
 
 function allSolved(problemGroup) {
