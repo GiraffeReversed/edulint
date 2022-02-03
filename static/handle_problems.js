@@ -112,7 +112,7 @@ function oneLineProblemsHTML(oneLineProblems) {
         result +=
             `<div class="problem border-bottom w-100 h-100 d-flex flex-column justify-content-center" id="problem${lineIndex}_${i}" data-line=${lineIndex}>
                 <div class="btn-group problemBtn w-100 align-self-center" role="group">
-                    <div class="p-1 small w-100">
+                    <div class="problemText p-1 small w-100" id="problemText${lineIndex}_${i}">
                         ${problem.line}: ${problem.text}
                     </div>
                     <button class="btn btn-outline-secondary problemInfoBtn p-1" type="button" data-bs-toggle="collapse"
@@ -207,6 +207,27 @@ function markSolved(e) {
     }
 }
 
+function problemTextClick(e) {
+    let problemText = e.currentTarget;
+    let problem = problemText.closest(".problem");
+    if (window.localStorage.getItem("settingProblemClickHighlight") === "true") {
+        updateActiveProblems(Number(problem.dataset.line));
+    }
+    
+    if (window.localStorage.getItem("settingProblemClickGoto") === "true") {
+        let problemGroup = problemText.closest(".problemGroup");
+        problemGroup.getElementsByClassName("problemGotoBtn")[0].click();
+    }
+
+    if (window.localStorage.getItem("settingProblemClickInfo") === "true") {
+        problem.getElementsByClassName("problemInfoBtn")[0].click();
+    }
+
+    if (window.localStorage.getItem("settingProblemClickSolve") === "true") {
+        problem.getElementsByClassName("problemSolvedBtn")[0].click();
+    }
+}
+
 function registerProblemCallbacks() {
     for (let problemInfoBtn of document.getElementsByClassName("problemInfoBtn")) {
         problemInfoBtn.addEventListener("click", gotoCodeClick);
@@ -218,6 +239,10 @@ function registerProblemCallbacks() {
 
     for (let problemSolvedBtn of document.getElementsByClassName("problemSolvedBtn")) {
         problemSolvedBtn.addEventListener("click", markSolved);
+    }
+
+    for (let problemText of document.getElementsByClassName("problemText")) {
+        problemText.addEventListener("click", problemTextClick);
     }
 }
 
