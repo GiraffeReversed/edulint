@@ -66,6 +66,10 @@
     border-color: var(--bs-secondary)!important;
 }
 
+.problemGroup.active.solved {
+    border-color: var(--bs-success)!important;
+}
+
 .d-flex .problem:last-child {
     border-bottom: none!important;
 }

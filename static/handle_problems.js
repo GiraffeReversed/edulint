@@ -183,8 +183,10 @@ function markSolved(e) {
     let marker = getProblemMarker(problemGroup.dataset.line, false);
     if (allSolved(problemGroup)) {
         marker.classList.add("solved");
+        problemGroup.classList.add("solved");
     } else {
         marker.classList.remove("solved");
+        problemGroup.classList.remove("solved");
     }
 }
 
