@@ -50,9 +50,14 @@
       <header>
         {% block header %}{% endblock %}
       </header>
-    {% for message in get_flashed_messages() %}
-    <div class="flash">{{ message }}</div>
-    {% endfor %}
+      <div id="messages">
+        {% for message in get_flashed_messages() %}
+        <div class="alert alert-warning alert-dismissible fade show mb-2" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+      </div>
       {% block content %}{% endblock %}
     </div>
   </section>
