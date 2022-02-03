@@ -88,7 +88,7 @@ function oneLineProblemsHTML(oneLineProblems) {
 
     let lineIndex = Number(oneLineProblems[0].line) - 1;
     let result =
-        `<div id="problemGroup${lineIndex}" data-line=${lineIndex} class="problemGroup mb-2 btn-group border rounded w-100">`;
+        `<div id="problemGroup${lineIndex}" data-line=${lineIndex} class="problemGroup mb-2 btn-group border rounded-3 w-100">`;
     result +=
         `<button class="btn btn-outline-warning problemGotoBtn p-1 px-2" type="button" data-line=${lineIndex}>
             <h5 class="bi bi-bullseye mb-0"></h5>
