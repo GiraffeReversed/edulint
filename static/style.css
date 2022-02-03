@@ -54,6 +54,14 @@
     border: none;
 }
 
+.problemGroup .problem:not(:last-child) .problemSolvedBtn {
+    border-bottom-right-radius: 0px;
+}
+
+.problemGroup .problem:not(:first-child) .problemSolvedBtn {
+    border-top-right-radius: 0px;
+}
+
 .d-flex .problem:last-child {
     border-bottom: none!important;
 }
