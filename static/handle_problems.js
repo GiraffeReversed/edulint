@@ -245,6 +245,7 @@ function analyze(e) {
 function loadFile() {
     let file = this.files[0];
     if (!file) {
+        showAlert("danger", "Select a .py file.");
         return;
     }
 
