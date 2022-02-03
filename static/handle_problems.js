@@ -290,11 +290,12 @@ function initSettings() {
         let val = window.localStorage.getItem(id);
         let check = document.getElementById(id);
 
-        if (val) {
+        if (val !== null) {
             check.checked = val === "true";
         } else {
             check.checked = def;
         }
+        window.localStorage.setItem(id, check.checked);
     }
 }
 
