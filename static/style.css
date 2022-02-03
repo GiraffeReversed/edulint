@@ -9,7 +9,6 @@
 
 .problemMarker {
     color: var(--bs-danger);
-    text-decoration: none;
     cursor: pointer;
     padding-left: 2px;
 }
@@ -18,33 +17,10 @@
     color: var(--bs-success);
 }
 
-#code-block {
-    display: flex;
-    flex-direction: column;
-    overflow-x: auto;
-}
-
 .CodeMirror {
     font-size: 13px;
     flex-grow: 1;
     border: 1px solid #eee;
-}
-
-@keyframes fade {
-    from {background-color: rgb(200, 200, 200);}
-    to {background-color: rgba(200, 200, 200, 0);}
-}
-
-.highlighted-line {
-    background-color: rgb(200, 200, 200);
-    animation-name: fade;
-    animation-duration: 1700ms;
-}
-
-.highlighted-problem-group {
-    background-color: rgb(200, 200, 200);
-    animation-name: fade;
-    animation-duration: 1700ms;
 }
 
 #analysis-block {
