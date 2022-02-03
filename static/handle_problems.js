@@ -62,6 +62,14 @@ function makeMarker(lineIndex) {
     return marker;
 }
 
+function showAlert(type, message) {
+    document.getElementById("messages").innerHTML +=
+        `<div class="alert alert-${type} alert-dismissible fade show mb-2" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>`;
+}
+
 function getProblemMarker(problemLine, withFocus) {
     if (withFocus)
         jumpToLine(problemLine);
@@ -75,11 +83,15 @@ function getProblemMarker(problemLine, withFocus) {
             return gutterM.problemMarkers;
         }
     }
-    assert(false, "unreachable");
+
+    return null;
 }
 
 function getCurrentLineIndex(problemLine) {
     let marker = getProblemMarker(problemLine, true);
+    if (!marker)
+        return null;
+
     return Number(marker.parentElement.previousElementSibling.innerText) - 1;
 }
 
@@ -155,6 +167,11 @@ function jumpToLine(n) {
 function gotoCodeClick(e) {
     let problemInfoBtn = e.currentTarget;
     let lineIndex = getCurrentLineIndex(Number(problemInfoBtn.dataset.line));
+    if (!lineIndex) {
+        showAlert("warning", "Line with this problem has been removed.");
+        return;
+    }
+
     editor.focus();
     jumpToLine(lineIndex);
     editor.setCursor({ line: lineIndex, ch: 0 });
@@ -182,10 +199,10 @@ function markSolved(e) {
     let problemGroup = btn.closest(".problemGroup");
     let marker = getProblemMarker(problemGroup.dataset.line, false);
     if (allSolved(problemGroup)) {
-        marker.classList.add("solved");
+        marker?.classList.add("solved");
         problemGroup.classList.add("solved");
     } else {
-        marker.classList.remove("solved");
+        marker?.classList.remove("solved");
         problemGroup.classList.remove("solved");
     }
 }
