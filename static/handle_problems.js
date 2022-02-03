@@ -244,8 +244,7 @@ function analyze(e) {
 
 function loadFile() {
     let file = this.files[0];
-    if (!file || file.type !== "text/x-python") {
-        alert("Upload Python file");
+    if (!file) {
         return;
     }
 
