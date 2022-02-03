@@ -44,18 +44,24 @@ function makeMarker(lineIndex) {
     return marker;
 }
 
-function getCurrentLineIndex(problemLine) {
-    jumpToLine(problemLine);
+function getProblemMarker(problemLine, withFocus) {
+    if (withFocus)
+        jumpToLine(problemLine);
     let marker = document.getElementById("problemMarker" + problemLine);
-    if (!marker) {
-        for (let i = 0; i < editor.lineCount(); i++) {
-            let gutterM = editor.lineInfo(i).gutterMarkers;
-            if (gutterM && gutterM.problemMarkers.dataset.line == problemLine) {
-                return i;
-            }
+    if (marker)
+        return marker;
+
+    for (let i = 0; i < editor.lineCount(); i++) {
+        let gutterM = editor.lineInfo(i).gutterMarkers;
+        if (gutterM && gutterM.problemMarkers.dataset.line == problemLine) {
+            return gutterM.problemMarkers;
         }
-        assert(false, "unreachable");
     }
+    assert(false, "unreachable");
+}
+
+function getCurrentLineIndex(problemLine) {
+    let marker = getProblemMarker(problemLine, true);
     return Number(marker.parentElement.previousElementSibling.innerText) - 1;
 }
 
