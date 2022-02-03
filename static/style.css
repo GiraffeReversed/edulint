@@ -13,6 +13,10 @@
     padding-left: 2px;
 }
 
+.problemMarker.solved {
+    color: var(--bs-success);
+}
+
 #code-block {
     display: flex;
     flex-direction: column;

@@ -90,7 +90,7 @@ function oneLineProblemsHTML(oneLineProblems) {
                         aria-controls="collapse${lineIndex}_${i}" id="heading${lineIndex}_${i}">
                         <h5 class="bi bi-chevron-down mb-0"></h5>
                     </button>
-                    <button class="btn btn-outline-success problemSolvedBtn p-1" type="button" data-line=${lineIndex}>
+                    <button class="btn btn-outline-success problemSolvedBtn p-1" type="button" data-line=${lineIndex} data-solved=false>
                         <h5 class="bi bi-check2 mb-0"></h5>
                     </button>
                 </div>
@@ -146,6 +146,34 @@ function gotoCodeClick(e) {
     editor.setCursor({line: lineIndex, ch: 0});
 }
 
+function allSolved(problemGroup) {
+    for (let btn of problemGroup.getElementsByClassName("problemSolvedBtn")) {
+        if (btn.dataset.solved !== "true")
+            return false;
+    }
+    return true;
+}
+
+function markSolved(e) {
+    let btn = e.currentTarget;
+
+    if (btn.dataset.solved === "false") {
+        btn.classList.replace("btn-outline-success", "btn-success");
+        btn.dataset.solved = true;
+    } else {
+        btn.classList.replace("btn-success", "btn-outline-success");
+        btn.dataset.solved = false;
+    }
+
+    let problemGroup = btn.closest(".problemGroup");
+    let marker = getProblemMarker(problemGroup.dataset.line, false);
+    if (allSolved(problemGroup)) {
+        marker.classList.add("solved");
+    } else {
+        marker.classList.remove("solved");
+    }
+}
+
 function registerProblemCallbacks() {
     for (let problemInfoBtn of document.getElementsByClassName("problemInfoBtn")) {
         problemInfoBtn.addEventListener("click", gotoCodeClick);
@@ -153,6 +181,10 @@ function registerProblemCallbacks() {
 
     for (let problemGotoBtn of document.getElementsByClassName("problemGotoBtn")) {
         problemGotoBtn.addEventListener("click", gotoCodeClick);
+    }
+
+    for (let problemSolvedBtn of document.getElementsByClassName("problemSolvedBtn")) {
+        problemSolvedBtn.addEventListener("click", markSolved);
     }
 }
 
