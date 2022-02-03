@@ -259,6 +259,28 @@ function resetFile() {
     this.value = null;
 }
 
+function initSettings() {
+    for (let [setting, def] of [["Highlight", true], ["Goto", true], ["Info", false], ["Solve", false]]) {
+        let id = "settingProblemClick" + setting;
+        let val = window.localStorage.getItem(id);
+        let check = document.getElementById(id);
+
+        if (val) {
+            check.checked = val === "true";
+        } else {
+            check.checked = def;
+        }
+    }
+}
+
+function saveSettings() {
+    for (let setting of ["Highlight", "Goto", "Info", "Solve"]) {
+        let id = "settingProblemClick" + setting;
+        let check = document.getElementById(id);
+        window.localStorage.setItem(id, check.checked);
+    }
+}
+
 function setup() {
     setupEditor();
     Split(['#code-block', '#problems-block'], {
@@ -269,6 +291,8 @@ function setup() {
     document.getElementById("analysisSubmit").addEventListener("click", analyze);
     document.getElementById('inputFile').addEventListener('change', loadFile);
     document.getElementById('inputFile', false).addEventListener('click', resetFile);
+    initSettings();
+    document.getElementById("settingsSave").addEventListener("click", saveSettings);
 }
 
 document.addEventListener("DOMContentLoaded", setup)
