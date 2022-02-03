@@ -11,6 +11,7 @@ function assert(condition, message = "") {
 function setupEditor() {
     editor = CodeMirror.fromTextArea(code, {
         lineNumbers: true,
+        styleActiveLine: true,
         gutters: ["problemMarkers", "CodeMirror-linenumbers"],
         rulers: [{ color: "#ddd", column: 79, lineStyle: "dotted" }]
     });
@@ -137,10 +138,6 @@ function jumpToLine(n) {
 function gotoCodeClick(e) {
     let problemInfoBtn = e.currentTarget;
     let lineIndex = getCurrentLineIndex(Number(problemInfoBtn.dataset.line));
-    editor.addLineClass(lineIndex, "background", "highlighted-line");
-    setTimeout(() => {
-        editor.removeLineClass(lineIndex, "background", "highlighted-line")
-    }, 1700);
     editor.focus();
     jumpToLine(lineIndex);
     editor.setCursor({line: lineIndex, ch: 0});
