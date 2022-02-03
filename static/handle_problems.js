@@ -207,7 +207,7 @@ function registerProblemCallbacks() {
 function analyze(e) {
     let lintButton = e.currentTarget;
     lintButton.firstElementChild.hidden = false;
-    let problemsBlock = document.getElementById("problems-block");
+    let problemsBlock = document.getElementById("problems");
     problemsBlock.innerHTML = ""
     fetch("/analyze", {
         method: "POST",
@@ -235,7 +235,7 @@ function loadFile() {
     let reader = new FileReader();
     reader.onload = function () { editor.setValue(reader.result); }
     reader.readAsText(file);
-    document.getElementById("problems-block").innerText = "";
+    document.getElementById("problems").innerText = "";
 }
 
 function setup() {

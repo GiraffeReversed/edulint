@@ -47,6 +47,10 @@
 }
 
 #problems-block {
+    overflow-y: hidden;
+}
+
+#problems {
     overflow-y: auto;
 }
 
