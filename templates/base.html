@@ -34,6 +34,49 @@
   {% block head %}{% endblock %}
 </head>
 
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="settingsModalLabel">Settings</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Clicking on problem text should:</h5>
+            <p class="card-text">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="settingProblemClickHighlight">
+              <label class="form-check-label" for="settingProblemClickHighlight">Highlight problem</label>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="settingProblemClickGoto">
+              <label class="form-check-label" for="settingProblemClickGoto"><i class="bi bi-bullseye"></i> Go to code
+                line</label>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="settingProblemClickInfo">
+              <label class="form-check-label" for="settingProblemClickInfo"><i class="bi bi-chevron-down"></i> Show
+                problem details</label>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="settingProblemClickSolve">
+              <label class="form-check-label" for="settingProblemClickSolve"><i class="bi bi-check-lg"></i> Mark problem
+                as solved</label>
+            </div>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="settingsSave">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <body>
   <nav class="navbar navbar-expand navbar-light bg-light">
     <div class="container-lg">
@@ -43,6 +86,10 @@
           <a class="nav-link active" aria-current="page" href="{{ url_for('editor') }}">Editor</a>
         </li>
       </ul>
+      <a role="button" class="nav-link text-secondary px-2" data-bs-toggle="modal" data-bs-target="#settingsModal">
+        <i class="bi bi-gear-fill"></i>
+      </a>
+
     </div>
   </nav>
   <section class="container-lg p-0">
