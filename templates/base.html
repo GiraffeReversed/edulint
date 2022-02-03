@@ -46,11 +46,11 @@
     </div>
   </nav>
   <section class="container-lg p-0">
-    <div class="content d-flex flex-column p-3 pt-1 rounded-bottom align-items-stretch">
+    <div class="content d-flex flex-column rounded-bottom align-items-stretch">
       <header>
         {% block header %}{% endblock %}
       </header>
-      <div id="messages">
+      <div id="messages" class="m-3 mb-0 mt-2">
         {% for message in get_flashed_messages() %}
         <div class="alert alert-warning alert-dismissible fade show mb-2" role="alert">
           {{ message }}

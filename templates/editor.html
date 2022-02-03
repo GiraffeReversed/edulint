@@ -14,14 +14,10 @@
 
 {% endblock %}
 
-{% block header %}
-<h1>{% block title %}{% endblock %}</h1>
-{% endblock %}
-
 {% block content %}
 
 <div class="d-flex flex-row flex-fill" id="analysis-block">
-  <div id="code-block" class="flex-column me-2">
+  <div id="code-block" class="d-flex flex-column m-3 me-2 mt-1">
     <h5>Code</h5>
 
     <textarea name="code" id="code" placeholder="Enter your code here">{{textarea}}</textarea>
@@ -35,9 +31,9 @@
       </button>
     </div>
   </div>
-  <div id="problems-block" class="d-flex flex-column ms-2">
-    <h5>Problems</h5>
-    <div id="problems">
+  <div id="problems-block" class="d-flex flex-column m-3 ms-0 mt-1">
+    <h5 class="ms-2">Problems</h5>
+    <div id="problems" class="pt-1 pe-1 ps-2">
     </div>
   </div>
 </div>

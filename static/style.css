@@ -87,6 +87,7 @@ body {
     background-color: #eee;
     background-repeat: no-repeat;
     background-position: 50%;
+    margin-bottom: 1em;
 }
 
 .gutter.gutter-horizontal {
