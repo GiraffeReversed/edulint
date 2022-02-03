@@ -62,6 +62,10 @@
     border-top-right-radius: 0px;
 }
 
+.problemGroup.active {
+    border-color: var(--bs-secondary)!important;
+}
+
 .d-flex .problem:last-child {
     border-bottom: none!important;
 }

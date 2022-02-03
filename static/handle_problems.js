@@ -8,6 +8,29 @@ function assert(condition, message = "") {
     }
 }
 
+function updateActiveProblems(from, to) {
+    if (!to)
+        to = from;
+
+    for (let problemGroup of document.querySelectorAll("#problems-block .problemGroup.active")) {
+        problemGroup.classList.remove("active");
+    }
+    
+    for (let i = from; i <= to; i++) {
+        let info = editor.lineInfo(i);
+        if (info.gutterMarkers) {
+            let problemGroup = document.getElementById("problemGroup" + info.gutterMarkers.problemMarkers.dataset.line);
+            problemGroup.scrollIntoView(
+                {
+                    behavior: "smooth",
+                    block: "nearest",
+                }
+            );
+            problemGroup.classList.add("active");
+        }
+    }
+}
+
 function setupEditor() {
     editor = CodeMirror.fromTextArea(code, {
         lineNumbers: true,
@@ -21,18 +44,12 @@ function setupEditor() {
     editor.on("gutterClick", (cm, n) => {
         var info = cm.lineInfo(n);
         if (info.gutterMarkers) {
-            let problemGroup = document.getElementById("problemGroup" + n);
-            problemGroup.scrollIntoView(
-                {
-                    behavior: "smooth",
-                    block: "nearest",
-                }
-            );
-            problemGroup.classList.add("highlighted-problem-group");
-            setTimeout(() => {
-                problemGroup.classList.remove("highlighted-problem-group");
-            }, 1700);
+            updateActiveProblems(n);
         }
+    });
+
+    editor.on("cursorActivity", (cm) => {
+        updateActiveProblems(cm.getCursor("from").line, cm.getCursor("to").line);
     });
 }
 
