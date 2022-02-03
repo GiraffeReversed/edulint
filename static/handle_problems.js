@@ -244,8 +244,8 @@ function analyze(e) {
 
 function loadFile() {
     let file = this.files[0];
-    if (!file) {
-        showAlert("danger", "Select a .py file.");
+    if (!file || !file.name.endsWith(".py")) {
+        showAlert("danger", `Select a <span class="font-monospace">.py</span> file.`);
         return;
     }
 
