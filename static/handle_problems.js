@@ -1,6 +1,8 @@
 'use strict';
 
 let editor;
+let EDITOR_LIGHT_THEME = "coda";
+let EDITOR_DARK_THEME = "sunburst";
 
 function assert(condition, message = "") {
     if (!condition) {
@@ -36,10 +38,9 @@ function setupEditor() {
         lineNumbers: true,
         styleActiveLine: true,
         gutters: ["problemMarkers", "CodeMirror-linenumbers"],
-        rulers: [{ color: "#ddd", column: 79, lineStyle: "dotted" }]
+        rulers: [{ color: "#ddd", column: 79, lineStyle: "dotted" }],
+        theme: darkmode.inDarkMode ? EDITOR_DARK_THEME : EDITOR_LIGHT_THEME
     });
-
-    // editor.setOption("theme", "base16-light");
 
     editor.on("gutterClick", (cm, n) => {
         var info = cm.lineInfo(n);
@@ -284,19 +285,27 @@ function resetFile() {
     this.value = null;
 }
 
+function initSetting(id, def) {
+    let val = window.localStorage.getItem(id);
+    let check = document.getElementById(id);
+
+    if (val !== null) {
+        check.checked = val === "true";
+    } else {
+        check.checked = def;
+    }
+    return check.checked;
+}
+
 function initSettings() {
     for (let [setting, def] of [["Highlight", true], ["Goto", true], ["Info", false], ["Solve", false]]) {
         let id = "settingProblemClick" + setting;
-        let val = window.localStorage.getItem(id);
-        let check = document.getElementById(id);
-
-        if (val !== null) {
-            check.checked = val === "true";
-        } else {
-            check.checked = def;
-        }
-        window.localStorage.setItem(id, check.checked);
+        let val = initSetting(id, def);
+        window.localStorage.setItem(id, val);
     }
+
+    initSetting("settingDarkmode", darkmode.inDarkMode);
+    document.getElementsByName("color-scheme")[0].content = darkmode.inDarkMode ? "dark" : "light";
 }
 
 function saveSettings() {
@@ -305,6 +314,12 @@ function saveSettings() {
         let check = document.getElementById(id);
         window.localStorage.setItem(id, check.checked);
     }
+}
+
+function toggleDarkmode() {
+    darkmode.toggleDarkMode();
+    document.getElementsByName("color-scheme")[0].content = darkmode.inDarkMode ? "dark" : "light";
+    editor.setOption("theme", darkmode.inDarkMode ? EDITOR_DARK_THEME : EDITOR_LIGHT_THEME);
 }
 
 function setup() {
@@ -319,6 +334,7 @@ function setup() {
     document.getElementById('inputFile', false).addEventListener('click', resetFile);
     initSettings();
     document.getElementById("settingsSave").addEventListener("click", saveSettings);
+    document.getElementById("settingDarkmode").addEventListener("click", toggleDarkmode);
 }
 
 document.addEventListener("DOMContentLoaded", setup)
