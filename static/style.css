@@ -6,8 +6,39 @@
     width: 1.2em;
 }
 
+body {
+    background-color: #d1d1d1;
+    background-image: url("black-thread.png");
+    background-size: 3.4% auto;
+}
+
+html.dark body {
+    background-color: #090909;
+}
+
+.navbar {
+    background-color: #bbbbbb;
+}
+
+html.dark .navbar {
+    background-color: #3b3b3b;
+}
+
 .content {
     height: calc(100vh - 70px);
+    background-color: #ebebebd1;
+}
+
+html.dark .content {
+    background-color: #151515e6;
+}
+
+.problemGroup {
+    background-color: white;
+}
+
+html.dark .problemGroup {
+    background-color: #222;
 }
 
 .problemMarker {
@@ -64,10 +95,6 @@ html.dark .CodeMirror-scrollbar-filler {
 
 .d-flex .problem:last-child {
     border-bottom: none!important;
-}
-
-body {
-    background-image: url("cutcube.png");
 }
 
 .gutter {
