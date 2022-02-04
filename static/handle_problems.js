@@ -165,8 +165,7 @@ function jumpToLine(n) {
     editor.scrollTo(null, t - middleHeight - 5);
 }
 
-function gotoCodeClick(e) {
-    let problemInfoBtn = e.currentTarget;
+function gotoCodeClick(problemInfoBtn) {
     let lineIndex = getCurrentLineIndex(Number(problemInfoBtn.dataset.line));
     if (!lineIndex) {
         showAlert("warning", "Line with this problem has been removed.");
@@ -186,9 +185,7 @@ function allSolved(problemGroup) {
     return true;
 }
 
-function markSolved(e) {
-    let btn = e.currentTarget;
-
+function markSolved(btn) {
     if (btn.dataset.solved === "false") {
         btn.classList.replace("btn-outline-success", "btn-success");
         btn.dataset.solved = true;
@@ -210,8 +207,7 @@ function markSolved(e) {
     }
 }
 
-function problemTextClick(e) {
-    let problemText = e.currentTarget;
+function problemTextClick(problemText) {
     let problem = problemText.closest(".problem");
     if (window.localStorage.getItem("settingProblemClickHighlight") === "true") {
         updateActiveProblems(Number(problem.dataset.line));
@@ -233,19 +229,19 @@ function problemTextClick(e) {
 
 function registerProblemCallbacks() {
     for (let problemInfoBtn of document.getElementsByClassName("problemInfoBtn")) {
-        problemInfoBtn.addEventListener("click", gotoCodeClick);
+        problemInfoBtn.addEventListener("click", e => gotoCodeClick(e.currentTarget));
     }
 
     for (let problemGotoBtn of document.getElementsByClassName("problemGotoBtn")) {
-        problemGotoBtn.addEventListener("click", gotoCodeClick);
+        problemGotoBtn.addEventListener("click", e => gotoCodeClick(e.currentTarget));
     }
 
     for (let problemSolvedBtn of document.getElementsByClassName("problemSolvedBtn")) {
-        problemSolvedBtn.addEventListener("click", markSolved);
+        problemSolvedBtn.addEventListener("click", e => markSolved(e.currentTarget));
     }
 
     for (let problemText of document.getElementsByClassName("problemText")) {
-        problemText.addEventListener("click", problemTextClick);
+        problemText.addEventListener("click", e => problemTextClick(e.currentTarget));
     }
 }
 
