@@ -20,7 +20,10 @@
 
 <div class="d-flex flex-row flex-fill" id="analysis-block">
   <div id="code-block" class="d-flex flex-column m-3 me-2 mt-1">
-    <h5>Code</h5>
+    <div class="d-flex flex-row justify-content-between">
+      <h5>Code</h5>
+      <small id="keybind" hidden><kbd class="bg-secondary"><kbd class="bg-secondary">ctrl</kbd> + <kbd class="bg-secondary">D</kbd></kbd> to mark current line as solved</small>
+    </div>
 
     <textarea name="code" id="code" placeholder="Enter your code here">{{textarea}}</textarea>
 

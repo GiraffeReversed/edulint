@@ -288,6 +288,7 @@ function analyze(e) {
             lintButton.firstElementChild.hidden = true;
         }
         );
+    document.getElementById("keybind").hidden = false;
 }
 
 function loadFile() {
