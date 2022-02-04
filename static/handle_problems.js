@@ -10,26 +10,34 @@ function assert(condition, message = "") {
     }
 }
 
-function updateActiveProblems(from, to) {
+function collectSelectedProblemGroups(from, to) {
     if (!to)
         to = from;
 
-    for (let problemGroup of document.querySelectorAll("#problems-block .problemGroup.active")) {
-        problemGroup.classList.remove("active");
-    }
-
+    let result = [];
     for (let i = from; i <= to; i++) {
         let info = editor.lineInfo(i);
         if (info.gutterMarkers) {
             let problemGroup = document.getElementById("problemGroup" + info.gutterMarkers.problemMarkers.dataset.line);
-            problemGroup.scrollIntoView(
-                {
-                    behavior: "smooth",
-                    block: "nearest",
-                }
-            );
-            problemGroup.classList.add("active");
+            result.push(problemGroup);
         }
+    }
+    return result;
+}
+
+function updateActiveProblems(problemGroups) {
+    for (let problemGroup of document.querySelectorAll("#problems-block .problemGroup.active")) {
+        problemGroup.classList.remove("active");
+    }
+
+    for (let problemGroup of problemGroups) {
+        problemGroup.scrollIntoView(
+            {
+                behavior: "smooth",
+                block: "nearest",
+            }
+        );
+        problemGroup.classList.add("active");
     }
 }
 
@@ -45,12 +53,12 @@ function setupEditor() {
     editor.on("gutterClick", (cm, n) => {
         var info = cm.lineInfo(n);
         if (info.gutterMarkers) {
-            updateActiveProblems(n);
+            updateActiveProblems(collectSelectedProblemGroups(n));
         }
     });
 
     editor.on("cursorActivity", (cm) => {
-        updateActiveProblems(cm.getCursor("from").line, cm.getCursor("to").line);
+        updateActiveProblems(collectSelectedProblemGroups(cm.getCursor("from").line, cm.getCursor("to").line));
     });
 }
 
@@ -209,12 +217,12 @@ function markSolved(btn) {
 
 function problemTextClick(problemText) {
     let problem = problemText.closest(".problem");
+    let problemGroup = problemText.closest(".problemGroup");
     if (window.localStorage.getItem("settingProblemClickHighlight") === "true") {
-        updateActiveProblems(Number(problem.dataset.line));
+        updateActiveProblems([problemGroup]);
     }
-    
+
     if (window.localStorage.getItem("settingProblemClickGoto") === "true") {
-        let problemGroup = problemText.closest(".problemGroup");
         problemGroup.getElementsByClassName("problemGotoBtn")[0].click();
     }
 
