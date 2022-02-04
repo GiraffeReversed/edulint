@@ -56,7 +56,7 @@ function setupEditor() {
 
 function makeMarker(lineIndex) {
     var marker = document.createElement("div");
-    marker.classList.add("problemMarker");
+    marker.classList.add("problemMarker", "text-danger");
     marker.id = "problemMarker" + lineIndex;
     marker.dataset.line = lineIndex;
     marker.innerHTML = `<h5 class="bi bi-arrow-right-short"></h5>`;
@@ -200,10 +200,12 @@ function markSolved(e) {
     let problemGroup = btn.closest(".problemGroup");
     let marker = getProblemMarker(problemGroup.dataset.line, false);
     if (allSolved(problemGroup)) {
-        marker?.classList.add("solved");
+        marker?.classList.add("text-success");
+        marker?.classList.remove("text-danger");
         problemGroup.classList.add("solved");
     } else {
-        marker?.classList.remove("solved");
+        marker?.classList.remove("text-success");
+        marker?.classList.add("text-danger");
         problemGroup.classList.remove("solved");
     }
 }

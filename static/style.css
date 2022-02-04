@@ -11,21 +11,8 @@
 }
 
 .problemMarker {
-    color: var(--bs-danger);
     cursor: pointer;
     padding-left: 2px;
-}
-
-.problemMarker.solved {
-    color: var(--bs-success);
-}
-
-html.dark .problemMarker {
-    color: var(--bs-danger-alt);
-}
-
-html.dark .problemMarker.solved {
-    color: var(--bs-success-alt);
 }
 
 .CodeMirror {
