@@ -299,15 +299,23 @@ function initSetting(id, def) {
     return check.checked;
 }
 
+function setDarkmodeToggle() {
+    let darkmodeToggle = document.getElementById("settingDarkmode").firstElementChild;
+    if (darkmode.inDarkMode) {
+        darkmodeToggle.classList.replace("bi-moon-fill", "bi-sun-fill");
+    } else {
+        darkmodeToggle.classList.replace("bi-sun-fill", "bi-moon-fill");
+    }
+    document.getElementsByName("color-scheme")[0].content = darkmode.inDarkMode ? "dark" : "light";
+}
+
 function initSettings() {
     for (let [setting, def] of [["Highlight", true], ["Goto", true], ["Info", false], ["Solve", false]]) {
         let id = "settingProblemClick" + setting;
         let val = initSetting(id, def);
         window.localStorage.setItem(id, val);
     }
-
-    initSetting("settingDarkmode", darkmode.inDarkMode);
-    document.getElementsByName("color-scheme")[0].content = darkmode.inDarkMode ? "dark" : "light";
+    setDarkmodeToggle();
 }
 
 function saveSettings() {
@@ -320,7 +328,7 @@ function saveSettings() {
 
 function toggleDarkmode() {
     darkmode.toggleDarkMode();
-    document.getElementsByName("color-scheme")[0].content = darkmode.inDarkMode ? "dark" : "light";
+    setDarkmodeToggle();
     editor.setOption("theme", darkmode.inDarkMode ? EDITOR_DARK_THEME : EDITOR_LIGHT_THEME);
 }
 
