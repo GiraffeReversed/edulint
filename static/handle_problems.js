@@ -41,6 +41,18 @@ function updateActiveProblems(problemGroups) {
     }
 }
 
+function markLinesSolved() {
+    let from = editor.getCursor("from").line;
+    let to = editor.getCursor("to").line;
+
+    let problemGroups = collectSelectedProblemGroups(from, to);
+    for (let problemGroup of problemGroups) {
+        for (let problem of problemGroup.getElementsByClassName("problem")) {
+            markSolved(problem.getElementsByClassName("problemSolvedBtn")[0]);
+        }
+    }
+}
+
 function setupEditor() {
     editor = CodeMirror.fromTextArea(code, {
         lineNumbers: true,
@@ -59,6 +71,10 @@ function setupEditor() {
 
     editor.on("cursorActivity", (cm) => {
         updateActiveProblems(collectSelectedProblemGroups(cm.getCursor("from").line, cm.getCursor("to").line));
+    });
+
+    editor.addKeyMap({
+        "Ctrl-D": markLinesSolved
     });
 }
 
