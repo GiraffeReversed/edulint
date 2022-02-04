@@ -49,6 +49,7 @@ html.dark .problemGroup {
 .CodeMirror {
     font-size: 13px!important;
     flex-grow: 1;
+    border-radius: 0.3rem;
 }
 
 html.dark .CodeMirror {
