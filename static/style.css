@@ -49,11 +49,9 @@ html.dark .problemGroup {
 .CodeMirror {
     font-size: 13px!important;
     flex-grow: 1;
-    border: 1px solid #eee;
 }
 
 html.dark .CodeMirror {
-    border-color: #222;
     background-color: #1f1f1f;
 }
 
@@ -86,11 +84,11 @@ html.dark .CodeMirror-scrollbar-filler {
 }
 
 .problemGroup.active {
-    border-color: var(--bs-secondary)!important;
+    outline: 0.17rem solid rgb(var(--bs-secondary-rgb), 0.5);
 }
 
 .problemGroup.active.solved {
-    border-color: var(--bs-success)!important;
+    outline-color: rgb(var(--bs-success-rgb), 0.5);
 }
 
 .d-flex .problem:last-child {
