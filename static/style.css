@@ -9,7 +9,7 @@
 body {
     background-color: #d1d1d1;
     background-image: url("black-thread.png");
-    background-size: 3.4% auto;
+    background-size: max(4%, 49px) auto;
 }
 
 html.dark body {
