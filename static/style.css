@@ -38,7 +38,7 @@ html.dark .content {
 }
 
 html.dark .problemGroup {
-    background-color: #222;
+    background-color: #1f1f1f;
 }
 
 .problemMarker {
@@ -47,7 +47,7 @@ html.dark .problemGroup {
 }
 
 .CodeMirror {
-    font-size: 13px!important;
+    font-size: 0.815rem!important;
     flex-grow: 1;
     border-radius: 0.3rem;
 }
