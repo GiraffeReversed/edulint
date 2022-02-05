@@ -7,7 +7,46 @@
 {% block content %}
 
 <div class="m-3 mt-1">
-    <h5>About the page</h5>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">About the page</h5>
+            <p class="card-text">
+                This page was built for computer science students at the <a target="_blank"
+                    href="https://www.fi.muni.cz/" class="link-secondary">Faculty of Informatics, Masaryk University</a>
+                to serve as a simple linter to help them overcome the most common programmer-beginner's mistakes.
+            </p>
+            <p class="card-text">The project is available to everybody, but no guarantees of uptime are provided.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Behind the page</h5>
+            <p class="card-text">The backend is powered by <a target="_blank" href="flask.palletsprojects.com"
+                    class="link-secondary">Flask</a>. The frontend is designed using <a target="_blank"
+                    href="https://getbootstrap.com/" class="link-secondary">Bootstrap</a>, with <a target="_blank"
+                    href="https://vinorodrigues.github.io/bootstrap-dark-5/" class="link-secondary">bootstrap-dark-5</a>
+                for the
+                dark mode. The icons are <a target="_blank" href="https://icons.getbootstrap.com/"
+                    class="link-secondary">the Bootstrap Icons</a>. The editor is provided by <a target="_blank"
+                    href="https://codemirror.net/" class="link-secondary">CodeMirror</a>, the themes by <a
+                    target="_blank" href="https://github.com/FarhadG/code-mirror-themes"
+                    class="link-secondary">CodeMirror Themes</a>.
+                The background image is taken from <a target="_blank" href="https://www.transparenttextures.com/"
+                    class="link-secondary">Transparent textures</a>. <a target="_blank" href="https://split.js.org/"
+                    class="link-secondary">Split.js</a> is used for window splitting.
+            </p>
+            <p class="card-text">The analysis uses <a target="_blank" href="https://flake8.pycqa.org/"
+                    class="link-secondary">flake8</a> and <a target="_blank" href="https://pylint.org/"
+                    class="link-secondary">pylint</a>.
+            </p>
+            <p class="card-text">This page was built by <a target="_blank" href="https://github.com/GiraffeReversed"
+                    class="link-secondary">Anna Rechtackova</a>. <a target="_blank"
+                    href="https://github.com/GiraffeReversed/edulint" class="link-secondary">Project's GitHub<span
+                        style="text-decoration: none"> </span><i class="bi bi-github"></i></a>.
+            </p>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
