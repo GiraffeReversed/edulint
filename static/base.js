@@ -44,10 +44,19 @@ function toggleDarkmode() {
         editor.setOption("theme", darkmode.inDarkMode ? EDITOR_DARK_THEME : EDITOR_LIGHT_THEME);
 }
 
+function highlightActiveNavlink() {
+    let path = window.location.pathname;
+    if (path.includes("editor"))
+        document.getElementById("navLinkEditor").classList.add("active");
+    else if (path.includes("about"))
+        document.getElementById("navLinkAbout").classList.add("active");
+}
+
 function baseSetup() {
     initSettings();
     document.getElementById("settingsSave").addEventListener("click", saveSettings);
     document.getElementById("settingDarkmode").addEventListener("click", toggleDarkmode);
+    highlightActiveNavlink();
 }
 
 document.addEventListener("DOMContentLoaded", baseSetup);

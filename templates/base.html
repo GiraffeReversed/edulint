@@ -83,7 +83,10 @@
       <a class="navbar-brand" href="{{ url_for('editor') }}">EduLint</a>
       <ul class="navbar-nav me-auto">
         <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="{{ url_for('editor') }}">Editor</a>
+          <a class="nav-link" aria-current="page" href="{{ url_for('editor') }}" id="navLinkEditor">Editor</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" aria-current="page" href="{{ url_for('about') }}" id="navLinkAbout">About</a>
         </li>
       </ul>
       <ul class="navbar-nav">

@@ -82,5 +82,10 @@ def editor_default():
         return render_template("editor.html", textarea=f.read())
 
 
+@app.route("/about", methods=["GET"])
+def about():
+    return render_template("about.html")
+
+
 if __name__ == "__main__":
     app.run(debug=True)
