@@ -87,12 +87,9 @@ function makeMarker(lineIndex) {
     return marker;
 }
 
-function showAlert(type, message) {
-    document.getElementById("messages").innerHTML +=
-        `<div class="alert alert-${type} alert-dismissible fade show mb-2" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>`;
+function showAlert(id) {
+    let toast = bootstrap.Toast.getOrCreateInstance(document.getElementById(id));
+    toast.show();
 }
 
 function getProblemMarker(problemLine, withFocus) {
@@ -192,7 +189,7 @@ function jumpToLine(n) {
 function gotoCodeClick(problemInfoBtn) {
     let lineIndex = getCurrentLineIndex(Number(problemInfoBtn.dataset.line));
     if (!lineIndex) {
-        showAlert("warning", "Line with this problem has been removed.");
+        showAlert("toastLineDeleted");
         return;
     }
 
@@ -294,7 +291,7 @@ function analyze(e) {
 function loadFile() {
     let file = this.files[0];
     if (!file || !file.name.endsWith(".py")) {
-        showAlert("danger", `Select a <span class="font-monospace">.py</span> file.`);
+        showAlert("toastIncorrectFiletype");
         return;
     }
 

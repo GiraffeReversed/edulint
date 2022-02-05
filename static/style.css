@@ -25,7 +25,7 @@ html.dark .navbar {
 }
 
 .content {
-    height: calc(100vh - 70px);
+    height: calc(100vh - 69px);
     background-color: #ebebebd1;
 }
 
