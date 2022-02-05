@@ -74,6 +74,7 @@ function setupEditor() {
     });
 
     editor.addKeyMap({
+        "Ctrl-S": () => { showAlert("toastNoSave"); },
         "Ctrl-D": markLinesSolved
     });
 }
