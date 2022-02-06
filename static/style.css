@@ -85,6 +85,10 @@ html.dark .CodeMirror-scrollbar-filler {
     border-top-right-radius: 0px;
 }
 
+.problemGotoBtn:hover:active {
+    box-shadow: none!important;
+}
+
 .problemGroup.active {
     outline: 0.17rem solid rgb(var(--bs-secondary-rgb), 0.5);
 }
