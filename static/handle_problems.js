@@ -221,11 +221,9 @@ function markSolved(btn) {
     if (allSolved(problemGroup)) {
         marker?.classList.add("text-success");
         marker?.classList.remove("text-danger");
-        problemGroup.classList.add("solved");
     } else {
         marker?.classList.remove("text-success");
         marker?.classList.add("text-danger");
-        problemGroup.classList.remove("solved");
     }
 }
 

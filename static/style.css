@@ -93,10 +93,6 @@ html.dark .CodeMirror-scrollbar-filler {
     outline: 0.17rem solid rgb(var(--bs-secondary-rgb), 0.5);
 }
 
-.problemGroup.active.solved {
-    outline-color: rgb(var(--bs-success-rgb), 0.5);
-}
-
 .d-flex .problem:last-child {
     border-bottom: none!important;
 }
