@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, request, flash, url_for, jsonify
+from flask import Flask, render_template, redirect, request, flash, send_from_directory, jsonify
 from edulint import lint, ProblemEncoder
 import os
 import json
@@ -85,6 +85,13 @@ def editor_default():
 @app.route("/about", methods=["GET"])
 def about():
     return render_template("about.html")
+
+
+# rightfully stolen from
+# https://stackoverflow.com/a/14625619
+@app.route('/robots.txt')
+def static_from_root():
+    return send_from_directory(app.static_folder, request.path[1:])
 
 
 if __name__ == "__main__":
