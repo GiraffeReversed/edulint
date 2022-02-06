@@ -47,6 +47,14 @@ html.dark .problemGroup {
     padding-left: 2px;
 }
 
+html.dark .problemMarker.text-danger {
+    color: hsl(18, 100%, 42%)!important;
+}
+
+html.dark .problemMarker.text-success {
+    color: #65b042!important;
+}
+
 .CodeMirror {
     font-size: 0.815rem!important;
     flex-grow: 1;
@@ -87,6 +95,42 @@ html.dark .CodeMirror-scrollbar-filler {
 
 .problemGotoBtn:hover:active {
     box-shadow: none!important;
+}
+
+html.dark .problemSolvedBtn.btn-outline-success {
+    color: #65b042;
+}
+
+html.dark .problemSolvedBtn.btn-outline-success:hover {
+    background-color: #489325;
+    color: #111;
+}
+
+html.dark .problemSolvedBtn:focus,
+html.dark .problemSolvedBtn:hover:active {
+    box-shadow: 0 0 0 0.25rem rgba(72, 147, 37, 0.5);
+}
+
+html.dark .problemSolvedBtn.btn-success {
+    background-color: #489325;
+    color: #111;
+}
+
+html.dark .problemSolvedBtn.btn-success:hover {
+    background-color: #3c7a1f;
+}
+
+html.dark .problemGotoBtn.btn-outline-warning {
+    color: #D8A460;
+}
+
+html.dark .problemGotoBtn.btn-outline-warning:hover {
+    background-color: #D8A460;
+    color: #111;
+}
+
+html.dark .problemGotoBtn:focus {
+    box-shadow: 0 0 0 0.25rem rgba(218, 208, 133, 0.5);
 }
 
 .problemGroup.active {
