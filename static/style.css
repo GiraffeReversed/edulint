@@ -27,6 +27,7 @@ html.dark .navbar {
 .content {
     height: calc(100vh - 69px);
     background-color: #ebebebd1;
+    overflow: hidden;
 }
 
 html.dark .content {
@@ -114,4 +115,8 @@ html.dark .gutter.gutter-horizontal {
 
 .modal .bi::before {
     width: 20px;
+}
+
+.about {
+    overflow-y: auto;
 }
