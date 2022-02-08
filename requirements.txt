@@ -3,3 +3,5 @@ flake8-json
 pylint
 flask
 flask-talisman
+gunicorn
+gevent

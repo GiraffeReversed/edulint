@@ -12,7 +12,7 @@ app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "uploaded_files"
 app.secret_key = "super secret key"
 
-Talisman(app, content_security_policy=None, strict_transport_security=False)
+Talisman(app, content_security_policy=None, strict_transport_security=False, force_https=False)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
 
 
