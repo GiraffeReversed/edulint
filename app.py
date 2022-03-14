@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, request, flash, send_from_directory, jsonify
-from edulint import lint, ProblemEncoder
+from linter.edulint import lint, ProblemEncoder
 import os
 import json
 from hashlib import sha256

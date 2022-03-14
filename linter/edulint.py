@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from typing import List, Dict, Union, Optional
-from process_handler import ProcessHandler
+from .process_handler import ProcessHandler
 import argparse
 import json
 from dataclasses import dataclass, asdict
