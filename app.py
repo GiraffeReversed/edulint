@@ -113,6 +113,11 @@ def about():
     return render_template("about.html")
 
 
+@app.route("/faq", methods=["GET"])
+def faq():
+    return render_template("faq.html")
+
+
 # rightfully stolen from
 # https://stackoverflow.com/a/14625619
 @app.route('/robots.txt')
