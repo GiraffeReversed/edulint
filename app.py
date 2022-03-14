@@ -12,7 +12,8 @@ app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "uploaded_files"
 app.secret_key = "super secret key"
 
-Talisman(app, content_security_policy=None, strict_transport_security=False, force_https=False)
+Talisman(app, content_security_policy=None,
+         strict_transport_security=False, force_https=False)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
 
 
@@ -47,7 +48,7 @@ def upload_code():
         with open(code_path(code_hash), "w", encoding="utf8") as f:
             f.write(code)
 
-    return { "filename" : code_hash }
+    return {"filename": code_hash}
 
 
 @app.route("/analyze/<string:code_hash>", methods=["GET"])
@@ -95,4 +96,4 @@ def static_from_root():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0")
