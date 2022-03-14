@@ -10,6 +10,9 @@
   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/code-mirror-themes@1.0.0/themes/coda.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/code-mirror-themes@1.0.0/themes/sunburst.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.0.3/showdown.min.js"
+  integrity="sha512-vx8rJNrYIZPDr290AV2tL04x0CKjLHSnTXrHMeb1kqbhfGwBnclPDOWIWxRiVS6Oe1oGzk5MzNz/eLzVku30kg=="
+  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script src="/static/handle_problems.js"></script>
 
@@ -30,6 +33,10 @@
     <div class="input-group pt-3">
       <input type="file" class="form-control" id="inputFile" aria-describedby="analysisSubmit" aria-label="Upload"
         accept=".py">
+      <button class="btn btn-secondary" type="button" id="downloadFile">
+        <a id="downloadFileAux"></a>
+        Download
+      </button>
       <button class="btn btn-primary" type="button" id="analysisSubmit">
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" hidden></span>
         Lint

@@ -311,6 +311,25 @@ function resetFile() {
     this.value = null;
 }
 
+function downloadFile() {
+    let file = new Blob([document.getElementById("code").innerText], { type: "text/x-python" });
+    let filename = "edulint_out.py";
+
+    if (window.navigator.msSaveOrOpenBlob) // IE10+
+        window.navigator.msSaveOrOpenBlob(file, filename);
+    else { // Others
+        let a = document.getElementById("downloadFileAux");
+        let url = URL.createObjectURL(file);
+
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(function () {
+            window.URL.revokeObjectURL(url);
+        }, 0);
+    }
+}
+
 function explanationsToHtml(exp) {
     let converter = new showdown.Converter();
 
@@ -332,6 +351,7 @@ function setup() {
     document.getElementById("analysisSubmit").addEventListener("click", analyze);
     document.getElementById('inputFile').addEventListener('change', loadFile);
     document.getElementById('inputFile', false).addEventListener('click', resetFile);
+    document.getElementById('downloadFile').addEventListener('click', downloadFile);
 
     fetch("/explanations", { method: "GET", })
         .then(response => response.json())
