@@ -312,7 +312,14 @@ function resetFile() {
 }
 
 function downloadFile() {
-    let file = new Blob([document.getElementById("code").innerText], { type: "text/x-python" });
+    let text = editor.getValue();
+    console.log(text);
+    if (!text) {
+        showAlert("toastUnnecessaryDownload");
+        return;
+    }
+
+    let file = new Blob([text], { type: "text/x-python" });
     let filename = "edulint_out.py";
 
     if (window.navigator.msSaveOrOpenBlob) // IE10+
@@ -328,6 +335,8 @@ function downloadFile() {
             window.URL.revokeObjectURL(url);
         }, 0);
     }
+
+    showAlert("toastDangerousDownload");
 }
 
 function setup() {
