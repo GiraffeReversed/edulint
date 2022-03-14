@@ -133,3 +133,5 @@ tests/
 uploaded_files/*
 
 !**/.gitkeep
+
+static/explanations.json

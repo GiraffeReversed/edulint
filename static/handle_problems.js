@@ -330,17 +330,6 @@ function downloadFile() {
     }
 }
 
-function explanationsToHtml(exp) {
-    let converter = new showdown.Converter();
-
-    Object.keys(exp).forEach(item => {
-        Object.keys(exp[item]).forEach(val => {
-            exp[item][val] = converter.makeHtml(exp[item][val]);
-        })
-    });
-    return exp;
-}
-
 function setup() {
     setupEditor();
     Split(['#code-block', '#problems-block'], {
@@ -355,7 +344,7 @@ function setup() {
 
     fetch("/explanations", { method: "GET", })
         .then(response => response.json())
-        .then(exp => { explanations = explanationsToHtml(exp); });
+        .then(exp => { explanations = exp; });
 }
 
 document.addEventListener("DOMContentLoaded", setup);

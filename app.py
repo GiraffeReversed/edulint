@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, request, flash, send_from_directory, jsonify
+from flask import Flask, render_template, redirect, request, flash, send_from_directory, send_file, jsonify
 from linter.edulint import lint, get_explanations, ProblemEncoder
 import os
 import json
@@ -6,10 +6,12 @@ from hashlib import sha256
 from os import path
 from flask_talisman import Talisman
 from werkzeug.middleware.proxy_fix import ProxyFix
+from markdown import markdown
 
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "uploaded_files"
+app.config["EXPLANATIONS"] = "explanations.json"
 app.secret_key = "super secret key"
 
 Talisman(app, content_security_policy=None,
@@ -27,6 +29,10 @@ def code_path(code_hash: str) -> str:
 
 def problems_path(code_hash: str) -> str:
     return full_path(code_hash) + ".json"
+
+
+def explanations_path() -> str:
+    return os.path.join("static", app.config["EXPLANATIONS"])
 
 
 @app.route("/")
@@ -77,9 +83,23 @@ def combine():
     return analyze(code_hash)
 
 
+@app.before_first_request
+def prepare_HTML_explanations():
+    exps = get_explanations()
+    HTML_exps = {
+        code: {
+            key: markdown(
+                exps[code][key]) for key in exps[code]
+        } for code in exps
+    }
+
+    with open(explanations_path(), "w") as f:
+        f.write(json.dumps(HTML_exps))
+
+
 @app.route("/explanations", methods=["GET"])
 def explanations():
-    return json.dumps(get_explanations())
+    return send_file(explanations_path())
 
 
 @app.route("/editor/default", methods=["GET"])
