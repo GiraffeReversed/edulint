@@ -1,6 +1,8 @@
 'use strict';
 
 let editor;
+let explanations;
+
 let EDITOR_LIGHT_THEME = "coda";
 let EDITOR_DARK_THEME = "sunburst";
 
@@ -118,6 +120,15 @@ function getCurrentLineIndex(problemLine) {
     return Number(marker.parentElement.previousElementSibling.innerText) - 1;
 }
 
+function explanationHTML(problem, explanations) {
+    let why = explanations[problem.code]?.why;
+    let examples = explanations[problem.code]?.examples;
+
+    return (why ? "<h6>Why is it a problem?</h6>" + why + "<hr>" : "")
+        + (examples ? "<h6>How to solve it?</h6>" + examples + "<hr>" : "")
+        + `<small>${problem.source} ${problem.code}</small>`;
+}
+
 function oneLineProblemsHTML(oneLineProblems) {
     assert(oneLineProblems.length >= 1);
 
@@ -150,11 +161,7 @@ function oneLineProblemsHTML(oneLineProblems) {
                 <div id="collapse${lineIndex}_${i}" class="accordion-collapse collapse multi-collapse${lineIndex}"
                     aria-labelledby="heading${lineIndex}_${i}" data-bs-parent="#problemsAccordion">
                     <div class="accordion-body small">
-                        WHY?!
-                        <hr>
-                        Examples
-                        <hr>
-                        <small>${problem.source} ${problem.code}</small>
+                        ${explanationHTML(problem, explanations)}
                     </div>
                 </div>
             </div>`;
@@ -304,6 +311,17 @@ function resetFile() {
     this.value = null;
 }
 
+function explanationsToHtml(exp) {
+    let converter = new showdown.Converter();
+
+    Object.keys(exp).forEach(item => {
+        Object.keys(exp[item]).forEach(val => {
+            exp[item][val] = converter.makeHtml(exp[item][val]);
+        })
+    });
+    return exp;
+}
+
 function setup() {
     setupEditor();
     Split(['#code-block', '#problems-block'], {
@@ -314,6 +332,10 @@ function setup() {
     document.getElementById("analysisSubmit").addEventListener("click", analyze);
     document.getElementById('inputFile').addEventListener('change', loadFile);
     document.getElementById('inputFile', false).addEventListener('click', resetFile);
+
+    fetch("/explanations", { method: "GET", })
+        .then(response => response.json())
+        .then(exp => { explanations = explanationsToHtml(exp); });
 }
 
 document.addEventListener("DOMContentLoaded", setup);

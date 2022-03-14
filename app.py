@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, request, flash, send_from_directory, jsonify
-from linter.edulint import lint, ProblemEncoder
+from linter.edulint import lint, get_explanations, ProblemEncoder
 import os
 import json
 from hashlib import sha256
@@ -75,6 +75,11 @@ def analyze(code_hash: str):
 def combine():
     code_hash = upload_code()["filename"]
     return analyze(code_hash)
+
+
+@app.route("/explanations", methods=["GET"])
+def explanations():
+    return json.dumps(get_explanations())
 
 
 @app.route("/editor/default", methods=["GET"])
