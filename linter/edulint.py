@@ -2,6 +2,7 @@
 
 from typing import List, Dict, Union, Optional
 from .process_handler import ProcessHandler
+from .explanations import explanations
 import argparse
 import json
 from dataclasses import dataclass, asdict
@@ -97,6 +98,10 @@ def main() -> None:
     else:
         for problem in result:
             print(problem)
+
+
+def get_explanations() -> Dict[str, Dict[str, str]]:
+    return explanations
 
 
 # If you are going to execute multiple commands / multiple times, add some
