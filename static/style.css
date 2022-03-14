@@ -161,6 +161,10 @@ html.dark .gutter.gutter-horizontal {
     width: 20px;
 }
 
-.about {
+.card-container {
     overflow-y: auto;
+}
+
+.card-container .card:last-child {
+    margin-bottom: 0px !important;
 }
