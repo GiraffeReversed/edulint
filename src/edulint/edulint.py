@@ -6,6 +6,7 @@ from .explanations import explanations
 import argparse
 import json
 from dataclasses import dataclass, asdict
+import pathlib
 # import time
 
 
@@ -67,7 +68,8 @@ def lint_flake8(filename: str) -> List[Problem]:
 
 
 def lint_pylint(filename: str) -> List[Problem]:
-    pylint_command = ["python3", "-m", "pylint",
+    cwd = pathlib.Path(__file__).parent.resolve()
+    pylint_command = ["python3", "-m", "pylint", f'--rcfile={cwd}/.pylintrc',
                       "--output-format=json", filename]
     return_code, outs, errs = ProcessHandler.run(pylint_command, timeout=10)
     if not outs:
