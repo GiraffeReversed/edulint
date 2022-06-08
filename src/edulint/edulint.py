@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 
 from typing import List, Dict, Union, Optional
-from .process_handler import ProcessHandler
-from .explanations import explanations
+import process_handler
+import explanations
 import argparse
 import json
 from dataclasses import dataclass, asdict
 import pathlib
+import sys
 # import time
 
 
@@ -58,24 +59,28 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
     )
 
 
-def lint_flake8(filename: str) -> List[Problem]:
-    flake8_command = ["python3", "-m", "flake8", "--format=json", filename]
-    return_code, outs, errs = ProcessHandler.run(flake8_command)
+def lint_any(filename, command, result_getter, out_to_problem):
+    return_code, outs, errs = process_handler.ProcessHandler.run(command, timeout=10)
+    if errs:
+        print(errs, file=sys.stderr, end="")
+        exit(return_code)
     if not outs:
         return []
-    flake8_result = json.loads(outs)[filename]
-    return list(map(flake8_to_problem, flake8_result))
+    result = result_getter(json.loads(outs))
+    return list(map(out_to_problem, result))
+
+
+def lint_flake8(filename: str) -> List[Problem]:
+    flake8_command = [sys.executable, "-m", "flake8", "--format=json", filename]
+    return lint_any(filename, flake8_command, lambda r: r[filename], flake8_to_problem)
 
 
 def lint_pylint(filename: str) -> List[Problem]:
     cwd = pathlib.Path(__file__).parent.resolve()
-    pylint_command = ["python3", "-m", "pylint", f'--rcfile={cwd}/.pylintrc',
+    pylint_command = [sys.executable, "-m", "pylint",
+                      f'--rcfile={cwd}/.pylintrc',
                       "--output-format=json", filename]
-    return_code, outs, errs = ProcessHandler.run(pylint_command, timeout=10)
-    if not outs:
-        return []
-    pylint_result = json.loads(outs)
-    return list(map(pylint_to_problem, pylint_result))
+    return lint_any(filename, pylint_command, lambda r: r, pylint_to_problem)
 
 
 def lint(filename: str) -> List[Problem]:
@@ -103,7 +108,7 @@ def main() -> None:
 
 
 def get_explanations() -> Dict[str, Dict[str, str]]:
-    return explanations
+    return explanations.explanations
 
 
 # If you are going to execute multiple commands / multiple times, add some
