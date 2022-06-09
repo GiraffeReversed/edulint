@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
 from typing import List, Dict, Union, Optional
-import process_handler
-import explanations
+from edulint.process_handler import ProcessHandler
+from edulint.explanations import explanations
 import argparse
 import json
 from dataclasses import dataclass, asdict
@@ -60,7 +60,7 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
 
 
 def lint_any(filename, command, result_getter, out_to_problem):
-    return_code, outs, errs = process_handler.ProcessHandler.run(command, timeout=10)
+    return_code, outs, errs = ProcessHandler.run(command, timeout=10)
     if errs:
         print(errs, file=sys.stderr, end="")
         exit(return_code)
@@ -108,12 +108,9 @@ def main() -> None:
 
 
 def get_explanations() -> Dict[str, Dict[str, str]]:
-    return explanations.explanations
+    return explanations
 
 
 # If you are going to execute multiple commands / multiple times, add some
 # sleep to not spam the terminal and CPU.
 # time.sleep(1)  # wait 1 second
-
-if __name__ == "__main__":
-    main()
