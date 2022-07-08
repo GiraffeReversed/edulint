@@ -8,6 +8,8 @@ import json
 from dataclasses import dataclass, asdict
 import pathlib
 import sys
+from enum import Enum
+import re
 # import time
 
 
@@ -33,6 +35,44 @@ class Problem:
 class ProblemEncoder(json.JSONEncoder):
     def default(self, o):
         return asdict(o)
+
+
+class Linters(Enum):
+    EDULINT = 0,  # keep defined first
+    PYLINT = 1,
+    FLAKE8 = 2
+
+    def __str__(self: Enum) -> str:
+        return self.name.lower()
+
+    @staticmethod
+    def from_str(linter_str: str) -> "Linters":
+        for linter in Linters:
+            if str(linter) == linter_str.lower():
+                return linter
+        assert False, "no such linter: " + linter_str
+
+
+class Config:
+    config: Dict[Linters, List[str]] = {linter: [] for linter in Linters}
+
+
+def extract_config(filename: str) -> Config:
+    edulint_re = re.compile(r"\s*#[\s#]*edulint\s*", re.IGNORECASE)
+    linters_re = re.compile(r"\s*(" + "|".join(str(linter) for linter in Linters) + r")\s*", re.IGNORECASE)
+
+    result = Config()
+    with open(filename) as f:
+        for line in f:
+            match = edulint_re.match(line)
+            if match:
+                raw_config = line[match.end():]
+                specific_match = linters_re.match(raw_config)
+                if specific_match:
+                    result.config[Linters.from_str(specific_match.group(1))].append(raw_config[specific_match.end():])
+                else:
+                    result.config[Linters.EDULINT].append(raw_config)
+    return result
 
 
 def flake8_to_problem(raw: ProblemJson) -> Problem:
@@ -73,9 +113,10 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
 
 
 def lint_any(
-        filename: str, command: List[str],
+        filename: str, command: List[str], config: List[str],
         result_getter: Callable[[Any], List[ProblemJson]],
         out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
+    return_code, outs, errs = ProcessHandler.run(command + config, timeout=10)
     if errs:
         print(errs, file=sys.stderr, end="")
         exit(return_code)
@@ -85,21 +126,21 @@ def lint_any(
     return list(map(out_to_problem, result))
 
 
-def lint_flake8(filename: str) -> List[Problem]:
+def lint_flake8(filename: str, config: Config) -> List[Problem]:
     flake8_command = [sys.executable, "-m", "flake8", "--format=json", filename]
-    return lint_any(filename, flake8_command, lambda r: r[filename], flake8_to_problem)
+    return lint_any(filename, flake8_command, config.config[Linters.FLAKE8], lambda r: r[filename], flake8_to_problem)
 
 
-def lint_pylint(filename: str) -> List[Problem]:
+def lint_pylint(filename: str, config: Config) -> List[Problem]:
     cwd = pathlib.Path(__file__).parent.resolve()
     pylint_command = [sys.executable, "-m", "pylint",
                       f'--rcfile={cwd}/.pylintrc',
                       "--output-format=json", filename]
-    return lint_any(filename, pylint_command, lambda r: r, pylint_to_problem)
+    return lint_any(filename, pylint_command, config.config[Linters.PYLINT], lambda r: r, pylint_to_problem)
 
 
-def lint(filename: str) -> List[Problem]:
-    result = lint_flake8(filename) + lint_pylint(filename)
+def lint(filename: str, config: Config) -> List[Problem]:
+    result = lint_flake8(filename, config) + lint_pylint(filename, config)
     result.sort(key=lambda problem: (problem.line, problem.column))
     return result
 
@@ -114,7 +155,8 @@ def setup_argparse() -> argparse.Namespace:
 
 def main() -> None:
     args = setup_argparse()
-    result = lint(args.file)
+    config = extract_config(args.file)
+    result = lint(args.file, config)
     if args.json:
         print(json.dumps(result, indent=1, cls=ProblemEncoder))
     else:
