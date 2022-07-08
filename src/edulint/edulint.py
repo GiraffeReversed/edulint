@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, Callable, Any
 from edulint.process_handler import ProcessHandler
 from edulint.explanations import explanations
 import argparse
@@ -36,6 +36,9 @@ class ProblemEncoder(json.JSONEncoder):
 
 
 def flake8_to_problem(raw: ProblemJson) -> Problem:
+    for val, t in (("filename", str), ("line_number", int), ("column_number", int), ("code", str), ("text", str)):
+        assert isinstance(raw[val], t), f"got {type(raw[val])} for {val}"
+
     return Problem(
         "flake8",
         raw["filename"],
@@ -47,6 +50,16 @@ def flake8_to_problem(raw: ProblemJson) -> Problem:
 
 
 def pylint_to_problem(raw: ProblemJson) -> Problem:
+    for val, ts in (
+        ("path", [str]),
+        ("line", [int]),
+        ("column", [int]),
+        ("message-id", [str]),
+        ("message", [str]),
+        ("endLine", [int, type(None)]),
+            ("endColumn", [int, type(None)])):
+        assert any(isinstance(raw[val], t) for t in ts), f"got {type(raw[val])} for {val}"
+
     return Problem(
         "pylint",
         raw["path"],
@@ -59,8 +72,10 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
     )
 
 
-def lint_any(filename, command, result_getter, out_to_problem):
-    return_code, outs, errs = ProcessHandler.run(command, timeout=10)
+def lint_any(
+        filename: str, command: List[str],
+        result_getter: Callable[[Any], List[ProblemJson]],
+        out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
     if errs:
         print(errs, file=sys.stderr, end="")
         exit(return_code)
@@ -89,7 +104,7 @@ def lint(filename: str) -> List[Problem]:
     return result
 
 
-def setup_argparse():
+def setup_argparse() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Lint provided code.")
     parser.add_argument("file", metavar="FILE", help="the file to lint")
     parser.add_argument("--json", action="store_true",
