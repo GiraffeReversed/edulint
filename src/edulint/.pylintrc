@@ -78,25 +78,38 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
-disable=raw-checker-failed,
-        bad-inline-option,
-        locally-disabled,
-        file-ignored,
-        suppressed-message,
-        useless-suppression,
-        deprecated-pragma,
-        use-symbolic-message-instead,
-        missing-function-docstring,
-        missing-module-docstring,
-        missing-class-docstring,
-        invalid-name,
-        no-name-in-module
+disable=all
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once). See also the "--disable" option for examples.
-enable=c-extension-no-member
+enable=cell-var-from-loop,
+       comparison-with-itself,
+       dangerous-default-value,
+       function-redefined,
+       import-outside-toplevel,
+       multiple-statements,
+       no-else-break,
+       no-else-return,
+       no-method-argument,
+       no-self-argument,
+       non-ascii-name,
+       not-in-loop,
+       pointless-statement,
+       redefined-argument-from-local,
+       redefined-builtin,
+       return-in-init,
+       return-outside-function,
+       self-assigning-variable,
+       singleton-comparison,
+       trailing-comma-tuple,
+       undefined-variable,
+       unnecessary-dict-index-lookup,
+       unnecessary-pass,
+       unneeded-not,
+       unreachable,
+       used-before-assignment
 
 
 [REPORTS]
