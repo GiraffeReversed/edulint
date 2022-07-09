@@ -14,6 +14,7 @@ import re
 
 
 ProblemJson = Dict[str, Union[str, int]]
+ConfigDict = Dict["Linters", List[str]]
 
 
 @dataclass
@@ -59,13 +60,13 @@ class Problem:
         self.end_column = v
         return self
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.path}:{self.line}:{self.column}: " \
                f"{self.code} {self.text}"
 
 
 class ProblemEncoder(json.JSONEncoder):
-    def default(self, o):
+    def default(self, o: Problem) -> ProblemJson:
         return asdict(o)
 
 
@@ -86,16 +87,16 @@ class Linters(Enum):
 
 
 class Config:
-    def __init__(self, config=None):
+    def __init__(self, config: Optional[ConfigDict] = None) -> None:
         config = config if config is not None else {}
-        self.config: Dict[Linters, List[str]] = {linter: config.get(linter, []) for linter in Linters}
+        self.config: ConfigDict = {linter: config.get(linter, []) for linter in Linters}
 
 
 def extract_config(filename: str) -> Config:
     edulint_re = re.compile(r"\s*#[\s#]*edulint\s*", re.IGNORECASE)
     linters_re = re.compile(r"\s*(" + "|".join(str(linter) for linter in Linters) + r")\s*", re.IGNORECASE)
 
-    result = Config()
+    result: Config = Config()
     with open(filename) as f:
         for line in f:
             line = line.strip()
@@ -116,8 +117,11 @@ def extract_config(filename: str) -> Config:
 
 
 def flake8_to_problem(raw: ProblemJson) -> Problem:
-    for val, t in (("filename", str), ("line_number", int), ("column_number", int), ("code", str), ("text", str)):
-        assert isinstance(raw[val], t), f"got {type(raw[val])} for {val}"
+    assert isinstance(raw["filename"], str), f'got {type(raw["filename"])} for filename'
+    assert isinstance(raw["line_number"], int), f'got {type(raw["line_number"])} for line_number'
+    assert isinstance(raw["column_number"], int), f'got {type(raw["column_number"])} for column_number'
+    assert isinstance(raw["code"], str), f'got {type(raw["code"])} for code'
+    assert isinstance(raw["text"], str), f'got {type(raw["text"])} for text'
 
     return Problem(
         "flake8",
@@ -130,15 +134,13 @@ def flake8_to_problem(raw: ProblemJson) -> Problem:
 
 
 def pylint_to_problem(raw: ProblemJson) -> Problem:
-    for val, ts in (
-        ("path", [str]),
-        ("line", [int]),
-        ("column", [int]),
-        ("message-id", [str]),
-        ("message", [str]),
-        ("endLine", [int, type(None)]),
-            ("endColumn", [int, type(None)])):
-        assert any(isinstance(raw[val], t) for t in ts), f"got {type(raw[val])} for {val}"
+    assert isinstance(raw["path"], str), f'got {type(raw["path"])} for path'
+    assert isinstance(raw["line"], int), f'got {type(raw["line"])} for line'
+    assert isinstance(raw["column"], int), f'got {type(raw["column"])} for column'
+    assert isinstance(raw["message-id"], str), f'got {type(raw["message-id"])} for message-id'
+    assert isinstance(raw["message"], str), f'got {type(raw["message"])} for message'
+    assert isinstance(raw["endLine"], int) or raw["endLine"] is None, f'got {type(raw["endLine"])} for endLine'
+    assert isinstance(raw["endColumn"], int) or raw["endColumn"] is None, f'got {type(raw["endColumn"])} for endColumn'
 
     return Problem(
         "pylint",
@@ -154,7 +156,7 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
 
 def lint_any(
         filename: str, command: List[str], config: List[str],
-        result_getter: Callable[[Any], List[ProblemJson]],
+        result_getter: Callable[[Any], Any],
         out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
     return_code, outs, errs = ProcessHandler.run(command + config, timeout=10)
     if errs:
@@ -193,7 +195,7 @@ def setup_argparse() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main() -> int:
     args = setup_argparse()
     config = extract_config(args.file)
     result = lint(args.file, config)
@@ -202,6 +204,7 @@ def main() -> None:
     else:
         for problem in result:
             print(problem)
+    return 0
 
 
 def get_explanations() -> Dict[str, Dict[str, str]]:
