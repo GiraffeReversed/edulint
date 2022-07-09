@@ -134,6 +134,5 @@ dmypy.json
 .pyre/
 
 .vscode/
-tests/
 
 !**/.gitkeep
