@@ -3,6 +3,7 @@
 from typing import List, Dict, Union, Optional, Callable, Any
 from edulint.process_handler import ProcessHandler
 from edulint.explanations import explanations
+from edulint.config_translates import CONFIG_TRANSLATES
 import argparse
 import json
 from dataclasses import dataclass, asdict
@@ -90,6 +91,18 @@ class Config:
     def __init__(self, config: Optional[ConfigDict] = None) -> None:
         config = config if config is not None else {}
         self.config: ConfigDict = {linter: config.get(linter, []) for linter in Linters}
+
+    def apply(self, config_translates: Dict[str, Dict[str, str]]) -> "Config":
+        for arg in self.config[Linters.EDULINT]:
+            translated = config_translates.get(arg)
+            if translated is None:
+                print(f"edulint: unsupported argument {arg}", file=sys.stderr)
+            else:
+                to = Linters.from_str(translated["to"])
+                assert to != Linters.EDULINT
+                self.config[to].append(translated["arg"])
+        self.config[Linters.EDULINT] = []
+        return self
 
 
 def extract_config(filename: str) -> Config:
@@ -198,6 +211,7 @@ def setup_argparse() -> argparse.Namespace:
 def main() -> int:
     args = setup_argparse()
     config = extract_config(args.file)
+    config.apply(CONFIG_TRANSLATES)
     result = lint(args.file, config)
     if args.json:
         print(json.dumps(result, indent=1, cls=ProblemEncoder))
