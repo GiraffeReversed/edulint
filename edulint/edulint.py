@@ -98,6 +98,7 @@ def extract_config(filename: str) -> Config:
     result = Config()
     with open(filename) as f:
         for line in f:
+            line = line.strip()
             match = edulint_re.match(line)
             if match:
                 raw_config = line[match.end():]
