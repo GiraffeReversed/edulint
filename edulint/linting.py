@@ -1,7 +1,8 @@
-from typing import List, Callable, Any
+from typing import List, Callable, Any, Dict
 from edulint.problem import ProblemJson, Problem
 from edulint.config import Config, Linters
 from edulint.process_handler import ProcessHandler
+from edulint.tweakers import TWEAKERS, Tweaker
 import sys
 import json
 import pathlib
@@ -77,7 +78,21 @@ def lint_pylint(filename: str, config: Config) -> List[Problem]:
         lambda r: r, pylint_to_problem)
 
 
+def apply_tweaks(problems: List[Problem], tweakers: Dict[str, Tweaker]) -> List[Problem]:
+    result = []
+    for problem in problems:
+        tweaker = tweakers.get(f"{problem.source}_{problem.code}")
+        if tweaker:
+            if tweaker.should_keep(problem):
+                problem.text = tweaker.get_reword(problem)
+                result.append(problem)
+        else:
+            result.append(problem)
+    return result
+
+
 def lint(filename: str, config: Config) -> List[Problem]:
     result = lint_flake8(filename, config) + lint_pylint(filename, config)
+    result = apply_tweaks(result, TWEAKERS)
     result.sort(key=lambda problem: (problem.line, problem.column))
     return result

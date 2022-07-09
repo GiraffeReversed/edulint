@@ -15,6 +15,6 @@ CONFIG_TRANSLATES = {
                "inconsistent-return-statements,consider-swap-variables,"
                "consider-using-join,consider-using-set-comprehension,"
                "unnecessary-comprehension,use-a-generator,use-list-literal,"
-               "use-dict-literal"
+               "use-dict-literal,invalid-name"
     }
 }
