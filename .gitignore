@@ -135,8 +135,5 @@ dmypy.json
 
 .vscode/
 tests/
-uploaded_files/*
 
 !**/.gitkeep
-
-static/explanations.json
