@@ -92,6 +92,12 @@ class Config:
         config = config if config is not None else {}
         self.config: ConfigDict = {linter: config.get(linter, []) for linter in Linters}
 
+    def __str__(self) -> str:
+        return "{" + ", ".join(f"{linter}: {options}" for linter, options in self.config.items() if options) + "}"
+
+    def __repr__(self) -> str:
+        return str(self)
+
     def apply(self, config_translates: Dict[str, Dict[str, str]]) -> "Config":
         for arg in self.config[Linters.EDULINT]:
             translated = config_translates.get(arg)
