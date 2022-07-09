@@ -86,7 +86,9 @@ class Linters(Enum):
 
 
 class Config:
-    config: Dict[Linters, List[str]] = {linter: [] for linter in Linters}
+    def __init__(self, config=None):
+        config = config if config is not None else {}
+        self.config: Dict[Linters, List[str]] = {linter: config.get(linter, []) for linter in Linters}
 
 
 def extract_config(filename: str) -> Config:
