@@ -46,12 +46,14 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
 
 
 def lint_any(
-        filename: str, command: List[str], config: List[str],
+        linter: Linters, filename: str, args: List[str], config: List[str],
         result_getter: Callable[[Any], Any],
         out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
-    return_code, outs, errs = ProcessHandler.run(command + config, timeout=10)
-    if errs:
+    command = [sys.executable, "-m", str(linter)] + args + config + [filename]
+    return_code, outs, errs = ProcessHandler.run(command, timeout=10)
+    if (linter == Linters.FLAKE8 and return_code not in (0, 1)) or (linter == Linters.PYLINT and return_code == 32):
         print(errs, file=sys.stderr, end="")
+        print(f"edulint: {command[2]} exited with {return_code}", file=sys.stderr)
         exit(return_code)
     if not outs:
         return []
@@ -60,16 +62,19 @@ def lint_any(
 
 
 def lint_flake8(filename: str, config: Config) -> List[Problem]:
-    flake8_command = [sys.executable, "-m", "flake8", "--format=json", filename]
-    return lint_any(filename, flake8_command, config.config[Linters.FLAKE8], lambda r: r[filename], flake8_to_problem)
+    flake8_args = ["--format=json"]
+    return lint_any(
+        Linters.FLAKE8, filename, flake8_args, config.config[Linters.FLAKE8],
+        lambda r: r[filename],
+        flake8_to_problem)
 
 
 def lint_pylint(filename: str, config: Config) -> List[Problem]:
     cwd = pathlib.Path(__file__).parent.resolve()
-    pylint_command = [sys.executable, "-m", "pylint",
-                      f'--rcfile={cwd}/.pylintrc',
-                      "--output-format=json", filename]
-    return lint_any(filename, pylint_command, config.config[Linters.PYLINT], lambda r: r, pylint_to_problem)
+    pylint_args = [f'--rcfile={cwd}/.pylintrc', "--output-format=json"]
+    return lint_any(
+        Linters.PYLINT, filename, pylint_args, config.config[Linters.PYLINT],
+        lambda r: r, pylint_to_problem)
 
 
 def lint(filename: str, config: Config) -> List[Problem]:
