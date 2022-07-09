@@ -1,3 +1,3 @@
-from .edulint import lint, get_explanations, ProblemEncoder, main
+from .edulint import main, lint, Problem, get_explanations, ProblemEncoder, Config, extract_config, Linters
 
-__all__ = ["lint", "get_explanations", "ProblemEncoder", "main"]
+__all__ = ["main", "lint", "Problem", "get_explanations", "ProblemEncoder", "Config", "extract_config", "Linters"]
