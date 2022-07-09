@@ -103,10 +103,15 @@ def extract_config(filename: str) -> Config:
             if match:
                 raw_config = line[match.end():]
                 specific_match = linters_re.match(raw_config)
+
                 if specific_match:
-                    result.config[Linters.from_str(specific_match.group(1))].append(raw_config[specific_match.end():])
+                    linter = Linters.from_str(specific_match.group(1))
+                    config = raw_config[specific_match.end():]
                 else:
-                    result.config[Linters.EDULINT].append(raw_config)
+                    linter = Linters.EDULINT
+                    config = raw_config
+
+                result.config[linter].extend(config.split())
     return result
 
 
