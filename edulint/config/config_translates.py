@@ -2,9 +2,9 @@ from edulint.linters import Linters
 from edulint.config.arg import Arg
 from typing import Dict
 
-ConfigTranslates = Dict[str, Arg]
+ConfigTranslations = Dict[str, Arg]
 
-CONFIG_TRANSLATES: ConfigTranslates = {
+CONFIG_TRANSLATIONS: ConfigTranslations = {
     "enhancement": Arg(
         Linters.PYLINT,
         "--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
