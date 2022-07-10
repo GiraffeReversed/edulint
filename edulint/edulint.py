@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 
 from edulint.problem import ProblemEncoder
-from edulint.config import extract_config
-from edulint.config_translates import CONFIG_TRANSLATES
+from edulint.config import get_config
 from edulint.linting import lint
 import argparse
 import json
@@ -18,8 +17,7 @@ def setup_argparse() -> argparse.Namespace:
 
 def main() -> int:
     args = setup_argparse()
-    config = extract_config(args.file)
-    config.apply(CONFIG_TRANSLATES)
+    config = get_config(args.file)
     result = lint(args.file, config)
     if args.json:
         print(json.dumps(result, indent=1, cls=ProblemEncoder))

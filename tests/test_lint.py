@@ -1,8 +1,7 @@
 import pytest
-from edulint import lint, Problem, Config, Linters, CONFIG_TRANSLATES
+from edulint import lint, Problem, Arg, Config, Linters, apply_translates, CONFIG_TRANSLATES
 from os.path import join
 from typing import List
-from copy import deepcopy
 
 LAZY_INT = -1
 FILLER_CODE = "FILLER"
@@ -72,22 +71,22 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
     lazy_equal(lint(join("tests", "data", filename), config), expected_output)
 
 
-@pytest.mark.parametrize("filename,config,expected_output", [
-    ("z202817-zkouska.py", Config({Linters.EDULINT: ["enhancement"]}), [
+@pytest.mark.parametrize("filename,args,expected_output", [
+    ("z202817-zkouska.py", [Arg(Linters.EDULINT, "enhancement")], [
         lazy_problem().set_code("W0107").set_line(198)
     ]),
-    ("z202817-zkouska.py", Config({Linters.EDULINT: ["python_spec"]}), [
+    ("z202817-zkouska.py", [Arg(Linters.EDULINT, "python_spec")], [
         lazy_problem().set_code("C0200").set_line(82),
         lazy_problem().set_code("C0200").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
         lazy_problem().set_code("W0107").set_line(198),
     ]),
-    ("z202817-zkouska.py", Config({Linters.PYLINT: ["--disable=all"], Linters.EDULINT: ["python_spec"]}), [
+    ("z202817-zkouska.py", [Arg(Linters.PYLINT, "--disable=all"), Arg(Linters.EDULINT, "python_spec")], [
         lazy_problem().set_code("C0200").set_line(82),
         lazy_problem().set_code("C0200").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
     ]),
-    ("014186-p2_nested.py", Config({Linters.EDULINT: ["python_spec"]}), [
+    ("014186-p2_nested.py", [Arg(Linters.EDULINT, "python_spec")], [
         lazy_problem().set_code("C0103").set_line(20),
         lazy_problem().set_code("C0103").set_line(21),
         lazy_problem().set_code("C0103").set_line(27),
@@ -97,6 +96,5 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
         lazy_problem().set_code("W0622").set_line(48),
     ]),
 ])
-def test_apply_and_lint(filename: str, config: Config, expected_output: List[Problem]) -> None:
-    config_c = deepcopy(config).apply(CONFIG_TRANSLATES)
-    lazy_equal(lint(join("tests", "data", filename), config_c), expected_output)
+def test_apply_and_lint(filename: str, args: Arg, expected_output: List[Problem]) -> None:
+    lazy_equal(lint(join("tests", "data", filename), apply_translates(args, CONFIG_TRANSLATES)), expected_output)

@@ -1,5 +1,5 @@
 import pytest
-from edulint import Config, extract_config, Linters
+from edulint import Arg, Config, extract_args, apply_translates, Linters
 
 
 def mock_contents(mocker, contents) -> None:
@@ -7,24 +7,38 @@ def mock_contents(mocker, contents) -> None:
     mocker.patch("builtins.open", mocked_file)
 
 
-@pytest.mark.parametrize("contents,config", [
-    ("", Config()),
-    ("print(\"Hello world\")", Config()),
-    ("# edulint xxx", Config({Linters.EDULINT: ["xxx"]})),
-    ("# edulint pylint xxx", Config({Linters.PYLINT: ["xxx"]})),
-    ("# edulint flake8 xxx", Config({Linters.FLAKE8: ["xxx"]})),
-    ("# edulint xxx yyy", Config({Linters.EDULINT: ["xxx", "yyy"]})),
-    ("# edulint xxx\n# edulint xxx", Config({Linters.EDULINT: ["xxx", "xxx"]})),
-    ("# edulint xxx\n# edulint yyy", Config({Linters.EDULINT: ["xxx", "yyy"]})),
-    ("# edulint pylint xxx\n# edulint pylint yyy", Config({Linters.PYLINT: ["xxx", "yyy"]})),
-    ("# edulint xxx\n# edulint pylint yyy", Config({Linters.EDULINT: ["xxx"], Linters.PYLINT: ["yyy"]})),
-    ("# edulint flake8 xxx\n# edulint pylint yyy", Config({Linters.FLAKE8: ["xxx"], Linters.PYLINT: ["yyy"]})),
-    ("\n\n# edulint xxx", Config({Linters.EDULINT: ["xxx"]})),
+@pytest.mark.parametrize("contents,args", [
+    ("", []),
+    ("print(\"Hello world\")", []),
+    ("# edulint xxx", [Arg(Linters.EDULINT, "xxx")]),
+    ("# edulint pylint xxx", [Arg(Linters.PYLINT, "xxx")]),
+    ("# edulint flake8 xxx", [Arg(Linters.FLAKE8, "xxx")]),
+    ("# edulint xxx yyy", [Arg(Linters.EDULINT, "xxx"), Arg(Linters.EDULINT, "yyy")]),
+    ("# edulint xxx\n# edulint xxx", [Arg(Linters.EDULINT, "xxx"), Arg(Linters.EDULINT, "xxx")]),
+    ("# edulint xxx\n# edulint yyy", [Arg(Linters.EDULINT, "xxx"), Arg(Linters.EDULINT, "yyy")]),
+    ("# edulint pylint xxx\n# edulint pylint yyy", [Arg(Linters.PYLINT, "xxx"), Arg(Linters.PYLINT, "yyy")]),
+    ("# edulint xxx\n# edulint pylint yyy", [Arg(Linters.EDULINT, "xxx"), Arg(Linters.PYLINT, "yyy")]),
+    ("# edulint flake8 xxx\n# edulint pylint yyy", [Arg(Linters.FLAKE8, "xxx"), Arg(Linters.PYLINT, "yyy")]),
+    ("\n\n# edulint xxx", [Arg(Linters.EDULINT, "xxx")]),
     ("some code\n # edulint xxx\ncode mentioning edulint a bit\n# edulint yyy",
-     Config({Linters.EDULINT: ["xxx", "yyy"]})),
-    ("           #        edulint      xxx        ", Config({Linters.EDULINT: ["xxx"]})),
-    ("           #        edulint      xxx  yyy      ", Config({Linters.EDULINT: ["xxx", "yyy"]}))
+     [Arg(Linters.EDULINT, "xxx"), Arg(Linters.EDULINT, "yyy")]),
+    ("           #        edulint      xxx        ", [Arg(Linters.EDULINT, "xxx")]),
+    ("           #        edulint      xxx  yyy      ", [Arg(Linters.EDULINT, "xxx"), Arg(Linters.EDULINT, "yyy")])
 ])
-def test_extract_config_extracts_correctly(mocker, contents, config):
+def test_extract_args_extracts_correctly(mocker, contents, args):
     mock_contents(mocker, contents)
-    assert extract_config("foo").config == config.config
+    assert extract_args("foo") == args
+
+
+@pytest.fixture
+def config_translates():
+    return {"xxx": {"to": "pylint", "arg": "yyy"}}
+
+
+@pytest.mark.parametrize("args,config", [
+    ([Arg(Linters.EDULINT, "xxx")], Config({Linters.PYLINT: ["yyy"]})),
+    ([Arg(Linters.EDULINT, "xxx"), Arg(Linters.PYLINT, "zzz")], Config({Linters.PYLINT: ["yyy", "zzz"]})),
+    ([Arg(Linters.PYLINT, "zzz"), Arg(Linters.EDULINT, "xxx")], Config({Linters.PYLINT: ["zzz", "yyy"]})),
+])
+def test_apply_translations_translates_correctly(args, config_translates, config):
+    return apply_translates(args, config_translates).config == config.config
