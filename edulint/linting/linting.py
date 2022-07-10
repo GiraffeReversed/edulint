@@ -2,7 +2,8 @@ from typing import List, Callable, Any, Dict
 from edulint.linting.problem import ProblemJson, Problem
 from edulint.linting.process_handler import ProcessHandler
 from edulint.linting.tweakers import TWEAKERS, Tweaker
-from edulint.config.config import Config, Linters
+from edulint.config.config import Config
+from edulint.linters import Linters
 import sys
 import json
 import pathlib

@@ -1,5 +1,7 @@
 import pytest
-from edulint.config.config import Arg, Config, Linters, apply_translates
+from edulint.linters import Linters
+from edulint.config.arg import Arg
+from edulint.config.config import Config, apply_translates
 from edulint.config.config_translates import CONFIG_TRANSLATES
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint
@@ -99,5 +101,5 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
         lazy_problem().set_code("W0622").set_line(48),
     ]),
 ])
-def test_apply_and_lint(filename: str, args: Arg, expected_output: List[Problem]) -> None:
+def test_apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     lazy_equal(lint(join("tests", "data", filename), apply_translates(args, CONFIG_TRANSLATES)), expected_output)

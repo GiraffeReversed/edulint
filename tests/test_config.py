@@ -1,5 +1,8 @@
 import pytest
-from edulint.config.config import Arg, Config, extract_args, apply_translates, Linters
+from edulint.linters import Linters
+from edulint.config.arg import Arg
+from edulint.config.config import Config, extract_args, apply_translates
+from edulint.config.config_translates import ConfigTranslates
 
 
 def mock_contents(mocker, contents) -> None:
@@ -31,8 +34,8 @@ def test_extract_args_extracts_correctly(mocker, contents, args):
 
 
 @pytest.fixture
-def config_translates():
-    return {"xxx": {"to": "pylint", "arg": "yyy"}}
+def config_translates() -> ConfigTranslates:
+    return {"xxx": Arg(Linters.PYLINT, "yyy")}
 
 
 @pytest.mark.parametrize("args,config", [

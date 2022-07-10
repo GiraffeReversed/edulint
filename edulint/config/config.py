@@ -1,33 +1,11 @@
-from edulint.config.config_translates import CONFIG_TRANSLATES
+from edulint.config.arg import Arg
+from edulint.linters import Linters
+from edulint.config.config_translates import ConfigTranslates, CONFIG_TRANSLATES
 from typing import Dict, List, Optional
-from dataclasses import dataclass
-from enum import Enum
 import re
 import sys
 
 ConfigDict = Dict["Linters", List[str]]
-
-
-class Linters(Enum):
-    EDULINT = 0,  # keep defined first
-    PYLINT = 1,
-    FLAKE8 = 2
-
-    def __str__(self: Enum) -> str:
-        return self.name.lower()
-
-    @staticmethod
-    def from_str(linter_str: str) -> "Linters":
-        for linter in Linters:
-            if str(linter) == linter_str.lower():
-                return linter
-        assert False, "no such linter: " + linter_str
-
-
-@dataclass
-class Arg:
-    to: Linters
-    val: str
 
 
 class Config:
@@ -69,7 +47,7 @@ def extract_args(filename: str) -> List[Arg]:
     return result
 
 
-def apply_translates(args: List[Arg], config_translates: Dict[str, Dict[str, str]]) -> Config:
+def apply_translates(args: List[Arg], config_translates: ConfigTranslates) -> Config:
     result: Config = Config()
     for arg in args:
         if arg.to == Linters.EDULINT:
@@ -77,13 +55,12 @@ def apply_translates(args: List[Arg], config_translates: Dict[str, Dict[str, str
             if translated is None:
                 print(f"edulint: unsupported argument {arg.val}", file=sys.stderr)
             else:
-                to = Linters.from_str(translated["to"])
-                assert to != Linters.EDULINT
-                result[to].append(translated["arg"])
+                assert translated.to != Linters.EDULINT
+                result[translated.to].append(translated.val)
         else:
             result[arg.to].append(arg.val)
     return result
 
 
-def get_config(filename: str, config_translates: Dict[str, Dict[str, str]] = CONFIG_TRANSLATES) -> Config:
+def get_config(filename: str, config_translates: ConfigTranslates = CONFIG_TRANSLATES) -> Config:
     return apply_translates(extract_args(filename), config_translates)
