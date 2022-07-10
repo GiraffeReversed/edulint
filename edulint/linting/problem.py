@@ -1,3 +1,4 @@
+from edulint.linters import Linters
 from dataclasses import dataclass, asdict
 from typing import Optional, Dict, Union
 import json
@@ -7,7 +8,7 @@ ProblemJson = Dict[str, Union[str, int]]
 
 @dataclass
 class Problem:
-    source: str
+    source: Linters
     path: str
     line: int
     column: int
@@ -16,7 +17,7 @@ class Problem:
     end_line: Optional[int] = None
     end_column: Optional[int] = None
 
-    def set_source(self, v: str) -> "Problem":
+    def set_source(self, v: Linters) -> "Problem":
         self.source = v
         return self
 

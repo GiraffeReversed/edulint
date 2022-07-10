@@ -1,6 +1,7 @@
+from edulint.linters import Linters
 from edulint.linting.problem import Problem
 from dataclasses import dataclass
-from typing import Callable, Optional, Pattern, Match, AnyStr, Dict
+from typing import Callable, Optional, Pattern, Match, AnyStr, Dict, Tuple
 import re
 
 
@@ -36,13 +37,15 @@ def invalid_name_keep(self: Tweaker, problem: Problem) -> bool:
     return False
 
 
+Tweakers = Dict[Tuple[Linters, str], Tweaker]
+
 TWEAKERS = {
-    "pylint_C0103": Tweaker(  # invalid-name
+    (Linters.PYLINT, "C0103"): Tweaker(  # invalid-name
         re.compile(r"^(.*) name \"(.*)\" doesn't conform to (.*)$"),
         invalid_name_keep
     )
 }
 
 
-def get_tweakers() -> Dict[str, Tweaker]:
+def get_tweakers() -> Tweakers:
     return TWEAKERS

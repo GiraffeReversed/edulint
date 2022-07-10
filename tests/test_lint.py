@@ -32,7 +32,7 @@ def lazy_equals(received: Problem, expected: Problem) -> None:
 
 
 def lazy_problem() -> Problem:
-    return Problem("", "", LAZY_INT, LAZY_INT, "", "", LAZY_INT, LAZY_INT)
+    return Problem(None, "", LAZY_INT, LAZY_INT, "", "", LAZY_INT, LAZY_INT)  # type: ignore
 
 
 def filler_problem() -> Problem:

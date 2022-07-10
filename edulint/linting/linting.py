@@ -1,7 +1,7 @@
-from typing import List, Callable, Any, Dict
+from typing import List, Callable, Any
 from edulint.linting.problem import ProblemJson, Problem
 from edulint.linting.process_handler import ProcessHandler
-from edulint.linting.tweakers import get_tweakers, Tweaker
+from edulint.linting.tweakers import get_tweakers, Tweakers
 from edulint.config.config import Config
 from edulint.linters import Linters
 import sys
@@ -17,7 +17,7 @@ def flake8_to_problem(raw: ProblemJson) -> Problem:
     assert isinstance(raw["text"], str), f'got {type(raw["text"])} for text'
 
     return Problem(
-        "flake8",
+        Linters.FLAKE8,
         raw["filename"],
         raw["line_number"],
         raw["column_number"],
@@ -36,7 +36,7 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
     assert isinstance(raw["endColumn"], int) or raw["endColumn"] is None, f'got {type(raw["endColumn"])} for endColumn'
 
     return Problem(
-        "pylint",
+        Linters.PYLINT,
         raw["path"],
         raw["line"],
         raw["column"],
@@ -79,10 +79,10 @@ def lint_pylint(filename: str, config: Config) -> List[Problem]:
         lambda r: r, pylint_to_problem)
 
 
-def apply_tweaks(problems: List[Problem], tweakers: Dict[str, Tweaker]) -> List[Problem]:
+def apply_tweaks(problems: List[Problem], tweakers: Tweakers) -> List[Problem]:
     result = []
     for problem in problems:
-        tweaker = tweakers.get(f"{problem.source}_{problem.code}")
+        tweaker = tweakers.get((problem.source, problem.code))
         if tweaker:
             if tweaker.should_keep(problem):
                 problem.text = tweaker.get_reword(problem)
