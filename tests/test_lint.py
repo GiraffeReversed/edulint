@@ -9,7 +9,7 @@ from os.path import join
 from typing import List
 
 LAZY_INT = -1
-FILLER_CODE = "FILLER"
+FILLER_CODE = ""
 
 
 def lazy_equals(received: Problem, expected: Problem) -> None:
@@ -17,7 +17,7 @@ def lazy_equals(received: Problem, expected: Problem) -> None:
         assert received.source == expected.source
     if expected.path:
         assert received.path == expected.path
-    if expected.code:
+    if expected.code is not None:
         assert received.code == expected.code
     if expected.line != LAZY_INT:
         assert received.line == expected.line
@@ -32,7 +32,7 @@ def lazy_equals(received: Problem, expected: Problem) -> None:
 
 
 def lazy_problem() -> Problem:
-    return Problem(None, "", LAZY_INT, LAZY_INT, "", "", LAZY_INT, LAZY_INT)  # type: ignore
+    return Problem(None, "", LAZY_INT, LAZY_INT, None, "", LAZY_INT, LAZY_INT)  # type: ignore
 
 
 def filler_problem() -> Problem:
