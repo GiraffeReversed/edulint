@@ -1,5 +1,5 @@
 import pytest
-from edulint import Arg, Config, extract_args, apply_translates, Linters
+from edulint.config.config import Arg, Config, extract_args, apply_translates, Linters
 
 
 def mock_contents(mocker, contents) -> None:

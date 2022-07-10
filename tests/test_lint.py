@@ -1,5 +1,8 @@
 import pytest
-from edulint import lint, Problem, Arg, Config, Linters, apply_translates, CONFIG_TRANSLATES
+from edulint.config.config import Arg, Config, Linters, apply_translates
+from edulint.config.config_translates import CONFIG_TRANSLATES
+from edulint.linting.problem import Problem
+from edulint.linting.linting import lint
 from os.path import join
 from typing import List
 

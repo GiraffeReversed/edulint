@@ -1,4 +1,4 @@
-from edulint.config_translates import CONFIG_TRANSLATES
+from edulint.config.config_translates import CONFIG_TRANSLATES
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum

@@ -1,8 +1,8 @@
 from typing import List, Callable, Any, Dict
-from edulint.problem import ProblemJson, Problem
-from edulint.config import Config, Linters
-from edulint.process_handler import ProcessHandler
-from edulint.tweakers import TWEAKERS, Tweaker
+from edulint.linting.problem import ProblemJson, Problem
+from edulint.linting.process_handler import ProcessHandler
+from edulint.linting.tweakers import TWEAKERS, Tweaker
+from edulint.config.config import Config, Linters
 import sys
 import json
 import pathlib

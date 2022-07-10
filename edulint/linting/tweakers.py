@@ -1,4 +1,4 @@
-from edulint.problem import Problem
+from edulint.linting.problem import Problem
 from dataclasses import dataclass
 from typing import Callable, Optional, Pattern, Match, AnyStr
 import re

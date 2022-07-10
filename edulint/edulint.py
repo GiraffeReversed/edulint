@@ -1,8 +1,6 @@
-#!/usr/bin/python3
-
-from edulint.problem import ProblemEncoder
-from edulint.config import get_config
-from edulint.linting import lint
+from edulint.linting.problem import ProblemEncoder
+from edulint.config.config import get_config
+from edulint.linting.linting import lint
 import argparse
 import json
 
