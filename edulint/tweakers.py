@@ -1,20 +1,20 @@
 from edulint.problem import Problem
 from dataclasses import dataclass
-from typing import Callable, Optional, Pattern, AnyStr
+from typing import Callable, Optional, Pattern, Match, AnyStr
 import re
 
 
 @dataclass
 class Tweaker:
-    pattern: Pattern[AnyStr]
+    pattern: Pattern[AnyStr]  # type: ignore
     keep: Callable[["Tweaker", Problem], bool]
     reword: Optional[Callable[["Tweaker", Problem], str]] = None
 
-    def match(self, problem: Problem) -> Pattern[AnyStr]:
+    def match(self, problem: Problem) -> Optional[Match[AnyStr]]:
         return self.pattern.match(problem.text)
 
     def should_keep(self, problem: Problem) -> bool:
-        return self.keep(self, problem)
+        return self.keep(self, problem)  # type: ignore
 
     def does_reword(self) -> bool:
         return self.reword is not None
@@ -23,7 +23,7 @@ class Tweaker:
         return self.reword(self, problem) if self.reword else problem.text
 
 
-def invalid_name_keep(self: Tweaker, problem: Problem):
+def invalid_name_keep(self: Tweaker, problem: Problem) -> bool:
     match = self.match(problem)
     assert match
     if match.group(1).lower() == "module":
