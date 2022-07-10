@@ -1,6 +1,6 @@
 from edulint.linting.problem import Problem
 from dataclasses import dataclass
-from typing import Callable, Optional, Pattern, Match, AnyStr
+from typing import Callable, Optional, Pattern, Match, AnyStr, Dict
 import re
 
 
@@ -42,3 +42,7 @@ TWEAKERS = {
         invalid_name_keep
     )
 }
+
+
+def get_tweakers() -> Dict[str, Tweaker]:
+    return TWEAKERS

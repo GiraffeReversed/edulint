@@ -1,7 +1,7 @@
 from typing import List, Callable, Any, Dict
 from edulint.linting.problem import ProblemJson, Problem
 from edulint.linting.process_handler import ProcessHandler
-from edulint.linting.tweakers import TWEAKERS, Tweaker
+from edulint.linting.tweakers import get_tweakers, Tweaker
 from edulint.config.config import Config
 from edulint.linters import Linters
 import sys
@@ -94,6 +94,6 @@ def apply_tweaks(problems: List[Problem], tweakers: Dict[str, Tweaker]) -> List[
 
 def lint(filename: str, config: Config) -> List[Problem]:
     result = lint_flake8(filename, config) + lint_pylint(filename, config)
-    result = apply_tweaks(result, TWEAKERS)
+    result = apply_tweaks(result, get_tweakers())
     result.sort(key=lambda problem: (problem.line, problem.column))
     return result

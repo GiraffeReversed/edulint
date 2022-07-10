@@ -24,3 +24,7 @@ CONFIG_TRANSLATIONS: ConfigTranslations = {
         "use-dict-literal,invalid-name"
     )
 }
+
+
+def get_config_translations() -> ConfigTranslations:
+    return CONFIG_TRANSLATIONS

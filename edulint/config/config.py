@@ -1,6 +1,6 @@
 from edulint.config.arg import Arg
 from edulint.linters import Linters
-from edulint.config.config_translates import ConfigTranslations, CONFIG_TRANSLATIONS
+from edulint.config.config_translates import ConfigTranslations, get_config_translations
 from typing import Dict, List, Optional
 import re
 import sys
@@ -62,5 +62,5 @@ def apply_translates(args: List[Arg], config_translates: ConfigTranslations) -> 
     return result
 
 
-def get_config(filename: str, config_translates: ConfigTranslations = CONFIG_TRANSLATIONS) -> Config:
+def get_config(filename: str, config_translates: ConfigTranslations = get_config_translations()) -> Config:
     return apply_translates(extract_args(filename), config_translates)
