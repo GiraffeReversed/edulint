@@ -5,6 +5,7 @@ from edulint.config.config_translates import get_config_translations, Translatio
 from typing import Dict, List, Optional, Tuple
 import re
 import sys
+import shlex
 
 ConfigDict = Dict[Linters, List[str]]
 
@@ -26,7 +27,6 @@ class Config:
 
 def extract_args(filename: str) -> List[str]:
     edulint_re = re.compile(r"\s*#[\s#]*edulint\s*", re.IGNORECASE)
-    arg_re = re.compile(r"([a-z0-9-]+)=(\"[^\"]*\"|[^\s\"]*)|[a-z0-9-]+", re.IGNORECASE)
 
     result: List[str] = []
     with open(filename) as f:
@@ -37,8 +37,7 @@ def extract_args(filename: str) -> List[str]:
                 continue
 
             raw_args = line[edmatch.end():]
-            for match in arg_re.finditer(raw_args):
-                result.append(match[0])
+            result.extend(shlex.split(raw_args))
     return result
 
 
@@ -49,7 +48,7 @@ def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Lis
         if "=" in arg:
             assert arg.count("=") == 1
             name, val = arg.split("=")
-            return name, val.strip("\"")
+            return name, val
         return arg, None
 
     result: List[Arg] = []

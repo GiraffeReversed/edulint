@@ -75,10 +75,10 @@ def mock_contents(mocker, contents) -> None:
      ["xxx", "yyy"]),
     ("           #        edulint      xxx        ", ["xxx"]),
     ("           #        edulint      xxx  yyy      ", ["xxx", "yyy"]),
-    ("# edulint pylint=\"xxx       yyy\"", ["pylint=\"xxx       yyy\""]),
+    ("# edulint pylint=\"xxx       yyy\"", ["pylint=xxx       yyy"]),
     (
         "# edulint pylint=xxx yyy zzz flake8=aaa bbb pylint= flake8=\"xxx yyy\" ",
-        ["pylint=xxx", "yyy", "zzz", "flake8=aaa", "bbb", "pylint=", "flake8=\"xxx yyy\""]
+        ["pylint=xxx", "yyy", "zzz", "flake8=aaa", "bbb", "pylint=", "flake8=xxx yyy"]
     )
 ])
 def test_extract_args_extracts_correctly(mocker, contents, args):
