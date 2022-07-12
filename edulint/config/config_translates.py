@@ -11,7 +11,7 @@ CONFIG_TRANSLATIONS: ConfigTranslations = {
         "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
         "unused-variable,unused-argument"
     ),
-    "python_spec": Arg(
+    "python-spec": Arg(
         Linters.PYLINT,
         "--enable=unidiomatic-typecheck,misplaced-format-function,"
         "unnecessary-lambda,protected-access,multiple-imports,"

@@ -80,18 +80,18 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
     ("z202817-zkouska.py", [Arg(Linters.EDULINT, "enhancement")], [
         lazy_problem().set_code("W0107").set_line(198)
     ]),
-    ("z202817-zkouska.py", [Arg(Linters.EDULINT, "python_spec")], [
+    ("z202817-zkouska.py", [Arg(Linters.EDULINT, "python-spec")], [
         lazy_problem().set_code("C0200").set_line(82),
         lazy_problem().set_code("C0200").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
         lazy_problem().set_code("W0107").set_line(198),
     ]),
-    ("z202817-zkouska.py", [Arg(Linters.PYLINT, "--disable=all"), Arg(Linters.EDULINT, "python_spec")], [
+    ("z202817-zkouska.py", [Arg(Linters.PYLINT, "--disable=all"), Arg(Linters.EDULINT, "python-spec")], [
         lazy_problem().set_code("C0200").set_line(82),
         lazy_problem().set_code("C0200").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
     ]),
-    ("014186-p2_nested.py", [Arg(Linters.EDULINT, "python_spec")], [
+    ("014186-p2_nested.py", [Arg(Linters.EDULINT, "python-spec")], [
         lazy_problem().set_code("C0103").set_line(20),
         lazy_problem().set_code("C0103").set_line(21),
         lazy_problem().set_code("C0103").set_line(27),
