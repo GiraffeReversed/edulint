@@ -1,5 +1,6 @@
 import pytest
 from edulint.linters import Linters
+from edulint.options import Option
 from edulint.config.arg import Arg
 from edulint.config.config import Config, apply_translates
 from edulint.config.config_translates import get_config_translations
@@ -77,21 +78,21 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
-    ("z202817-zkouska.py", [Arg(Linters.EDULINT, "enhancement")], [
+    ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT)], [
         lazy_problem().set_code("W0107").set_line(198)
     ]),
-    ("z202817-zkouska.py", [Arg(Linters.EDULINT, "python-spec")], [
+    ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC)], [
         lazy_problem().set_code("C0200").set_line(82),
         lazy_problem().set_code("C0200").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
         lazy_problem().set_code("W0107").set_line(198),
     ]),
-    ("z202817-zkouska.py", [Arg(Linters.PYLINT, "--disable=all"), Arg(Linters.EDULINT, "python-spec")], [
+    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPEC)], [
         lazy_problem().set_code("C0200").set_line(82),
         lazy_problem().set_code("C0200").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
     ]),
-    ("014186-p2_nested.py", [Arg(Linters.EDULINT, "python-spec")], [
+    ("014186-p2_nested.py", [Arg(Option.PYTHON_SPEC)], [
         lazy_problem().set_code("C0103").set_line(20),
         lazy_problem().set_code("C0103").set_line(21),
         lazy_problem().set_code("C0103").set_line(27),

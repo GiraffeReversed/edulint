@@ -1,17 +1,23 @@
 from edulint.linters import Linters
-from edulint.config.arg import Arg
+from edulint.options import Option
 from typing import Dict
+from dataclasses import dataclass
 
-ConfigTranslations = Dict[str, Arg]
 
-CONFIG_TRANSLATIONS: ConfigTranslations = {
-    "enhancement": Arg(
+@dataclass(frozen=True)
+class Translation:
+    to: Linters
+    val: str
+
+
+CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
+    Option.ENHANCEMENT: Translation(
         Linters.PYLINT,
         "--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
         "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
         "unused-variable,unused-argument"
     ),
-    "python-spec": Arg(
+    Option.PYTHON_SPEC: Translation(
         Linters.PYLINT,
         "--enable=unidiomatic-typecheck,misplaced-format-function,"
         "unnecessary-lambda,protected-access,multiple-imports,"
@@ -26,5 +32,5 @@ CONFIG_TRANSLATIONS: ConfigTranslations = {
 }
 
 
-def get_config_translations() -> ConfigTranslations:
+def get_config_translations() -> Dict[Option, Translation]:
     return CONFIG_TRANSLATIONS

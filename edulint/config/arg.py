@@ -1,8 +1,9 @@
-from edulint.linters import Linters
+from edulint.options import Option
+from typing import Optional
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class Arg:
-    to: Linters
-    val: str
+    option: Option
+    val: Optional[str] = None
