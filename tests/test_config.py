@@ -4,7 +4,9 @@ from edulint.config.arg import Arg
 from edulint.options import Option, OptionParse, get_option_parses
 from edulint.config.config import Config, extract_args, parse_args, apply_translates
 from edulint.config.config_translates import get_config_translations, Translation
+from edulint.linting.tweakers import get_tweakers
 from typing import List, Set, Dict
+from copy import deepcopy
 
 
 @pytest.fixture
@@ -19,7 +21,7 @@ def advertised_options(all_advertised_options: List[Option]) -> Set[Option]:
 
 @pytest.fixture
 def always_managed_options() -> Set[Option]:
-    return set([Option.PYLINT, Option.FLAKE8])
+    return set((Option.PYLINT, Option.FLAKE8))
 
 
 @pytest.fixture
@@ -28,12 +30,19 @@ def managed_translations_options() -> List[Option]:
 
 
 @pytest.fixture
+def managed_tweaker_options() -> List[Set[Option]]:
+    return list(tweaker.used_options for tweaker in get_tweakers().values())
+
+
+@pytest.fixture
 def managed_options(
         always_managed_options: Set[Option],
         managed_translations_options: List[Option],
+        managed_tweaker_options: List[Set[Option]]
 ) -> Set[Option]:
     return always_managed_options \
-        | set(managed_translations_options)
+        | set(managed_translations_options) \
+        | set(opt for options in managed_tweaker_options for opt in options)
 
 
 def issubset(subset, superset):
@@ -106,20 +115,38 @@ def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: 
 
 @pytest.fixture
 def config_translations() -> Dict[Option, Translation]:
-    return {Option.ENHANCEMENT: Translation(Linters.PYLINT, "yyy")}
+    return {
+        Option.ENHANCEMENT: Translation(
+            Linters.PYLINT,
+            ["aaa"]
+        ),
+        Option.PYTHON_SPEC: Translation(
+            Linters.PYLINT,
+            ["bbb"]
+        ),
+        Option.ALLOWED_ONECHAR_NAMES: Translation(
+            Linters.PYLINT,
+            ["ccc"]
+        )
+    }
 
 
 @pytest.mark.parametrize("args,config", [
-    ([Arg(Option.ENHANCEMENT)], Config({Linters.PYLINT: ["yyy"]})),
-    ([Arg(Option.ENHANCEMENT), Arg(Option.PYLINT, "zzz")], Config({Linters.PYLINT: ["yyy", "zzz"]})),
-    ([Arg(Option.PYLINT, "zzz"), Arg(Option.ENHANCEMENT)], Config({Linters.PYLINT: ["zzz", "yyy"]})),
+    ([Arg(Option.ENHANCEMENT)], Config(others={Linters.PYLINT: ["aaa"]})),
+    ([Arg(Option.ENHANCEMENT), Arg(Option.PYLINT, "zzz")], Config(others={Linters.PYLINT: ["aaa", "zzz"]})),
+    ([Arg(Option.PYLINT, "zzz"), Arg(Option.ENHANCEMENT)], Config(others={Linters.PYLINT: ["zzz", "aaa"]})),
     (
         [Arg(Option.FLAKE8, "zzz"), Arg(Option.ENHANCEMENT)],
-        Config({Linters.FLAKE8: ["zzz"], Linters.PYLINT: ["yyy"]})
+        Config(others={Linters.FLAKE8: ["zzz"], Linters.PYLINT: ["aaa"]})
     ),
+    ([Arg(Option.ALLOWED_ONECHAR_NAMES, "n")], Config(others={Linters.PYLINT: ["ccc"]}))
 ])
 def test_apply_translations_translates_correctly(
         args: List[Arg],
         config_translations: Dict[Option, Translation],
         config: Config) -> None:
-    assert apply_translates(args, config_translations).config == config.config
+
+    result = apply_translates(args, config_translations)
+    orig_args = deepcopy(args)
+    assert result.others == config.others
+    assert result.edulint == orig_args

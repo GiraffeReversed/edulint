@@ -8,6 +8,7 @@ class Option(Enum):
     FLAKE8 = auto()
     ENHANCEMENT = auto()
     PYTHON_SPEC = auto()
+    ALLOWED_ONECHAR_NAMES = auto()
 
     def to_name(self) -> str:
         return self.name.lower().replace("_", "-")
@@ -41,6 +42,11 @@ OPTIONS: List[Tuple[Option, str, bool]] = [
         Option.PYTHON_SPEC,
         "enable checking for ways to improve the code with Python-specific constructions",
         False
+    ),
+    (
+        Option.ALLOWED_ONECHAR_NAMES,
+        "only listed characters are allowed to be variable names of length one",
+        True
     ),
 ]
 

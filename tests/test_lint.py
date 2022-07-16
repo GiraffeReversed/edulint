@@ -55,16 +55,16 @@ def lazy_equal(received: List[Problem], expected: List[Problem]) -> None:
 @pytest.mark.parametrize("filename,config,expected_output", [
     ("hello_world.py", Config(), []),
     ("z202817-zkouska.py", Config(), [lazy_problem().set_code("W0107").set_line(198)]),
-    ("z202817-zkouska.py", Config({Linters.PYLINT: ["--enable=C0115"]}), [
+    ("z202817-zkouska.py", Config(others={Linters.PYLINT: ["--enable=C0115"]}), [
         lazy_problem().set_code("C0115").set_line(124),
         lazy_problem().set_code("C0115").set_line(130),
         lazy_problem().set_code("W0107").set_line(198)
     ]),
-    ("z202817-zkouska.py", Config({Linters.PYLINT: ["--enable=C0115", "--disable=W0107"]}), [
+    ("z202817-zkouska.py", Config(others={Linters.PYLINT: ["--enable=C0115", "--disable=W0107"]}), [
         lazy_problem().set_code("C0115").set_line(124),
         lazy_problem().set_code("C0115").set_line(130)
     ]),
-    ("z202817-zkouska.py", Config({Linters.PYLINT: ["--disable=all"]}), []),
+    ("z202817-zkouska.py", Config(others={Linters.PYLINT: ["--disable=all"]}), []),
     ("002814-p1_trapezoid.py", Config(), [
         lazy_problem().set_code("F401").set_line(1),
         lazy_problem().set_code("F401").set_line(1),
@@ -100,6 +100,16 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
         lazy_problem().set_code("C0103").set_line(31),
         lazy_problem().set_code("C0103").set_line(34),
         lazy_problem().set_code("W0622").set_line(48),
+    ]),
+    ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "")], [
+        lazy_problem().set_code("C0103").set_line(6),
+        lazy_problem().set_code("C0103").set_line(14)
+    ]),
+    ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "n")], [
+        lazy_problem().set_code("C0103").set_line(14)
+    ]),
+    ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "i")], [
+        lazy_problem().set_code("C0103").set_line(6)
     ]),
 ])
 def test_apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
