@@ -1,7 +1,7 @@
 import pytest
 from edulint.linters import Linters
 from edulint.config.arg import Arg
-from edulint.options import Option, OptionParse, get_option_parses
+from edulint.options import Option, TakesVal, OptionParse, get_option_parses
 from edulint.config.config import Config, extract_args, parse_args, apply_translates
 from edulint.config.config_translates import get_config_translations, Translation
 from edulint.linting.tweakers import get_tweakers
@@ -98,8 +98,8 @@ def test_extract_args_extracts_correctly(mocker, contents, args):
 @pytest.fixture
 def options() -> Dict[Option, OptionParse]:
     return {
-        Option.ENHANCEMENT: OptionParse(Option.ENHANCEMENT, "enhancement", "", False),
-        Option.FLAKE8: OptionParse(Option.FLAKE8, "flake8", "", True)
+        Option.ENHANCEMENT: OptionParse(Option.ENHANCEMENT, "enhancement", "", TakesVal.NO),
+        Option.FLAKE8: OptionParse(Option.FLAKE8, "flake8", "", TakesVal.YES)
     }
 
 

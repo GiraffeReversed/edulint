@@ -1,5 +1,5 @@
 from edulint.config.arg import Arg
-from edulint.options import Option, OptionParse, get_option_parses, get_name_to_option
+from edulint.options import Option, TakesVal, OptionParse, get_option_parses, get_name_to_option
 from edulint.linters import Linters
 from edulint.config.config_translates import get_config_translations, Translation
 from typing import Dict, List, Optional, Tuple, Any
@@ -80,9 +80,9 @@ def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Lis
             print(f"edulint: unrecognized option {name}", file=sys.stderr)
         else:
             option_parse = option_parses[option]
-            if option_parse.takes_val and val is None:
+            if option_parse.takes_val == TakesVal.YES and val is None:
                 print(f"edulint: option {name} takes an argument but none was supplied", file=sys.stderr)
-            elif not option_parse.takes_val and val is not None:
+            elif option_parse.takes_val == TakesVal.NO and val is not None:
                 print(f"edulint: option {name} takes no argument but {val} was supplied", file=sys.stderr)
             else:
                 result.append(Arg(option, val))

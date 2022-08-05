@@ -14,39 +14,45 @@ class Option(Enum):
         return self.name.lower().replace("_", "-")
 
 
+class TakesVal(Enum):
+    YES = auto()
+    NO = auto()
+    OPTIONAL = auto()
+
+
 @dataclass
 class OptionParse:
     option: Option
     name: str
     help_: str
-    takes_val: bool
+    takes_val: TakesVal
 
 
-OPTIONS: List[Tuple[Option, str, bool]] = [
+OPTIONS: List[Tuple[Option, str, TakesVal]] = [
     (
         Option.PYLINT,
         "arguments to be passed to pylint",
-        True
+        TakesVal.YES
     ),
     (
         Option.FLAKE8,
         "arguments to be passed to edulint",
-        True
+        TakesVal.YES
     ),
     (
         Option.ENHANCEMENT,
         "enable checking for ways to improve the code further",
-        False
+        TakesVal.NO
     ),
     (
         Option.PYTHON_SPEC,
         "enable checking for ways to improve the code with Python-specific constructions",
-        False
+        TakesVal.NO
     ),
     (
         Option.ALLOWED_ONECHAR_NAMES,
         "only listed characters are allowed to be variable names of length one",
-        True
+        TakesVal.YES
     ),
 ]
 
