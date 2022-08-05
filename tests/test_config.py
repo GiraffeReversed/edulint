@@ -99,16 +99,16 @@ def test_extract_args_extracts_correctly(mocker, contents, args):
 @pytest.fixture
 def options() -> Dict[Option, OptionParse]:
     return {
-        Option.ENHANCEMENT: OptionParse(Option.ENHANCEMENT, "enhancement", "", TakesVal.NO),
+        Option.PYTHON_SPEC: OptionParse(Option.PYTHON_SPEC, "python-spec", "", TakesVal.NO),
         Option.FLAKE8: OptionParse(Option.FLAKE8, "flake8", "", TakesVal.YES)
     }
 
 
 @pytest.mark.parametrize("raw,parsed", [
-    (["enhancement"], [Arg(Option.ENHANCEMENT)]),
+    (["python-spec"], [Arg(Option.PYTHON_SPEC)]),
     (["flake8=foo"], [Arg(Option.FLAKE8, "foo")]),
     (["flake8="], [Arg(Option.FLAKE8, "")]),
-    (["enhancement", "flake8=foo"], [Arg(Option.ENHANCEMENT), Arg(Option.FLAKE8, "foo")])
+    (["python-spec", "flake8=foo"], [Arg(Option.PYTHON_SPEC), Arg(Option.FLAKE8, "foo")])
 ])
 def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: List[Arg]) -> None:
     assert parse_args(raw, options) == parsed

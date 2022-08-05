@@ -111,6 +111,8 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "i")], [
         lazy_problem().set_code("C0103").set_line(6)
     ]),
+    ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "in")], [
+    ]),
 ])
 def test_apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     lazy_equal(
