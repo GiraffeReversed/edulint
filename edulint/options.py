@@ -36,7 +36,7 @@ OPTIONS: List[Tuple[Option, str, TakesVal]] = [
     ),
     (
         Option.FLAKE8,
-        "arguments to be passed to edulint",
+        "arguments to be passed to flake8",
         TakesVal.YES
     ),
     (
