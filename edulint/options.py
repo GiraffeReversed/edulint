@@ -13,6 +13,13 @@ class Option(Enum):
     def to_name(self) -> str:
         return self.name.lower().replace("_", "-")
 
+    @staticmethod
+    def from_str(option_str: str) -> "Option":
+        for option in Option:
+            if option.to_name() == option_str.lower():
+                return option
+        assert False, "no such option: " + option_str
+
 
 class TakesVal(Enum):
     YES = auto()
