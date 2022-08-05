@@ -46,7 +46,7 @@ class Config:
 
 
 def extract_args(filename: str) -> List[str]:
-    edulint_re = re.compile(r"\s*#[\s#]*edulint\s*", re.IGNORECASE)
+    edulint_re = re.compile(r"\s*#[\s#]*edulint:\s*", re.IGNORECASE)
 
     result: List[str] = []
     with open(filename) as f:
