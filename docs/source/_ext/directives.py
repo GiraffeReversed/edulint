@@ -6,6 +6,7 @@ from docutils import nodes
 from configparser import ConfigParser
 import requests
 from bs4 import BeautifulSoup
+from pathlib import Path
 
 
 def html_to_nodes(siblings):
@@ -143,7 +144,7 @@ class MessageTable(Directive):
         arg = self.arguments[0]
         if arg == "default":
             config = ConfigParser()
-            config.read("../edulint/linting/.pylintrc")
+            config.read(Path(__file__).parent.parent.parent.parent / "edulint/linting/.pylintrc")
             message_names = [c.strip() for c in config["MESSAGES CONTROL"]["enable"].split(",")]
         else:
             translations = get_config_translations()
