@@ -1,4 +1,6 @@
 flake8
 flake8-json
 pylint
+
 sphinx-rtd-theme
+beautifulsoup4
