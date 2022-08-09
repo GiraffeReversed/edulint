@@ -16,3 +16,5 @@ Once installed, you can run it as a python module:
 ```
 python<the-same-version> -m edulint <file-to-lint>
 ```
+
+Read the [documentation](https://edulint.readthedocs.io/) for more options and configuration details.
