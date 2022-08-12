@@ -119,3 +119,18 @@ def test_apply_and_lint(filename: str, args: List[Arg], expected_output: List[Pr
         lint(join("tests", "data", filename), apply_translates(args, get_config_translations())),
         expected_output
     )
+
+
+def test_problem_can_be_dumped_to_json() -> None:
+    problem = Problem(source=Linters.FLAKE8, path='path', line=5, column=1, code='E303', text='too many blank lines (3)', end_line=None, end_column=None)
+    out = problem.to_json(indent=2)
+    assert out == """{
+  "source": 2,
+  "path": "path",
+  "line": 5,
+  "column": 1,
+  "code": "E303",
+  "text": "too many blank lines (3)",
+  "end_line": null,
+  "end_column": null
+}"""

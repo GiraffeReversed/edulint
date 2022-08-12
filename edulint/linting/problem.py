@@ -1,11 +1,13 @@
 from edulint.linters import Linters
 from dataclasses import dataclass, asdict
+from dataclasses_json import dataclass_json
 from typing import Optional, Dict, Union
 import json
 
 ProblemJson = Dict[str, Union[str, int]]
 
 
+@dataclass_json
 @dataclass
 class Problem:
     source: Linters
@@ -52,8 +54,3 @@ class Problem:
     def __str__(self) -> str:
         return f"{self.path}:{self.line}:{self.column}: " \
                f"{self.code} {self.text}"
-
-
-class ProblemEncoder(json.JSONEncoder):
-    def default(self, o: Problem) -> ProblemJson:
-        return asdict(o)
