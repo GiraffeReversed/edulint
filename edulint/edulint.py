@@ -1,8 +1,7 @@
-from edulint.linting.problem import ProblemEncoder
 from edulint.config.config import get_config
+from edulint.linting.problem import Problem
 from edulint.linting.linting import lint
 import argparse
-import json
 
 
 def setup_argparse() -> argparse.Namespace:
@@ -18,7 +17,7 @@ def main() -> int:
     config = get_config(args.file)
     result = lint(args.file, config)
     if args.json:
-        print(json.dumps(result, indent=1, cls=ProblemEncoder))
+        print(Problem.schema().dumps(result, indent=2, many=True))  # type: ignore
     else:
         for problem in result:
             print(problem)

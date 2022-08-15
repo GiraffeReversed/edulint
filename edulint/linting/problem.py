@@ -1,8 +1,7 @@
 from edulint.linters import Linters
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from typing import Optional, Dict, Union
-import json
 
 ProblemJson = Dict[str, Union[str, int]]
 
