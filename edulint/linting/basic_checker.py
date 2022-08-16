@@ -1,13 +1,13 @@
-from astroid import nodes
+from astroid import nodes  # type: ignore
 from typing import TYPE_CHECKING, Optional
 
-from pylint.checkers import BaseChecker
+from pylint.checkers import BaseChecker  # type: ignore
 
 if TYPE_CHECKING:
-    from pylint.lint import PyLinter
+    from pylint.lint import PyLinter  # type: ignore
 
 
-class OnecharNames(BaseChecker):
+class OnecharNames(BaseChecker):  # type: ignore
 
     name = "only-allowed-onechar-names"
     msgs = {

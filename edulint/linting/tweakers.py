@@ -15,11 +15,11 @@ class Tweaker:
     keep: Callable[["Tweaker", Problem, List[Arg]], bool]
     reword: Optional[Callable[["Tweaker", Problem], str]] = None
 
-    def match(self, problem: Problem) -> Optional[Match[AnyStr]]:
+    def match(self, problem: Problem) -> Optional[Match[str]]:
         return self.pattern.match(problem.text)
 
     def should_keep(self, problem: Problem, args: List[Arg]) -> bool:
-        return self.keep(self, problem, args)  # type: ignore
+        return self.keep(self, problem, args)
 
     def does_reword(self) -> bool:
         return self.reword is not None
