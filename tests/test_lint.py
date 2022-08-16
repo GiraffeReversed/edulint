@@ -77,6 +77,13 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
     lazy_equal(lint(join("tests", "data", filename), config), expected_output)
 
 
+def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    lazy_equal(
+        lint(join("tests", "data", filename), apply_translates(args, get_config_translations())),
+        expected_output
+    )
+
+
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT)], [
         lazy_problem().set_code("W0107").set_line(198)
@@ -92,6 +99,12 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
         lazy_problem().set_code("C0200").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
     ]),
+])
+def test_translations(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    apply_and_lint(filename, args, expected_output)
+
+
+@pytest.mark.parametrize("filename,args,expected_output", [
     ("014186-p2_nested.py", [Arg(Option.PYTHON_SPEC)], [
         lazy_problem().set_code("C0103").set_line(20),
         lazy_problem().set_code("C0103").set_line(21),
@@ -101,6 +114,12 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
         lazy_problem().set_code("C0103").set_line(34),
         lazy_problem().set_code("W0622").set_line(48),
     ]),
+])
+def test_invalid_name(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    apply_and_lint(filename, args, expected_output)
+
+
+@pytest.mark.parametrize("filename,args,expected_output", [
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "")], [
         lazy_problem().set_code("R6001").set_line(6),
         lazy_problem().set_code("R6001").set_line(14)
@@ -112,7 +131,13 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
         lazy_problem().set_code("R6001").set_line(6)
     ]),
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "in")], [
-    ]),
+    ])
+])
+def test_allowed_onechar_names(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    apply_and_lint(filename, args, expected_output)
+
+
+@pytest.mark.parametrize("filename,args,expected_output", [
     ("105119-p5_template.py", [Arg(Option.PYTHON_SPEC), Arg(Option.PYLINT, "--disable=C0200")], [
         lazy_problem().set_code("R1714").set_line(22)
         .set_text("Consider merging these comparisons with \"in\" to \"i not in '[]'\""),
@@ -120,11 +145,8 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
         .set_text("Consider merging these comparisons with \"in\" to 'i in (1, 2, 3)'"),
     ]),
 ])
-def test_apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    lazy_equal(
-        lint(join("tests", "data", filename), apply_translates(args, get_config_translations())),
-        expected_output
-    )
+def test_consider_using_in(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    apply_and_lint(filename, args, expected_output)
 
 
 def test_problem_can_be_dumped_to_json() -> None:
