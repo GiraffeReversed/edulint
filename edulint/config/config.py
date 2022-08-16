@@ -90,13 +90,24 @@ def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Lis
     return result
 
 
+def fill_in_val(arg: Arg, translation: List[str]) -> List[str]:
+    result = []
+    for t in translation:
+        if "<val>" in t:
+            assert isinstance(arg.val, str)
+            result.append(t.replace("<val>", arg.val))
+        else:
+            result.append(t)
+    return result
+
+
 def apply_translates(args: List[Arg], config_translations: Dict[Option, Translation]) -> Config:
     result: Config = Config(edulint=args)
     for arg in args:
         translated = config_translations.get(arg.option)
         if translated is not None:
             assert translated.to != Linters.EDULINT
-            result.others[translated.to].extend(translated.val)
+            result.others[translated.to].extend(fill_in_val(arg, translated.val))
         elif arg.option == Option.PYLINT:
             assert arg.val
             result.others[Linters.PYLINT].append(arg.val)

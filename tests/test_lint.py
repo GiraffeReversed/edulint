@@ -102,14 +102,14 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
         lazy_problem().set_code("W0622").set_line(48),
     ]),
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "")], [
-        lazy_problem().set_code("C0103").set_line(6),
-        lazy_problem().set_code("C0103").set_line(14)
+        lazy_problem().set_code("R6001").set_line(6),
+        lazy_problem().set_code("R6001").set_line(14)
     ]),
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "n")], [
-        lazy_problem().set_code("C0103").set_line(14)
+        lazy_problem().set_code("R6001").set_line(14)
     ]),
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "i")], [
-        lazy_problem().set_code("C0103").set_line(6)
+        lazy_problem().set_code("R6001").set_line(6)
     ]),
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "in")], [
     ]),
