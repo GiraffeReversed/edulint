@@ -54,8 +54,8 @@ def lint_any(
         out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
     command = [sys.executable, "-m", str(linter)] + args + config + [filename]
     return_code, outs, errs = ProcessHandler.run(command, timeout=10)
+    print(errs, file=sys.stderr, end="")
     if (linter == Linters.FLAKE8 and return_code not in (0, 1)) or (linter == Linters.PYLINT and return_code == 32):
-        print(errs, file=sys.stderr, end="")
         print(f"edulint: {command[2]} exited with {return_code}", file=sys.stderr)
         exit(return_code)
     if not outs:
