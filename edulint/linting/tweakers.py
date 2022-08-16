@@ -41,6 +41,23 @@ def invalid_name_keep(self: Tweaker, problem: Problem, args: List[Arg]) -> bool:
     return False
 
 
+def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
+    match = self.match(problem)
+    assert match
+
+    groups = match.groups()
+    start = groups[0]
+    outer_quote = groups[1]
+    vals = groups[4].split(", ")
+    assert vals
+
+    if all(v and v[0] == v[-1] and v[0] in "\"\'" and len(v) == 3 for v in vals):
+        inner_quote = vals[0][0]
+        return start + inner_quote + "".join(v.strip("\"\'") for v in vals) + inner_quote + outer_quote
+
+    return problem.text
+
+
 Tweakers = Dict[Tuple[Linters, str], Tweaker]
 
 TWEAKERS = {
@@ -48,7 +65,16 @@ TWEAKERS = {
         set(),
         re.compile(r"^(.*) name \"(.*)\" doesn't conform to (.*)$"),
         invalid_name_keep
-    )
+    ),
+    (Linters.PYLINT, "R1714"): Tweaker(  # consider-using-in
+        set(),
+        re.compile(
+            r"^(Consider merging these comparisons with \"in\" to "
+            r"(\"|\')([^\s]*)( not)? in )\(([^\)]+)\)(\"|\')"
+        ),
+        lambda _t, _p, _a: True,
+        consider_using_in_reword
+    ),
 }
 
 

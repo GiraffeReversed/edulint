@@ -27,7 +27,7 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
          "inconsistent-return-statements,consider-swap-variables,"
          "consider-using-join,consider-using-set-comprehension,"
          "unnecessary-comprehension,use-a-generator,use-list-literal,"
-         "use-dict-literal,invalid-name"]
+         "use-dict-literal,invalid-name,consider-using-in"]
     ),
     Option.ALLOWED_ONECHAR_NAMES: Translation(
         Linters.PYLINT,

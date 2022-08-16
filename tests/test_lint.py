@@ -113,6 +113,12 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
     ]),
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "in")], [
     ]),
+    ("105119-p5_template.py", [Arg(Option.PYTHON_SPEC), Arg(Option.PYLINT, "--disable=C0200")], [
+        lazy_problem().set_code("R1714").set_line(22)
+        .set_text("Consider merging these comparisons with \"in\" to \"i not in '[]'\""),
+        lazy_problem().set_code("R1714").set_line(34)
+        .set_text("Consider merging these comparisons with \"in\" to 'i in (1, 2, 3)'"),
+    ]),
 ])
 def test_apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     lazy_equal(
