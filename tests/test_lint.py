@@ -178,6 +178,24 @@ def test_consider_using_enumerate(filename: str, args: List[Arg], expected_outpu
     apply_and_lint(filename, args, expected_output)
 
 
+def test_umime_count_a() -> None:
+    apply_and_lint(
+        "umime_count_a.py",
+        [Arg(Option.PYTHON_SPEC), Arg(Option.ALLOWED_ONECHAR_NAMES, "i")],
+        [
+            lazy_problem().set_code("R6001").set_line(2)
+            .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name."),
+            lazy_problem().set_code("E225").set_line(2),
+            lazy_problem().set_code("R6101").set_line(3)
+            .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
+            lazy_problem().set_code("E225").set_line(4).set_column(19),
+            lazy_problem().set_code("E225").set_line(4).set_column(35),
+            lazy_problem().set_code("R6001").set_line(5),
+            lazy_problem().set_code("E225").set_line(5).set_column(14),
+        ]
+    )
+
+
 def test_problem_can_be_dumped_to_json() -> None:
     problem = Problem(source=Linters.FLAKE8, path='path', line=5, column=1, code='E303',
                       text='too many blank lines (3)', end_line=None, end_column=None)
