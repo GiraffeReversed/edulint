@@ -22,7 +22,7 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
         ["--enable=unidiomatic-typecheck,misplaced-format-function,"
          "unnecessary-lambda,protected-access,multiple-imports,"
          "wrong-import-position,consider-using-from-import,wildcard-import,"
-         "reimported,consider-using-enumerate,consider-iterating-dictionary,"
+         "reimported,improve-for-loop,consider-iterating-dictionary,"
          "consider-using-dict-items,consider-using-f-string,"
          "inconsistent-return-statements,consider-swap-variables,"
          "consider-using-join,consider-using-set-comprehension,"

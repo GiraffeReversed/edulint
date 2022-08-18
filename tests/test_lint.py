@@ -89,14 +89,14 @@ def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem
         lazy_problem().set_code("W0107").set_line(198)
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC)], [
-        lazy_problem().set_code("C0200").set_line(82),
-        lazy_problem().set_code("C0200").set_line(173),
+        lazy_problem().set_code("R6102").set_line(82),
+        lazy_problem().set_code("R6101").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
         lazy_problem().set_code("W0107").set_line(198),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPEC)], [
-        lazy_problem().set_code("C0200").set_line(82),
-        lazy_problem().set_code("C0200").set_line(173),
+        lazy_problem().set_code("R6102").set_line(82),
+        lazy_problem().set_code("R6101").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
     ]),
 ])
@@ -141,11 +141,40 @@ def test_allowed_onechar_names(filename: str, args: List[Arg], expected_output: 
     ("105119-p5_template.py", [Arg(Option.PYTHON_SPEC), Arg(Option.PYLINT, "--disable=C0200")], [
         lazy_problem().set_code("R1714").set_line(22)
         .set_text("Consider merging these comparisons with \"in\" to \"i not in '[]'\""),
-        lazy_problem().set_code("R1714").set_line(34)
+        lazy_problem().set_code("R1714").set_line(35)
         .set_text("Consider merging these comparisons with \"in\" to 'i in (1, 2, 3)'"),
     ]),
 ])
 def test_consider_using_in(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    apply_and_lint(filename, args, expected_output)
+
+
+@pytest.mark.parametrize("filename,args,expected_output", [
+    ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], [
+    ]),
+    ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--enable=iterate-directly"),
+                               Arg(Option.PYLINT, "--disable=W0622,R1705")], [
+    ]),
+    ("014771-p2_nested.py", [Arg(Option.PYTHON_SPEC)], [
+        lazy_problem().set_code("R6101").set_line(25)
+        .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
+        lazy_problem().set_code("R6101").set_line(35)
+        .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
+    ]),
+    ("umime_count_a.py", [Arg(Option.PYLINT, "--enable=improve-for-loop"),
+                          Arg(Option.FLAKE8, "--extend-ignore=E225")], [
+        lazy_problem().set_code("R6101").set_line(3)
+        .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
+    ]),
+    ("custom_for.py", [Arg(Option.PYLINT, "--enable=improve-for-loop")], [
+        lazy_problem().set_code("R6101").set_line(5)
+        .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
+        lazy_problem().set_code("R6102").set_line(21)
+        .set_text("Iterate using enumerate: \"for x, var in enumerate(A)\" (with appropriate name for \"var\")"),
+        lazy_problem().set_code("R6101").set_line(26)
+    ])
+])
+def test_consider_using_enumerate(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     apply_and_lint(filename, args, expected_output)
 
 
