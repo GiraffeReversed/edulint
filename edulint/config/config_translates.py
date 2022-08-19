@@ -31,7 +31,7 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
     ),
     Option.ALLOWED_ONECHAR_NAMES: Translation(
         Linters.PYLINT,
-        ["--enable=disallowed-onechar-name", "--allowed-onechar-names=<val>"]
+        ["--bad-names-rgxs=^[a-z]$"]
     )
 }
 

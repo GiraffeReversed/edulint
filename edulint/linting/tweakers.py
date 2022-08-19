@@ -41,6 +41,26 @@ def invalid_name_keep(self: Tweaker, problem: Problem, args: List[Arg]) -> bool:
     return False
 
 
+def disallowed_name_keep(self: Tweaker, problem: Problem, args: List[Arg]) -> bool:
+    if len(args) == 1 and args[0].option == Option.ALLOWED_ONECHAR_NAMES and args[0].val is not None:
+        allowed_onechar_names = args[0].val
+    else:
+        allowed_onechar_names = ""
+
+    match = self.match(problem)
+    assert match
+    name = match.group(1)
+
+    return len(name) != 1 or name not in allowed_onechar_names
+
+
+def disallowed_name_reword(self: Tweaker, problem: Problem) -> str:
+    name = self.match(problem).group(1)
+    if len(name) == 1:
+        return f"Disallowed single-character variable name \"{name}\", choose a more descriptive name"
+    return problem.text
+
+
 def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
     match = self.match(problem)
     assert match
@@ -65,6 +85,12 @@ TWEAKERS = {
         set(),
         re.compile(r"^(.*) name \"(.*)\" doesn't conform to (.*)$"),
         invalid_name_keep
+    ),
+    (Linters.PYLINT, "C0104"): Tweaker(  # disallowed-name
+        set([Option.ALLOWED_ONECHAR_NAMES]),
+        re.compile(r"Disallowed name \"(.*)\""),
+        disallowed_name_keep,
+        disallowed_name_reword
     ),
     (Linters.PYLINT, "R1714"): Tweaker(  # consider-using-in
         set(),

@@ -137,6 +137,9 @@ Tweakers
      -
       * does not emit messages about invalid module name
       * emits messages only about variable names that do indeed break :code:`snake_case`
+   * - :link_pylint:`disallowed-name`
+     -
+      * when :code:`allowed-onechar-names` is enabled, complains on all single-character variable names, encouraging choosing a different name
    * - :link_pylint:`consider-using-in`
      -
       * if all enumerated values are all single characters, suggests joining them into string rather than using a tuple (:code:`ch in ".,?"` instead of :code:`ch in ('.', ',', '?')`)

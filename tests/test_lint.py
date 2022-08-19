@@ -121,14 +121,14 @@ def test_invalid_name(filename: str, args: List[Arg], expected_output: List[Prob
 
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "")], [
-        lazy_problem().set_code("R6001").set_line(6),
-        lazy_problem().set_code("R6001").set_line(14)
+        lazy_problem().set_code("C0104").set_line(6),
+        lazy_problem().set_code("C0104").set_line(14)
     ]),
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "n")], [
-        lazy_problem().set_code("R6001").set_line(14)
+        lazy_problem().set_code("C0104").set_line(14)
     ]),
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "i")], [
-        lazy_problem().set_code("R6001").set_line(6)
+        lazy_problem().set_code("C0104").set_line(6)
     ]),
     ("014180-p5_fibsum.py", [Arg(Option.ALLOWED_ONECHAR_NAMES, "in")], [
     ])
@@ -183,14 +183,14 @@ def test_umime_count_a() -> None:
         "umime_count_a.py",
         [Arg(Option.PYTHON_SPEC), Arg(Option.ALLOWED_ONECHAR_NAMES, "i")],
         [
-            lazy_problem().set_code("R6001").set_line(2)
+            lazy_problem().set_code("C0104").set_line(2)
             .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),
             lazy_problem().set_code("E225").set_line(2),
             lazy_problem().set_code("R6101").set_line(3)
             .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
             lazy_problem().set_code("E225").set_line(4).set_column(19),
             lazy_problem().set_code("E225").set_line(4).set_column(35),
-            lazy_problem().set_code("R6001").set_line(5),
+            lazy_problem().set_code("C0104").set_line(5),
             lazy_problem().set_code("E225").set_line(5).set_column(14),
         ]
     )
