@@ -1,4 +1,4 @@
-from edulint.linters import Linters
+from edulint.linters import Linter
 from edulint.options import Option
 from edulint.config.arg import Arg
 from edulint.linting.problem import Problem
@@ -77,21 +77,21 @@ def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
     return problem.text
 
 
-Tweakers = Dict[Tuple[Linters, str], Tweaker]
+Tweakers = Dict[Tuple[Linter, str], Tweaker]
 
 TWEAKERS = {
-    (Linters.PYLINT, "C0103"): Tweaker(  # invalid-name
+    (Linter.PYLINT, "C0103"): Tweaker(  # invalid-name
         set(),
         re.compile(r"^(.*) name \"(.*)\" doesn't conform to (.*)$"),
         invalid_name_keep
     ),
-    (Linters.PYLINT, "C0104"): Tweaker(  # disallowed-name
+    (Linter.PYLINT, "C0104"): Tweaker(  # disallowed-name
         set([Option.ALLOWED_ONECHAR_NAMES]),
         re.compile(r"Disallowed name \"(.*)\""),
         disallowed_name_keep,
         disallowed_name_reword
     ),
-    (Linters.PYLINT, "R1714"): Tweaker(  # consider-using-in
+    (Linter.PYLINT, "R1714"): Tweaker(  # consider-using-in
         set(),
         re.compile(
             r"^(Consider merging these comparisons with \"in\" to "

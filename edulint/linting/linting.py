@@ -4,7 +4,7 @@ from edulint.linting.problem import ProblemJson, Problem
 from edulint.linting.process_handler import ProcessHandler
 from edulint.linting.tweakers import get_tweakers, Tweakers
 from edulint.config.config import Config
-from edulint.linters import Linters
+from edulint.linters import Linter
 import sys
 import json
 import pathlib
@@ -18,7 +18,7 @@ def flake8_to_problem(raw: ProblemJson) -> Problem:
     assert isinstance(raw["text"], str), f'got {type(raw["text"])} for text'
 
     return Problem(
-        Linters.FLAKE8,
+        Linter.FLAKE8,
         raw["filename"],
         raw["line_number"],
         raw["column_number"],
@@ -37,7 +37,7 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
     assert isinstance(raw["endColumn"], int) or raw["endColumn"] is None, f'got {type(raw["endColumn"])} for endColumn'
 
     return Problem(
-        Linters.PYLINT,
+        Linter.PYLINT,
         raw["path"],
         raw["line"],
         raw["column"],
@@ -49,13 +49,13 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
 
 
 def lint_any(
-        linter: Linters, filename: str, args: List[str], config: List[str],
+        linter: Linter, filename: str, args: List[str], config: List[str],
         result_getter: Callable[[Any], Any],
         out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
     command = [sys.executable, "-m", str(linter)] + args + config + [filename]
     return_code, outs, errs = ProcessHandler.run(command, timeout=10)
     print(errs, file=sys.stderr, end="")
-    if (linter == Linters.FLAKE8 and return_code not in (0, 1)) or (linter == Linters.PYLINT and return_code == 32):
+    if (linter == Linter.FLAKE8 and return_code not in (0, 1)) or (linter == Linter.PYLINT and return_code == 32):
         print(f"edulint: {command[2]} exited with {return_code}", file=sys.stderr)
         exit(return_code)
     if not outs:
@@ -67,7 +67,7 @@ def lint_any(
 def lint_flake8(filename: str, config: Config) -> List[Problem]:
     flake8_args = ["--format=json"]
     return lint_any(
-        Linters.FLAKE8, filename, flake8_args, config.others[Linters.FLAKE8],
+        Linter.FLAKE8, filename, flake8_args, config.others[Linter.FLAKE8],
         lambda r: r[filename],
         flake8_to_problem)
 
@@ -76,7 +76,7 @@ def lint_pylint(filename: str, config: Config) -> List[Problem]:
     cwd = pathlib.Path(__file__).parent.resolve()
     pylint_args = [f'--rcfile={cwd}/.pylintrc', "--output-format=json"]
     return lint_any(
-        Linters.PYLINT, filename, pylint_args, config.others[Linters.PYLINT],
+        Linter.PYLINT, filename, pylint_args, config.others[Linter.PYLINT],
         lambda r: r, pylint_to_problem)
 
 

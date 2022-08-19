@@ -1,4 +1,4 @@
-from edulint.linters import Linters
+from edulint.linters import Linter
 from edulint.options import Option
 from typing import Dict, List
 from dataclasses import dataclass
@@ -6,19 +6,19 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Translation:
-    to: Linters
+    to: Linter
     val: List[str]
 
 
 CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
     Option.ENHANCEMENT: Translation(
-        Linters.PYLINT,
+        Linter.PYLINT,
         ["--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
          "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
          "unused-variable,unused-argument"]
     ),
     Option.PYTHON_SPEC: Translation(
-        Linters.PYLINT,
+        Linter.PYLINT,
         ["--enable=unidiomatic-typecheck,misplaced-format-function,"
          "unnecessary-lambda,protected-access,multiple-imports,"
          "wrong-import-position,consider-using-from-import,wildcard-import,"
@@ -30,7 +30,7 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
          "use-dict-literal,invalid-name,consider-using-in"]
     ),
     Option.ALLOWED_ONECHAR_NAMES: Translation(
-        Linters.PYLINT,
+        Linter.PYLINT,
         ["--bad-names-rgxs=^[a-z]$"]
     )
 }

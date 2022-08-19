@@ -1,5 +1,5 @@
 import pytest
-from edulint.linters import Linters
+from edulint.linters import Linter
 from edulint.options import Option
 from edulint.config.arg import Arg
 from edulint.config.config import Config, apply_translations
@@ -55,16 +55,16 @@ def lazy_equal(received: List[Problem], expected: List[Problem]) -> None:
 @pytest.mark.parametrize("filename,config,expected_output", [
     ("hello_world.py", Config(), []),
     ("z202817-zkouska.py", Config(), [lazy_problem().set_code("W0107").set_line(198)]),
-    ("z202817-zkouska.py", Config(others={Linters.PYLINT: ["--enable=C0115"]}), [
+    ("z202817-zkouska.py", Config(others={Linter.PYLINT: ["--enable=C0115"]}), [
         lazy_problem().set_code("C0115").set_line(124),
         lazy_problem().set_code("C0115").set_line(130),
         lazy_problem().set_code("W0107").set_line(198)
     ]),
-    ("z202817-zkouska.py", Config(others={Linters.PYLINT: ["--enable=C0115", "--disable=W0107"]}), [
+    ("z202817-zkouska.py", Config(others={Linter.PYLINT: ["--enable=C0115", "--disable=W0107"]}), [
         lazy_problem().set_code("C0115").set_line(124),
         lazy_problem().set_code("C0115").set_line(130)
     ]),
-    ("z202817-zkouska.py", Config(others={Linters.PYLINT: ["--disable=all"]}), []),
+    ("z202817-zkouska.py", Config(others={Linter.PYLINT: ["--disable=all"]}), []),
     ("002814-p1_trapezoid.py", Config(), [
         lazy_problem().set_code("F401").set_line(1),
         lazy_problem().set_code("F401").set_line(1),
@@ -197,7 +197,7 @@ def test_umime_count_a() -> None:
 
 
 def test_problem_can_be_dumped_to_json() -> None:
-    problem = Problem(source=Linters.FLAKE8, path='path', line=5, column=1, code='E303',
+    problem = Problem(source=Linter.FLAKE8, path='path', line=5, column=1, code='E303',
                       text='too many blank lines (3)', end_line=None, end_column=None)
     out = problem.to_json(indent=2)  # type: ignore
     assert out == """{

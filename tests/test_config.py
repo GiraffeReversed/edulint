@@ -1,5 +1,5 @@
 import pytest
-from edulint.linters import Linters
+from edulint.linters import Linter
 from edulint.config.arg import Arg
 from edulint.options import Option, TakesVal, OptionParse, get_option_parses
 from edulint.config.config import Config, extract_args, parse_args, apply_translations
@@ -118,29 +118,29 @@ def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: 
 def config_translations() -> Dict[Option, Translation]:
     return {
         Option.ENHANCEMENT: Translation(
-            Linters.PYLINT,
+            Linter.PYLINT,
             ["aaa"]
         ),
         Option.PYTHON_SPEC: Translation(
-            Linters.PYLINT,
+            Linter.PYLINT,
             ["bbb"]
         ),
         Option.ALLOWED_ONECHAR_NAMES: Translation(
-            Linters.PYLINT,
+            Linter.PYLINT,
             ["ccc"]
         )
     }
 
 
 @pytest.mark.parametrize("args,config", [
-    ([Arg(Option.ENHANCEMENT)], Config(others={Linters.PYLINT: ["aaa"]})),
-    ([Arg(Option.ENHANCEMENT), Arg(Option.PYLINT, "zzz")], Config(others={Linters.PYLINT: ["aaa", "zzz"]})),
-    ([Arg(Option.PYLINT, "zzz"), Arg(Option.ENHANCEMENT)], Config(others={Linters.PYLINT: ["zzz", "aaa"]})),
+    ([Arg(Option.ENHANCEMENT)], Config(others={Linter.PYLINT: ["aaa"]})),
+    ([Arg(Option.ENHANCEMENT), Arg(Option.PYLINT, "zzz")], Config(others={Linter.PYLINT: ["aaa", "zzz"]})),
+    ([Arg(Option.PYLINT, "zzz"), Arg(Option.ENHANCEMENT)], Config(others={Linter.PYLINT: ["zzz", "aaa"]})),
     (
         [Arg(Option.FLAKE8, "zzz"), Arg(Option.ENHANCEMENT)],
-        Config(others={Linters.FLAKE8: ["zzz"], Linters.PYLINT: ["aaa"]})
+        Config(others={Linter.FLAKE8: ["zzz"], Linter.PYLINT: ["aaa"]})
     ),
-    ([Arg(Option.ALLOWED_ONECHAR_NAMES, "n")], Config(others={Linters.PYLINT: ["ccc"]}))
+    ([Arg(Option.ALLOWED_ONECHAR_NAMES, "n")], Config(others={Linter.PYLINT: ["ccc"]}))
 ])
 def test_apply_translations_translates_correctly(
         args: List[Arg],

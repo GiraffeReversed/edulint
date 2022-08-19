@@ -1,20 +1,20 @@
 from edulint.config.arg import Arg
 from edulint.options import Option, TakesVal, OptionParse, get_option_parses, get_name_to_option
-from edulint.linters import Linters
+from edulint.linters import Linter
 from edulint.config.config_translations import get_config_translations, Translation
 from typing import Dict, List, Optional, Tuple, Any
 import re
 import sys
 import shlex
 
-ConfigDict = Dict[Linters, List[str]]
+ConfigDict = Dict[Linter, List[str]]
 
 
 class Config:
     def __init__(self, edulint: Optional[List[Arg]] = None, others: Optional[ConfigDict] = None) -> None:
         self.edulint = edulint if edulint is not None else []
         others = others if others is not None else {}
-        self.others: ConfigDict = {linter: others.get(linter, []) for linter in Linters}
+        self.others: ConfigDict = {linter: others.get(linter, []) for linter in Linter}
 
     @staticmethod
     def get_val_from(args: List[Arg], option: Option) -> Optional[str]:
@@ -34,11 +34,11 @@ class Config:
         return Config.has_opt_in(self.edulint, option)
 
     def __str__(self) -> str:
-        def to_str(linter: Linters, options: Any) -> str:
+        def to_str(linter: Linter, options: Any) -> str:
             return f"{linter}: {options}"
         return "{" \
             + ", ".join(to_str(linter, options) for linter, options in self.others.items() if options) \
-            + ", " + to_str(Linters.EDULINT, self.edulint) \
+            + ", " + to_str(Linter.EDULINT, self.edulint) \
             + "}"
 
     def __repr__(self) -> str:
@@ -106,14 +106,14 @@ def apply_translations(args: List[Arg], config_translations: Dict[Option, Transl
     for arg in args:
         translated = config_translations.get(arg.option)
         if translated is not None:
-            assert translated.to != Linters.EDULINT
+            assert translated.to != Linter.EDULINT
             result.others[translated.to].extend(fill_in_val(arg, translated.val))
         elif arg.option == Option.PYLINT:
             assert arg.val
-            result.others[Linters.PYLINT].append(arg.val)
+            result.others[Linter.PYLINT].append(arg.val)
         elif arg.option == Option.FLAKE8:
             assert arg.val
-            result.others[Linters.FLAKE8].append(arg.val)
+            result.others[Linter.FLAKE8].append(arg.val)
     return result
 
 

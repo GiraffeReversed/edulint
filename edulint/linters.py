@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class Linters(Enum):
+class Linter(Enum):
     EDULINT = 0,  # keep defined first
     PYLINT = 1,
     FLAKE8 = 2
@@ -10,8 +10,8 @@ class Linters(Enum):
         return self.name.lower()
 
     @staticmethod
-    def from_str(linter_str: str) -> "Linters":
-        for linter in Linters:
+    def from_str(linter_str: str) -> "Linter":
+        for linter in Linter:
             if str(linter) == linter_str.lower():
                 return linter
         assert False, "no such linter: " + linter_str
