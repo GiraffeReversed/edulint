@@ -1,7 +1,7 @@
 from edulint.config.arg import Arg
 from edulint.options import Option, TakesVal, OptionParse, get_option_parses, get_name_to_option
 from edulint.linters import Linters
-from edulint.config.config_translates import get_config_translations, Translation
+from edulint.config.config_translations import get_config_translations, Translation
 from typing import Dict, List, Optional, Tuple, Any
 import re
 import sys
@@ -101,7 +101,7 @@ def fill_in_val(arg: Arg, translation: List[str]) -> List[str]:
     return result
 
 
-def apply_translates(args: List[Arg], config_translations: Dict[Option, Translation]) -> Config:
+def apply_translations(args: List[Arg], config_translations: Dict[Option, Translation]) -> Config:
     result: Config = Config(edulint=args)
     for arg in args:
         translated = config_translations.get(arg.option)
@@ -120,4 +120,4 @@ def apply_translates(args: List[Arg], config_translations: Dict[Option, Translat
 def get_config(
         filename: str, option_parses: Dict[Option, OptionParse] = get_option_parses(),
         config_translations: Dict[Option, Translation] = get_config_translations()) -> Config:
-    return apply_translates(parse_args(extract_args(filename), option_parses), config_translations)
+    return apply_translations(parse_args(extract_args(filename), option_parses), config_translations)

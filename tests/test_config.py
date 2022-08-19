@@ -2,8 +2,8 @@ import pytest
 from edulint.linters import Linters
 from edulint.config.arg import Arg
 from edulint.options import Option, TakesVal, OptionParse, get_option_parses
-from edulint.config.config import Config, extract_args, parse_args, apply_translates
-from edulint.config.config_translates import get_config_translations, Translation
+from edulint.config.config import Config, extract_args, parse_args, apply_translations
+from edulint.config.config_translations import get_config_translations, Translation
 from edulint.linting.tweakers import get_tweakers
 from typing import List, Set, Dict
 from copy import deepcopy
@@ -147,7 +147,7 @@ def test_apply_translations_translates_correctly(
         config_translations: Dict[Option, Translation],
         config: Config) -> None:
 
-    result = apply_translates(args, config_translations)
+    result = apply_translations(args, config_translations)
     orig_args = deepcopy(args)
     assert result.others == config.others
     assert result.edulint == orig_args

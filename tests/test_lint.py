@@ -2,8 +2,8 @@ import pytest
 from edulint.linters import Linters
 from edulint.options import Option
 from edulint.config.arg import Arg
-from edulint.config.config import Config, apply_translates
-from edulint.config.config_translates import get_config_translations
+from edulint.config.config import Config, apply_translations
+from edulint.config.config_translations import get_config_translations
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint
 from os.path import join
@@ -79,7 +79,7 @@ def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> 
 
 def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     lazy_equal(
-        lint(join("tests", "data", filename), apply_translates(args, get_config_translations())),
+        lint(join("tests", "data", filename), apply_translations(args, get_config_translations())),
         expected_output
     )
 
