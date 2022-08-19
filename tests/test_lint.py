@@ -184,7 +184,7 @@ def test_umime_count_a() -> None:
         [Arg(Option.PYTHON_SPEC), Arg(Option.ALLOWED_ONECHAR_NAMES, "i")],
         [
             lazy_problem().set_code("R6001").set_line(2)
-            .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name."),
+            .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),
             lazy_problem().set_code("E225").set_line(2),
             lazy_problem().set_code("R6101").set_line(3)
             .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),

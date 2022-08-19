@@ -7,6 +7,7 @@ from pylint.checkers import utils
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
+from edulint.options import Option
 from edulint.linting.checkers.utils import BaseVisitor
 
 
@@ -15,14 +16,14 @@ class OnecharNames(BaseChecker):  # type: ignore
     name = "only-allowed-onechar-names"
     msgs = {
         "R6001": (
-            "Disallowed single-character variable name \"%s\", choose a more descriptive name.",
+            "Disallowed single-character variable name \"%s\", choose a more descriptive name",
             "disallowed-onechar-name",
-            "Only allowed one-character names can be used.",
+            "Emmited when a disallowed single-character name is used (see options).",
         ),
     }
     options = (
         (
-            "allowed-onechar-names",
+            Option.ALLOWED_ONECHAR_NAMES.to_name(),
             {
                 "default": "",
                 "type": "choice",
@@ -54,12 +55,12 @@ class ImproveForLoop(BaseChecker):  # type: ignore
         "R6101": (
             "Iterate directly: \"for var in %s\" (with appropriate name for \"var\")",
             "use-foreach",
-            "Avoid iterating over range(len(lst)) unless the index is needed.",
+            "Emitted when a for-range loop is used while a for-each loop would suffice.",
         ),
         "R6102": (
             "Iterate using enumerate: \"for %s, var in enumerate(%s)\" (with appropriate name for \"var\")",
             "use-enumerate",
-            "Use enumerate when needing both index and value to avoid accessing wrong element.",
+            "Emitted when a for-range loop is used with the element at each index is accessed as well.",
         ),
     }
 
