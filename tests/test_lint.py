@@ -1,8 +1,8 @@
 import pytest
 from edulint.linters import Linter
-from edulint.options import Option
+from edulint.options import Option, get_option_parses
 from edulint.config.arg import Arg
-from edulint.config.config import Config, apply_translations
+from edulint.config.config import Config, combine_and_translate
 from edulint.config.config_translations import get_config_translations
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint
@@ -55,16 +55,16 @@ def lazy_equal(received: List[Problem], expected: List[Problem]) -> None:
 @pytest.mark.parametrize("filename,config,expected_output", [
     ("hello_world.py", Config(), []),
     ("z202817-zkouska.py", Config(), [lazy_problem().set_code("W0107").set_line(198)]),
-    ("z202817-zkouska.py", Config(others={Linter.PYLINT: ["--enable=C0115"]}), [
+    ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115"])]), [
         lazy_problem().set_code("C0115").set_line(124),
         lazy_problem().set_code("C0115").set_line(130),
         lazy_problem().set_code("W0107").set_line(198)
     ]),
-    ("z202817-zkouska.py", Config(others={Linter.PYLINT: ["--enable=C0115", "--disable=W0107"]}), [
+    ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115", "--disable=W0107"])]), [
         lazy_problem().set_code("C0115").set_line(124),
         lazy_problem().set_code("C0115").set_line(130)
     ]),
-    ("z202817-zkouska.py", Config(others={Linter.PYLINT: ["--disable=all"]}), []),
+    ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--disable=all"])]), []),
     ("002814-p1_trapezoid.py", Config(), [
         lazy_problem().set_code("F401").set_line(1),
         lazy_problem().set_code("F401").set_line(1),
@@ -73,28 +73,29 @@ def lazy_equal(received: List[Problem], expected: List[Problem]) -> None:
         lazy_problem().set_code("E303").set_line(22),
     ])
 ])
-def test_lint(filename: str, config: Config, expected_output: List[Problem]) -> None:
+def test_lint_basic(filename: str, config: Config, expected_output: List[Problem]) -> None:
     lazy_equal(lint(join("tests", "data", filename), config), expected_output)
 
 
 def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     lazy_equal(
-        lint(join("tests", "data", filename), apply_translations(args, get_config_translations())),
+        lint(join("tests", "data", filename),
+             combine_and_translate(args, get_option_parses(), get_config_translations())),
         expected_output
     )
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
-    ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT)], [
+    ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT, True)], [
         lazy_problem().set_code("W0107").set_line(198)
     ]),
-    ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC)], [
+    ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC, True)], [
         lazy_problem().set_code("R6102").set_line(82),
         lazy_problem().set_code("R6101").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
         lazy_problem().set_code("W0107").set_line(198),
     ]),
-    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPEC)], [
+    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPEC, True)], [
         lazy_problem().set_code("R6102").set_line(82),
         lazy_problem().set_code("R6101").set_line(173),
         lazy_problem().set_code("C0123").set_line(174),
@@ -105,7 +106,7 @@ def test_translations(filename: str, args: List[Arg], expected_output: List[Prob
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
-    ("014186-p2_nested.py", [Arg(Option.PYTHON_SPEC)], [
+    ("014186-p2_nested.py", [Arg(Option.PYTHON_SPEC, True)], [
         lazy_problem().set_code("C0103").set_line(20),
         lazy_problem().set_code("C0103").set_line(21),
         lazy_problem().set_code("C0103").set_line(27),
@@ -138,7 +139,7 @@ def test_allowed_onechar_names(filename: str, args: List[Arg], expected_output: 
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
-    ("105119-p5_template.py", [Arg(Option.PYTHON_SPEC), Arg(Option.PYLINT, "--disable=C0200")], [
+    ("105119-p5_template.py", [Arg(Option.PYTHON_SPEC, True), Arg(Option.PYLINT, "--disable=C0200")], [
         lazy_problem().set_code("R1714").set_line(22)
         .set_text("Consider merging these comparisons with \"in\" to \"i not in '[]'\""),
         lazy_problem().set_code("R1714").set_line(35)
@@ -155,7 +156,7 @@ def test_consider_using_in(filename: str, args: List[Arg], expected_output: List
     ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--enable=iterate-directly"),
                                Arg(Option.PYLINT, "--disable=W0622,R1705")], [
     ]),
-    ("014771-p2_nested.py", [Arg(Option.PYTHON_SPEC)], [
+    ("014771-p2_nested.py", [Arg(Option.PYTHON_SPEC, True)], [
         lazy_problem().set_code("R6101").set_line(25)
         .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
         lazy_problem().set_code("R6101").set_line(35)
@@ -181,7 +182,7 @@ def test_improve_for(filename: str, args: List[Arg], expected_output: List[Probl
 def test_umime_count_a() -> None:
     apply_and_lint(
         "umime_count_a.py",
-        [Arg(Option.PYTHON_SPEC), Arg(Option.ALLOWED_ONECHAR_NAMES, "i")],
+        [Arg(Option.PYTHON_SPEC, True), Arg(Option.ALLOWED_ONECHAR_NAMES, "i")],
         [
             lazy_problem().set_code("C0104").set_line(2)
             .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),

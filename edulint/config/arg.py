@@ -1,9 +1,13 @@
-from edulint.options import Option
-from typing import Optional
+from edulint.options import Option, T, UnionT
+from typing import Optional, Generic
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Arg:
+class Arg(Generic[T]):
     option: Option
-    val: Optional[str] = None
+    val: T
+
+
+UnprocessedArg = Arg[Optional[str]]
+ProcessedArg = Arg[UnionT]

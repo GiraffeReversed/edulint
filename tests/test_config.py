@@ -1,12 +1,11 @@
 import pytest
 from edulint.linters import Linter
-from edulint.config.arg import Arg
-from edulint.options import Option, TakesVal, OptionParse, get_option_parses
-from edulint.config.config import Config, extract_args, parse_args, apply_translations
+from edulint.config.arg import UnprocessedArg, ProcessedArg
+from edulint.options import Option, TakesVal, Type, Combine, OptionParse, get_option_parses
+from edulint.config.config import Config, extract_args, parse_args, combine_and_translate
 from edulint.config.config_translations import get_config_translations, Translation
 from edulint.linting.tweakers import get_tweakers
 from typing import List, Set, Dict
-from copy import deepcopy
 
 
 @pytest.fixture
@@ -99,18 +98,18 @@ def test_extract_args_extracts_correctly(mocker, contents, args):
 @pytest.fixture
 def options() -> Dict[Option, OptionParse]:
     return {
-        Option.PYTHON_SPEC: OptionParse(Option.PYTHON_SPEC, "python-spec", "", TakesVal.NO),
-        Option.FLAKE8: OptionParse(Option.FLAKE8, "flake8", "", TakesVal.YES)
+        Option.PYTHON_SPEC: OptionParse(Option.PYTHON_SPEC, "", TakesVal.NO, False, Type.BOOL, Combine.REPLACE),
+        Option.FLAKE8: OptionParse(Option.FLAKE8, "", TakesVal.YES, [], Type.STR, Combine.APPEND)
     }
 
 
 @pytest.mark.parametrize("raw,parsed", [
-    (["python-spec"], [Arg(Option.PYTHON_SPEC)]),
-    (["flake8=foo"], [Arg(Option.FLAKE8, "foo")]),
-    (["flake8="], [Arg(Option.FLAKE8, "")]),
-    (["python-spec", "flake8=foo"], [Arg(Option.PYTHON_SPEC), Arg(Option.FLAKE8, "foo")])
+    (["python-spec"], [UnprocessedArg(Option.PYTHON_SPEC, None)]),
+    (["flake8=foo"], [UnprocessedArg(Option.FLAKE8, "foo")]),
+    (["flake8="], [UnprocessedArg(Option.FLAKE8, "")]),
+    (["python-spec", "flake8=foo"], [UnprocessedArg(Option.PYTHON_SPEC, None), UnprocessedArg(Option.FLAKE8, "foo")])
 ])
-def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: List[Arg]) -> None:
+def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: List[UnprocessedArg]) -> None:
     assert parse_args(raw, options) == parsed
 
 
@@ -133,21 +132,35 @@ def config_translations() -> Dict[Option, Translation]:
 
 
 @pytest.mark.parametrize("args,config", [
-    ([Arg(Option.ENHANCEMENT)], Config(others={Linter.PYLINT: ["aaa"]})),
-    ([Arg(Option.ENHANCEMENT), Arg(Option.PYLINT, "zzz")], Config(others={Linter.PYLINT: ["aaa", "zzz"]})),
-    ([Arg(Option.PYLINT, "zzz"), Arg(Option.ENHANCEMENT)], Config(others={Linter.PYLINT: ["zzz", "aaa"]})),
     (
-        [Arg(Option.FLAKE8, "zzz"), Arg(Option.ENHANCEMENT)],
-        Config(others={Linter.FLAKE8: ["zzz"], Linter.PYLINT: ["aaa"]})
+        [UnprocessedArg(Option.ENHANCEMENT, None)],
+        Config([ProcessedArg(Option.ENHANCEMENT, True), ProcessedArg(Option.PYLINT, ["aaa"])])
     ),
-    ([Arg(Option.ALLOWED_ONECHAR_NAMES, "n")], Config(others={Linter.PYLINT: ["ccc"]}))
+    (
+        [UnprocessedArg(Option.ENHANCEMENT, None), UnprocessedArg(Option.PYLINT, "zzz")],
+        Config([ProcessedArg(Option.ENHANCEMENT, True), ProcessedArg(Option.PYLINT, ["aaa", "zzz"])])
+    ),
+    (
+        [UnprocessedArg(Option.PYLINT, "zzz"), UnprocessedArg(Option.ENHANCEMENT, None)],
+        Config([ProcessedArg(Option.PYLINT, ["zzz", "aaa"]), ProcessedArg(Option.ENHANCEMENT, True)])
+    ),
+    (
+        [UnprocessedArg(Option.FLAKE8, "zzz"), UnprocessedArg(Option.ENHANCEMENT, None)],
+        Config([
+            ProcessedArg(Option.FLAKE8, ["zzz"]),
+            ProcessedArg(Option.ENHANCEMENT, True),
+            ProcessedArg(Option.PYLINT, ["aaa"])
+        ])
+    ),
+    (
+        [UnprocessedArg(Option.ALLOWED_ONECHAR_NAMES, "n")],
+        Config([ProcessedArg(Option.ALLOWED_ONECHAR_NAMES, "n"), ProcessedArg(Option.PYLINT, ["ccc"])])
+    )
 ])
-def test_apply_translations_translates_correctly(
-        args: List[Arg],
+def test_combine_and_translate_translates(
+        args: List[UnprocessedArg],
         config_translations: Dict[Option, Translation],
         config: Config) -> None:
 
-    result = apply_translations(args, config_translations)
-    orig_args = deepcopy(args)
-    assert result.others == config.others
-    assert result.edulint == orig_args
+    result = combine_and_translate(args, get_option_parses(), config_translations)
+    assert result.config == config.config

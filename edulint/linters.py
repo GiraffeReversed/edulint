@@ -1,4 +1,5 @@
 from enum import Enum
+from edulint.options import Option
 
 
 class Linter(Enum):
@@ -15,3 +16,13 @@ class Linter(Enum):
             if str(linter) == linter_str.lower():
                 return linter
         assert False, "no such linter: " + linter_str
+
+    def to_name(self) -> str:
+        return str(self)
+
+    @classmethod
+    def from_option(cls, option: Option) -> "Linter":
+        return cls.from_str(option.to_name())
+
+    def to_option(self) -> Option:
+        return Option.from_str(self.to_name())

@@ -1,48 +1,37 @@
-from edulint.config.arg import Arg
-from edulint.options import Option, TakesVal, OptionParse, get_option_parses, get_name_to_option
-from edulint.linters import Linter
+from edulint.config.arg import ProcessedArg, UnprocessedArg
+from edulint.options import UnionT, Option, TakesVal, OptionParse, get_option_parses, get_name_to_option
 from edulint.config.config_translations import get_config_translations, Translation
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Iterator
 import re
 import sys
 import shlex
 
-ConfigDict = Dict[Linter, List[str]]
-
 
 class Config:
-    def __init__(self, edulint: Optional[List[Arg]] = None, others: Optional[ConfigDict] = None) -> None:
-        self.edulint = edulint if edulint is not None else []
-        others = others if others is not None else {}
-        self.others: ConfigDict = {linter: others.get(linter, []) for linter in Linter}
 
-    @staticmethod
-    def get_val_from(args: List[Arg], option: Option) -> Optional[str]:
-        for arg in args:
-            if arg.option == option:
-                return arg.val
-        return None
+    def __init__(self, config: Optional[List[ProcessedArg]] = None,
+                 option_parses: Dict[Option, OptionParse] = get_option_parses()) -> None:
+        config = config if config is not None else []
+        wip_config: List[Optional[ProcessedArg]] = [None for _ in Option]
 
-    @staticmethod
-    def has_opt_in(args: List[Arg], option: Option) -> bool:
-        return Config.get_val_from(args, option) is not None
+        for arg in config:
+            assert wip_config[int(arg.option)] is None
+            wip_config[int(arg.option)] = arg
 
-    def get_val(self, option: Option) -> Optional[str]:
-        return Config.get_val_from(self.edulint, option)
-
-    def has_opt(self, option: Option) -> bool:
-        return Config.has_opt_in(self.edulint, option)
-
-    def __str__(self) -> str:
-        def to_str(linter: Linter, options: Any) -> str:
-            return f"{linter}: {options}"
-        return "{" \
-            + ", ".join(to_str(linter, options) for linter, options in self.others.items() if options) \
-            + ", " + to_str(Linter.EDULINT, self.edulint) \
-            + "}"
+        self.config = tuple([arg if arg is not None else ProcessedArg(o, option_parses[o].default)
+                             for o, arg in zip(Option, wip_config)])
 
     def __repr__(self) -> str:
-        return str(self)
+        return f"Config({self.config})"
+
+    def __getitem__(self, option: Option) -> ProcessedArg:
+        return self.config[int(option)]
+
+    def __contains__(self, option: Option) -> bool:
+        return self[option] is not None
+
+    def __iter__(self) -> Iterator[ProcessedArg]:
+        return filter(lambda x: x is not None, self.config.__iter__())
 
 
 def extract_args(filename: str) -> List[str]:
@@ -61,7 +50,7 @@ def extract_args(filename: str) -> List[str]:
     return result
 
 
-def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> List[Arg]:
+def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> List[UnprocessedArg]:
     name_to_option = get_name_to_option(option_parses)
 
     def get_name_val(arg: str) -> Tuple[str, Optional[str]]:
@@ -71,7 +60,7 @@ def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Lis
             return name, val
         return arg, None
 
-    result: List[Arg] = []
+    result: List[UnprocessedArg] = []
     for arg in args:
         name, val = get_name_val(arg)
         option = name_to_option.get(name)
@@ -85,12 +74,12 @@ def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Lis
             elif option_parse.takes_val == TakesVal.NO and val is not None:
                 print(f"edulint: option {name} takes no argument but {val} was supplied", file=sys.stderr)
             else:
-                result.append(Arg(option, val))
+                result.append(UnprocessedArg(option, val))
 
     return result
 
 
-def fill_in_val(arg: Arg, translation: List[str]) -> List[str]:
+def fill_in_val(arg: UnprocessedArg, translation: List[str]) -> List[str]:
     result = []
     for t in translation:
         if "<val>" in t:
@@ -101,23 +90,32 @@ def fill_in_val(arg: Arg, translation: List[str]) -> List[str]:
     return result
 
 
-def apply_translations(args: List[Arg], config_translations: Dict[Option, Translation]) -> Config:
-    result: Config = Config(edulint=args)
+def combine_and_translate(
+        args: List[UnprocessedArg],
+        option_parses: Dict[Option, OptionParse],
+        config_translations: Dict[Option, Translation]) -> Config:
+    def combine(option_vals: List[UnionT], option: Option, val: Optional[str]) -> None:
+        parse = option_parses[option]
+        old_val = option_vals[int(option)]
+        option_vals[int(option)] = parse.combine(old_val, parse.convert(val))
+
+    option_vals = [option_parses[o].default for o in Option]
+
     for arg in args:
+        combine(option_vals, arg.option, arg.val)
+
         translated = config_translations.get(arg.option)
         if translated is not None:
-            assert translated.to != Linter.EDULINT
-            result.others[translated.to].extend(fill_in_val(arg, translated.val))
-        elif arg.option == Option.PYLINT:
-            assert arg.val
-            result.others[Linter.PYLINT].append(arg.val)
-        elif arg.option == Option.FLAKE8:
-            assert arg.val
-            result.others[Linter.FLAKE8].append(arg.val)
-    return result
+            translated_option = translated.to.to_option()
+            for val in translated.vals:
+                combine(option_vals, translated_option, val)
+
+    return Config([ProcessedArg(o, v) for o, v in zip(Option, option_vals) if v is not None])
 
 
 def get_config(
         filename: str, option_parses: Dict[Option, OptionParse] = get_option_parses(),
         config_translations: Dict[Option, Translation] = get_config_translations()) -> Config:
-    return apply_translations(parse_args(extract_args(filename), option_parses), config_translations)
+    extracted = extract_args(filename)
+    parsed = parse_args(extracted, option_parses)
+    return combine_and_translate(parsed, option_parses, config_translations)

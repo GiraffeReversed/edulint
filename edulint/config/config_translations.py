@@ -7,7 +7,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Translation:
     to: Linter
-    val: List[str]
+    vals: List[str]
 
 
 CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
