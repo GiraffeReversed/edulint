@@ -153,10 +153,20 @@ class MessageTable(Directive):
             assert translation.to == Linters.PYLINT
             message_names = [c.strip() for v in translation.val for c in v[len("--enable="):].split(",")]
 
-        tbody.extend([prepare_row(
-            nodes.reference(internal=False, refuri=LINKS[n][2], text=n),
-            DESCRIPTIONS[n][3]
-        ) for n in message_names])
+        for name in message_names:
+            if name in LINKS:
+                tbody.append(prepare_row(
+                    nodes.reference(internal=False, refuri=LINKS[name][2], text=name),
+                    DESCRIPTIONS[name][3]
+                ))
+            else:
+                message = nodes.reference(internal=True, refuri="#custom-checkers", text=name)
+                para = nodes.paragraph()
+                para.append(nodes.inline(text="Custom message or checker, see "))
+                para.append(nodes.reference(
+                    internal=True, refuri="#custom-checkers", text="the corresponding section."
+                ))
+                tbody.append(prepare_row(message, para))
 
         return [table]
 
