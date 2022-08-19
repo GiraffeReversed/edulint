@@ -15,8 +15,10 @@ class Tweaker:
     keep: Callable[["Tweaker", Problem, List[Arg]], bool]
     reword: Optional[Callable[["Tweaker", Problem], str]] = None
 
-    def match(self, problem: Problem) -> Optional[Match[str]]:
-        return self.pattern.match(problem.text)
+    def match(self, problem: Problem) -> Match[str]:
+        match = self.pattern.match(problem.text)
+        assert match is not None
+        return match
 
     def should_keep(self, problem: Problem, args: List[Arg]) -> bool:
         return self.keep(self, problem, args)
@@ -30,7 +32,6 @@ class Tweaker:
 
 def invalid_name_keep(self: Tweaker, problem: Problem, args: List[Arg]) -> bool:
     match = self.match(problem)
-    assert match
     if match.group(1).lower() == "module":
         return False
 
@@ -48,7 +49,6 @@ def disallowed_name_keep(self: Tweaker, problem: Problem, args: List[Arg]) -> bo
         allowed_onechar_names = ""
 
     match = self.match(problem)
-    assert match
     name = match.group(1)
 
     return len(name) != 1 or name not in allowed_onechar_names
@@ -63,7 +63,6 @@ def disallowed_name_reword(self: Tweaker, problem: Problem) -> str:
 
 def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
     match = self.match(problem)
-    assert match
 
     groups = match.groups()
     start = groups[0]
