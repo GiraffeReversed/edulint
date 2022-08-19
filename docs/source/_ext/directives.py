@@ -1,12 +1,19 @@
 from edulint.options import Option, get_option_parses
 from edulint.linters import Linters
 from edulint.config.config_translates import get_config_translations
+import edulint.linting.checkers as custom_checkers
+from pylint.checkers import BaseChecker
 from docutils.parsers.rst import Directive
 from docutils import nodes
 from configparser import ConfigParser
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
+from pkgutil import iter_modules
+import os
+import sys
+import importlib
+import inspect
 
 
 def html_to_nodes(siblings):
@@ -175,10 +182,79 @@ def link_pylint(name, rawtext, text, lineno, inliner, options={}, content=[]):
     return [nodes.reference(internal=False, refuri=LINKS[text][2], text=text)], []
 
 
+def prepare_section(name, title):
+    section = nodes.section(ids=[f"checker-{name}"])
+    titlenode = nodes.title(text=title)
+    section += titlenode
+    para = nodes.paragraph()
+    para.extend([
+        nodes.inline(text="This section details messages emmited by the "),
+        nodes.literal(text=name),
+        nodes.inline(text=" checker.")
+    ])
+    section += para
+    return section
+
+
+class CheckersBlock(Directive):
+
+    @staticmethod
+    def _iterate_checkers():
+        custom_checkers_dir = os.path.dirname(custom_checkers.__file__)
+        for _, name, _ in iter_modules([custom_checkers_dir]):
+            module_path = os.path.join(custom_checkers_dir, name) + ".py"
+            spec = importlib.util.spec_from_file_location(f"edulint.linting.checkers.{name}", module_path)
+
+            module = importlib.util.module_from_spec(spec)
+            sys.modules["module.name"] = module
+            spec.loader.exec_module(module)
+
+            for name, obj in inspect.getmembers(module):
+                if inspect.isclass(obj) and issubclass(obj, BaseChecker) and obj != BaseChecker:
+                    yield obj
+
+    def _prepare_option_defaults_table(self, options):
+        noun_plural = "s" if len(options) > 1 else ""
+        verb_plural = "" if len(options) > 1 else "s"
+        para = nodes.paragraph(
+            text=f"The checker has {'some' if len(options) > 1 else 'an'} option{noun_plural} associated "
+            f"with it. If the checker or its messages are enabled directly, the option{noun_plural} "
+            f"receive{verb_plural} the following default{noun_plural}:"
+        )
+
+        table, tbody = prepare_table(["Option", "Default"])
+        for name, details in options:
+            default = details["default"]
+            tbody.append(prepare_row(
+                name, nodes.literal(text=default if not isinstance(default, str) else f"\"{default}\"")
+            ))
+
+        return [para, table]
+
+    def run(self):
+        result = []
+        for checker_class in self._iterate_checkers():
+            name = checker_class.name
+            section = prepare_section(name, name.replace("-", " ").title())
+
+            table, tbody = prepare_table(["Message name", "Format", "Description"], [1, 3, 3])
+            for message_code, (message_format, message_name, desc) in checker_class.msgs.items():
+                tbody.append(prepare_row(message_name, nodes.literal(text=message_format), desc))
+            section.append(table)
+
+            options = checker_class.options
+            if options:
+                section.extend(self._prepare_option_defaults_table(options))
+
+            result.append(section)
+        return result
+
+
 def setup(app):
     app.add_directive("options", Options)
     app.add_directive("message-table", MessageTable)
     app.add_role("link_pylint", link_pylint)
+    app.add_directive("checkers-block", CheckersBlock)
 
     return {
         'version': '0.1',

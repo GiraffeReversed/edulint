@@ -48,7 +48,7 @@ EduLint wraps around `Pylint <https://pylint.pycqa.org/>`_ and `Flake8 <https://
 
 As of now, it is only possible to configure the tool by augmenting the checked source with lines beginning with :python:`# edulint`, with the configuration applying to that file only. I intend to make it possible to configure via CLI and possibly a configuration file.
 
-The tool also provides tweakers, which filter out or alter the checkers' messages.
+The tool also provides custom pylint checkers and tweakers, which filter out or alter the checkers' messages.
 
 Configuration
 -------------
@@ -116,6 +116,13 @@ The flag `python-spec` enables the following checks:
 .. message-table::
    python-spec
 
+
+Custom checkers
+^^^^^^^^^^^^^^^
+
+EduLint provides custom checkers to report more problems frequent in beginners' code. It does so by extending Pylint with extra plugins. The checkers can therefore be invoked in the standard Pylint manner (e.g. using :code:`--enable` or :code:`--disable`) on the Edulint's :code:`pylint` option.
+
+.. checkers-block::
 
 Tweakers
 ^^^^^^^^
