@@ -174,7 +174,7 @@ def test_consider_using_in(filename: str, args: List[Arg], expected_output: List
         lazy_problem().set_code("R6101").set_line(26)
     ])
 ])
-def test_consider_using_enumerate(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+def test_improve_for(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     apply_and_lint(filename, args, expected_output)
 
 

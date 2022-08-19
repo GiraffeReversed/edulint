@@ -101,6 +101,9 @@ class ImproveForLoop(BaseChecker):  # type: ignore
             self.modified = {self._get_name(var): False for var in watched}
             super().__init__()
 
+        def was_modified(self, node: nodes.NodeNG) -> bool:
+            return self.modified[self._get_name(node)]
+
         @staticmethod
         def _is_assigned_to(node: Named) -> bool:
             return hasattr(node.parent, "target") and node == node.parent.target \
@@ -150,7 +153,7 @@ class ImproveForLoop(BaseChecker):  # type: ignore
                 return sub_result
 
             parent = subscript.parent
-            if self.modified[self._get_name(self.structure)] or self.modified[self._get_name(self.index)]:
+            if self.was_modified(self.structure) or self.was_modified(self.index):
                 return False
             if not isinstance(subscript.value, type(self.structure)) \
                     or (isinstance(parent, nodes.Assign) and subscript in parent.targets) \
@@ -176,14 +179,11 @@ class ImproveForLoop(BaseChecker):  # type: ignore
 
         def visit_name(self, name: nodes.Name) -> bool:
             super().visit_name(name)
-            # eprint(name.as_string(), name.parent.as_string())
             if name.name != self.index.name:
-                # eprint("f")
                 return False
             if not isinstance(name.parent, nodes.Subscript) \
                 or not isinstance(self.structure, type(name.parent.value)) \
                     or self.modified[self._get_name(name)]:
-                # eprint("t")
                 return True
 
             subscript = name.parent
@@ -191,10 +191,8 @@ class ImproveForLoop(BaseChecker):  # type: ignore
                     and subscript.value.name == self.structure.name)
                     or (isinstance(subscript.value, nodes.Attirbute)
                     and subscript.value.attrname == self.structure.attrname)):
-                # eprint("tt")
                 return True
 
-            # eprint(isinstance(subscript.parent, nodes.Assign) and subscript in subscript.parent.targets)
             return isinstance(subscript.parent, nodes.Assign) and subscript in subscript.parent.targets
 
     def visit_for(self, node: nodes.For) -> None:
