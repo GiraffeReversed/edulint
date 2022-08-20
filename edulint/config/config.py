@@ -29,8 +29,8 @@ class Config:
         object.__setattr__(self, "config", tuple([arg if arg is not None else ImmutableArg(
             o, self.to_immutable(option_parses[o].default)) for o, arg in zip(Option, wip_config)]))
 
-    def __repr__(self) -> str:
-        return f"Config({self.config})"
+    def __str__(self) -> str:
+        return f"Config({', '.join(arg.option.name + '=' + str(arg.val) for arg in self.config)})"
 
     def __getitem__(self, option: Option) -> ImmutableArg:
         return self.config[int(option)]
