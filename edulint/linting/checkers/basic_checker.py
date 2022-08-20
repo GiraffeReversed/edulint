@@ -7,8 +7,36 @@ from pylint.checkers import utils
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import BaseVisitor, Named, get_name, get_assigned
+from edulint.linting.checkers.utils import BaseVisitor, Named, get_name, get_assigned, is_any_assign, is_named
 
+
+class AugmentAssignments(BaseChecker):  # type: ignore
+
+    name = "augment-assignments"
+    msgs = {
+        "R6001": (
+            "Use augmenting assignment: %s %s= %s",
+            "use-augmenting-assignment",
+            "Emitted when an assignment can be simplified by using its augmented version.",
+        ),
+    }
+
+    def add_augmenting_message(self, bin_op: nodes.BinOp, param: nodes.BinOp, name: str) -> None:
+        self.add_message("use-augmenting-assignment", node=bin_op, args=(name, bin_op.op, param.as_string()))
+
+    def visit_binop(self, bin_op: nodes.BinOp) -> None:
+        if not is_any_assign(bin_op.parent):
+            return
+
+        targets = get_assigned(bin_op.parent)
+        if len(targets) != 1:
+            return
+
+        name = get_name(targets[0])
+        if is_named(bin_op.left) and name == get_name(bin_op.left):
+            self.add_augmenting_message(bin_op, bin_op.right, name)
+        if bin_op.op in "+*|&" and is_named(bin_op.right) and name == get_name(bin_op.right):
+            self.add_augmenting_message(bin_op, bin_op.left, name)
 
 
 T = TypeVar("T")
@@ -173,4 +201,5 @@ def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
     :param linter: The linter to register the checker to.
     """
+    linter.register_checker(AugmentAssignments(linter))
     linter.register_checker(ImproveForLoop(linter))

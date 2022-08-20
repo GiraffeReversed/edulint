@@ -185,8 +185,11 @@ def test_improve_for(filename: str, args: List[Arg], expected_output: List[Probl
 def test_umime_count_a() -> None:
     apply_and_lint(
         "umime_count_a.py",
-        [Arg(Option.PYTHON_SPEC, True), Arg(Option.ALLOWED_ONECHAR_NAMES, "i")],
         [
+            Arg(Option.PYTHON_SPEC, True),
+            Arg(Option.ALLOWED_ONECHAR_NAMES, "i"),
+            Arg(Option.PYLINT, "--enable=augment-assignments"),
+        ], [
             lazy_problem().set_code("C0104").set_line(2)
             .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),
             lazy_problem().set_code("E225").set_line(2),
@@ -196,6 +199,8 @@ def test_umime_count_a() -> None:
             lazy_problem().set_code("E225").set_line(4).set_column(35),
             lazy_problem().set_code("C0104").set_line(5),
             lazy_problem().set_code("E225").set_line(5).set_column(14),
+            lazy_problem().set_code("R6001").set_line(5)
+            .set_text("Use augmenting assignment: a += 1"),
         ]
     )
 

@@ -1,4 +1,4 @@
-from typing import Any, TypeVar, Generic, List, Iterable, Union
+from typing import Any, TypeVar, Generic, List, Iterable, Union, cast
 from astroid import nodes  # type: ignore
 import sys
 import inspect
@@ -49,13 +49,17 @@ def is_any_assign(node: nodes.NodeNG) -> bool:
 
 def get_assigned(node: nodes.NodeNG) -> List[nodes.NodeNG]:
     if is_multi_assign(node):
-        return node.targets
+        return cast(List[nodes.NodeNG], node.targets)
     if is_assign(node):
         return [node.target]
     return []
 
 
 Named = Union[nodes.Name, nodes.Attribute, nodes.AssignName]
+
+
+def is_named(node: nodes.NodeNG) -> bool:
+    return hasattr(node, "name") or hasattr(node, "attrname")
 
 
 def get_name(node: Named) -> str:
