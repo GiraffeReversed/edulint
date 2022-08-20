@@ -1,4 +1,4 @@
-from edulint.options import Option, T, UnionT
+from edulint.options import Option, T, UnionT, ImmutableT
 from typing import Optional, Generic
 from dataclasses import dataclass
 
@@ -11,3 +11,4 @@ class Arg(Generic[T]):
 
 UnprocessedArg = Arg[Optional[str]]
 ProcessedArg = Arg[UnionT]
+ImmutableArg = Arg[ImmutableT]

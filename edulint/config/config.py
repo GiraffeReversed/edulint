@@ -1,36 +1,44 @@
-from edulint.config.arg import ProcessedArg, UnprocessedArg
-from edulint.options import UnionT, Option, TakesVal, OptionParse, get_option_parses, get_name_to_option
+from edulint.config.arg import ProcessedArg, UnprocessedArg, ImmutableArg
+from edulint.options import UnionT, ImmutableT, Option, TakesVal, OptionParse, get_option_parses, get_name_to_option
 from edulint.config.config_translations import get_config_translations, Translation
 from typing import Dict, List, Optional, Tuple, Iterator
+from dataclasses import dataclass
 import re
 import sys
 import shlex
 
 
+@dataclass(frozen=True)
 class Config:
+
+    config: Tuple[ImmutableArg]
+
+    @staticmethod
+    def to_immutable(v: UnionT) -> ImmutableT:
+        return v if not isinstance(v, list) else tuple(v)
 
     def __init__(self, config: Optional[List[ProcessedArg]] = None,
                  option_parses: Dict[Option, OptionParse] = get_option_parses()) -> None:
         config = config if config is not None else []
-        wip_config: List[Optional[ProcessedArg]] = [None for _ in Option]
+        wip_config: List[Optional[ImmutableArg]] = [None for _ in Option]
 
         for arg in config:
             assert wip_config[int(arg.option)] is None
-            wip_config[int(arg.option)] = arg
+            wip_config[int(arg.option)] = ImmutableArg(arg.option, self.to_immutable(arg.val))
 
-        self.config = tuple([arg if arg is not None else ProcessedArg(o, option_parses[o].default)
-                             for o, arg in zip(Option, wip_config)])
+        object.__setattr__(self, "config", tuple([arg if arg is not None else ImmutableArg(
+            o, self.to_immutable(option_parses[o].default)) for o, arg in zip(Option, wip_config)]))
 
     def __repr__(self) -> str:
         return f"Config({self.config})"
 
-    def __getitem__(self, option: Option) -> ProcessedArg:
+    def __getitem__(self, option: Option) -> ImmutableArg:
         return self.config[int(option)]
 
     def __contains__(self, option: Option) -> bool:
         return self[option] is not None
 
-    def __iter__(self) -> Iterator[ProcessedArg]:
+    def __iter__(self) -> Iterator[ImmutableArg]:
         return filter(lambda x: x is not None, self.config.__iter__())
 
 

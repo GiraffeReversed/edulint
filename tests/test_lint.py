@@ -5,7 +5,7 @@ from edulint.config.arg import Arg
 from edulint.config.config import Config, combine_and_translate
 from edulint.config.config_translations import get_config_translations
 from edulint.linting.problem import Problem
-from edulint.linting.linting import lint
+from edulint.linting.linting import lint_one
 from os.path import join
 from typing import List
 
@@ -74,13 +74,13 @@ def lazy_equal(received: List[Problem], expected: List[Problem]) -> None:
     ])
 ])
 def test_lint_basic(filename: str, config: Config, expected_output: List[Problem]) -> None:
-    lazy_equal(lint(join("tests", "data", filename), config), expected_output)
+    lazy_equal(lint_one(join("tests", "data", filename), config), expected_output)
 
 
 def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     lazy_equal(
-        lint(join("tests", "data", filename),
-             combine_and_translate(args, get_option_parses(), get_config_translations())),
+        lint_one(join("tests", "data", filename),
+                 combine_and_translate(args, get_option_parses(), get_config_translations())),
         expected_output
     )
 
@@ -115,6 +115,9 @@ def test_translations(filename: str, args: List[Arg], expected_output: List[Prob
         lazy_problem().set_code("C0103").set_line(34),
         lazy_problem().set_code("W0622").set_line(48),
     ]),
+    ("custom_pep_assign.py", [Arg(Option.PYTHON_SPEC, True)], [
+        lazy_problem().set_code("C0103").set_line(1),
+    ])
 ])
 def test_invalid_name(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     apply_and_lint(filename, args, expected_output)

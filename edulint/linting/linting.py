@@ -1,5 +1,5 @@
-from typing import List, Callable, Any
-from edulint.config.arg import ProcessedArg
+from typing import List, Callable, Tuple, Any
+from edulint.config.arg import ImmutableArg
 from edulint.linting.problem import ProblemJson, Problem
 from edulint.linting.process_handler import ProcessHandler
 from edulint.linting.tweakers import get_tweakers, Tweakers
@@ -50,34 +50,37 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
 
 
 def lint_any(
-        linter: Linter, filename: str, linter_args: List[str], config_arg: ProcessedArg,
+        linter: Linter, filenames: List[str], linter_args: List[str], config_arg: ImmutableArg,
         result_getter: Callable[[Any], Any],
         out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
-    command = [sys.executable, "-m", str(linter)] + linter_args + config_arg.val + [filename]  # type: ignore
+    command = [sys.executable, "-m", str(linter)] + linter_args + list(config_arg.val) + filenames  # type: ignore
     return_code, outs, errs = ProcessHandler.run(command, timeout=10)
+
     print(errs, file=sys.stderr, end="")
     if (linter == Linter.FLAKE8 and return_code not in (0, 1)) or (linter == Linter.PYLINT and return_code == 32):
-        print(f"edulint: {command[2]} exited with {return_code}", file=sys.stderr)
+        print(f"edulint: {linter} exited with {return_code}", file=sys.stderr)
         exit(return_code)
+
     if not outs:
         return []
+
     result = result_getter(json.loads(outs))
     return list(map(out_to_problem, result))
 
 
-def lint_flake8(filename: str, config: Config) -> List[Problem]:
+def lint_flake8(filenames: List[str], config: Config) -> List[Problem]:
     flake8_args = ["--format=json"]
     return lint_any(
-        Linter.FLAKE8, filename, flake8_args, config[Option.FLAKE8],
-        lambda r: r[filename],
+        Linter.FLAKE8, filenames, flake8_args, config[Option.FLAKE8],
+        lambda r: [problem for problems in r.values() for problem in problems],
         flake8_to_problem)
 
 
-def lint_pylint(filename: str, config: Config) -> List[Problem]:
+def lint_pylint(filenames: List[str], config: Config) -> List[Problem]:
     cwd = pathlib.Path(__file__).parent.resolve()
     pylint_args = [f'--rcfile={cwd}/.pylintrc', "--output-format=json"]
     return lint_any(
-        Linter.PYLINT, filename, pylint_args, config[Option.PYLINT],
+        Linter.PYLINT, filenames, pylint_args, config[Option.PYLINT],
         lambda r: r, pylint_to_problem)
 
 
@@ -94,8 +97,21 @@ def apply_tweaks(problems: List[Problem], tweakers: Tweakers, config: Config) ->
     return result
 
 
-def lint(filename: str, config: Config) -> List[Problem]:
-    result = lint_flake8(filename, config) + lint_pylint(filename, config)
+def lint_one(filename: str, config: Config) -> List[Problem]:
+    return lint([filename], config)
+
+
+def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
+    indices = {fn: i for i, fn in enumerate(filenames)}
+    problems.sort(key=lambda problem: (indices[problem.path], problem.line, problem.column))
+    return problems
+
+
+def lint(filenames: List[str], config: Config) -> List[Problem]:
+    result = lint_flake8(filenames, config) + lint_pylint(filenames, config)
     result = apply_tweaks(result, get_tweakers(), config)
-    result.sort(key=lambda problem: (problem.line, problem.column))
-    return result
+    return sort(filenames, result)
+
+
+def lint_many(partition: List[Tuple[List[str], Config]]) -> List[Problem]:
+    return [problem for filenames, config in partition for problem in lint(filenames, config)]

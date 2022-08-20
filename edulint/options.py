@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Any, TypeVar, Optional, Union, Callable
+from typing import Dict, List, Any, TypeVar, Optional, Union, Callable, Tuple
 from enum import Enum, auto
 
 
@@ -13,6 +13,7 @@ class NumberFromZero(Enum):
 
 T = TypeVar("T")
 UnionT = Union[bool, List[str], Optional[str]]
+ImmutableT = Union[bool, Tuple[str, ...], Optional[str]]
 
 
 class Option(NumberFromZero):

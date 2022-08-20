@@ -1,6 +1,6 @@
 from edulint.linters import Linter
 from edulint.options import Option
-from edulint.config.arg import ProcessedArg
+from edulint.config.arg import ImmutableArg
 from edulint.linting.problem import Problem
 from dataclasses import dataclass
 from typing import Callable, Optional, Pattern, Match, AnyStr, Dict, Tuple, Set, List
@@ -12,7 +12,7 @@ class Tweaker:
     used_options: Set[Option]
 
     pattern: Pattern[AnyStr]  # type: ignore
-    keep: Callable[["Tweaker", Problem, List[ProcessedArg]], bool]
+    keep: Callable[["Tweaker", Problem, List[ImmutableArg]], bool]
     reword: Optional[Callable[["Tweaker", Problem], str]] = None
 
     def match(self, problem: Problem) -> Match[str]:
@@ -20,7 +20,7 @@ class Tweaker:
         assert match is not None
         return match
 
-    def should_keep(self, problem: Problem, args: List[ProcessedArg]) -> bool:
+    def should_keep(self, problem: Problem, args: List[ImmutableArg]) -> bool:
         return self.keep(self, problem, args)
 
     def does_reword(self) -> bool:
@@ -30,7 +30,7 @@ class Tweaker:
         return self.reword(self, problem) if self.reword else problem.text
 
 
-def invalid_name_keep(self: Tweaker, problem: Problem, args: List[ProcessedArg]) -> bool:
+def invalid_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
     match = self.match(problem)
     if match.group(1).lower() == "module":
         return False
@@ -42,7 +42,7 @@ def invalid_name_keep(self: Tweaker, problem: Problem, args: List[ProcessedArg])
     return False
 
 
-def disallowed_name_keep(self: Tweaker, problem: Problem, args: List[ProcessedArg]) -> bool:
+def disallowed_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
     if len(args) == 1 and args[0].option == Option.ALLOWED_ONECHAR_NAMES and args[0].val is not None:
         assert isinstance(args[0].val, str)
         allowed_onechar_names = args[0].val
