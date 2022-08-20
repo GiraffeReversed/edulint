@@ -110,7 +110,8 @@ enable=cell-var-from-loop,
        unneeded-not,
        unreachable,
        used-before-assignment,
-       disallowed-name
+       disallowed-name,
+       unused-argument
 
 
 [REPORTS]
