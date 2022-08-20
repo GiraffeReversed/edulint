@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Translation:
-    to: Linter
+    for_linter: Linter
     vals: List[str]
 
 

@@ -113,7 +113,7 @@ def combine_and_translate(
 
         translated = config_translations.get(arg.option)
         if translated is not None:
-            translated_option = translated.to.to_option()
+            translated_option = translated.for_linter.to_option()
             for val in translated.vals:
                 combine(option_vals, translated_option, val)
 
