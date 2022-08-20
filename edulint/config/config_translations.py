@@ -14,7 +14,9 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
     Option.ENHANCEMENT: Translation(
         Linter.PYLINT,
         ["--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
-         "consider-using-max-builtin,consider-using-with,unspecified-encoding"]
+         "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
+         "use-augmenting-assignment"
+         ]
     ),
     Option.PYTHON_SPEC: Translation(
         Linter.PYLINT,

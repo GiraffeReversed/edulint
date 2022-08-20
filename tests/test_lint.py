@@ -54,15 +54,15 @@ def lazy_equal(received: List[Problem], expected: List[Problem]) -> None:
 
 @pytest.mark.parametrize("filename,config,expected_output", [
     ("hello_world.py", Config(), []),
-    ("z202817-zkouska.py", Config(), [lazy_problem().set_code("W0107").set_line(198)]),
+    ("z202817-zkouska.py", Config(), [lazy_problem().set_code("W0107").set_line(196)]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115"])]), [
-        lazy_problem().set_code("C0115").set_line(124),
-        lazy_problem().set_code("C0115").set_line(130),
-        lazy_problem().set_code("W0107").set_line(198)
+        lazy_problem().set_code("C0115").set_line(122),
+        lazy_problem().set_code("C0115").set_line(128),
+        lazy_problem().set_code("W0107").set_line(196)
     ]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115", "--disable=W0107"])]), [
-        lazy_problem().set_code("C0115").set_line(124),
-        lazy_problem().set_code("C0115").set_line(130)
+        lazy_problem().set_code("C0115").set_line(122),
+        lazy_problem().set_code("C0115").set_line(128)
     ]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--disable=all"])]), []),
     ("002814-p1_trapezoid.py", Config(), [
@@ -87,18 +87,20 @@ def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem
 
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT, True)], [
-        lazy_problem().set_code("W0107").set_line(198)
+        lazy_problem().set_code("R6001").set_line(10),
+        lazy_problem().set_code("R6001").set_line(175),
+        lazy_problem().set_code("W0107").set_line(196),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC, True)], [
-        lazy_problem().set_code("R6102").set_line(82),
-        lazy_problem().set_code("R6101").set_line(173),
-        lazy_problem().set_code("C0123").set_line(174),
-        lazy_problem().set_code("W0107").set_line(198),
+        lazy_problem().set_code("R6102").set_line(80),
+        lazy_problem().set_code("R6101").set_line(171),
+        lazy_problem().set_code("C0123").set_line(172),
+        lazy_problem().set_code("W0107").set_line(196),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPEC, True)], [
-        lazy_problem().set_code("R6102").set_line(82),
-        lazy_problem().set_code("R6101").set_line(173),
-        lazy_problem().set_code("C0123").set_line(174),
+        lazy_problem().set_code("R6102").set_line(80),
+        lazy_problem().set_code("R6101").set_line(171),
+        lazy_problem().set_code("C0123").set_line(172),
     ]),
 ])
 def test_translations(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
@@ -188,7 +190,7 @@ def test_umime_count_a() -> None:
         [
             Arg(Option.PYTHON_SPEC, True),
             Arg(Option.ALLOWED_ONECHAR_NAMES, "i"),
-            Arg(Option.PYLINT, "--enable=augment-assignments"),
+            Arg(Option.ENHANCEMENT, True),
         ], [
             lazy_problem().set_code("C0104").set_line(2)
             .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),
