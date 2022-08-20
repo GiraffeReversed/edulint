@@ -3,6 +3,7 @@ from edulint.options import UnionT, ImmutableT, Option, TakesVal, OptionParse, g
 from edulint.config.config_translations import get_config_translations, Translation
 from typing import Dict, List, Optional, Tuple, Iterator
 from dataclasses import dataclass
+from argparse import Namespace
 import re
 import sys
 import shlex
@@ -121,8 +122,13 @@ def combine_and_translate(
 
 
 def get_config(
-        filename: str, option_parses: Dict[Option, OptionParse] = get_option_parses(),
+        filename: str, cmd_args: List[str],
+        option_parses: Dict[Option, OptionParse] = get_option_parses(),
         config_translations: Dict[Option, Translation] = get_config_translations()) -> Config:
-    extracted = extract_args(filename)
+    extracted = extract_args(filename) + cmd_args
     parsed = parse_args(extracted, option_parses)
     return combine_and_translate(parsed, option_parses, config_translations)
+
+
+def get_cmd_args(args: Namespace) -> List[str]:
+    return [s for arg in args.options for s in shlex.split(arg)]

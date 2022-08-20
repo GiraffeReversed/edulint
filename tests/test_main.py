@@ -77,3 +77,46 @@ def test_multiple_files_stdout(monkeypatch, capsys, argv, output):
 ])
 def test_different_configs(monkeypatch, capsys, argv, output):
     compare_output(monkeypatch, capsys, argv, output)
+
+
+@pytest.mark.parametrize("argv,output", [
+    (
+        f"{join('tests', 'data', 'custom_flake8_pylint.py')} -o pylint=--enable=missing-module-docstring".split(),
+        "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring\n"
+        "tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name \"foo\"\n"
+        "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used\n"
+    ),
+    (
+        f"{join('tests', 'data', 'custom_flake8_pylint.py')} -o=pylint=--enable=missing-module-docstring".split(),
+        "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring\n"
+        "tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name \"foo\"\n"
+        "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used\n"
+    ),
+    (
+        f"{join('tests', 'data', 'custom_flake8_pylint.py')} --option pylint=--enable=missing-module-docstring".split(),
+        "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring\n"
+        "tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name \"foo\"\n"
+        "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used\n"
+    ),
+    (
+        f"{join('tests', 'data', 'custom_flake8_pylint.py')} --option=pylint=--enable=missing-module-docstring".split(),
+        "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring\n"
+        "tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name \"foo\"\n"
+        "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used\n"
+    ),
+    (
+        f"{join('tests', 'data', 'custom_flake8_pylint.py')} "
+        "-o pylint=--enable=missing-module-docstring "
+        "-o pylint=--disable=C0104".split(),
+        "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring\n"
+        "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used\n"
+    ),
+    (
+        [join('tests', 'data', 'custom_flake8_pylint.py'),
+         "-o", "pylint=--enable=missing-module-docstring pylint=--disable=C0104"],
+        "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring\n"
+        "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used\n"
+    ),
+])
+def test_passing_cmd_args(monkeypatch, capsys, argv, output):
+    compare_output(monkeypatch, capsys, argv, output)
