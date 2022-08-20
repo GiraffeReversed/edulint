@@ -1,7 +1,8 @@
-from typing import List, Callable, Tuple, Any
+from typing import List, Callable, Tuple, Dict, Set, Any
 from edulint.config.arg import ImmutableArg
 from edulint.linting.problem import ProblemJson, Problem
 from edulint.linting.process_handler import ProcessHandler
+from edulint.linting.overrides import get_overriders
 from edulint.linting.tweakers import get_tweakers, Tweakers
 from edulint.config.config import Config
 from edulint.options import Option
@@ -84,6 +85,21 @@ def lint_pylint(filenames: List[str], config: Config) -> List[Problem]:
         lambda r: r, pylint_to_problem)
 
 
+def apply_overrides(problems: List[Problem], overriders: Dict[str, Set[str]]) -> List[Problem]:
+    codes_on_lines: Dict[int, Set[str]] = {line: set() for line in set([problem.line for problem in problems])}
+
+    for problem in problems:
+        codes_on_lines[problem.line].add(problem.code)
+
+    result = []
+    for problem in problems:
+        o = overriders.get(problem.code, set())
+        if not (o & codes_on_lines[problem.line]):
+            result.append(problem)
+
+    return result
+
+
 def apply_tweaks(problems: List[Problem], tweakers: Tweakers, config: Config) -> List[Problem]:
     result = []
     for problem in problems:
@@ -109,6 +125,7 @@ def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
 
 def lint(filenames: List[str], config: Config) -> List[Problem]:
     result = lint_flake8(filenames, config) + lint_pylint(filenames, config)
+    result = apply_overrides(result, get_overriders())
     result = apply_tweaks(result, get_tweakers(), config)
     return sort(filenames, result)
 

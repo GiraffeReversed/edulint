@@ -197,8 +197,6 @@ def test_umime_count_a() -> None:
             .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
             lazy_problem().set_code("E225").set_line(4).set_column(19),
             lazy_problem().set_code("E225").set_line(4).set_column(35),
-            lazy_problem().set_code("C0104").set_line(5),
-            lazy_problem().set_code("E225").set_line(5).set_column(14),
             lazy_problem().set_code("R6001").set_line(5)
             .set_text("Use augmenting assignment: a += 1"),
         ]
