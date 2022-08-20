@@ -7,7 +7,8 @@ from pylint.checkers import utils
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import BaseVisitor
+from edulint.linting.checkers.utils import BaseVisitor, Named, get_name, get_assigned
+
 
 
 T = TypeVar("T")
@@ -56,31 +57,21 @@ class ImproveForLoop(BaseChecker):  # type: ignore
 
     class ModifiedListener(BaseVisitor[T]):
 
-        Named = Union[nodes.Name, nodes.Attribute, nodes.AssignName]
-
-        @staticmethod
-        def _get_name(node: Named) -> str:
-            return str(node.name) if hasattr(node, "name") else f".{node.attrname}"
-
         def __init__(self, watched: List[Named]):
             self.watched = watched
-            self.modified = {self._get_name(var): False for var in watched}
+            self.modified = {get_name(var): False for var in watched}
             super().__init__()
 
         def was_modified(self, node: nodes.NodeNG) -> bool:
-            return self.modified[self._get_name(node)]
+            return self.modified[get_name(node)]
 
         @staticmethod
         def _is_assigned_to(node: Named) -> bool:
-            return hasattr(node.parent, "target") and node == node.parent.target \
-                or hasattr(node.parent, "targets") and node in node.parent.targets
+            return node in get_assigned(node.parent)
 
         @staticmethod
         def _is_same_var(var: Named, node: Named) -> bool:
-            return var.scope() == node.scope() and isinstance(var, type(node)) and (
-                (hasattr(var, "name") and var.name == node.name)
-                or (hasattr(var, "attrname") and var.attrname == node.attrname)
-            )
+            return var.scope() == node.scope() and isinstance(var, type(node)) and get_name(var) == get_name(node)
 
         def _visit_assigned_to(self, node: Named) -> T:
             if not self._is_assigned_to(node):
@@ -88,7 +79,7 @@ class ImproveForLoop(BaseChecker):  # type: ignore
 
             for var in self.watched:
                 if self._is_same_var(var, node):
-                    self.modified[self._get_name(var)] = True
+                    self.modified[get_name(var)] = True
 
             return self.default
 
@@ -148,8 +139,8 @@ class ImproveForLoop(BaseChecker):  # type: ignore
             if name.name != self.index.name:
                 return False
             if not isinstance(name.parent, nodes.Subscript) \
-                or not isinstance(self.structure, type(name.parent.value)) \
-                    or self.modified[self._get_name(name)]:
+                    or not isinstance(self.structure, type(name.parent.value)) \
+                    or self.modified[get_name(name)]:
                 return True
 
             subscript = name.parent
@@ -171,7 +162,7 @@ class ImproveForLoop(BaseChecker):  # type: ignore
             return
 
         if self.StructureIndexedVisitor(structure, node.target).visit_many(node.body):
-            structure_name = self.ModifiedListener._get_name(structure)
+            structure_name = get_name(structure)
             if self.IndexUsedVisitor(structure, node.target).visit_many(node.body):
                 self.add_message("use-enumerate", args=(index.name, structure_name), node=node)
             else:
