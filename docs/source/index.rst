@@ -41,31 +41,36 @@ To start using EduLint, open an interactive shell and run:
 
    python<version> -m edulint path/to/code/to/check.py
 
+Multiple filenames can be passed and linted at once.
+
 Overview
 --------
 
-EduLint wraps around `Pylint <https://pylint.pycqa.org/>`_ and `Flake8 <https://flake8.pycqa.org/>`_, allowing for separate configuration of each of the tools. Most importantly, it provides a reasonable default and convenience configurations for check that we deemed useful for beginning programmers.
+EduLint wraps around `Pylint <https://pylint.pycqa.org/>`_ and `Flake8 <https://flake8.pycqa.org/>`_, allowing for separate configuration of each of the tools. It provides a reasonable default and convenience "bulk names" for groups of checks that make sense to be enabled together. It transforms some messages to make them clearer to a beginner, or drops some messages entirely. It also provides extra checks for situations not covered by either of the linters.
 
-As of now, it is only possible to configure the tool by augmenting the checked source with lines beginning with :python:`# edulint`, with the configuration applying to that file only. I intend to make it possible to configure via CLI and possibly a configuration file.
+As of now, it is possible to configure the tool in two ways:
 
-The tool also provides custom pylint checkers and tweakers, which filter out or alter the checkers' messages.
+-  by augmenting the checked source with lines beginning with :python:`# edulint`, with the configuration applying to that file only
+- by passing arguments through the CLI, applying to all files linted by that command
 
 Configuration
 -------------
 
-EduLint enables configuring performed checks by inserting lines into the checked source code. The lines start with ``# edulint:``, following by values in one of the following forms: ``<option-name>`` for options that do not take an argument and either ``<option-name>=<value-without-spaces>`` or ``<option-name>="<value-with-spaces>"`` for options that do take an argument.
+Edulint takes arguments in one of the following forms: ``<option-name>`` for options that do not take an argument and either ``<option-name>=<value-without-spaces>`` or ``<option-name>="<value-with-spaces>"`` for options that do take an argument.
 
-Options
-^^^^^^^
+.. note::
+   In-file configuration always applies to the whole file, even if configuration lines are only after some code.
 
-Currently available options are as follows:
+.. note::
+   CLI configuration always applies to all files linted with that command, even if some files are specified before an option.
 
-.. _options-table:
+.. note::
+   CLI configuration takes precedence over in-file configuration. If a check is disabled in-file and enabled in CLI, it ends up enabled.
 
-.. options-table::
+Configuration through comments in the code
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Examples
-^^^^^^^^
+When configuring in the linted file directly, the lines must start with :python:`# edulint:`
 
 .. code::
 
@@ -89,8 +94,29 @@ One option can be used multiple times, the rules for how its values are combined
 
    # edulint: allowed-onechar-names=abc allowed-onechar-names=ijk
 
-.. note::
-   Configuration always applies to the whole file, even if configuration lines are only after some code.
+Configuration through CLI
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When configuring through CLI, pass the configuration through the option ``--option`` (``-o`` for short).
+
+.. code::
+
+   python<version> -m edulint --option enhancement -o pylint=--enable=no-self-use code/to/check.py
+
+It is also possible to pass multiple options in one ``--option`` argument.
+
+.. code::
+
+   python<version> -m edulint --option "enhancement pylint=--enable=no-self-use" code/to/check.py
+
+Options
+^^^^^^^
+
+Currently available options are as follows:
+
+.. _options-table:
+
+.. options-table::
 
 Capabilities
 ------------
