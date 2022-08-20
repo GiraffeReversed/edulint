@@ -128,15 +128,22 @@ def prepare_row(*contents):
     return row
 
 
-class Options(Directive):
+class OptionsTable(Directive):
 
     def run(self):
-        table, tbody = prepare_table(["Option name", "Takes argument", "Description"], [2, 1, 4])
+        table, tbody = prepare_table(
+            ["Option name", "Takes argument", "Default", "Converts to", "When used multiple types", "Description"],
+            [2, 1, 1, 1, 1, 10])
 
         for option, parse in get_option_parses().items():
-            tbody.append(prepare_row(
-                option.to_name(), parse.takes_val.name.lower(), parse.help_
-            ))
+            tbody.append(
+                prepare_row(
+                    option.to_name(),
+                    parse.takes_val.name.lower(),
+                    nodes.literal(text=str(parse.default)),
+                    parse.convert.name.lower(),
+                    parse.combine.name.lower(),
+                    parse.help_))
 
         return [table]
 
@@ -251,7 +258,7 @@ class CheckersBlock(Directive):
 
 
 def setup(app):
-    app.add_directive("options", Options)
+    app.add_directive("options-table", OptionsTable)
     app.add_directive("message-table", MessageTable)
     app.add_role("link_pylint", link_pylint)
     app.add_directive("checkers-block", CheckersBlock)

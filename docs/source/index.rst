@@ -60,7 +60,9 @@ Options
 
 Currently available options are as follows:
 
-.. options::
+.. _options-table:
+
+.. options-table::
 
 Examples
 ^^^^^^^^
@@ -75,6 +77,20 @@ It is also possible to combine multiple options on one line:
 .. code::
 
    # edulint: python-spec allowed-onechar-names=ijk
+
+One option can be used multiple times, the rules for how its values are combined are listed in the :ref:`Options table <options-table>`. For both of the following snippets, the resulting value for :code:`allowed-onechar-names` would be :code:`ijk`, because with the option, the method of combining result is replacing the old one with the new one.
+
+.. code::
+
+   # edulint: allowed-onechar-names=abc
+   # edulint: allowed-onechar-names=ijk
+
+.. code::
+
+   # edulint: allowed-onechar-names=abc allowed-onechar-names=ijk
+
+.. note::
+   Configuration always applies to the whole file, even if configuration lines are only after some code.
 
 Capabilities
 ------------
@@ -99,6 +115,8 @@ In the default configuration, the default configuration of ``flake8`` is used. F
 
 Translations
 ^^^^^^^^^^^^
+
+EduLint provides convenience "bulk names" for groups of pylint messages.
 
 Enhancement
 """"""""""""
