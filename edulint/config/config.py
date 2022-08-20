@@ -55,8 +55,7 @@ def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Lis
 
     def get_name_val(arg: str) -> Tuple[str, Optional[str]]:
         if "=" in arg:
-            assert arg.count("=") == 1
-            name, val = arg.split("=")
+            name, val = arg.split("=", 1)
             return name, val
         return arg, None
 

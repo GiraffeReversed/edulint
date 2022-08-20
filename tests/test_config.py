@@ -88,9 +88,10 @@ def mock_contents(mocker, contents) -> None:
     (
         "# edulint: pylint=xxx yyy zzz flake8=aaa bbb pylint= flake8=\"xxx yyy\" ",
         ["pylint=xxx", "yyy", "zzz", "flake8=aaa", "bbb", "pylint=", "flake8=xxx yyy"]
-    )
+    ),
+    ("# edulint: pylint=--enable=missing-module-docstring", ["pylint=--enable=missing-module-docstring"]),
 ])
-def test_extract_args_extracts_correctly(mocker, contents, args):
+def test_extract_args(mocker, contents, args):
     mock_contents(mocker, contents)
     assert extract_args("foo") == args
 
@@ -107,7 +108,8 @@ def options() -> Dict[Option, OptionParse]:
     (["python-spec"], [UnprocessedArg(Option.PYTHON_SPEC, None)]),
     (["flake8=foo"], [UnprocessedArg(Option.FLAKE8, "foo")]),
     (["flake8="], [UnprocessedArg(Option.FLAKE8, "")]),
-    (["python-spec", "flake8=foo"], [UnprocessedArg(Option.PYTHON_SPEC, None), UnprocessedArg(Option.FLAKE8, "foo")])
+    (["python-spec", "flake8=foo"], [UnprocessedArg(Option.PYTHON_SPEC, None), UnprocessedArg(Option.FLAKE8, "foo")]),
+    (["flake8=--enable=xxx"], [UnprocessedArg(Option.FLAKE8, "--enable=xxx")])
 ])
 def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: List[UnprocessedArg]) -> None:
     assert parse_args(raw, options) == parsed
