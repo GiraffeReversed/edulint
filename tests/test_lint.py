@@ -159,7 +159,7 @@ def test_consider_using_in(filename: str, args: List[Arg], expected_output: List
     ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], [
     ]),
     ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--enable=iterate-directly"),
-                               Arg(Option.PYLINT, "--disable=W0622,R1705")], [
+                               Arg(Option.PYLINT, "--disable=W0622,R1705,R1703")], [
     ]),
     ("014771-p2_nested.py", [Arg(Option.PYTHON_SPEC, True)], [
         lazy_problem().set_code("R6101").set_line(25)
@@ -181,6 +181,33 @@ def test_consider_using_in(filename: str, args: List[Arg], expected_output: List
     ])
 ])
 def test_improve_for(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    apply_and_lint(filename, args, expected_output)
+
+
+@pytest.mark.parametrize("filename,args,expected_output", [
+    ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--disable=W0622,R1705")], [
+        lazy_problem().set_code("R1703").set_line(21)
+        .set_text("The if statement can be replaced with 'return side_c == sides[2]'"),
+        lazy_problem().set_code("R1703").set_line(32)
+        .set_text("The if statement can be replaced with 'return a == b & a == c'"),
+    ]),
+    ("custom_if.py", [Arg(Option.PYLINT, "--disable=R1705"), Arg(Option.FLAKE8, "--extend-ignore=E501")], [
+        lazy_problem().set_code("R1703").set_line(2)
+        .set_text("The if statement can be replaced with 'var = c ** 2 == a ** 2 + b ** 2 "
+                  "or a ** 2 == c ** 2 + b ** 2 or b ** 2 == a ** 2 + c ** 2'"),
+        lazy_problem().set_code("R1719").set_line(15)
+        .set_text("The if expression can be replaced with 'values[which] > last[which]'"),
+        lazy_problem().set_code("R1719").set_line(18)
+        .set_text("The if expression can be replaced with 'values[which] > last[which]'"),
+        lazy_problem().set_code("R1719").set_line(20)
+        .set_text("The if expression can be replaced with 'values[which] > last[which]'"),
+        lazy_problem().set_code("R1719").set_line(20)
+        .set_text("The if expression can be replaced with 'not values[which] <= last[which]'"),
+        lazy_problem().set_code("R1703").set_line(31)
+        .set_text("The if statement can be replaced with 'return x'"),
+    ])
+])
+def test_simplify_if(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     apply_and_lint(filename, args, expected_output)
 
 

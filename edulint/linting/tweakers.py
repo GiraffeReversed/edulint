@@ -12,7 +12,7 @@ class Tweaker:
     used_options: Set[Option]
 
     pattern: Pattern[AnyStr]  # type: ignore
-    keep: Callable[["Tweaker", Problem, List[ImmutableArg]], bool]
+    keep: Callable[["Tweaker", Problem, List[ImmutableArg]], bool] = lambda _t, _p, _a: True
     reword: Optional[Callable[["Tweaker", Problem], str]] = None
 
     def match(self, problem: Problem) -> Match[str]:
@@ -77,6 +77,52 @@ def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
     return problem.text
 
 
+def _get_if_condition(filename: str, line: int) -> str:
+    line -= 1  # -1 adjusts for indexing from 0
+    with open(filename) as f:
+        lines = f.readlines()
+        result = [lines[line].strip()]
+        while result[-1][-1] == "\\":
+            result[-1] = result[-1].strip("\\ ")
+            line += 1
+            result.append(lines[line].strip())
+        return " ".join(result)
+
+
+def simplifiable_if_statement_reword(self: Tweaker, problem: Problem) -> str:
+    if_line = _get_if_condition(problem.path, problem.line)
+    if not if_line.startswith("if "):
+        return problem.text
+    if_line = if_line[len("if "):].strip(":")
+
+    match = self.match(problem)
+    return problem.text[:match.start(1)] + if_line + problem.text[match.end(1):]
+
+
+def _get_if_expression(problem: Problem) -> str:
+    with open(problem.path) as f:
+        selected_lines = f.readlines()[problem.line - 1:problem.end_line]
+    selected_lines[0] = selected_lines[0][problem.column:]  # no -1, columns indexed from 0
+
+    if problem.line == problem.end_line:
+        assert problem.end_column is not None
+        selected_lines[-1] = selected_lines[-1][:problem.end_column - problem.column]
+    else:
+        selected_lines[-1] = selected_lines[-1][:problem.end_column]
+
+    return " ".join(line.strip(" \t\n\\") for line in selected_lines)
+
+
+def simplifiable_if_expression_reword(self: Tweaker, problem: Problem) -> str:
+    if_expr = _get_if_expression(problem)
+    if_expr_match = re.match(r"(?:True|False) *if *(.*?) *else *(?:True|False)", if_expr)
+    if not if_expr_match:
+        return problem.text
+
+    match = self.match(problem)
+    return problem.text[:match.start(1)] + if_expr_match.group(1) + problem.text[match.end(1):]
+
+
 Tweakers = Dict[Tuple[Linter, str], Tweaker]
 
 TWEAKERS = {
@@ -97,8 +143,21 @@ TWEAKERS = {
             r"^(Consider merging these comparisons with \"in\" to "
             r"(\"|\')([^\s]*)( not)? in )\(([^\)]+)\)(\"|\')"
         ),
-        lambda _t, _p, _a: True,
-        consider_using_in_reword
+        reword=consider_using_in_reword
+    ),
+    (Linter.PYLINT, "R1703"): Tweaker(  # simplifiable-if-statement
+        set(),
+        re.compile(
+            r"^The if statement can be replaced with '.*?((?:bool\()?test\)?)'"
+        ),
+        reword=simplifiable_if_statement_reword
+    ),
+    (Linter.PYLINT, "R1719"): Tweaker(  # simplifiable-if-expression
+        set(),
+        re.compile(
+            r"^The if expression can be replaced with '.*?((?:bool\()?test\)?)'"
+        ),
+        reword=simplifiable_if_expression_reword
     ),
 }
 

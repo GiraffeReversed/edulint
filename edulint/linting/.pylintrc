@@ -111,7 +111,9 @@ enable=cell-var-from-loop,
        unreachable,
        used-before-assignment,
        disallowed-name,
-       unused-argument
+       unused-argument,
+       simplifiable-if-expression,
+       simplifiable-if-statement
 
 
 [REPORTS]
