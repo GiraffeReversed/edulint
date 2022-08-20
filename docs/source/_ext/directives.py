@@ -1,6 +1,6 @@
 from edulint.options import Option, get_option_parses
 from edulint.linters import Linter
-from edulint.config.config_translates import get_config_translations
+from edulint.config.config_translations import get_config_translations
 import edulint.linting.checkers as custom_checkers
 from pylint.checkers import BaseChecker
 from docutils.parsers.rst import Directive
@@ -158,7 +158,7 @@ class MessageTable(Directive):
             opt_arg = Option.from_str(arg)
             translation = translations[opt_arg]
             assert translation.to == Linter.PYLINT
-            message_names = [c.strip() for v in translation.val for c in v[len("--enable="):].split(",")]
+            message_names = [c.strip() for v in translation.vals for c in v[len("--enable="):].split(",")]
 
         for name in message_names:
             if name in LINKS:
