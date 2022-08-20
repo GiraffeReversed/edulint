@@ -162,7 +162,7 @@ class MessageTable(Directive):
             message_names = [c.strip() for c in config["MESSAGES CONTROL"]["enable"].split(",")]
         else:
             translations = get_config_translations()
-            opt_arg = Option.from_str(arg)
+            opt_arg = Option.from_name(arg)
             translation = translations[opt_arg]
             assert translation.to == Linter.PYLINT
             message_names = [c.strip() for v in translation.vals for c in v[len("--enable="):].split(",")]

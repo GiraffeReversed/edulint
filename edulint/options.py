@@ -28,7 +28,7 @@ class Option(NumberFromZero):
         return self.name.lower().replace("_", "-")
 
     @staticmethod
-    def from_str(option_str: str) -> "Option":
+    def from_name(option_str: str) -> "Option":
         for option in Option:
             if option.to_name() == option_str.lower():
                 return option

@@ -11,7 +11,7 @@ class Linter(Enum):
         return self.name.lower()
 
     @staticmethod
-    def from_str(linter_str: str) -> "Linter":
+    def from_name(linter_str: str) -> "Linter":
         for linter in Linter:
             if str(linter) == linter_str.lower():
                 return linter
@@ -22,7 +22,7 @@ class Linter(Enum):
 
     @classmethod
     def from_option(cls, option: Option) -> "Linter":
-        return cls.from_str(option.to_name())
+        return cls.from_name(option.to_name())
 
     def to_option(self) -> Option:
-        return Option.from_str(self.to_name())
+        return Option.from_name(self.to_name())
