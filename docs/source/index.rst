@@ -116,12 +116,12 @@ In the default configuration, the default configuration of ``flake8`` is used. F
 Translations
 ^^^^^^^^^^^^
 
-EduLint provides convenience "bulk names" for groups of pylint messages.
+EduLint provides convenience "bulk names" for groups of ``pylint`` messages.
 
 Enhancement
 """"""""""""
 
-The flag `enhancement` enables the following checks:
+The flag :link_option:`enhancement` enables the following checks:
 
 .. message-table::
    enhancement
@@ -129,7 +129,7 @@ The flag `enhancement` enables the following checks:
 Python-spec
 """"""""""""
 
-The flag `python-spec` enables the following checks:
+The flag :link_option:`python-spec` enables the following checks:
 
 .. message-table::
    python-spec
@@ -138,7 +138,7 @@ The flag `python-spec` enables the following checks:
 Custom checkers
 ^^^^^^^^^^^^^^^
 
-EduLint provides custom checkers to report more problems frequent in beginners' code. It does so by extending Pylint with extra plugins. The checkers can therefore be invoked in the standard Pylint manner (e.g. using :code:`--enable` or :code:`--disable`) on the Edulint's :code:`pylint` option.
+EduLint provides custom checkers to report more problems frequent in beginners' code. It does so by extending Pylint with extra plugins. The checkers can therefore be invoked in the standard Pylint manner (e.g. using :code:`--enable` or :code:`--disable`) on the Edulint's :link_option:`pylint` option.
 
 .. checkers-block::
 
@@ -157,7 +157,7 @@ Tweakers
       * emits messages only about variable names that do indeed break :code:`snake_case`
    * - :link_pylint:`disallowed-name`
      -
-      * when :code:`allowed-onechar-names` is enabled, complains on all single-character variable names, encouraging choosing a different name
+      * when :link_option:`allowed-onechar-names` is enabled, complains on all single-character variable names, encouraging choosing a different name
    * - :link_pylint:`consider-using-in`
      -
       * if all enumerated values are all single characters, suggests joining them into string rather than using a tuple (:code:`ch in ".,?"` instead of :code:`ch in ('.', ',', '?')`)

@@ -136,14 +136,18 @@ class OptionsTable(Directive):
             [2, 1, 1, 1, 1, 10])
 
         for option, parse in get_option_parses().items():
-            tbody.append(
-                prepare_row(
-                    option.to_name(),
-                    parse.takes_val.name.lower(),
-                    nodes.literal(text=str(parse.default)),
-                    parse.convert.name.lower(),
-                    parse.combine.name.lower(),
-                    parse.help_))
+            id_ = f"option-{option.to_name()}"
+            row = prepare_row(
+                option.to_name(),
+                parse.takes_val.name.lower(),
+                nodes.literal(text=str(parse.default)),
+                parse.convert.name.lower(),
+                parse.combine.name.lower(),
+                parse.help_
+            )
+            self.options["name"] = id_
+            self.add_name(row)
+            tbody.append(row)
 
         return [table]
 
@@ -187,6 +191,10 @@ class MessageTable(Directive):
 
 def link_pylint(name, rawtext, text, lineno, inliner, options={}, content=[]):
     return [nodes.reference(internal=False, refuri=LINKS[text][2], text=text)], []
+
+
+def link_option(name, rawtext, text, lineno, inliner, options={}, context=[]):
+    return [nodes.reference(internal=True, refuri=f"#option-{Option.from_name(text).to_name()}", text=text)], []
 
 
 def prepare_section(name, title):
@@ -261,6 +269,7 @@ def setup(app):
     app.add_directive("options-table", OptionsTable)
     app.add_directive("message-table", MessageTable)
     app.add_role("link_pylint", link_pylint)
+    app.add_role("link_option", link_option)
     app.add_directive("checkers-block", CheckersBlock)
 
     return {
