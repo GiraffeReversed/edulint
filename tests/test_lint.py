@@ -248,17 +248,32 @@ def test_umime_count_a(filename: str, args: List[Arg], expected_output: List[Pro
     apply_and_lint(filename, args, expected_output)
 
 
+@pytest.mark.filterwarnings("ignore:The 'default' argument to fields is deprecated. Use 'dump_default' instead.")
 def test_problem_can_be_dumped_to_json() -> None:
     problem = Problem(source=Linter.FLAKE8, path='path', line=5, column=1, code='E303',
                       text='too many blank lines (3)', end_line=None, end_column=None)
-    out = problem.to_json(indent=2)  # type: ignore
+    out = problem.to_json(indent=2, sort_keys=True)  # type: ignore
     assert out == """{
-  "source": 2,
-  "path": "path",
-  "line": 5,
-  "column": 1,
   "code": "E303",
-  "text": "too many blank lines (3)",
+  "column": 1,
+  "end_column": null,
   "end_line": null,
-  "end_column": null
+  "line": 5,
+  "path": "path",
+  "source": "flake8",
+  "text": "too many blank lines (3)"
 }"""
+
+    out = Problem.schema().dumps([problem], indent=2, many=True, sort_keys=True)  # type: ignore
+    assert out == """[
+  {
+    "code": "E303",
+    "column": 1,
+    "end_column": null,
+    "end_line": null,
+    "line": 5,
+    "path": "path",
+    "source": "flake8",
+    "text": "too many blank lines (3)"
+  }
+]"""

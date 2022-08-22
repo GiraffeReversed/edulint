@@ -1,6 +1,7 @@
 from edulint.linters import Linter
-from dataclasses import dataclass
-from dataclasses_json import dataclass_json
+from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json, config
+from marshmallow import fields
 from typing import Optional, Dict, Union
 
 ProblemJson = Dict[str, Union[str, int]]
@@ -9,7 +10,11 @@ ProblemJson = Dict[str, Union[str, int]]
 @dataclass_json
 @dataclass
 class Problem:
-    source: Linter
+    source: Linter = field(metadata=config(
+        encoder=Linter.to_name,
+        decoder=Linter.from_name,
+        mm_field=fields.Str()
+    ))
     path: str
     line: int
     column: int
