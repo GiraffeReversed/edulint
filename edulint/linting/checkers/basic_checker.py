@@ -15,7 +15,7 @@ class AugmentAssignments(BaseChecker):  # type: ignore
     name = "augment-assignments"
     msgs = {
         "R6001": (
-            "Use augmenting assignment: %s %s= %s",
+            "Use augmenting assignment: \"%s %s= %s\"",
             "use-augmenting-assignment",
             "Emitted when an assignment can be simplified by using its augmented version.",
         ),
