@@ -142,12 +142,12 @@ In the default configuration, the default configuration of ``flake8`` is used. F
 Translations
 ^^^^^^^^^^^^
 
-EduLint provides convenience "bulk names" for groups of ``pylint`` messages.
+EduLint provides convenience "bulk names" for groups of ``pylint`` messages. One flag enables multiple messages that have a common theme.
 
 Enhancement
 """"""""""""
 
-The flag :link_option:`enhancement` enables the following checks:
+The flag :link_option:`enhancement` groups those messages, that should be followed but it is not essential skill for a beginner:
 
 .. message-table::
    enhancement
@@ -155,7 +155,7 @@ The flag :link_option:`enhancement` enables the following checks:
 Python-spec
 """"""""""""
 
-The flag :link_option:`python-spec` enables the following checks:
+The flag :link_option:`python-spec` enables those messages that improve the code, but are specific to Python:
 
 .. message-table::
    python-spec
