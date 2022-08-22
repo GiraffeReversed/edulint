@@ -211,25 +211,41 @@ def test_simplify_if(filename: str, args: List[Arg], expected_output: List[Probl
     apply_and_lint(filename, args, expected_output)
 
 
-def test_umime_count_a() -> None:
-    apply_and_lint(
-        "umime_count_a.py",
-        [
-            Arg(Option.PYTHON_SPEC, True),
-            Arg(Option.ALLOWED_ONECHAR_NAMES, "i"),
-            Arg(Option.ENHANCEMENT, True),
-        ], [
-            lazy_problem().set_code("C0104").set_line(2)
-            .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),
-            lazy_problem().set_code("E225").set_line(2),
-            lazy_problem().set_code("R6101").set_line(3)
-            .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
-            lazy_problem().set_code("E225").set_line(4).set_column(19),
-            lazy_problem().set_code("E225").set_line(4).set_column(35),
-            lazy_problem().set_code("R6001").set_line(5)
-            .set_text("Use augmenting assignment: \"a += 1\""),
-        ]
-    )
+@pytest.mark.parametrize("filename,args,expected_output", [
+    ("umime_count_a.py", [
+        Arg(Option.PYTHON_SPEC, True),
+        Arg(Option.ALLOWED_ONECHAR_NAMES, ""),
+        Arg(Option.ENHANCEMENT, True),
+    ], [
+        lazy_problem().set_code("C0104").set_line(2)
+        .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),
+        lazy_problem().set_code("E225").set_line(2),
+        lazy_problem().set_code("R6101").set_line(3)
+        .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
+        lazy_problem().set_code("E225").set_line(4).set_column(19),
+        lazy_problem().set_code("E225").set_line(4).set_column(35),
+        lazy_problem().set_code("R6001").set_line(5)
+        .set_text("Use augmenting assignment: \"a += 1\""),
+    ]),
+    ("umime_count_a_extended.py", [
+        Arg(Option.PYTHON_SPEC, True),
+        Arg(Option.ALLOWED_ONECHAR_NAMES, ""),
+        Arg(Option.ENHANCEMENT, True),
+    ], [
+        lazy_problem().set_code("R1703").set_line(2)
+        .set_text("The if statement can be replaced with 'return ch == \"a\" or ch == \"A\"'"),
+        lazy_problem().set_code("R1714").set_line(2)
+        .set_text("Consider merging these comparisons with \"in\" to \"ch in 'aA'\""),
+        lazy_problem().set_code("C0104").set_line(9)
+        .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),
+        lazy_problem().set_code("R6101").set_line(10)
+        .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
+        lazy_problem().set_code("R6001").set_line(12)
+        .set_text("Use augmenting assignment: \"a += 1\""),
+    ])
+])
+def test_umime_count_a(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    apply_and_lint(filename, args, expected_output)
 
 
 def test_problem_can_be_dumped_to_json() -> None:
