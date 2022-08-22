@@ -1,11 +1,11 @@
-from enum import Enum
+from enum import Enum, auto
 from edulint.options import Option
 
 
 class Linter(Enum):
-    EDULINT = 0,  # keep defined first
-    PYLINT = 1,
-    FLAKE8 = 2
+    EDULINT = auto()
+    PYLINT = auto()
+    FLAKE8 = auto()
 
     def __str__(self: Enum) -> str:
         return self.name.lower()
