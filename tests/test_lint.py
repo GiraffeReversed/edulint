@@ -6,7 +6,7 @@ from edulint.config.config import Config, combine_and_translate
 from edulint.config.config_translations import get_config_translations
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_one
-from os.path import join
+import os
 from typing import List
 
 LAZY_INT = -1
@@ -52,6 +52,10 @@ def lazy_equal(received: List[Problem], expected: List[Problem]) -> None:
         lazy_equals(r, e)
 
 
+def get_tests_path(filename: str) -> str:
+    return os.path.join("tests", "data", filename)
+
+
 @pytest.mark.parametrize("filename,config,expected_output", [
     ("hello_world.py", Config(), []),
     ("z202817-zkouska.py", Config(), [lazy_problem().set_code("W0107").set_line(196)]),
@@ -74,15 +78,25 @@ def lazy_equal(received: List[Problem], expected: List[Problem]) -> None:
     ])
 ])
 def test_lint_basic(filename: str, config: Config, expected_output: List[Problem]) -> None:
-    lazy_equal(lint_one(join("tests", "data", filename), config), expected_output)
+    lazy_equal(lint_one(get_tests_path(filename), config), expected_output)
 
 
 def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     lazy_equal(
-        lint_one(join("tests", "data", filename),
+        lint_one(get_tests_path(filename),
                  combine_and_translate(args, get_option_parses(), get_config_translations())),
         expected_output
     )
+
+
+def create_apply_and_lint(lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
+    MOCK_FILENAME = "tmp"
+    with open(get_tests_path(MOCK_FILENAME), "w") as f:
+        f.write("".join(line + "\n" for line in lines))
+
+    apply_and_lint(MOCK_FILENAME, args, expected_output)
+
+    os.remove(get_tests_path(MOCK_FILENAME))
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
@@ -155,60 +169,153 @@ def test_consider_using_in(filename: str, args: List[Arg], expected_output: List
     apply_and_lint(filename, args, expected_output)
 
 
-@pytest.mark.parametrize("filename,args,expected_output", [
-    ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], [
-    ]),
-    ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--enable=iterate-directly"),
-                               Arg(Option.PYLINT, "--disable=W0622,R1705,R1703")], [
-    ]),
-    ("014771-p2_nested.py", [Arg(Option.PYTHON_SPEC, True)], [
-        lazy_problem().set_code("R6101").set_line(25)
-        .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
-        lazy_problem().set_code("R6101").set_line(35)
-        .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
-    ]),
-    ("umime_count_a.py", [Arg(Option.PYLINT, "--enable=improve-for-loop"),
-                          Arg(Option.FLAKE8, "--extend-ignore=E225")], [
-        lazy_problem().set_code("R6101").set_line(3)
-        .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
-    ]),
-    ("custom_for.py", [Arg(Option.PYLINT, "--enable=improve-for-loop")], [
-        lazy_problem().set_code("R6101").set_line(5)
-        .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
-        lazy_problem().set_code("R6102").set_line(21)
-        .set_text("Iterate using enumerate: \"for x, var in enumerate(A)\" (with appropriate name for \"var\")"),
-        lazy_problem().set_code("R6101").set_line(26)
+class TestImproveFor:
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "A = list(range(10))",
+            "B = []",
+            "for x in range(len(A)):",
+            "    for y in range(len(A)):",
+            "        B.append(A[x])",
+            "        B.append(y)"
+        ], [
+            lazy_problem().set_code("R6101").set_line(3)
+            .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
+        ]), ([
+            "A = list(range(10))",
+            "B = []",
+            "for x in range(len(A)):",
+            "    x += 1",
+            "    B.append(A[x])",
+            "    B.append(A[x + 1])"
+        ], [
+        ]), ([
+            "A = list(range(10))",
+            "B = []",
+            "for x in range(len(A)):",
+            "    B.append(A[x + 1])",
+        ], [
+        ]), ([
+            "A = list(range(10))",
+            "for x in range(len(A)):",
+            "    A[x] = A[x] + 1"
+        ], [
+            lazy_problem().set_code("R6102").set_line(2)
+            .set_text("Iterate using enumerate: \"for x, var in enumerate(A)\" (with appropriate name for \"var\")"),
+        ]), ([
+            "A = list(range(10))",
+            "B = []",
+            "for x in range(len(A)):",
+            "    for x in range(len(B)):",
+            "        B.append(A[x])"
+        ], [
+        ])
     ])
-])
-def test_improve_for(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output)
+    def test_improve_for_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        create_apply_and_lint(lines, [Arg(Option.PYLINT, "--enable=improve-for-loop")], expected_output)
+
+    @pytest.mark.parametrize("filename,args,expected_output", [
+        ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], [
+        ]),
+        ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--enable=iterate-directly"),
+                                   Arg(Option.PYLINT, "--disable=W0622,R1705,R1703")], [
+        ]),
+        ("014771-p2_nested.py", [Arg(Option.PYTHON_SPEC, True)], [
+            lazy_problem().set_code("R6101").set_line(25)
+            .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
+            lazy_problem().set_code("R6101").set_line(35)
+            .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
+        ]),
+        ("umime_count_a.py", [Arg(Option.PYLINT, "--enable=improve-for-loop"),
+                              Arg(Option.FLAKE8, "--extend-ignore=E225")], [
+            lazy_problem().set_code("R6101").set_line(3)
+            .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
+        ]),
+    ])
+    def test_improve_for(self, filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+        apply_and_lint(filename, args, expected_output)
 
 
-@pytest.mark.parametrize("filename,args,expected_output", [
-    ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--disable=W0622,R1705")], [
-        lazy_problem().set_code("R1703").set_line(21)
-        .set_text("The if statement can be replaced with 'return side_c == sides[2]'"),
-        lazy_problem().set_code("R1703").set_line(32)
-        .set_text("The if statement can be replaced with 'return a == b & a == c'"),
-    ]),
-    ("custom_if.py", [Arg(Option.PYLINT, "--disable=R1705"), Arg(Option.FLAKE8, "--extend-ignore=E501")], [
-        lazy_problem().set_code("R1703").set_line(2)
-        .set_text("The if statement can be replaced with 'var = c ** 2 == a ** 2 + b ** 2 "
-                  "or a ** 2 == c ** 2 + b ** 2 or b ** 2 == a ** 2 + c ** 2'"),
-        lazy_problem().set_code("R1719").set_line(15)
-        .set_text("The if expression can be replaced with 'values[which] > last[which]'"),
-        lazy_problem().set_code("R1719").set_line(18)
-        .set_text("The if expression can be replaced with 'values[which] > last[which]'"),
-        lazy_problem().set_code("R1719").set_line(20)
-        .set_text("The if expression can be replaced with 'values[which] > last[which]'"),
-        lazy_problem().set_code("R1719").set_line(20)
-        .set_text("The if expression can be replaced with 'not values[which] <= last[which]'"),
-        lazy_problem().set_code("R1703").set_line(31)
-        .set_text("The if statement can be replaced with 'return x'"),
+class TestSimplifyIf:
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "def is_right(a, b, c):",
+            "    if c ** 2 == a ** 2 + b ** 2 or a ** 2 == c ** 2 + b ** 2 or \\",
+            "       b ** 2 == a ** 2 + c ** 2:",
+            "        triangle_is_righ = True",
+            "    else:",
+            "        triangle_is_righ = False",
+            "    return triangle_is_righ"
+        ], [
+            lazy_problem().set_code("R1703").set_line(2)
+            .set_text("The if statement can be replaced with 'var = c ** 2 == a ** 2 + b ** 2 "
+                      "or a ** 2 == c ** 2 + b ** 2 or b ** 2 == a ** 2 + c ** 2'")
+        ]),
+        ([
+            "report = []",
+            "which = 0",
+            "report[which] = True if report[which] > \\",
+            "    report[which] else False"
+        ], [
+            lazy_problem().set_code("R1719").set_line(3)
+            .set_text("The if expression can be replaced with 'report[which] > report[which]'")
+        ]),
+        ([
+            "report = []",
+            "which = 0",
+            "report[which], x = True if report[which] > report[which] else False, 0"
+        ], [
+            lazy_problem().set_code("R1719").set_line(3)
+            .set_text("The if expression can be replaced with 'report[which] > report[which]'")
+        ]),
+        ([
+            "report = []",
+            "which = 0",
+            "report[which], x = True if report[which] > report[which] else False, \\",
+            "    False if report[which] <= report[which] else True"
+        ], [
+            lazy_problem().set_code("R1719").set_line(3)
+            .set_text("The if expression can be replaced with 'report[which] > report[which]'"),
+            lazy_problem().set_code("R1719").set_line(4)
+            .set_text("The if expression can be replaced with 'not report[which] <= report[which]'")
+        ]),
+        ([
+            "def xxx(x):",
+            "    if x:",
+            "        return False",
+            "    else:",
+            "        return True"
+        ], [
+            # WTF
+        ]),
+        ([
+            "def yyy(x):",
+            "    if x:",
+            "        return True",
+            "    else:",
+            "        return False"
+        ], [
+            lazy_problem().set_code("R1703").set_line(2)
+            .set_text("The if statement can be replaced with 'return x'")
+        ])
     ])
-])
-def test_simplify_if(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output)
+    def test_simplify_if_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        create_apply_and_lint(
+            lines,
+            [Arg(Option.PYLINT, "--disable=R1705"), Arg(Option.FLAKE8, "--extend-ignore=E501")],
+            expected_output
+        )
+
+    @pytest.mark.parametrize("filename,args,expected_output", [
+        ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--disable=W0622,R1705")], [
+            lazy_problem().set_code("R1703").set_line(21)
+            .set_text("The if statement can be replaced with 'return side_c == sides[2]'"),
+            lazy_problem().set_code("R1703").set_line(32)
+            .set_text("The if statement can be replaced with 'return a == b & a == c'"),
+        ])
+    ])
+    def test_simplify_if(self, filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+        apply_and_lint(filename, args, expected_output)
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
