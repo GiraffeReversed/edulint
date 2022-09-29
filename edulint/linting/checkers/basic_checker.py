@@ -2,12 +2,12 @@ from astroid import nodes  # type: ignore
 from typing import TYPE_CHECKING, Optional, List, Union, TypeVar
 
 from pylint.checkers import BaseChecker  # type: ignore
-from pylint.checkers import utils
 
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import BaseVisitor, Named, get_name, get_assigned, is_any_assign, is_named
+from edulint.linting.checkers.utils import \
+    BaseVisitor, Named, get_name, get_assigned, is_any_assign, is_named, is_builtin
 
 
 class AugmentAssignments(BaseChecker):  # type: ignore
@@ -61,23 +61,14 @@ class ImproveForLoop(BaseChecker):  # type: ignore
     def __init__(self, linter: Optional["PyLinter"] = None) -> None:
         super().__init__(linter)
 
-# rightfully stolen from
-# https://github.com/PyCQA/pylint/blob/ca80f03a43bc39e4cc2c67dc99817b3c9f13b8a6/pylint/checkers/refactoring/recommendation_checker.py
-    @staticmethod
-    def _is_builtin(node: nodes.NodeNG, function: str) -> bool:
-        inferred = utils.safe_infer(node)
-        if not inferred:
-            return False
-        return utils.is_builtin_object(inferred) and inferred.name == function  # type: ignore
-
     def _is_for_range(self, node: nodes.For) -> bool:
         return isinstance(node.iter, nodes.Call) \
-            and self._is_builtin(node.iter.func, "range") \
+            and is_builtin(node.iter.func, "range") \
             and (len(node.iter.args) == 1
                  or (len(node.iter.args) == 2
                      and isinstance(node.iter.args[0], nodes.Const)
                      and node.iter.args[0].value == 0)) \
-            and self._is_builtin(node.iter.args[0].func, "len") \
+            and is_builtin(node.iter.args[0].func, "len") \
             and len(node.iter.args[0].args) == 1
 
     def _get_structure(self, node: nodes.For) -> nodes.NodeNG:

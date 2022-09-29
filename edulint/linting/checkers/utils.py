@@ -1,7 +1,8 @@
-from typing import Any, TypeVar, Generic, List, Iterable, Union, cast
+from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, cast
 from astroid import nodes  # type: ignore
 import sys
 import inspect
+from pylint.checkers import utils  # type: ignore
 
 
 def eprint(*args: Any, **kwargs: Any) -> None:
@@ -33,6 +34,15 @@ def generic_visit(self: BaseVisitor[T], node: nodes.NodeNG) -> T:
 
 for name, obj in inspect.getmembers(nodes, inspect.isclass):
     setattr(BaseVisitor, f"visit_{obj.__name__.lower()}", generic_visit)
+
+
+# rightfully stolen from
+# https://github.com/PyCQA/pylint/blob/ca80f03a43bc39e4cc2c67dc99817b3c9f13b8a6/pylint/checkers/refactoring/recommendation_checker.py
+def is_builtin(node: nodes.NodeNG, function: Optional[str] = None) -> bool:
+    inferred = utils.safe_infer(node)
+    if not inferred:
+        return False
+    return utils.is_builtin_object(inferred) and function is None or inferred.name == function
 
 
 def is_multi_assign(node: nodes.NodeNG) -> bool:
