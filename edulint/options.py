@@ -12,8 +12,8 @@ class NumberFromZero(Enum):
 
 
 T = TypeVar("T")
-UnionT = Union[bool, List[str], Optional[str]]
-ImmutableT = Union[bool, Tuple[str, ...], Optional[str]]
+UnionT = Union[bool, List[str], Optional[str], Optional[int]]
+ImmutableT = Union[bool, Tuple[str, ...], Optional[str], Optional[int]]
 
 
 class Option(NumberFromZero):
@@ -23,6 +23,7 @@ class Option(NumberFromZero):
     ENHANCEMENT = ()
     PYTHON_SPEC = ()
     ALLOWED_ONECHAR_NAMES = ()
+    IB111_WEEK = ()
 
     def to_name(self) -> str:
         return self.name.lower().replace("_", "-")
@@ -65,6 +66,10 @@ class Type(MultivaluedEnum):
     def _to_str_val(val: Optional[str]) -> Optional[str]:
         return val
 
+    @staticmethod
+    def _to_int_val(val: Optional[str]) -> Optional[int]:
+        return int(val) if val is not None and val.isdecimal() else None
+
     def __init__(self, _: Enum, convert: Callable[[Optional[str]], UnionT]):
         self.convert: Callable[[Optional[str]], UnionT] = convert.__func__  # type: ignore
 
@@ -74,6 +79,7 @@ class Type(MultivaluedEnum):
     BOOL = (auto(), _to_bool_val)
     LIST = (auto(), _to_list_val)
     STR = (auto(), _to_str_val)
+    INT = (auto(), _to_int_val)
 
 
 class Combine(MultivaluedEnum):
@@ -151,6 +157,14 @@ OPTIONS: List[OptionParse] = [
         Type.STR,
         Combine.REPLACE
     ),
+    OptionParse(
+        Option.IB111_WEEK,
+        "set which week's limitation should be applied",
+        TakesVal.YES,
+        None,
+        Type.INT,
+        Combine.REPLACE
+    )
 ]
 
 

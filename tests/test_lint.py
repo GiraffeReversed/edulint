@@ -3,7 +3,7 @@ from edulint.linters import Linter
 from edulint.options import Option, get_option_parses
 from edulint.config.arg import Arg
 from edulint.config.config import Config, combine_and_translate
-from edulint.config.config_translations import get_config_translations
+from edulint.config.config_translations import get_config_translations, get_ib111_translations
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_one
 import os
@@ -84,7 +84,7 @@ def test_lint_basic(filename: str, config: Config, expected_output: List[Problem
 def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     lazy_equal(
         lint_one(get_tests_path(filename),
-                 combine_and_translate(args, get_option_parses(), get_config_translations())),
+                 combine_and_translate(args, get_option_parses(), get_config_translations(), get_ib111_translations())),
         expected_output
     )
 
@@ -119,6 +119,34 @@ def create_apply_and_lint(lines: List[str], args: List[Arg], expected_output: Li
 ])
 def test_translations(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     apply_and_lint(filename, args, expected_output)
+
+
+class TestIB111Week:
+    @pytest.mark.parametrize("lines,args,expected_output", [
+        ([
+            "def swap(a, b):",
+            "    tmp = a",
+            "    a = b",
+            "    b = tmp",
+        ], [Arg(Option.PYTHON_SPEC, True)], [
+            lazy_problem().set_code("R1712").set_line(2),
+        ]), ([
+            "def swap(a, b):",
+            "    tmp = a",
+            "    a = b",
+            "    b = tmp",
+        ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "2")], [
+        ]), ([
+            "def swap(a, b):",
+            "    tmp = a",
+            "    a = b",
+            "    b = tmp",
+        ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "3")], [
+            lazy_problem().set_code("R1712").set_line(2),
+        ])
+    ])
+    def test_improve_for_custom(self, lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
+        create_apply_and_lint(lines, args, expected_output)
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [

@@ -120,3 +120,10 @@ def test_different_configs(monkeypatch, capsys, argv, output):
 ])
 def test_passing_cmd_args(monkeypatch, capsys, argv, output):
     compare_output(monkeypatch, capsys, argv, output)
+
+
+@pytest.mark.parametrize("argv,output", [
+    ([join("tests", "data", "custom_swap.py")], "")
+])
+def test_ib111_week(monkeypatch, capsys, argv, output):
+    compare_output(monkeypatch, capsys, argv, output)

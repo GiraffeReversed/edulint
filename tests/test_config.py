@@ -20,7 +20,7 @@ def advertised_options(all_advertised_options: List[Option]) -> Set[Option]:
 
 @pytest.fixture
 def always_managed_options() -> Set[Option]:
-    return set((Option.PYLINT, Option.FLAKE8))
+    return set((Option.PYLINT, Option.FLAKE8, Option.IB111_WEEK))
 
 
 @pytest.fixture
@@ -90,6 +90,8 @@ def mock_contents(mocker, contents) -> None:
         ["pylint=xxx", "yyy", "zzz", "flake8=aaa", "bbb", "pylint=", "flake8=xxx yyy"]
     ),
     ("# edulint: pylint=--enable=missing-module-docstring", ["pylint=--enable=missing-module-docstring"]),
+    ("from ib111 import week_12", ["ib111-week=12"]),
+    ("from ib111 import week_02  # noqa", ["ib111-week=02"]),
 ])
 def test_extract_args(mocker, contents, args):
     mock_contents(mocker, contents)
@@ -100,7 +102,8 @@ def test_extract_args(mocker, contents, args):
 def options() -> Dict[Option, OptionParse]:
     return {
         Option.PYTHON_SPEC: OptionParse(Option.PYTHON_SPEC, "", TakesVal.NO, False, Type.BOOL, Combine.REPLACE),
-        Option.FLAKE8: OptionParse(Option.FLAKE8, "", TakesVal.YES, [], Type.STR, Combine.APPEND)
+        Option.FLAKE8: OptionParse(Option.FLAKE8, "", TakesVal.YES, [], Type.STR, Combine.APPEND),
+        Option.IB111_WEEK: OptionParse(Option.IB111_WEEK, "", TakesVal.YES, None, Type.INT, Combine.REPLACE)
     }
 
 
@@ -109,7 +112,11 @@ def options() -> Dict[Option, OptionParse]:
     (["flake8=foo"], [UnprocessedArg(Option.FLAKE8, "foo")]),
     (["flake8="], [UnprocessedArg(Option.FLAKE8, "")]),
     (["python-spec", "flake8=foo"], [UnprocessedArg(Option.PYTHON_SPEC, None), UnprocessedArg(Option.FLAKE8, "foo")]),
-    (["flake8=--enable=xxx"], [UnprocessedArg(Option.FLAKE8, "--enable=xxx")])
+    (["flake8=--enable=xxx"], [UnprocessedArg(Option.FLAKE8, "--enable=xxx")]),
+    (["ib111-week=02"], [UnprocessedArg(Option.IB111_WEEK, "02")]),
+    (["ib111-week=12", "ib111-week=02"], [
+        UnprocessedArg(Option.IB111_WEEK, "12"), UnprocessedArg(Option.IB111_WEEK, "02")
+    ]),
 ])
 def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: List[UnprocessedArg]) -> None:
     assert parse_args(raw, options) == parsed
@@ -131,6 +138,15 @@ def config_translations() -> Dict[Option, Translation]:
             ["ccc"]
         )
     }
+
+
+@pytest.fixture
+def ib111_translations() -> List[Translation]:
+    return [
+        Translation(Linter.PYLINT, ["iii"]),
+        Translation(Linter.PYLINT, ["jjj"]),
+        Translation(Linter.PYLINT, ["kkk"]),
+    ]
 
 
 @pytest.mark.parametrize("args,config", [
@@ -157,12 +173,33 @@ def config_translations() -> Dict[Option, Translation]:
     (
         [UnprocessedArg(Option.ALLOWED_ONECHAR_NAMES, "n")],
         Config([ProcessedArg(Option.ALLOWED_ONECHAR_NAMES, "n"), ProcessedArg(Option.PYLINT, ["ccc"])])
-    )
+    ),
+    (
+        [UnprocessedArg(Option.IB111_WEEK, "02")],
+        Config([ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["kkk"])])
+    ),
+    (
+        [UnprocessedArg(Option.IB111_WEEK, "12"), UnprocessedArg(Option.IB111_WEEK, "02")],
+        Config([ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["kkk"])])
+    ),
+    (
+        [UnprocessedArg(Option.IB111_WEEK, "02"), UnprocessedArg(Option.PYLINT, "aaa")],
+        Config([ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["aaa", "kkk"])])
+    ),
+    (
+        [UnprocessedArg(Option.IB111_WEEK, "02"), UnprocessedArg(Option.ENHANCEMENT, None)],
+        Config([
+            ProcessedArg(Option.IB111_WEEK, 2),
+            ProcessedArg(Option.ENHANCEMENT, True),
+            ProcessedArg(Option.PYLINT, ["aaa", "kkk"])
+        ])
+    ),
 ])
 def test_combine_and_translate_translates(
         args: List[UnprocessedArg],
         config_translations: Dict[Option, Translation],
+        ib111_translations: List[Translation],
         config: Config) -> None:
 
-    result = combine_and_translate(args, get_option_parses(), config_translations)
+    result = combine_and_translate(args, get_option_parses(), config_translations, ib111_translations)
     assert result.config == config.config

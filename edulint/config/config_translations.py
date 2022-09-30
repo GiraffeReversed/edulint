@@ -39,3 +39,25 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
 
 def get_config_translations() -> Dict[Option, Translation]:
     return CONFIG_TRANSLATIONS
+
+
+IB111_WEEK_TRANSLATIONS: List[Translation] = [
+    Translation(Linter.PYLINT, ["--disable=consider-using-in,consider-swap-variables"]),  # 0
+    Translation(Linter.PYLINT, ["--disable=consider-using-in,consider-swap-variables"]),  # 1
+    Translation(Linter.PYLINT, ["--disable=consider-using-in,consider-swap-variables"]),  # 2
+    Translation(Linter.PYLINT, ["--disable=consider-using-in"]),  # 3
+    Translation(Linter.PYLINT, ["--disable=consider-using-in"]),  # 4
+    Translation(Linter.PYLINT, ["--disable=consider-using-in"]),  # 5
+    Translation(Linter.PYLINT, ["--disable=consider-using-in"]),  # 6
+    Translation(Linter.PYLINT, []),  # 7
+    Translation(Linter.PYLINT, []),  # 8
+    Translation(Linter.PYLINT, []),  # 9
+    Translation(Linter.PYLINT, []),  # 10
+    Translation(Linter.PYLINT, []),  # 11
+    Translation(Linter.PYLINT, []),  # 12
+]
+
+
+def get_ib111_translations() -> List[Translation]:
+    assert len(IB111_WEEK_TRANSLATIONS) == 13
+    return IB111_WEEK_TRANSLATIONS

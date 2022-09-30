@@ -1,6 +1,6 @@
 from edulint.config.arg import ProcessedArg, UnprocessedArg, ImmutableArg
 from edulint.options import UnionT, ImmutableT, Option, TakesVal, OptionParse, get_option_parses, get_name_to_option
-from edulint.config.config_translations import get_config_translations, Translation
+from edulint.config.config_translations import get_config_translations, get_ib111_translations, Translation
 from typing import Dict, List, Optional, Tuple, Iterator
 from dataclasses import dataclass
 from argparse import Namespace
@@ -45,17 +45,22 @@ class Config:
 
 def extract_args(filename: str) -> List[str]:
     edulint_re = re.compile(r"\s*#[\s#]*edulint:\s*", re.IGNORECASE)
+    ib111_re = re.compile(r"\s*from\s+ib111\s+import\s+week_(\d+)", re.IGNORECASE)
 
     result: List[str] = []
     with open(filename) as f:
         for i, line in enumerate(f):
             line = line.strip()
-            edmatch = edulint_re.match(line)
-            if not edmatch:
-                continue
 
-            raw_args = line[edmatch.end():]
-            result.extend(shlex.split(raw_args))
+            edmatch = edulint_re.match(line)
+            if edmatch:
+                raw_args = line[edmatch.end():]
+                result.extend(shlex.split(raw_args))
+
+            ibmatch = ib111_re.match(line)
+            if ibmatch:
+                result.append(f"{Option.IB111_WEEK.to_name()}={ibmatch.group(1)}")
+
     return result
 
 
@@ -101,11 +106,18 @@ def fill_in_val(arg: UnprocessedArg, translation: List[str]) -> List[str]:
 def combine_and_translate(
         args: List[UnprocessedArg],
         option_parses: Dict[Option, OptionParse],
-        config_translations: Dict[Option, Translation]) -> Config:
+        config_translations: Dict[Option, Translation],
+        ib111_translations: List[Translation]) -> Config:
+
     def combine(option_vals: List[UnionT], option: Option, val: Optional[str]) -> None:
         parse = option_parses[option]
         old_val = option_vals[int(option)]
         option_vals[int(option)] = parse.combine(old_val, parse.convert(val))
+
+    def apply_translation(option_vals: List[UnionT], translated: Translation) -> None:
+        translated_option = translated.for_linter.to_option()
+        for val in translated.vals:
+            combine(option_vals, translated_option, val)
 
     option_vals = [option_parses[o].default for o in Option]
 
@@ -114,9 +126,16 @@ def combine_and_translate(
 
         translated = config_translations.get(arg.option)
         if translated is not None:
-            translated_option = translated.for_linter.to_option()
-            for val in translated.vals:
-                combine(option_vals, translated_option, val)
+            apply_translation(option_vals, translated)
+
+    ib111_week = option_vals[int(Option.IB111_WEEK)]
+    if ib111_week is not None:
+        assert isinstance(ib111_week, int)
+        if 0 <= ib111_week < len(ib111_translations):
+            apply_translation(option_vals, ib111_translations[ib111_week])
+        else:
+            print(f"edulint: option {Option.IB111_WEEK.to_name()} has value {ib111_week} which is invalid;"
+                  f"allowed values are 0 to {len(ib111_translations)}", file=sys.stderr)
 
     return Config([ProcessedArg(o, v) for o, v in zip(Option, option_vals) if v is not None])
 
@@ -124,10 +143,11 @@ def combine_and_translate(
 def get_config(
         filename: str, cmd_args: List[str],
         option_parses: Dict[Option, OptionParse] = get_option_parses(),
-        config_translations: Dict[Option, Translation] = get_config_translations()) -> Config:
+        config_translations: Dict[Option, Translation] = get_config_translations(),
+        ib111_translation: List[Translation] = get_ib111_translations()) -> Config:
     extracted = extract_args(filename) + cmd_args
     parsed = parse_args(extracted, option_parses)
-    return combine_and_translate(parsed, option_parses, config_translations)
+    return combine_and_translate(parsed, option_parses, config_translations, ib111_translation)
 
 
 def get_cmd_args(args: Namespace) -> List[str]:

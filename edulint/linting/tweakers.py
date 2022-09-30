@@ -123,6 +123,11 @@ def simplifiable_if_expression_reword(self: Tweaker, problem: Problem) -> str:
     return problem.text[:match.start(1)] + if_expr_match.group(1) + problem.text[match.end(1):]
 
 
+def unused_import_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
+    match = self.match(problem)
+    return not match.group(1).startswith("ib111")
+
+
 Tweakers = Dict[Tuple[Linter, str], Tweaker]
 
 TWEAKERS = {
@@ -159,6 +164,11 @@ TWEAKERS = {
         ),
         reword=simplifiable_if_expression_reword
     ),
+    (Linter.FLAKE8, "F401"): Tweaker(  # module imported but unused
+        set(),
+        re.compile("'(.*)' imported but unused"),
+        unused_import_keep
+    )
 }
 
 
