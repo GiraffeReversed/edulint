@@ -33,7 +33,8 @@ def lazy_equals(received: Problem, expected: Problem) -> None:
 
 
 def lazy_problem() -> Problem:
-    return Problem(None, "", LAZY_INT, LAZY_INT, None, "", LAZY_INT, LAZY_INT)  # type: ignore
+    # type: ignore
+    return Problem(None, "", LAZY_INT, LAZY_INT, None, "", LAZY_INT, LAZY_INT)
 
 
 def filler_problem() -> Problem:
@@ -58,7 +59,8 @@ def get_tests_path(filename: str) -> str:
 
 @pytest.mark.parametrize("filename,config,expected_output", [
     ("hello_world.py", Config(), []),
-    ("z202817-zkouska.py", Config(), [lazy_problem().set_code("W0107").set_line(196)]),
+    ("z202817-zkouska.py", Config(),
+     [lazy_problem().set_code("W0107").set_line(196)]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115"])]), [
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128),
@@ -68,7 +70,8 @@ def get_tests_path(filename: str) -> str:
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128)
     ]),
-    ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--disable=all"])]), []),
+    ("z202817-zkouska.py",
+     Config([Arg(Option.PYLINT, ["--disable=all"])]), []),
     ("002814-p1_trapezoid.py", Config(), [
         lazy_problem().set_code("F401").set_line(1),
         lazy_problem().set_code("F401").set_line(1),
@@ -143,6 +146,19 @@ class TestIB111Week:
             "    b = tmp",
         ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "3")], [
             lazy_problem().set_code("R1712").set_line(2),
+        ]), ([
+            "def is_one_or_two(n):",
+            "    if n == 1 or n == 2:",
+            "        return True",
+            "    return False"
+        ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "6")], [
+        ]), ([
+            "def is_one_or_two(n):",
+            "    if n == 1 or n == 2:",
+            "        return True",
+            "    return False"
+        ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "7")], [
+            lazy_problem().set_code("R1714").set_line(1)
         ])
     ])
     def test_improve_for_custom(self, lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
@@ -240,7 +256,8 @@ class TestImproveFor:
         ])
     ])
     def test_improve_for_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        create_apply_and_lint(lines, [Arg(Option.PYLINT, "--enable=improve-for-loop")], expected_output)
+        create_apply_and_lint(
+            lines, [Arg(Option.PYLINT, "--enable=improve-for-loop")], expected_output)
 
     @pytest.mark.parametrize("filename,args,expected_output", [
         ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], [
@@ -330,7 +347,8 @@ class TestSimplifyIf:
     def test_simplify_if_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.PYLINT, "--disable=R1705"), Arg(Option.FLAKE8, "--extend-ignore=E501")],
+            [Arg(Option.PYLINT, "--disable=R1705"),
+             Arg(Option.FLAKE8, "--extend-ignore=E501")],
             expected_output
         )
 
@@ -399,7 +417,8 @@ def test_problem_can_be_dumped_to_json() -> None:
   "text": "too many blank lines (3)"
 }"""
 
-    out = Problem.schema().dumps([problem], indent=2, many=True, sort_keys=True)  # type: ignore
+    out = Problem.schema().dumps(
+        [problem], indent=2, many=True, sort_keys=True)  # type: ignore
     assert out == """[
   {
     "code": "E303",
