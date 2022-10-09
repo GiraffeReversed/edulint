@@ -33,8 +33,7 @@ def lazy_equals(received: Problem, expected: Problem) -> None:
 
 
 def lazy_problem() -> Problem:
-    # type: ignore
-    return Problem(None, "", LAZY_INT, LAZY_INT, None, "", LAZY_INT, LAZY_INT)
+    return Problem(None, "", LAZY_INT, LAZY_INT, None, "", LAZY_INT, LAZY_INT)  # type: ignore
 
 
 def filler_problem() -> Problem:
@@ -158,10 +157,10 @@ class TestIB111Week:
             "        return True",
             "    return False"
         ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "7")], [
-            lazy_problem().set_code("R1714").set_line(1)
+            lazy_problem().set_code("R1714").set_line(2)
         ])
     ])
-    def test_improve_for_custom(self, lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
+    def test_ib111_week_custom(self, lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
         create_apply_and_lint(lines, args, expected_output)
 
 
@@ -417,8 +416,7 @@ def test_problem_can_be_dumped_to_json() -> None:
   "text": "too many blank lines (3)"
 }"""
 
-    out = Problem.schema().dumps(
-        [problem], indent=2, many=True, sort_keys=True)  # type: ignore
+    out = Problem.schema().dumps([problem], indent=2, many=True, sort_keys=True)  # type: ignore
     assert out == """[
   {
     "code": "E303",
