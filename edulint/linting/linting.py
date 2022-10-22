@@ -7,6 +7,7 @@ from edulint.linting.tweakers import get_tweakers, Tweakers
 from edulint.config.config import Config
 from edulint.options import Option
 from edulint.linters import Linter
+from functools import partial
 import sys
 import json
 import pathlib
@@ -29,7 +30,7 @@ def flake8_to_problem(raw: ProblemJson) -> Problem:
     )
 
 
-def pylint_to_problem(raw: ProblemJson) -> Problem:
+def pylint_to_problem(filenames: List[str], raw: ProblemJson) -> Problem:
     assert isinstance(raw["path"], str), f'got {type(raw["path"])} for path'
     assert isinstance(raw["line"], int), f'got {type(raw["line"])} for line'
     assert isinstance(raw["column"], int), f'got {type(raw["column"])} for column'
@@ -38,9 +39,15 @@ def pylint_to_problem(raw: ProblemJson) -> Problem:
     assert isinstance(raw["endLine"], int) or raw["endLine"] is None, f'got {type(raw["endLine"])} for endLine'
     assert isinstance(raw["endColumn"], int) or raw["endColumn"] is None, f'got {type(raw["endColumn"])} for endColumn'
 
+    def get_used_filename(path: str) -> str:
+        for filename in filenames:
+            if filename.endswith(path):
+                return filename
+        assert False, "unreachable"
+
     return Problem(
         Linter.PYLINT,
-        raw["path"],
+        get_used_filename(raw["path"]),
         raw["line"],
         raw["column"],
         raw["message-id"],
@@ -82,7 +89,7 @@ def lint_pylint(filenames: List[str], config: Config) -> List[Problem]:
     pylint_args = [f'--rcfile={pylintrc}', "--output-format=json"]
     return lint_any(
         Linter.PYLINT, filenames, pylint_args, config[Option.PYLINT],
-        lambda r: r, pylint_to_problem)
+        lambda r: r, partial(pylint_to_problem, filenames))
 
 
 def apply_overrides(problems: List[Problem], overriders: Dict[str, Set[str]]) -> List[Problem]:
