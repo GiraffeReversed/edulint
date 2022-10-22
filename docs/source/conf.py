@@ -12,7 +12,7 @@
 #
 import os
 import sys
-# sys.path.insert(0, os.path.abspath('.'))
+
 sys.path.insert(0, os.path.abspath('./_ext'))
 sys.path.insert(0, os.path.abspath('../..'))
 
@@ -24,7 +24,8 @@ copyright = '2022, Anna Rechtackova'
 author = 'Anna Rechtackova'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.7'
+import edulint  # noqa
+release = edulint.__version__
 
 
 # -- General configuration ---------------------------------------------------
