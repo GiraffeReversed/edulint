@@ -7,6 +7,7 @@ from edulint.config.config_translations import get_config_translations, get_ib11
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_one
 import os
+import pathlib
 from typing import List
 
 LAZY_INT = -1
@@ -53,7 +54,7 @@ def lazy_equal(received: List[Problem], expected: List[Problem]) -> None:
 
 
 def get_tests_path(filename: str) -> str:
-    return os.path.join("tests", "data", filename)
+    return str((pathlib.Path(__file__).parent / "data" / filename).resolve())
 
 
 @pytest.mark.parametrize("filename,config,expected_output", [
