@@ -6,6 +6,7 @@ from edulint.config.config import Config, combine_and_translate
 from edulint.config.config_translations import get_config_translations, get_ib111_translations
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_one
+from dataclasses import fields, replace
 import os
 import pathlib
 from typing import List
@@ -16,22 +17,12 @@ FILLER_CODE = ""
 
 
 def lazy_equals(received: Problem, expected: Problem) -> None:
-    if expected.source:
-        assert received.source == expected.source
-    if expected.path:
-        assert received.path == expected.path
-    if expected.code is not None:
-        assert received.code == expected.code
-    if expected.line != LAZY_INT:
-        assert received.line == expected.line
-    if expected.column != LAZY_INT:
-        assert received.column == expected.column
-    if expected.text:
-        assert received.text == expected.text
-    if expected.end_line != LAZY_INT:
-        assert received.end_line == expected.end_line
-    if expected.end_column != LAZY_INT:
-        assert received.end_column == expected.end_column
+    copy = replace(received)
+    for field in fields(Problem):
+        if not expected.has_value(field.name):
+            setattr(copy, field.name, getattr(expected, field.name))
+
+    assert copy == expected
 
 
 def lazy_problem() -> Problem:
