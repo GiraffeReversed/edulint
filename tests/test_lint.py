@@ -9,6 +9,7 @@ from edulint.linting.linting import lint_one
 import os
 import pathlib
 from typing import List
+import tempfile
 
 LAZY_INT = -1
 FILLER_CODE = ""
@@ -93,13 +94,13 @@ def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem
 
 
 def create_apply_and_lint(lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
-    MOCK_FILENAME = "tmp"
-    with open(get_tests_path(MOCK_FILENAME), "w") as f:
-        f.write("".join(line + "\n" for line in lines))
-
-    apply_and_lint(MOCK_FILENAME, args, expected_output)
-
-    os.remove(get_tests_path(MOCK_FILENAME))
+    tf = tempfile.NamedTemporaryFile("w+", delete=False)
+    try:
+        tf.writelines([line + "\n" for line in lines])
+        tf.close()
+        apply_and_lint(tf.name, args, expected_output)
+    finally:
+        os.remove(tf.name)
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
