@@ -78,8 +78,8 @@ def lint_flake8(filenames: List[str], config: Config) -> List[Problem]:
 
 
 def lint_pylint(filenames: List[str], config: Config) -> List[Problem]:
-    cwd = pathlib.Path(__file__).parent.resolve()
-    pylint_args = [f'--rcfile={cwd}/.pylintrc', "--output-format=json"]
+    pylintrc = (pathlib.Path(__file__).parent / ".pylintrc").resolve()
+    pylint_args = [f'--rcfile={pylintrc}', "--output-format=json"]
     return lint_any(
         Linter.PYLINT, filenames, pylint_args, config[Option.PYLINT],
         lambda r: r, pylint_to_problem)
