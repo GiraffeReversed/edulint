@@ -274,6 +274,300 @@ class TestImproveFor:
 
 
 class TestSimplifyIf:
+
+    def _test_simplify_if(self, lines: List[str], expected_output: List[Problem], code: str) -> None:
+        create_apply_and_lint(
+            lines,
+            [Arg(Option.PYLINT, "--disable=R1705"),
+             Arg(Option.FLAKE8, "--extend-ignore=E501")],
+            [p.set_code(code) for p in expected_output]
+        )
+
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "def yyy(x):",
+            "    if x:",
+            "        return True",
+            "    else:",
+            "        return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x'")
+        ]),
+        ([
+            "def xxx(x):",
+            "    if x:",
+            "        return False",
+            "    else:",
+            "        return True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated x>'"),
+        ]),
+        ([
+            "def xxx(x):",
+            "    if x:",
+            "        return True",
+            "    return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x'"),
+        ]),
+        ([
+            "def xxx(x):",
+            "    if x:",
+            "        return False",
+            "    return True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated x>'"),
+        ]),
+    ])
+    def test_simplify_if_statement_single_var_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        self._test_simplify_if_statement(lines, expected_output, "R6201")
+
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        if y:",
+            "            return True",
+            "    return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x and y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        if y:",
+            "            return False",
+            "    return True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated (x and y)>'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        return True",
+            "    return y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x or y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        return False",
+            "    return y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated x> and y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        return y",
+            "    return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x and y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        return y",
+            "    return True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated x> or y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        return True",
+            "    else:",
+            "        return y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x or y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        return False",
+            "    else:",
+            "        return y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated x> and y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        return y",
+            "    else:",
+            "        return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x and y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        return y",
+            "    else:",
+            "        return True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated x> or y'")
+        ]),
+    ])
+    def test_simplify_if_statement_two_vars_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        self._test_simplify_if_statement(lines, expected_output, "R6201")
+
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "def xxx(x, y, z):",
+            "    if x and z:",
+            "        return y",
+            "    return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x and z and y'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x or z:",
+            "        return y",
+            "    return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return (x or z) and y'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x:",
+            "        return y and z",
+            "    return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x and y and z'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x:",
+            "        return y or z",
+            "    return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x and (y or z)'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x and z:",
+            "        return True",
+            "    return y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return (x and z) or y'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x and z:",
+            "        return False",
+            "    return y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated (x and z)> and y'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x:",
+            "        return False",
+            "    return y or z"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated x> and (y or z)'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x or z:",
+            "        return y",
+            "    return False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return (x or z) and y'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x and z:",
+            "        return y",
+            "    return True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return <negated (x and z)> or y'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x and z:",
+            "        return True",
+            "    else:",
+            "        return y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return (x and z) or y'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x or z:",
+            "        return True",
+            "    else:",
+            "        return y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x and z or y'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x:",
+            "        return True",
+            "    else:",
+            "        return y and z"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be replaced with 'return x or (y and z)'")
+        ]),
+    ])
+    def test_simplify_if_statement_three_vars_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        self._test_simplify_if_statement(lines, expected_output, "R6201")
+
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "def xxx(x, y):"
+            "    if x:",
+            "        return 0",
+            "    if y:",
+            "        return 0",
+            "    return 1"
+        ], [
+            lazy_problem().set_line(4)
+            .set_text("The if statement can be merged with the previous to 'if x or y:'")
+        ]),
+        ([
+            "def xxx(x, y):"
+            "    if x:",
+            "        return True",
+            "    if y:",
+            "        return False",
+            "    return True"
+        ], [
+        ]),
+    ])
+    def test_simplify_if_statement_multiconds_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        self._test_simplify_if_statement(lines, expected_output, "R6202")
+
     @pytest.mark.parametrize("lines,expected_output", [
         ([
             "def is_right(a, b, c):",
@@ -284,17 +578,82 @@ class TestSimplifyIf:
             "        triangle_is_righ = False",
             "    return triangle_is_righ"
         ], [
-            lazy_problem().set_code("R1703").set_line(2)
-            .set_text("The if statement can be replaced with 'var = c ** 2 == a ** 2 + b ** 2 "
-                      "or a ** 2 == c ** 2 + b ** 2 or b ** 2 == a ** 2 + c ** 2'")
+            lazy_problem().set_line(2)
+            .set_text("The conditional assignment can be replace with 'triangle_is_righ = var = c ** 2 == a ** 2 "
+                      "+ b ** 2 or a ** 2 == c ** 2 + b ** 2 or b ** 2 == a ** 2 + c ** 2'")
         ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        a = True",
+            "    else:",
+            "        a = y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The conditional assignment can be replace with 'a = x or y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        a = False",
+            "    else:",
+            "        a = y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The conditional assignment can be replace with 'a = <negated x> and y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        a = y",
+            "    else:",
+            "        a = False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The conditional assignment can be replace with 'a = x and y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        a = y",
+            "    else:",
+            "        a = True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The conditional assignment can be replace with 'a = <negated x> or y'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x:",
+            "        a = y and z",
+            "    else:",
+            "        a = True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The conditional assignment can be replace with 'a = <negated x> or (y and z)'")
+        ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x:",
+            "        a = y or z",
+            "    else:",
+            "        a = True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The conditional assignment can be replace with 'a = <negated x> or y or z'")
+        ]),
+    ])
+    def test_simplify_if_assigning_statement_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        self._test_simplify_if_statement(lines, expected_output, "R6203")
+
+    @pytest.mark.parametrize("lines,expected_output", [
         ([
             "report = []",
             "which = 0",
             "report[which] = True if report[which] > \\",
             "    report[which] else False"
         ], [
-            lazy_problem().set_code("R1719").set_line(3)
+            lazy_problem().set_line(3)
             .set_text("The if expression can be replaced with 'report[which] > report[which]'")
         ]),
         ([
@@ -302,7 +661,7 @@ class TestSimplifyIf:
             "which = 0",
             "report[which], x = True if report[which] > report[which] else False, 0"
         ], [
-            lazy_problem().set_code("R1719").set_line(3)
+            lazy_problem().set_line(3)
             .set_text("The if expression can be replaced with 'report[which] > report[which]'")
         ]),
         ([
@@ -311,44 +670,48 @@ class TestSimplifyIf:
             "report[which], x = True if report[which] > report[which] else False, \\",
             "    False if report[which] <= report[which] else True"
         ], [
-            lazy_problem().set_code("R1719").set_line(3)
+            lazy_problem().set_line(3)
             .set_text("The if expression can be replaced with 'report[which] > report[which]'"),
-            lazy_problem().set_code("R1719").set_line(4)
-            .set_text("The if expression can be replaced with 'not report[which] <= report[which]'")
+            lazy_problem().set_line(4)
+            .set_text("The if expression can be replaced with negated 'report[which] <= report[which]'")
         ]),
         ([
-            "def xxx(x):",
-            "    if x:",
-            "        return False",
-            "    else:",
-            "        return True"
+            "def xxx(x, y):",
+            "    r = True if x else y"
         ], [
-            # WTF
+            lazy_problem().set_line(2)
+            .set_text("The if expression can be replaced with 'x or y'")
         ]),
         ([
-            "def yyy(x):",
-            "    if x:",
-            "        return True",
-            "    else:",
-            "        return False"
+            "def xxx(x, y):",
+            "    r = False if x else y"
         ], [
-            lazy_problem().set_code("R1703").set_line(2)
-            .set_text("The if statement can be replaced with 'return x'")
-        ])
+            lazy_problem().set_line(2)
+            .set_text("The if expression can be replaced with '<negated x> and y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    r = y if x else False"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if expression can be replaced with 'x and y'")
+        ]),
+        ([
+            "def xxx(x, y):",
+            "    r = y if x else True"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if expression can be replaced with '<negated x> or y'")
+        ]),
     ])
-    def test_simplify_if_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        create_apply_and_lint(
-            lines,
-            [Arg(Option.PYLINT, "--disable=R1705"),
-             Arg(Option.FLAKE8, "--extend-ignore=E501")],
-            expected_output
-        )
+    def test_simplify_if_expression_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        self._test_simplify_if_statement(lines, expected_output, "R6204")
 
     @pytest.mark.parametrize("filename,args,expected_output", [
         ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--disable=W0622,R1705")], [
-            lazy_problem().set_code("R1703").set_line(21)
+            lazy_problem().set_code("R6201").set_line(21)
             .set_text("The if statement can be replaced with 'return side_c == sides[2]'"),
-            lazy_problem().set_code("R1703").set_line(32)
+            lazy_problem().set_code("R6201").set_line(32)
             .set_text("The if statement can be replaced with 'return a == b & a == c'"),
         ])
     ])
