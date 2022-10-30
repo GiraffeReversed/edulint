@@ -18,7 +18,7 @@ mypy:
 test:
 	. ${EDULINT_VENV_PATH}/bin/activate && \
 		export PYTHONPATH=${EDULINT_PATH} && \
-		python3 -m pytest -k "${ARGS}" ${EDULINT_PATH}/tests/
+		python3 -m pytest -n4 -k "${ARGS}" ${EDULINT_PATH}/tests/
 
 check: mypy test
 
