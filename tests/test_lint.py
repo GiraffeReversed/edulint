@@ -157,14 +157,14 @@ class TestIB111Week:
             "    if n == 1 or n == 2:",
             "        return True",
             "    return False"
-        ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "6")], [
+        ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "6"), Arg(Option.PYLINT, "--disable=R6201")], [
         ]), ([
             "def is_one_or_two(n):",
             "    if n == 1 or n == 2:",
             "        return True",
             "    return False"
-        ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "7")], [
-            lazy_problem().set_code("R6201").set_line(2)
+        ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "7"), Arg(Option.PYLINT, "--disable=R6201")], [
+            lazy_problem().set_code("R1714").set_line(2),
         ])
     ])
     def test_ib111_week_custom(self, lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
@@ -269,7 +269,7 @@ class TestImproveFor:
         ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], [
         ]),
         ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--enable=iterate-directly"),
-                                   Arg(Option.PYLINT, "--disable=W0622,R1705,R1703")], [
+                                   Arg(Option.PYLINT, "--disable=W0622,R1705,R1703,R6201,R6202")], [
         ]),
         ("014771-p2_nested.py", [Arg(Option.PYTHON_SPEC, True)], [
             lazy_problem().set_code("R6101").set_line(25)
@@ -744,6 +744,8 @@ class TestSimplifyIf:
             .set_text("The if statement can be replaced with 'return side_c == sides[2]'"),
             lazy_problem().set_code("R6201").set_line(32)
             .set_text("The if statement can be replaced with 'return a == b & a == c'"),
+            lazy_problem().set_code("R6201").set_line(47)
+            .set_text("The if statement can be replaced with 'return <negated duplicate(sides) < max(sides)>'"),
         ]),
         ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")], [
             lazy_problem().set_code("R6202").set_line(76)
