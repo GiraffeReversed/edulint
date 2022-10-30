@@ -220,7 +220,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     }
 
     def _is_bool(self, node: nodes.NodeNG) -> bool:
-        return isinstance(node, nodes.Const) and node.value in (True, False)
+        return isinstance(node, nodes.Const) and node.pytype() == "builtins.bool"
 
     def _simplifiable_if_message(self, node: nodes.If, then: nodes.NodeNG, new_cond: str) -> None:
         if isinstance(node, nodes.IfExp):
@@ -290,6 +290,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 return self._get_refactored(node.test)
             if not then_bool_value and orelse_bool_value:
                 return self._get_refactored("not", node.test)
+            return None
 
         if then_bool_value is not None and then_bool_value:
             return self._get_refactored(node.test, "or", orelse_value)
@@ -336,6 +337,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         refactored = self._get_refactored(node.test, "or", after_if.test)
         self.add_message("simplifiable-if-merge", node=node, args=(refactored))
 
+    def _is_just_returning_if(self, node: Optional[nodes.NodeNG]) -> bool:
+        return node is not None and isinstance(node, nodes.If) and isinstance(nodes.body[-1], nodes.Return)
+
     def visit_if(self, node: nodes.If) -> None:
         if len(node.orelse) == 0:
             if len(node.body) == 1 and isinstance(node.body[0], nodes.If) and len(node.body[0].orelse) == 0:
@@ -360,7 +364,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             return
 
         refactored = self._refactored_cond_from_then_orelse(node, then.value, orelse.value)
-        if refactored is not None:
+
+        if refactored is not None and not self._is_just_returning_if(node.previous_sibling()):
             self._simplifiable_if_message(node, then, refactored)
 
     def visit_ifexp(self, node: nodes.IfExp) -> None:
