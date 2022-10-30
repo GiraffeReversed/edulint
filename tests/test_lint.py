@@ -53,16 +53,19 @@ def get_tests_path(filename: str) -> str:
     ("hello_world.py", Config(), []),
     ("z202817-zkouska.py", Config(), [
         lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("W0107").set_line(196)
     ]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115"])]), [
         lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128),
         lazy_problem().set_code("W0107").set_line(196)
     ]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115", "--disable=W0107"])]), [
         lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128)
     ]),
@@ -102,12 +105,14 @@ def create_apply_and_lint(lines: List[str], args: List[Arg], expected_output: Li
     ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT, True)], [
         lazy_problem().set_code("R6001").set_line(10),
         lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("R6001").set_line(175),
         lazy_problem().set_code("W0107").set_line(196),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC, True)], [
         lazy_problem().set_code("R6202").set_line(76),
         lazy_problem().set_code("R6102").set_line(80),
+        lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("R6101").set_line(171),
         lazy_problem().set_code("C0123").set_line(172),
         lazy_problem().set_code("W0107").set_line(196),
@@ -712,6 +717,21 @@ class TestSimplifyIf:
     def test_simplify_if_expression_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         self._test_simplify_if(lines, expected_output, "R6204")
 
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "def xxx(x, y):",
+            "    if x:",
+            "        pass",
+            "    else:",
+            "        return y"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("Use 'if <negated x>: <else body>' instead of 'pass'")
+        ]),
+    ])
+    def test_simplify_if_pass_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        self._test_simplify_if(lines, expected_output, "R6205")
+
     @pytest.mark.parametrize("filename,args,expected_output", [
         ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--disable=W0622,R1705")], [
             lazy_problem().set_code("R6202").set_line(14)
@@ -725,6 +745,7 @@ class TestSimplifyIf:
         ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")], [
             lazy_problem().set_code("R6202").set_line(76)
             .set_text("The if statement can be merged with the next to 'if word == '' or word[len(word) - 1] == '.':'"),
+            lazy_problem().set_code("R6205").set_line(82),
         ]),
     ])
     def test_simplify_if(self, filename: str, args: List[Arg], expected_output: List[Problem]) -> None:

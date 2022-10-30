@@ -211,6 +211,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "The if expression can be replaced with '%s'",
             "simplifiable-if-expr",
             "Emitted when an if expression can be omitted."
+        ),
+        "R6205": (
+            "Use 'if %s: <else body>' instead of 'pass'",
+            "simplifiable-if-pass",
+            "Emitted when there is an if condition with a pass in the positive branch."
         )
     }
 
@@ -340,6 +345,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if node.next_sibling() is not None and isinstance(node.next_sibling(), nodes.If):
                 self._merge_sequential(node)
                 return
+
+        if len(node.body) == 1 and isinstance(node.body[0], nodes.Pass) and len(node.orelse) > 0:
+            self.add_message("simplifiable-if-pass", node=node, args=(self._get_refactored("not", node.test)))
+            return
 
         then_orelse = self._get_then_orelse(node)
 
