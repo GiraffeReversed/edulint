@@ -17,6 +17,9 @@ FILLER_CODE = ""
 
 
 def lazy_equals(received: Problem, expected: Problem) -> None:
+    if not any(expected.has_value(f.name) for f in fields(Problem)):
+        assert False, f"unexpected problem {repr(received)}"
+
     copy = replace(received)
     for field in fields(Problem):
         if not expected.has_value(field.name):
