@@ -9,7 +9,7 @@ OVERRIDERS = {
     # C0103=invalid-name
     "E225": {"R6001"},
     # E225=missing whitespace around operator
-    "R1705": {"R1703"},
+    "R1705": {"R1703", "R6201"},
     # R1705=no-else-return, R1703=simplifiable-if-statement
 }
 

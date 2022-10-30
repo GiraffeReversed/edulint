@@ -110,8 +110,7 @@ enable=comparison-with-itself,
        used-before-assignment,
        disallowed-name,
        unused-argument,
-       simplifiable-if-expression,
-       simplifiable-if-statement
+       simplifiable-if
 
 
 [REPORTS]
