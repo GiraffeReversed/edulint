@@ -57,7 +57,7 @@ def is_any_assign(node: nodes.NodeNG) -> bool:
     return is_assign(node) or is_multi_assign(node)
 
 
-def get_assigned(node: nodes.NodeNG) -> List[nodes.NodeNG]:
+def get_assigned_to(node: nodes.NodeNG) -> List[nodes.NodeNG]:
     if is_multi_assign(node):
         return cast(List[nodes.NodeNG], node.targets)
     if is_assign(node):

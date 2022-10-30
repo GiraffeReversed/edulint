@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
 from edulint.linting.checkers.utils import \
-    BaseVisitor, Named, get_name, get_assigned, is_any_assign, is_named, is_builtin
+    BaseVisitor, Named, get_name, get_assigned_to, is_any_assign, is_named, is_builtin
 
 
 class AugmentAssignments(BaseChecker):  # type: ignore
@@ -28,7 +28,7 @@ class AugmentAssignments(BaseChecker):  # type: ignore
         if not is_any_assign(bin_op.parent):
             return
 
-        targets = get_assigned(bin_op.parent)
+        targets = get_assigned_to(bin_op.parent)
         if len(targets) != 1:
             return
 
@@ -86,7 +86,7 @@ class ImproveForLoop(BaseChecker):  # type: ignore
 
         @staticmethod
         def _is_assigned_to(node: Named) -> bool:
-            return node in get_assigned(node.parent)
+            return node in get_assigned_to(node.parent)
 
         @staticmethod
         def _is_same_var(var: Named, node: Named) -> bool:
