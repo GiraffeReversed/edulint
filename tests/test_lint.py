@@ -51,14 +51,18 @@ def get_tests_path(filename: str) -> str:
 
 @pytest.mark.parametrize("filename,config,expected_output", [
     ("hello_world.py", Config(), []),
-    ("z202817-zkouska.py", Config(),
-     [lazy_problem().set_code("W0107").set_line(196)]),
+    ("z202817-zkouska.py", Config(), [
+        lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("W0107").set_line(196)
+    ]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115"])]), [
+        lazy_problem().set_code("R6202").set_line(76),
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128),
         lazy_problem().set_code("W0107").set_line(196)
     ]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115", "--disable=W0107"])]), [
+        lazy_problem().set_code("R6202").set_line(76),
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128)
     ]),
@@ -97,10 +101,12 @@ def create_apply_and_lint(lines: List[str], args: List[Arg], expected_output: Li
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT, True)], [
         lazy_problem().set_code("R6001").set_line(10),
+        lazy_problem().set_code("R6202").set_line(76),
         lazy_problem().set_code("R6001").set_line(175),
         lazy_problem().set_code("W0107").set_line(196),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC, True)], [
+        lazy_problem().set_code("R6202").set_line(76),
         lazy_problem().set_code("R6102").set_line(80),
         lazy_problem().set_code("R6101").set_line(171),
         lazy_problem().set_code("C0123").set_line(172),
@@ -150,7 +156,7 @@ class TestIB111Week:
             "        return True",
             "    return False"
         ], [Arg(Option.PYTHON_SPEC, True), Arg(Option.IB111_WEEK, "7")], [
-            lazy_problem().set_code("R1714").set_line(2)
+            lazy_problem().set_code("R6201").set_line(2)
         ])
     ])
     def test_ib111_week_custom(self, lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
@@ -279,7 +285,7 @@ class TestSimplifyIf:
         create_apply_and_lint(
             lines,
             [Arg(Option.PYLINT, "--disable=R1705"),
-             Arg(Option.FLAKE8, "--extend-ignore=E501")],
+             Arg(Option.FLAKE8, "--extend-ignore=E501,F841")],
             [p.set_code(code) for p in expected_output]
         )
 
@@ -324,29 +330,9 @@ class TestSimplifyIf:
         ]),
     ])
     def test_simplify_if_statement_single_var_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        self._test_simplify_if_statement(lines, expected_output, "R6201")
+        self._test_simplify_if(lines, expected_output, "R6201")
 
     @pytest.mark.parametrize("lines,expected_output", [
-        ([
-            "def xxx(x, y):",
-            "    if x:",
-            "        if y:",
-            "            return True",
-            "    return False"
-        ], [
-            lazy_problem().set_line(2)
-            .set_text("The if statement can be replaced with 'return x and y'")
-        ]),
-        ([
-            "def xxx(x, y):",
-            "    if x:",
-            "        if y:",
-            "            return False",
-            "    return True"
-        ], [
-            lazy_problem().set_line(2)
-            .set_text("The if statement can be replaced with 'return <negated (x and y)>'")
-        ]),
         ([
             "def xxx(x, y):",
             "    if x:",
@@ -425,7 +411,7 @@ class TestSimplifyIf:
         ]),
     ])
     def test_simplify_if_statement_two_vars_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        self._test_simplify_if_statement(lines, expected_output, "R6201")
+        self._test_simplify_if(lines, expected_output, "R6201")
 
     @pytest.mark.parametrize("lines,expected_output", [
         ([
@@ -527,7 +513,7 @@ class TestSimplifyIf:
             "        return y"
         ], [
             lazy_problem().set_line(2)
-            .set_text("The if statement can be replaced with 'return x and z or y'")
+            .set_text("The if statement can be replaced with 'return x or z or y'")
         ]),
         ([
             "def xxx(x, y, z):",
@@ -541,22 +527,32 @@ class TestSimplifyIf:
         ]),
     ])
     def test_simplify_if_statement_three_vars_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        self._test_simplify_if_statement(lines, expected_output, "R6201")
+        self._test_simplify_if(lines, expected_output, "R6201")
 
     @pytest.mark.parametrize("lines,expected_output", [
         ([
-            "def xxx(x, y):"
+            "def xxx(x, y):",
+            "    if x:",
+            "        if y:",
+            "            return 0",
+            "    return 1"
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be merged with the next to 'if x and y:'")
+        ]),
+        ([
+            "def xxx(x, y):",
             "    if x:",
             "        return 0",
             "    if y:",
             "        return 0",
             "    return 1"
         ], [
-            lazy_problem().set_line(4)
-            .set_text("The if statement can be merged with the previous to 'if x or y:'")
+            lazy_problem().set_line(2)
+            .set_text("The if statement can be merged with the next to 'if x or y:'")
         ]),
         ([
-            "def xxx(x, y):"
+            "def xxx(x, y):",
             "    if x:",
             "        return True",
             "    if y:",
@@ -564,9 +560,18 @@ class TestSimplifyIf:
             "    return True"
         ], [
         ]),
+        ([
+            "def xxx(x, y, z):",
+            "    if x and y:",
+            "        return True",
+            "    if z:",
+            "        return True",
+            "    return True"
+        ], [
+        ]),
     ])
     def test_simplify_if_statement_multiconds_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        self._test_simplify_if_statement(lines, expected_output, "R6202")
+        self._test_simplify_if(lines, expected_output, "R6202")
 
     @pytest.mark.parametrize("lines,expected_output", [
         ([
@@ -579,8 +584,8 @@ class TestSimplifyIf:
             "    return triangle_is_righ"
         ], [
             lazy_problem().set_line(2)
-            .set_text("The conditional assignment can be replace with 'triangle_is_righ = var = c ** 2 == a ** 2 "
-                      "+ b ** 2 or a ** 2 == c ** 2 + b ** 2 or b ** 2 == a ** 2 + c ** 2'")
+            .set_text("The conditional assignment can be replace with 'triangle_is_righ = c**2 == a**2 "
+                      "+ b**2 or a**2 == c**2 + b**2 or b**2 == a**2 + c**2'")
         ]),
         ([
             "def xxx(x, y):",
@@ -644,7 +649,7 @@ class TestSimplifyIf:
         ]),
     ])
     def test_simplify_if_assigning_statement_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        self._test_simplify_if_statement(lines, expected_output, "R6203")
+        self._test_simplify_if(lines, expected_output, "R6203")
 
     @pytest.mark.parametrize("lines,expected_output", [
         ([
@@ -673,7 +678,7 @@ class TestSimplifyIf:
             lazy_problem().set_line(3)
             .set_text("The if expression can be replaced with 'report[which] > report[which]'"),
             lazy_problem().set_line(4)
-            .set_text("The if expression can be replaced with negated 'report[which] <= report[which]'")
+            .set_text("The if expression can be replaced with '<negated report[which] <= report[which]>'")
         ]),
         ([
             "def xxx(x, y):",
@@ -705,15 +710,22 @@ class TestSimplifyIf:
         ]),
     ])
     def test_simplify_if_expression_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        self._test_simplify_if_statement(lines, expected_output, "R6204")
+        self._test_simplify_if(lines, expected_output, "R6204")
 
     @pytest.mark.parametrize("filename,args,expected_output", [
         ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--disable=W0622,R1705")], [
+            lazy_problem().set_code("R6202").set_line(14)
+            .set_text("The if statement can be merged with the next to 'if len(sides) != len(set(sides))"
+                      " and len(set(sides)) <= 3 and sides[1] == sides[2]:'"),
             lazy_problem().set_code("R6201").set_line(21)
             .set_text("The if statement can be replaced with 'return side_c == sides[2]'"),
             lazy_problem().set_code("R6201").set_line(32)
             .set_text("The if statement can be replaced with 'return a == b & a == c'"),
-        ])
+        ]),
+        ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")], [
+            lazy_problem().set_code("R6202").set_line(76)
+            .set_text("The if statement can be merged with the next to 'if word == '' or word[len(word) - 1] == '.':'"),
+        ]),
     ])
     def test_simplify_if(self, filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
         apply_and_lint(filename, args, expected_output)
@@ -740,8 +752,8 @@ class TestSimplifyIf:
         Arg(Option.ALLOWED_ONECHAR_NAMES, ""),
         Arg(Option.ENHANCEMENT, True),
     ], [
-        lazy_problem().set_code("R1703").set_line(2)
-        .set_text("The if statement can be replaced with 'return ch == \"a\" or ch == \"A\"'"),
+        lazy_problem().set_code("R6201").set_line(2)
+        .set_text("The if statement can be replaced with 'return ch == 'a' or ch == 'A''"),
         lazy_problem().set_code("R1714").set_line(2)
         .set_text("Consider merging these comparisons with \"in\" to \"ch in 'aA'\""),
         lazy_problem().set_code("C0104").set_line(9)
