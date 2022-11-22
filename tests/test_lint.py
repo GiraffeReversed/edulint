@@ -757,6 +757,27 @@ class TestSimplifyIf:
         apply_and_lint(filename, args, expected_output)
 
 
+class TestNoWhileTrue:
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "def xxx(x):",
+            "    while True:",
+            "        if x:",
+            "            break",
+        ], [
+            lazy_problem().set_line(2)
+            .set_text("The while condition can be replaced with '<negated x>'")
+        ]),
+    ])
+    def test_while_true_break(self, lines: List[str], expected_output: List[Problem]) -> None:
+        create_apply_and_lint(
+            lines,
+            [Arg(Option.PYLINT, "--disable=R1705"),
+             Arg(Option.FLAKE8, "--extend-ignore=E501,F841")],
+            [p.set_code("R6301") for p in expected_output]
+        )
+
+
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("umime_count_a.py", [
         Arg(Option.PYTHON_SPEC, True),

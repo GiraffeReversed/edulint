@@ -381,6 +381,26 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             self._simplifiable_if_message(node, then, refactored)
 
 
+class NoWhileTrue(BaseChecker):
+
+    name = "no-while-true"
+    msgs = {
+        "R6301": (
+            "The while condition can be replaced with '<negated %s>'",
+            "no-while-true-break",
+            "Emitted when the condition of a while loop is 'True' unnecessarily.",
+        ),
+    }
+
+    def visit_while(self, node: nodes.While) -> None:
+        if not isinstance(node.test, nodes.Const) or not node.test.bool_value():
+            return
+
+        first = node.body[0]
+        if isinstance(first, nodes.If) and isinstance(first.body[-1], nodes.Break):
+            self.add_message("no-while-true-break", node=node, args=(first.test.as_string()))
+
+
 def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
     :param linter: The linter to register the checker to.
@@ -388,3 +408,4 @@ def register(linter: "PyLinter") -> None:
     linter.register_checker(AugmentAssignments(linter))
     linter.register_checker(ImproveForLoop(linter))
     linter.register_checker(SimplifiableIf(linter))
+    linter.register_checker(NoWhileTrue(linter))
