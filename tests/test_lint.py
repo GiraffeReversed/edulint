@@ -752,8 +752,30 @@ class TestSimplifyIf:
             .set_text("The if statement can be merged with the next to 'if word == '' or word[len(word) - 1] == '.':'"),
             lazy_problem().set_code("R6205").set_line(82),
         ]),
+        (
+            "014823-p4_geometry.py",
+            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")],
+            [
+                lazy_problem().set_code("R6206").set_line(17)
+                .set_text("Both branches should return a value explicitly (one returns implicit None)"),
+                lazy_problem().set_code("R6206").set_line(25),
+                lazy_problem().set_code("R6206").set_line(33),
+                lazy_problem().set_code("R6201").set_line(43),
+                lazy_problem().set_code("R6201").set_line(55),
+            ]
+        ),
+        (
+            "024423-p5_credit.py",
+            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")],
+            []
+        ),
+        (
+            "044669-p3_person_id.py",
+            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")],
+            [lazy_problem().set_code("R6206").set_line(30)]
+        )
     ])
-    def test_simplify_if(self, filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    def test_simplify_if_files(self, filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
         apply_and_lint(filename, args, expected_output)
 
 
