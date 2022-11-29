@@ -16,7 +16,7 @@ class ProcessHandler:
        """
 
     def __init__(self, timeout: float) -> None:
-        self.last_child : Optional[Popen[bytes]] = None
+        self.last_child: Optional[Popen[bytes]] = None
         self.__try_to_be_nice()
         self.timeout: float = timeout
         self.sigterm_grace_period = 0.2  # second
@@ -31,21 +31,23 @@ class ProcessHandler:
         if self.last_child is None or self.last_child.poll() is not None:
             return
 
-        print("Trying to terminate.")
+        print("Trying to terminate.", file=sys.stderr)
         self.last_child.terminate()  # Ask the child to exit peacefully.
-        
+
         try:
             self.last_child.wait(timeout=self.sigterm_grace_period)
         except TimeoutExpired:
-            print("Child refused to terminate. Trying SIGKILL if available.")
+            print("Child refused to terminate. Trying SIGKILL if available.", file=sys.stderr)
             self.last_child.kill()  # Kill anyone still standing, just like Anakin did.
-            # self.last_child.wait()  # Waiting would be safe on Linux, but on Windows .kill from Python is just .terminate
+            # self.last_child.wait()  # Waiting would be safe on Linux, but on Windows .kill from Python
+            # is just .terminate
 
         if self.last_child.poll():
             try:
                 _, _ = self.last_child.communicate(timeout=0.2)  # this can garbage collect the process
             except TimeoutExpired:
-                print(f"[Warning] The process refused to die. You might need to kill the zombie manually.")
+                print("[Warning] The process refused to die. You might need to kill the zombie manually.",
+                      file=sys.stderr)
                 ProcessHandler.linux_print_processes()
 
     def __start_process(self, user_command: List[str], input_str: Optional[str] = None) -> Tuple[int, str, str]:
@@ -58,7 +60,7 @@ class ProcessHandler:
         try:
             outb, errb = proc.communicate(input=input_str.encode("utf8") if input_str else None, timeout=self.timeout)
         except TimeoutExpired:
-            print("Timeout, trying to kill.")
+            print("Timeout, trying to kill.", file=sys.stderr)
             proc.kill()
             outb, errb = proc.communicate()
 
@@ -93,7 +95,7 @@ class ProcessHandler:
         if not sys.platform.startswith('linux'):
             return
         print("""Please check that you don't see any zombie processes from the process of testing. They would have nice
-              value of 19. You can use command "ps a -o pid,ni,time,cmd" """)
+              value of 19. You can use command "ps a -o pid,ni,time,cmd" """, file=sys.stderr)
 
 
 def usage_example() -> None:
