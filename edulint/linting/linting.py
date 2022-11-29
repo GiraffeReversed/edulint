@@ -11,6 +11,7 @@ from functools import partial
 import sys
 import json
 import pathlib
+import os
 
 
 def flake8_to_problem(raw: ProblemJson) -> Problem:
@@ -41,7 +42,7 @@ def pylint_to_problem(filenames: List[str], raw: ProblemJson) -> Problem:
 
     def get_used_filename(path: str) -> str:
         for filename in filenames:
-            if filename.endswith(path):
+            if os.path.abspath(filename) == os.path.abspath(path):
                 return filename
         assert False, "unreachable"
 
