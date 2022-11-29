@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
 from edulint.linting.checkers.utils import \
-    BaseVisitor, Named, get_name, get_assigned_to, is_any_assign, is_named, is_builtin
+    BaseVisitor, Named, get_name, get_assigned_to, is_any_assign, is_named, is_builtin, eprint
 
 
 class AugmentAssignments(BaseChecker):  # type: ignore
@@ -216,6 +216,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "Use 'if %s: <else body>' instead of 'pass'",
             "simplifiable-if-pass",
             "Emitted when there is an if condition with a pass in the positive branch."
+        ),
+        "R6206": (
+            "Both branches should return a value explicitly (one returns implicit None)",
+            "no-value-in-one-branch-return",
+            "Emitted when one branch returns a value and the other just returns."
         )
     }
 
@@ -311,34 +316,51 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         self.add_message("simplifiable-if-merge", node=node, args=refactored)
 
     def _same_values(self, node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
-        return node1.as_string() == node2.as_string()
+        return (node1 is None and node2 is None) \
+             or (node1 is not None and node2 is not None and node1.as_string() == node2.as_string())
 
     def _mergeable(self, node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
-        return isinstance(node1, type(node2)) and (isinstance(node1, nodes.Return) or (
-            is_any_assign(node1)
-            and len(get_assigned_to(node1)) == 1
-            and self._names_assigned_to(node1) == self._names_assigned_to(node2)
-        ))
+        if not isinstance(node1, type(node2)):
+            return False
+
+        if isinstance(node1, nodes.Return):
+            return node1.value is not None and node2.value is not None
+
+        if is_any_assign(node1) and not isinstance(node1, nodes.For):
+            assigned_to1 = get_assigned_to(node1)
+            assigned_to2 = get_assigned_to(node2)
+            return len(assigned_to1) == 1 and len(assigned_to1) == len(assigned_to2) \
+                and isinstance(assigned_to1[0], type(assigned_to2[0])) \
+                and not isinstance(assigned_to1[0], nodes.Subscript) \
+                and self._names_assigned_to(node1) == self._names_assigned_to(node2)
+
+        return False
 
     def _merge_sequential(self, node: nodes.If) -> None:
-        after_if = node.next_sibling()
+        second_if = node.next_sibling()
 
-        if isinstance(node.test, nodes.BoolOp) or isinstance(after_if.test, nodes.BoolOp) \
-                or len(after_if.orelse) != 0 or len(node.body) != 1 or len(after_if.body) != 1:
+        if isinstance(node.test, nodes.BoolOp) or isinstance(second_if.test, nodes.BoolOp) \
+                or len(second_if.orelse) != 0 or len(node.body) != 1 or len(second_if.body) != 1:
             return
 
         body1 = node.body[0]
-        body2 = after_if.body[0]
+        body2 = second_if.body[0]
         if not isinstance(body1, type(body2)) \
                 or not isinstance(body1, nodes.Return) \
                 or not self._same_values(body1.value, body2.value):
             return
 
-        refactored = self._get_refactored(node.test, "or", after_if.test)
+        parent_body = node.parent.body
+        if all(isinstance(n, nodes.If) or isinstance(n, nodes.Return)
+                or (is_any_assign(n) and not isinstance(n, nodes.For)) for n in parent_body) \
+                and sum(1 if isinstance(n, nodes.If) else 0 for n in parent_body) > 2:
+            return
+
+        refactored = self._get_refactored(node.test, "or", second_if.test)
         self.add_message("simplifiable-if-merge", node=node, args=(refactored))
 
     def _is_just_returning_if(self, node: Optional[nodes.NodeNG]) -> bool:
-        return node is not None and isinstance(node, nodes.If) and isinstance(nodes.body[-1], nodes.Return)
+        return node is not None and isinstance(node, nodes.If) and isinstance(node.body[-1], nodes.Return)
 
     def visit_if(self, node: nodes.If) -> None:
         if len(node.orelse) == 0:
@@ -360,12 +382,21 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             return
 
         then, orelse = then_orelse
+
+        if isinstance(then, nodes.Return) and isinstance(orelse, nodes.Return) \
+                and (then.value is None) != (orelse.value is None):
+            self.add_message("no-value-in-one-branch-return", node=node)
+            return
+
         if not self._mergeable(then, orelse):
+            return
+
+        if len(node.orelse) == 0 and self._is_just_returning_if(node.previous_sibling()):
             return
 
         refactored = self._refactored_cond_from_then_orelse(node, then.value, orelse.value)
 
-        if refactored is not None and not self._is_just_returning_if(node.previous_sibling()):
+        if refactored is not None:
             self._simplifiable_if_message(node, then, refactored)
 
     def visit_ifexp(self, node: nodes.IfExp) -> None:
