@@ -27,10 +27,11 @@ def good(a: bool, b: bool) -> bool:
 ```
 """},
 
-    "R1714 ": {
+    "R1714": {
         "why": "Shorter conditions are ussually easier to read.",
         "examples": """
-Comparison of a variable to two values can be simplified using the `in` operator. This is more readable and also safer against copy-paste errors.
+Comparison of a variable to two values can be simplified using the `in` operator.
+This is more readable and also safer against copy-paste errors.
 
 ```py
 def problematic(text: str):
