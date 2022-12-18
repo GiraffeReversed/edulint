@@ -42,6 +42,44 @@ class AugmentAssignments(BaseChecker):  # type: ignore
 T = TypeVar("T")
 
 
+class ModifiedListener(BaseVisitor[T]):
+
+    def __init__(self, watched: List[Named]):
+        self.watched = watched
+        self.modified = {get_name(var): False for var in watched}
+        super().__init__()
+
+    def was_modified(self, node: nodes.NodeNG) -> bool:
+        return self.modified[get_name(node)]
+
+    @staticmethod
+    def _is_assigned_to(node: Named) -> bool:
+        return node in get_assigned_to(node.parent)
+
+    @staticmethod
+    def _is_same_var(var: Named, node: Named) -> bool:
+        return var.scope() == node.scope() and isinstance(var, type(node)) and get_name(var) == get_name(node)
+
+    def _visit_assigned_to(self, node: Named) -> T:
+        if not self._is_assigned_to(node):
+            return self.default
+
+        for var in self.watched:
+            if self._is_same_var(var, node):
+                self.modified[get_name(var)] = True
+
+        return self.default
+
+    def visit_name(self, name: nodes.Name) -> T:
+        return self._visit_assigned_to(name)
+
+    def visit_attribute(self, attribute: nodes.Attribute) -> T:
+        return self._visit_assigned_to(attribute)
+
+    def visit_assignname(self, assign: nodes.AssignName) -> T:
+        return self._visit_assigned_to(assign)
+
+
 class ImproveForLoop(BaseChecker):  # type: ignore
 
     name = "improve-for-loop"
@@ -73,43 +111,6 @@ class ImproveForLoop(BaseChecker):  # type: ignore
 
     def _get_structure(self, node: nodes.For) -> nodes.NodeNG:
         return node.iter.args[0].args[0]
-
-    class ModifiedListener(BaseVisitor[T]):
-
-        def __init__(self, watched: List[Named]):
-            self.watched = watched
-            self.modified = {get_name(var): False for var in watched}
-            super().__init__()
-
-        def was_modified(self, node: nodes.NodeNG) -> bool:
-            return self.modified[get_name(node)]
-
-        @staticmethod
-        def _is_assigned_to(node: Named) -> bool:
-            return node in get_assigned_to(node.parent)
-
-        @staticmethod
-        def _is_same_var(var: Named, node: Named) -> bool:
-            return var.scope() == node.scope() and isinstance(var, type(node)) and get_name(var) == get_name(node)
-
-        def _visit_assigned_to(self, node: Named) -> T:
-            if not self._is_assigned_to(node):
-                return self.default
-
-            for var in self.watched:
-                if self._is_same_var(var, node):
-                    self.modified[get_name(var)] = True
-
-            return self.default
-
-        def visit_name(self, name: nodes.Name) -> T:
-            return self._visit_assigned_to(name)
-
-        def visit_attribute(self, attribute: nodes.Attribute) -> T:
-            return self._visit_assigned_to(attribute)
-
-        def visit_assignname(self, assign: nodes.AssignName) -> T:
-            return self._visit_assigned_to(assign)
 
     class StructureIndexedVisitor(ModifiedListener[bool]):
         default = False

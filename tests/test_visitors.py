@@ -1,4 +1,4 @@
-from edulint.linting.checkers.basic_checker import ImproveForLoop
+from edulint.linting.checkers.basic_checker import ModifiedListener
 
 from typing import List, Tuple, Dict
 import astroid  # type: ignore
@@ -133,6 +133,6 @@ def test_modified_listener(program: str, init_lines: int, modified: Dict[str, bo
         return result
 
     watched = extract_vars(before)
-    listener: ImproveForLoop.ModifiedListener = ImproveForLoop.ModifiedListener(watched)
+    listener: ModifiedListener = ModifiedListener(watched)
     listener.visit_many(after)
     assert listener.modified == modified
