@@ -46,10 +46,13 @@ class ModifiedListener(BaseVisitor[T]):
 
     def __init__(self, watched: List[Named]):
         self.watched = watched
-        self.modified = {get_name(var): False for var in watched}
+        self.modified = {get_name(var): [] for var in watched}
         super().__init__()
 
-    def was_modified(self, node: nodes.NodeNG) -> bool:
+    def was_modified(self, node: nodes.NodeNG, allow_definition: bool) -> bool:
+        return len(self.modified[get_name(node)]) > (1 if allow_definition else 0)
+
+    def get_modifiers(self, node: nodes.NodeNG) -> List[nodes.NodeNG]:
         return self.modified[get_name(node)]
 
     @staticmethod
@@ -66,7 +69,7 @@ class ModifiedListener(BaseVisitor[T]):
 
         for var in self.watched:
             if self._is_same_var(var, node):
-                self.modified[get_name(var)] = True
+                self.modified[get_name(var)].append(node.parent)
 
         return self.default
 
@@ -130,7 +133,8 @@ class ImproveForLoop(BaseChecker):  # type: ignore
                 return sub_result
 
             parent = subscript.parent
-            if self.was_modified(self.structure) or self.was_modified(self.index):
+            if self.was_modified(self.structure, allow_definition=False) \
+                    or self.was_modified(self.index, allow_definition=False):
                 return False
             if not isinstance(subscript.value, type(self.structure)) \
                     or (isinstance(parent, nodes.Assign) and subscript in parent.targets) \
@@ -160,7 +164,7 @@ class ImproveForLoop(BaseChecker):  # type: ignore
                 return False
             if not isinstance(name.parent, nodes.Subscript) \
                     or not isinstance(self.structure, type(name.parent.value)) \
-                    or self.modified[get_name(name)]:
+                    or self.was_modified(name, allow_definition=False):
                 return True
 
             subscript = name.parent

@@ -1,4 +1,5 @@
 from edulint.linting.checkers.basic_checker import ModifiedListener
+from edulint.linting.checkers.utils import get_name
 
 from typing import List, Tuple, Dict
 import astroid  # type: ignore
@@ -98,7 +99,7 @@ def test_split_n_lines(program: str, init_lines: int, before_types: List[type], 
     compare(after, after_types)
 
 
-@ pytest.mark.parametrize("program,init_lines,modified", [
+@pytest.mark.parametrize("program,init_lines,modified", [
     ("x = 5", 1, {"x": False}),
     ("""
 x = 5
@@ -135,4 +136,4 @@ def test_modified_listener(program: str, init_lines: int, modified: Dict[str, bo
     watched = extract_vars(before)
     listener: ModifiedListener = ModifiedListener(watched)
     listener.visit_many(after)
-    assert listener.modified == modified
+    assert {get_name(n): listener.was_modified(n, allow_definition=False) for n in watched} == modified
