@@ -24,6 +24,7 @@ class Option(NumberFromZero):
     PYTHON_SPEC = ()
     ALLOWED_ONECHAR_NAMES = ()
     IB111_WEEK = ()
+    NO_FLAKE8 = ()
 
     def to_name(self) -> str:
         return self.name.lower().replace("_", "-")
@@ -163,6 +164,14 @@ OPTIONS: List[OptionParse] = [
         TakesVal.YES,
         None,
         Type.INT,
+        Combine.REPLACE
+    ),
+    OptionParse(
+        Option.NO_FLAKE8,
+        "turn off flake8",
+        TakesVal.NO,
+        False,
+        Type.BOOL,
         Combine.REPLACE
     )
 ]

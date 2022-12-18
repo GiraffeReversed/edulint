@@ -20,7 +20,7 @@ def advertised_options(all_advertised_options: List[Option]) -> Set[Option]:
 
 @pytest.fixture
 def always_managed_options() -> Set[Option]:
-    return set((Option.PYLINT, Option.FLAKE8, Option.IB111_WEEK))
+    return set((Option.PYLINT, Option.FLAKE8, Option.IB111_WEEK, Option.NO_FLAKE8))
 
 
 @pytest.fixture

@@ -132,7 +132,7 @@ def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
 
 
 def lint(filenames: List[str], config: Config) -> List[Problem]:
-    result = lint_flake8(filenames, config) + lint_pylint(filenames, config)
+    result = ([] if config[Option.NO_FLAKE8].val else lint_flake8(filenames, config)) + lint_pylint(filenames, config)
     result = apply_overrides(result, get_overriders())
     result = apply_tweaks(result, get_tweakers(), config)
     return sort(filenames, result)
