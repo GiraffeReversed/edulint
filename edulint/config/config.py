@@ -125,7 +125,7 @@ def combine_and_translate(
         combine(option_vals, arg.option, arg.val)
 
         translated = config_translations.get(arg.option)
-        if translated is not None:
+        if translated is not None and option_vals[int(arg.option)] not in (False, None):
             apply_translation(option_vals, translated)
 
     ib111_week = option_vals[int(Option.IB111_WEEK)]
