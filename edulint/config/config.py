@@ -33,8 +33,8 @@ class Config:
     def __str__(self) -> str:
         return f"Config({', '.join(arg.option.name + '=' + str(arg.val) for arg in self.config)})"
 
-    def __getitem__(self, option: Option) -> ImmutableArg:
-        return self.config[int(option)]
+    def __getitem__(self, option: Option) -> ImmutableT:
+        return self.config[int(option)].val
 
     def __contains__(self, option: Option) -> bool:
         return self[option] is not None

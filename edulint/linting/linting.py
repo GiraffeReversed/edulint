@@ -62,7 +62,7 @@ def lint_any(
         linter: Linter, filenames: List[str], linter_args: List[str], config_arg: ImmutableArg,
         result_getter: Callable[[Any], Any],
         out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
-    command = [sys.executable, "-m", str(linter)] + linter_args + list(config_arg.val) + filenames  # type: ignore
+    command = [sys.executable, "-m", str(linter)] + linter_args + list(config_arg) + filenames  # type: ignore
     return_code, outs, errs = ProcessHandler.run(command, timeout=10)
 
     print(errs, file=sys.stderr, end="")
@@ -132,7 +132,7 @@ def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
 
 
 def lint(filenames: List[str], config: Config) -> List[Problem]:
-    result = ([] if config[Option.NO_FLAKE8].val else lint_flake8(filenames, config)) + lint_pylint(filenames, config)
+    result = ([] if config[Option.NO_FLAKE8] else lint_flake8(filenames, config)) + lint_pylint(filenames, config)
     result = apply_overrides(result, get_overriders())
     result = apply_tweaks(result, get_tweakers(), config)
     return sort(filenames, result)
