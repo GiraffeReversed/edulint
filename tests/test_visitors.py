@@ -100,28 +100,33 @@ def test_split_n_lines(program: str, init_lines: int, before_types: List[type], 
 
 
 @pytest.mark.parametrize("program,init_lines,modified", [
-    ("x = 5", 1, {"x": False}),
-    ("""
-x = 5
-x += 1""", 1, {"x": True}),
-    ("""
-x = 5
-x = 1""", 1, {"x": True}),
-    ("""
-x = 5
-y = 1
-x += 1""", 2, {"x": True, "y": False}),
-    ("""
-for x in range(10):
-    for x in range(11):
-        pass""", 1, {"x": True}),
-    ("""
-for x in range(10):
-    for y in range(11):
-        pass""", 1, {"x": False}),
+    (["x = 5"], 1, {"x": False}),
+    ([
+        "x = 5",
+        "x += 1"
+    ], 1, {"x": True}),
+    ([
+        "x = 5",
+        "x = 1"
+    ], 1, {"x": True}),
+    ([
+        "x = 5",
+        "y = 1",
+        "x += 1"
+    ], 2, {"x": True, "y": False}),
+    ([
+        "for x in range(10):",
+        "    for x in range(11):",
+        "        pass"
+    ], 1, {"x": True}),
+    ([
+        "for x in range(10):",
+        "    for y in range(11):",
+        "        pass"
+    ], 1, {"x": False}),
 ])
-def test_modified_listener(program: str, init_lines: int, modified: Dict[str, bool]):
-    module = astroid.parse(program)
+def test_modified_listener(program: List[str], init_lines: int, modified: Dict[str, bool]):
+    module = astroid.parse("\n".join(program))
     before, after = split_n_lines(module.body, init_lines)
 
     def extract_vars(nodes: List[astns.NodeNG]) -> List[astns.NodeNG]:
