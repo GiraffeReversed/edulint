@@ -29,7 +29,7 @@ class BaseVisitor(Generic[T]):
 
 
 def generic_visit(self: BaseVisitor[T], node: nodes.NodeNG) -> T:
-    return self.combine([child.accept(self) for child in node.get_children()])
+    return self.combine([self.visit(child) for child in node.get_children()])
 
 
 for name, obj in inspect.getmembers(nodes, inspect.isclass):

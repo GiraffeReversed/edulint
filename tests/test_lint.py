@@ -264,7 +264,10 @@ class TestImproveFor:
     ])
     def test_improve_for_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
-            lines, [Arg(Option.PYLINT, "--enable=improve-for-loop")], expected_output)
+            lines,
+            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=improve-for-loop")],
+            expected_output
+        )
 
     @pytest.mark.parametrize("filename,args,expected_output", [
         ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], [
