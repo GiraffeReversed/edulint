@@ -53,9 +53,16 @@ class ModifiedListener(BaseVisitor[T]):
         self.stack = [{get_name(var): var.scope() for var in watched}]
         super().__init__()
 
+    def _init_var_in_scope(self, node: nodes.NodeNG) -> T:
+        self.stack[-1][get_name(node)] = node.scope()
+
     def visit_functiondef(self, node: nodes.FunctionDef) -> T:
         self.stack.append({})
+        for arg in node.args.args:
+            self._init_var_in_scope(arg)
+
         result = self.visit_many(node.get_children())
+
         self.stack.pop()
         return result
 
@@ -111,7 +118,7 @@ class ModifiedListener(BaseVisitor[T]):
             return
 
         if isinstance(node, nodes.AssignName) and get_name(stripped) not in self.stack[-1]:
-            self.stack[-1][get_name(stripped)] = stripped.scope()
+            self._init_var_in_scope(stripped)
 
         for var in self.watched:
             if self._is_same_var(var, stripped):

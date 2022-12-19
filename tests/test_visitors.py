@@ -193,6 +193,16 @@ def test_split_n_lines(program: str, init_lines: int, before_types: List[type], 
         "    (x, y) = [], 0",
         "    x.append(0)"
     ], 1, {"x": False}),
+    ([
+        "x = None",
+        "def foo(x):",
+        "    x.append(0)"
+    ], 1, {"x": False}),
+    ([
+        "x = None",
+        "def foo(x: List[int] = []):",
+        "    x.append(0)"
+    ], 1, {"x": False}),
 ])
 def test_modified_listener(program: List[str], init_lines: int, modified: Dict[str, bool]):
     module = astroid.parse("\n".join(program))

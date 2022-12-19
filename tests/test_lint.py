@@ -880,6 +880,7 @@ class TestNoGlobals:
             .set_text("Do not use global variables; you use digits, modifying it for example at line 20."),
         ]),
         ("088952-p2_extremes.py", []),
+        ("s10265-d_mancala.py", []),
     ])
     def test_no_globals_files(self, filename: str, expected_output: List[Problem]) -> None:
         apply_and_lint(
