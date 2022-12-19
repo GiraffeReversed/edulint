@@ -134,6 +134,10 @@ class ModifiedListener(BaseVisitor[T]):
         self._visit_assigned_to(node.target)
         return self.visit_many(node.get_children())
 
+    def visit_annassign(self, node: nodes.AnnAssign) -> T:
+        self._visit_assigned_to(node.target)
+        return self.visit_many(node.get_children())
+
     def visit_attribute(self, node: nodes.Attribute) -> T:
         if isinstance(node.parent, nodes.Call) \
                 and ModifiedListener.NON_PURE_METHODS.match(node.attrname):

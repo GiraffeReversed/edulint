@@ -879,6 +879,7 @@ class TestNoGlobals:
             lazy_problem().set_code("R6401").set_line(8)
             .set_text("Do not use global variables; you use digits, modifying it for example at line 20."),
         ]),
+        ("088952-p2_extremes.py", []),
     ])
     def test_no_globals_files(self, filename: str, expected_output: List[Problem]) -> None:
         apply_and_lint(
