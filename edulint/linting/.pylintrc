@@ -111,7 +111,8 @@ enable=comparison-with-itself,
        disallowed-name,
        unused-argument,
        simplifiable-if,
-       no-while-true
+       no-while-true,
+       no-global-variables
 
 
 [REPORTS]

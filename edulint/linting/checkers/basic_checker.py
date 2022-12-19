@@ -507,6 +507,44 @@ class NoWhileTrue(BaseChecker):
             self.add_message("no-while-true-break", node=node, args=(first.test.as_string()))
 
 
+class NoGlobalVars(BaseChecker):
+    name = "no-global-variables"
+    msgs = {
+        "R6401": (
+            "Do not use global variables; you use %s, modifying it for example at line %i.",
+            "no-global-vars",
+            "Emitted when the code uses global variables."
+        ),
+    }
+
+    def __init__(self, linter: "PyLinter"):
+        super().__init__(linter)
+        self.to_check = {}
+
+    def visit_assignname(self, node: nodes.AssignName) -> None:
+        frame = node.frame()
+        if not isinstance(frame, nodes.Module):
+            return
+
+        if frame not in self.to_check:
+            self.to_check[frame] = {}
+
+        if node.name in self.to_check[frame].keys():
+            return
+
+        self.to_check[frame][node.name] = node
+
+    def close(self) -> None:
+        for frame, vars_ in self.to_check.items():
+            listener = ModifiedListener(list(vars_.values()))
+            listener.visit(frame)
+            for node in vars_.values():
+                if listener.was_modified(node, allow_definition=True):
+                    nonglobal_modifiers = [n for n in listener.get_modifiers(node) if n.scope() != node.scope()]
+                    if nonglobal_modifiers:
+                        self.add_message("no-global-vars", node=node, args=(node.name, nonglobal_modifiers[0].lineno))
+
+
 def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
     :param linter: The linter to register the checker to.
@@ -515,3 +553,4 @@ def register(linter: "PyLinter") -> None:
     linter.register_checker(ImproveForLoop(linter))
     linter.register_checker(SimplifiableIf(linter))
     linter.register_checker(NoWhileTrue(linter))
+    linter.register_checker(NoGlobalVars(linter))
