@@ -124,6 +124,75 @@ def test_split_n_lines(program: str, init_lines: int, before_types: List[type], 
         "    for y in range(11):",
         "        pass"
     ], 1, {"x": False}),
+    ([
+        "x = 0",
+        "def foo():",
+        "    global x",
+        "    x = 1"
+    ], 1, {"x": True}),
+    ([
+        "x = 0",
+        "def foo():",
+        "    global x",
+        "    x += 1"
+    ], 1, {"x": True}),
+    ([
+        "x = 0",
+        "def foo():",
+        "    nonlocal x",
+        "    x = 1"
+    ], 1, {"x": True}),
+    ([
+        "x = 0",
+        "def foo():",
+        "    x = 1",
+        "    def bar():",
+        "        nonlocal x",
+        "        x = 2"
+    ], 1, {"x": False}),
+    ([
+        "x = []",
+        "def foo():",
+        "    x.append(1)"
+    ], 1, {"x": True}),
+    ([
+        "x = []",
+        "def foo():",
+        "    x[0] = 1"
+    ], 1, {"x": True}),
+    ([
+        "x = None",
+        "def foo():",
+        "    x.y = 1"
+    ], 1, {"x": True}),
+    ([
+        "x = None",
+        "def foo():",
+        "    x.y.z = 1"
+    ], 1, {"x": True}),
+    ([
+        "x = None",
+        "def foo():",
+        "    x[0].y[1].z = 1"
+    ], 1, {"x": True}),
+    ([
+        "x = None",
+        "def foo():",
+        "    x = []",
+        "    x.append(0)"
+    ], 1, {"x": False}),
+    ([
+        "x = None",
+        "def foo():",
+        "    x, y = [], 0",
+        "    x.append(0)"
+    ], 1, {"x": False}),
+    ([
+        "x = None",
+        "def foo():",
+        "    (x, y) = [], 0",
+        "    x.append(0)"
+    ], 1, {"x": False}),
 ])
 def test_modified_listener(program: List[str], init_lines: int, modified: Dict[str, bool]):
     module = astroid.parse("\n".join(program))

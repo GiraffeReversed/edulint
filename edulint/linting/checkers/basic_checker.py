@@ -1,5 +1,6 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, List, Tuple, Union, TypeVar
+from typing import TYPE_CHECKING, Optional, List, Tuple, Union, TypeVar, Iterator
+import re
 
 from pylint.checkers import BaseChecker  # type: ignore
 
@@ -7,7 +8,7 @@ if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
 from edulint.linting.checkers.utils import \
-    BaseVisitor, Named, get_name, get_assigned_to, is_any_assign, is_named, is_builtin, eprint
+    BaseVisitor, Named, get_name, get_assigned_to, is_any_assign, is_named, is_builtin
 
 
 class AugmentAssignments(BaseChecker):  # type: ignore
@@ -44,13 +45,41 @@ T = TypeVar("T")
 
 class ModifiedListener(BaseVisitor[T]):
 
+    NON_PURE_METHODS = re.compile(r"append|clear|extend|insert|pop|remove|reverse|sort|add|.*update|write")
+
     def __init__(self, watched: List[Named]):
         self.watched = watched
         self.modified = {get_name(var): [] for var in watched}
+        self.stack = [{get_name(var): var.scope() for var in watched}]
         super().__init__()
+
+    def visit_functiondef(self, node: nodes.FunctionDef) -> T:
+        self.stack.append({})
+        result = self.visit_many(node.get_children())
+        self.stack.pop()
+        return result
+
+    def visit_global(self, node: nodes.Global) -> T:
+        for name in node.names:
+            self.stack[-1][name] = node.root().scope()
+
+        return self.default
+
+    def visit_nonlocal(self, node: nodes.Nonlocal) -> T:
+        for name in node.names:
+            self.stack[-1][name] = node.scope().parent.scope()
+
+        return self.default
 
     def was_modified(self, node: nodes.NodeNG, allow_definition: bool) -> bool:
         return len(self.modified[get_name(node)]) > (1 if allow_definition else 0)
+
+    @staticmethod
+    def _reassigns(node: nodes.NodeNG) -> bool:
+        return type(node) in (nodes.Name, nodes.AssignName)
+
+    def was_reassigned(self, node: nodes.NodeNG, allow_definition: bool) -> bool:
+        return sum(self._reassigns(mod) for mod in self.get_modifiers(node)) > (1 if allow_definition else 0)
 
     def get_modifiers(self, node: nodes.NodeNG) -> List[nodes.NodeNG]:
         return self.modified[get_name(node)]
@@ -60,27 +89,68 @@ class ModifiedListener(BaseVisitor[T]):
         return node in get_assigned_to(node.parent)
 
     @staticmethod
-    def _is_same_var(var: Named, node: Named) -> bool:
-        return var.scope() == node.scope() and isinstance(var, type(node)) and get_name(var) == get_name(node)
+    def _strip(node: nodes.NodeNG) -> Optional[Union[nodes.Name, nodes.AssignName]]:
+        while True:
+            if isinstance(node, nodes.Subscript):
+                node = node.value
+            elif isinstance(node, nodes.Attribute) or isinstance(node, nodes.AssignAttr):
+                node = node.expr
+            else:
+                break
 
-    def _visit_assigned_to(self, node: Named) -> T:
-        if not self._is_assigned_to(node):
-            return self.default
+        return node if isinstance(node, nodes.Name) or isinstance(node, nodes.AssignName) else None
+
+    def _is_same_var(self, var: Named, node: Named) -> bool:
+        varname = get_name(var)
+        return varname == get_name(node) and \
+            [sub[varname] for sub in reversed(self.stack) if varname in sub][0] == var.scope()
+
+    def _visit_assigned_to(self, node: nodes.NodeNG) -> None:
+        stripped = self._strip(node)
+        if stripped is None:
+            return
+
+        if isinstance(node, nodes.AssignName) and get_name(stripped) not in self.stack[-1]:
+            self.stack[-1][get_name(stripped)] = stripped.scope()
 
         for var in self.watched:
-            if self._is_same_var(var, node):
-                self.modified[get_name(var)].append(node.parent)
+            if self._is_same_var(var, stripped):
+                self.modified[get_name(var)].append(node)
 
-        return self.default
+    def _names_from_tuple(self, targets: List[nodes.NodeNG]) -> Iterator[nodes.NodeNG]:
+        for target in targets:
+            if not isinstance(target, nodes.Tuple):
+                yield target
+            else:
+                yield from self._names_from_tuple(target.elts)
 
-    def visit_name(self, name: nodes.Name) -> T:
-        return self._visit_assigned_to(name)
+    def visit_assign(self, assign: nodes.Assign) -> T:
+        for target in self._names_from_tuple(assign.targets):
+            self._visit_assigned_to(target)
 
-    def visit_attribute(self, attribute: nodes.Attribute) -> T:
-        return self._visit_assigned_to(attribute)
+        return self.visit_many(assign.get_children())
 
-    def visit_assignname(self, assign: nodes.AssignName) -> T:
-        return self._visit_assigned_to(assign)
+    def visit_augassign(self, node: nodes.AugAssign) -> T:
+        self._visit_assigned_to(node.target)
+        return self.visit_many(node.get_children())
+
+    def visit_attribute(self, node: nodes.Attribute) -> T:
+        if isinstance(node.parent, nodes.Call) \
+                and ModifiedListener.NON_PURE_METHODS.match(node.attrname):
+
+            stripped = self._strip(node)
+            if stripped is None:
+                return self.visit_many(node.get_children())
+
+            for var in self.watched:
+                if self._is_same_var(var, stripped):
+                    self.modified[get_name(var)].append(node.parent)
+
+        return self.visit_many(node.get_children())
+
+    def visit_for(self, node: nodes.For) -> T:
+        self._visit_assigned_to(node.target)
+        return self.visit_many(node.body)
 
 
 class ImproveForLoop(BaseChecker):  # type: ignore
@@ -133,8 +203,8 @@ class ImproveForLoop(BaseChecker):  # type: ignore
                 return sub_result
 
             parent = subscript.parent
-            if self.was_modified(self.structure, allow_definition=False) \
-                    or self.was_modified(self.index, allow_definition=False):
+            if self.was_reassigned(self.structure, allow_definition=False) \
+                    or self.was_reassigned(self.index, allow_definition=False):
                 return False
             if not isinstance(subscript.value, type(self.structure)) \
                     or (isinstance(parent, nodes.Assign) and subscript in parent.targets) \
@@ -164,7 +234,7 @@ class ImproveForLoop(BaseChecker):  # type: ignore
                 return False
             if not isinstance(name.parent, nodes.Subscript) \
                     or not isinstance(self.structure, type(name.parent.value)) \
-                    or self.was_modified(name, allow_definition=False):
+                    or self.was_reassigned(name, allow_definition=False):
                 return True
 
             subscript = name.parent
