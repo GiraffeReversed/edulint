@@ -890,6 +890,41 @@ class TestNoGlobals:
         )
 
 
+@pytest.mark.parametrize("filename,expected_output", [
+    ("010666-prime.py", [
+        lazy_problem().set_code("R6604").set_line(12).set_text("Do not use while loop with else.")
+    ]),
+    ("012889-pythagorean.py", [
+        lazy_problem().set_code("R6602").set_line(23).set_text("Use integral division //."),
+        lazy_problem().set_code("R6602").set_line(24),
+        lazy_problem().set_code("R6602").set_line(25),
+    ]),
+    ("017667-prime.py", [
+        lazy_problem().set_code("R6604").set_line(6).set_text("Do not use for loop with else.")
+    ]),
+    ("022859-digit_sum.py", [
+        lazy_problem().set_code("R6601").set_line(20)
+        .set_text("Use lst.append(number % 7) instead of lst += [number % 7].")
+    ]),
+    ("041630-ipv4.py", [
+        lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")
+    ]),
+    ("044834-ipv4.py", [
+        lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")
+    ])
+])
+def test_short_problems(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [
+            Arg(Option.NO_FLAKE8, "on"),
+            Arg(Option.PYLINT, "--disable=all"),
+            Arg(Option.PYLINT, "--enable=short-problems")
+        ],
+        expected_output
+    )
+
+
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("umime_count_a.py", [
         Arg(Option.PYTHON_SPEC, "on"),

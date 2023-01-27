@@ -83,7 +83,7 @@ class ModifiedListener(BaseVisitor[T]):
 
     @staticmethod
     def _reassigns(node: nodes.NodeNG) -> bool:
-        return type(node) in (nodes.Name, nodes.AssignName)
+        return type(node) in (nodes.AssignName, nodes.AssignAttr)
 
     def was_reassigned(self, node: nodes.NodeNG, allow_definition: bool) -> bool:
         return sum(self._reassigns(mod) for mod in self.get_modifiers(node)) > (1 if allow_definition else 0)
@@ -556,6 +556,78 @@ class NoGlobalVars(BaseChecker):
                         self.add_message("no-global-vars", node=node, args=(node.name, nonglobal_modifiers[0].lineno))
 
 
+class Short(BaseChecker):
+    name = "short-problems"
+    msgs = {
+        "R6601": (
+            "Use %s.append(%s) instead of %s.",
+            "use-append",
+            "Emitted when code extends list by a single argument instead of appending it."
+        ),
+        "R6602": (
+            "Use integral division //.",
+            "use-integral-division",
+            "Emitted when the code uses float division and converts the result to int."
+        ),
+        "R6603": (
+            "Use isdecimal to test if string contains a number.",
+            "use-isdecimal",
+            "Emitted when the code uses isdigit or isnumeric."
+        ),
+        "R6604": (
+            "Do not use %s loop with else.",
+            "no-loop-else",
+            "Emitted when the code contains loop with else block."
+        ),
+    }
+
+    def _check_extend(self, node: nodes.Call) -> None:
+        if isinstance(node.func, nodes.Attribute) and node.func.attrname == "extend" \
+                and len(node.args) == 1 \
+                and isinstance(node.args[0], nodes.List) and len(node.args[0].elts) == 1:
+            self.add_message("use-append", node=node, args=(
+                node.func.expr.as_string(),
+                node.args[0].elts[0].as_string(),
+                node.as_string()
+            ))
+
+    def _check_augassign_extend(self, node: nodes.AugAssign) -> None:
+        if node.op == "+=" and isinstance(node.value, nodes.List) and len(node.value.elts) == 1:
+            self.add_message("use-append", node=node, args=(
+                node.target.as_string(),
+                node.value.elts[0].as_string(),
+                node.as_string())
+            )
+
+    def _check_isdecimal(self, node: nodes.Call) -> None:
+        if isinstance(node.func, nodes.Attribute) and node.func.attrname in ("isdigit", "isnumeric"):
+            self.add_message("use-isdecimal", node=node)
+
+    def _check_div(self, node: nodes.Call) -> None:
+        if isinstance(node.func, nodes.Name) and node.func.name == "int" \
+                and len(node.args) == 1 \
+                and isinstance(node.args[0], nodes.BinOp) and node.args[0].op == "/":
+            self.add_message("use-integral-division", node=node)
+
+    def _check_loop_else(self, nodes: List[nodes.NodeNG], parent_name: str) -> None:
+        if nodes:
+            self.add_message("no-loop-else", node=nodes[0].parent, args=(parent_name))
+
+    def visit_call(self, node: nodes.Call) -> None:
+        self._check_extend(node)
+        self._check_isdecimal(node)
+        self._check_div(node)
+
+    def visit_augassign(self, node: nodes.AugAssign) -> None:
+        self._check_augassign_extend(node)
+
+    def visit_while(self, node: nodes.While) -> None:
+        self._check_loop_else(node.orelse, "while")
+
+    def visit_for(self, node: nodes.For) -> None:
+        self._check_loop_else(node.orelse, "for")
+
+
 def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
     :param linter: The linter to register the checker to.
@@ -565,3 +637,4 @@ def register(linter: "PyLinter") -> None:
     linter.register_checker(SimplifiableIf(linter))
     linter.register_checker(NoWhileTrue(linter))
     linter.register_checker(NoGlobalVars(linter))
+    linter.register_checker(Short(linter))
