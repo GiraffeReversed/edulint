@@ -1,5 +1,5 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, List, Tuple, Union, TypeVar, Iterator
+from typing import TYPE_CHECKING, Optional, List, Tuple, Union, TypeVar, Iterator, Any
 import re
 
 from pylint.checkers import BaseChecker  # type: ignore
@@ -579,6 +579,26 @@ class Short(BaseChecker):
             "no-loop-else",
             "Emitted when the code contains loop with else block."
         ),
+        "R6605": (
+            "Use elif.",
+            "use-elif",
+            "Emitted when the code contains else: if construction instead of elif."
+        ),
+        "R6606": (
+            "Remove the for loop, as it makes %s.",
+            "remove-for",
+            "Emitted when a for loop would always perform at most one iteration."
+        ),
+        "R6607": (
+            "Use %s instead of repeated %s in %s.",
+            "no-repeated-op",
+            "Emitted when the code contains repeated adition/multiplication instead of multiplication/exponentiation."
+        ),
+        "R6608": (
+            "Redundant arithmetic: %s",
+            "redundant-arithmetic",
+            "Emitted when there is redundant arithmetic (e.g. +0, *1) in an expression."
+        )
     }
 
     def _check_extend(self, node: nodes.Call) -> None:
@@ -613,6 +633,100 @@ class Short(BaseChecker):
         if nodes:
             self.add_message("no-loop-else", node=nodes[0].parent, args=(parent_name))
 
+    def _check_else_if(self, node: nodes.If) -> None:
+        if node.has_elif_block():
+            first_body = node.body[0]
+            first_orelse = node.orelse[0]
+            assert first_body.col_offset >= first_orelse.col_offset
+            if first_body.col_offset == first_orelse.col_offset:
+                self.add_message("use-elif", node=node.orelse[0])
+
+    def _check_iteration_count(self, node: nodes.For) -> None:
+
+        def get_const(node: nodes.NodeNG) -> Any:
+            return node.value if isinstance(node, nodes.Const) else None
+
+        if not isinstance(node.iter, nodes.Call) or node.iter.func.as_string() != "range":
+            return
+
+        func = node.iter
+
+        if len(func.args) == 1:
+            start = 0
+            stop = get_const(func.args[0])
+            step = 1
+
+        if len(func.args) in (2, 3):
+            start = get_const(func.args[0])
+            stop = get_const(func.args[1])
+            step = get_const(func.args[2]) if len(func.args) == 3 else 1
+
+        if start is not None and stop is not None and step is not None:
+            if start >= stop:
+                self.add_message("remove-for", node=node, args=("no iterations",))
+            elif start + step >= stop:
+                self.add_message("remove-for", node=node, args=("only one iteration",))
+
+    def _check_repeated_operation_rec(self, node: nodes.NodeNG, op: str, name: Optional[str] = None) \
+            -> Optional[Tuple[int, str]]:
+        if isinstance(node, nodes.BinOp):
+            if node.op != op:
+                return None
+
+            lt = self._check_repeated_operation_rec(node.left, op, name)
+            if lt is None:
+                return None
+
+            count_lt, name_lt = lt
+            assert name is None or name == name_lt
+            rt = self._check_repeated_operation_rec(node.right, op, name_lt)
+            if rt is None:
+                return None
+
+            count_rt, _ = rt
+            return count_lt + count_rt, name
+
+        if (name is None and type(node) in (nodes.Name, nodes.Attribute, nodes.Subscript)) or name == node.as_string():
+            return 1, node.as_string()
+        return None
+
+    def _check_repeated_operation(self, node: nodes.BinOp) -> None:
+        if node.op in ("+", "*"):
+            result = self._check_repeated_operation_rec(node, node.op)
+            if result is None:
+                return
+
+            self.add_message("no-repeated-op", node=node, args=(
+                "multiplication" if node.op == "+" else "exponentiation",
+                "addition" if node.op == "+" else "muliplication",
+                node.as_string()
+            ))
+
+    def _check_redundant_arithmetic(self, node: Union[nodes.BinOp, nodes.AugAssign]) -> None:
+        def get_value(node: nodes.NodeNG) -> Any:
+            return node.value if isinstance(node, nodes.Const) else None
+
+        if isinstance(node, nodes.BinOp):
+            op = node.op
+            left = get_value(node.left)
+            right = get_value(node.right)
+        elif isinstance(node, nodes.AugAssign):
+            op = node.op[:-1]
+            left = None
+            right = get_value(node.value)
+        else:
+            assert False, "unreachable"
+
+        if (op == "+" and (left in (0, "") or right in (0, ""))) \
+                or (op == "-" and (left == 0 or right == 0)) \
+                or (op == "*" and (left in (0, 1) or right in (0, 1))) \
+                or (op == "/" and right == 1) \
+                or (op in ("/", "//", "%")
+                    and (isinstance(node, nodes.BinOp) and node.left.as_string() == node.right.as_string()
+                         or isinstance(node, nodes.AugAssign) and node.target.as_string() == node.value.as_string())) \
+                or (op == "**" and right in (0, 1)):
+            self.add_message("redundant-arithmetic", node=node, args=(node.as_string(),))
+
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
         self._check_isdecimal(node)
@@ -620,12 +734,21 @@ class Short(BaseChecker):
 
     def visit_augassign(self, node: nodes.AugAssign) -> None:
         self._check_augassign_extend(node)
+        self._check_redundant_arithmetic(node)
 
     def visit_while(self, node: nodes.While) -> None:
         self._check_loop_else(node.orelse, "while")
 
     def visit_for(self, node: nodes.For) -> None:
         self._check_loop_else(node.orelse, "for")
+        self._check_iteration_count(node)
+
+    def visit_if(self, node: nodes.If) -> None:
+        self._check_else_if(node)
+
+    def visit_binop(self, node: nodes.BinOp) -> None:
+        self._check_repeated_operation(node)
+        self._check_redundant_arithmetic(node)
 
 
 def register(linter: "PyLinter") -> None:

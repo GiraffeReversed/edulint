@@ -899,6 +899,13 @@ class TestNoGlobals:
         lazy_problem().set_code("R6602").set_line(24),
         lazy_problem().set_code("R6602").set_line(25),
     ]),
+    ("014290-coins.py", [
+        lazy_problem().set_code("R6608").set_line(27).set_text("Redundant arithmetic: 1 * (value // 1)")
+    ]),
+    ("014494-next.py", [
+        lazy_problem().set_code("R6602").set_line(5).set_text("Use integral division //."),
+        lazy_problem().set_code("R6608").set_line(16).set_text("Redundant arithmetic: number**1"),
+    ]),
     ("017667-prime.py", [
         lazy_problem().set_code("R6604").set_line(6).set_text("Do not use for loop with else.")
     ]),
@@ -906,11 +913,71 @@ class TestNoGlobals:
         lazy_problem().set_code("R6601").set_line(20)
         .set_text("Use lst.append(number % 7) instead of lst += [number % 7].")
     ]),
+    ("024042-cards.py", []),
+    ("024180-delete.py", [
+        lazy_problem().set_code("R6606").set_line(7).set_text("Remove the for loop, as it makes only one iteration.")
+    ]),
+    ("024233-cards.py", [
+        lazy_problem().set_code("R6608").set_line(22).set_text("Redundant arithmetic: 0 + number"),
+        lazy_problem().set_code("R6608").set_line(42).set_text("Redundant arithmetic: 0 + number")
+    ]),
+    ("024371-cards.py", [
+        lazy_problem().set_code("R6606").set_line(12).set_text("Remove the for loop, as it makes no iterations.")
+    ]),
+    ("024371-workdays.py", [
+        lazy_problem().set_code("R6606").set_line(29).set_text("Remove the for loop, as it makes only one iteration."),
+        lazy_problem().set_code("R6608").set_line(30).set_text("Redundant arithmetic: i + 0"),
+    ]),
+    ("024491-cards.py", [
+        lazy_problem().set_code("R6606").set_line(86).set_text("Remove the for loop, as it makes only one iteration.")
+    ]),
+    ("024657-bisection.py", [
+        lazy_problem().set_code("R6608").set_line(6).set_text("Redundant arithmetic: 0 - eps"),
+        lazy_problem().set_code("R6608").set_line(6).set_text("Redundant arithmetic: 0 + eps"),
+        lazy_problem().set_code("R6608").set_line(8).set_text("Redundant arithmetic: 0 - eps"),
+        lazy_problem().set_code("R6608").set_line(10).set_text("Redundant arithmetic: 0 + eps"),
+        lazy_problem().set_code("R6608").set_line(12).set_text("Redundant arithmetic: 0 + eps"),
+        lazy_problem().set_code("R6608").set_line(14).set_text("Redundant arithmetic: 0 + eps"),
+    ]),
+    ("032630-concat.py", [
+        lazy_problem().set_code("R6608").set_line(5).set_text("Redundant arithmetic: [0] * 0")
+    ]),
     ("041630-ipv4.py", [
         lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")
     ]),
     ("044834-ipv4.py", [
         lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")
+    ]),
+    ("hw14358.py", [
+        lazy_problem().set_code("R6608").set_line(44).set_text("Redundant arithmetic: num // num")
+    ]),
+    ("hw34328.py", [
+        lazy_problem().set_code("R6608").set_line(79).set_text("Redundant arithmetic: '' + str(count)")
+    ]),
+    ("hw34451.py", [
+        lazy_problem().set_code("R6607").set_line(44)
+        .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
+        lazy_problem().set_code("R6607").set_line(47)
+        .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
+        lazy_problem().set_code("R6607").set_line(63)
+        .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
+        lazy_problem().set_code("R6607").set_line(66)
+        .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
+    ]),
+    ("m2630.py", [
+        lazy_problem().set_code("R6608").set_line(59).set_text("Redundant arithmetic: [0] * 0"),
+        lazy_problem().set_code("R6608").set_line(79).set_text("Redundant arithmetic: num //= num"),
+        lazy_problem().set_code("R6608").set_line(83).set_text("Redundant arithmetic: num //= num"),
+        lazy_problem().set_code("R6608").set_line(86).set_text("Redundant arithmetic: num //= num"),
+        lazy_problem().set_code("R6608").set_line(97).set_text("Redundant arithmetic: position * 1"),
+    ]),
+    ("m2650.py", [
+        lazy_problem().set_code("R6605").set_line(84).set_text("Use elif."),
+    ]),
+    ("m5435.py", [
+        lazy_problem().set_code("R6605").set_line(9).set_text("Use elif."),
+        lazy_problem().set_code("R6608").set_line(53).set_text("Redundant arithmetic: valid += 0"),
+        lazy_problem().set_code("R6608").set_line(64).set_text("Redundant arithmetic: valid += 0"),
     ])
 ])
 def test_short_problems(filename: str, expected_output: List[Problem]) -> None:
