@@ -575,6 +575,11 @@ class Short(BaseChecker):
             "use-augmenting-assignment",
             "Emitted when an assignment can be simplified by using its augmented version.",
         ),
+        "R6610": (
+            "Do not multiply list with mutable content.",
+            "do-not-multiply-mutable",
+            "Emitted when a list with mutable contents is being multiplied."
+        )
     }
 
     def _check_extend(self, node: nodes.Call) -> None:
@@ -725,6 +730,24 @@ class Short(BaseChecker):
         if bin_op.op in "+*|&" and target == bin_op.right.as_string():
             add_message(target, bin_op.left)
 
+    def _check_multiplied_list(self, node: nodes.BinOp) -> None:
+        def is_mutable(elem: nodes.NodeNG) -> bool:
+            return type(elem) in (nodes.List, nodes.Set, nodes.Dict) \
+                or (
+                    isinstance(elem, nodes.Call)
+                    and isinstance(elem.func, nodes.Name)
+                    and elem.func.name in ("list", "set", "dict")
+                )
+
+        if node.op != "*" or (not isinstance(node.left, nodes.List) and not isinstance(node.right, nodes.List)):
+            return
+
+        assert not isinstance(node.left, nodes.List) or not isinstance(node.right, nodes.List)
+        lst = node.left if isinstance(node.left, nodes.List) else node.right
+
+        if any(is_mutable(elem) for elem in lst.elts):
+            self.add_message("do-not-multiply-mutable", node=node)
+
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
         self._check_isdecimal(node)
@@ -747,6 +770,7 @@ class Short(BaseChecker):
     def visit_binop(self, node: nodes.BinOp) -> None:
         self._check_repeated_operation(node)
         self._check_redundant_arithmetic(node)
+        self._check_multiplied_list(node)
 
     def visit_assign(self, node: nodes.Assign) -> None:
         self._check_augmentable(node)

@@ -951,6 +951,9 @@ class TestNoGlobals:
     ("044834-ipv4.py", [
         lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")
     ]),
+    ("104174-ipv4_restore.py", [
+        lazy_problem().set_code("R6610").set_line(38).set_text("Do not multiply list with mutable content.")
+    ]),
     ("hw14358.py", [
         lazy_problem().set_code("R6609").set_line(29).set_text("Use augmenting assignment: 'result -= element'"),
         lazy_problem().set_code("R6609").set_line(31).set_text("Use augmenting assignment: 'b += 1'"),
@@ -975,6 +978,13 @@ class TestNoGlobals:
         .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
         lazy_problem().set_code("R6607").set_line(66)
         .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
+    ]),
+    ("hw35219.py", [
+        lazy_problem().set_code("R6601").set_line(34)
+        .set_text("Use coords_cw.append((-y, x)) instead of coords_cw += [(-y, x)]."),
+        lazy_problem().set_code("R6601").set_line(41)
+        .set_text("Use coords_ccw.append((y, -x)) instead of coords_ccw += [(y, -x)]."),
+        lazy_problem().set_code("R6610").set_line(46).set_text("Do not multiply list with mutable content.")
     ]),
     ("m2630.py", [
         lazy_problem().set_code("R6608").set_line(59).set_text("Redundant arithmetic: [0] * 0"),

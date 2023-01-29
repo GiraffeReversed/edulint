@@ -11,6 +11,8 @@ OVERRIDERS = {
     # E225=missing whitespace around operator
     "R1705": {"R1703", "R6201"},
     # R1705=no-else-return, R1703=simplifiable-if-statement
+    "R6610": {"R6608"},
+    # R6610=do-not-multiply-mutable, R6608=redundant-arithmetic
 }
 
 
