@@ -106,10 +106,10 @@ def create_apply_and_lint(lines: List[str], args: List[Arg], expected_output: Li
 
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT, "on")], [
-        lazy_problem().set_code("R6001").set_line(10),
+        lazy_problem().set_code("R6609").set_line(10),
         lazy_problem().set_code("R6202").set_line(76),
         lazy_problem().set_code("R6205").set_line(82),
-        lazy_problem().set_code("R6001").set_line(175),
+        lazy_problem().set_code("R6609").set_line(175),
         lazy_problem().set_code("W0107").set_line(196),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC, "on")], [
@@ -892,7 +892,8 @@ class TestNoGlobals:
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("010666-prime.py", [
-        lazy_problem().set_code("R6604").set_line(12).set_text("Do not use while loop with else.")
+        lazy_problem().set_code("R6604").set_line(12).set_text("Do not use while loop with else."),
+        lazy_problem().set_code("R6609").set_line(15).set_text("Use augmenting assignment: 'i += 1'"),
     ]),
     ("012889-pythagorean.py", [
         lazy_problem().set_code("R6602").set_line(23).set_text("Use integral division //."),
@@ -913,7 +914,9 @@ class TestNoGlobals:
         lazy_problem().set_code("R6601").set_line(20)
         .set_text("Use lst.append(number % 7) instead of lst += [number % 7].")
     ]),
-    ("024042-cards.py", []),
+    ("024042-cards.py", [
+        lazy_problem().set_code("R6609").set_line(9).set_text("Use augmenting assignment: 'number //= 10'")
+    ]),
     ("024180-delete.py", [
         lazy_problem().set_code("R6606").set_line(7).set_text("Remove the for loop, as it makes only one iteration.")
     ]),
@@ -949,7 +952,16 @@ class TestNoGlobals:
         lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")
     ]),
     ("hw14358.py", [
-        lazy_problem().set_code("R6608").set_line(44).set_text("Redundant arithmetic: num // num")
+        lazy_problem().set_code("R6609").set_line(29).set_text("Use augmenting assignment: 'result -= element'"),
+        lazy_problem().set_code("R6609").set_line(31).set_text("Use augmenting assignment: 'b += 1'"),
+        lazy_problem().set_code("R6609").set_line(34).set_text("Use augmenting assignment: 'a += 1'"),
+        lazy_problem().set_code("R6608").set_line(44).set_text("Redundant arithmetic: num // num"),
+        lazy_problem().set_code("R6609").set_line(50).set_text("Use augmenting assignment: 'count += 1'"),
+        lazy_problem().set_code("R6609").set_line(51).set_text("Use augmenting assignment: 'number //= n'"),
+        lazy_problem().set_code("R6609").set_line(53).set_text("Use augmenting assignment: 'primes += 1'"),
+        lazy_problem().set_code("R6609").set_line(54),
+        lazy_problem().set_code("R6609").set_line(56),
+        lazy_problem().set_code("R6609").set_line(57),
     ]),
     ("hw34328.py", [
         lazy_problem().set_code("R6608").set_line(79).set_text("Redundant arithmetic: '' + str(count)")
@@ -972,9 +984,13 @@ class TestNoGlobals:
         lazy_problem().set_code("R6608").set_line(97).set_text("Redundant arithmetic: position * 1"),
     ]),
     ("m2650.py", [
+        lazy_problem().set_code("R6609").set_line(11),
+        lazy_problem().set_code("R6609").set_line(41),
+        lazy_problem().set_code("R6609").set_line(44),
         lazy_problem().set_code("R6605").set_line(84).set_text("Use elif."),
     ]),
     ("m5435.py", [
+        lazy_problem().set_code("R6609").set_line(7),
         lazy_problem().set_code("R6605").set_line(9).set_text("Use elif."),
         lazy_problem().set_code("R6608").set_line(53).set_text("Redundant arithmetic: valid += 0"),
         lazy_problem().set_code("R6608").set_line(64).set_text("Redundant arithmetic: valid += 0"),
@@ -1005,8 +1021,8 @@ def test_short_problems(filename: str, expected_output: List[Problem]) -> None:
         .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
         lazy_problem().set_code("E225").set_line(4).set_column(19),
         lazy_problem().set_code("E225").set_line(4).set_column(35),
-        lazy_problem().set_code("R6001").set_line(5)
-        .set_text("Use augmenting assignment: \"a += 1\""),
+        lazy_problem().set_code("R6609").set_line(5)
+        .set_text("Use augmenting assignment: 'a += 1'"),
     ]),
     ("umime_count_a_extended.py", [
         Arg(Option.PYTHON_SPEC, "on"),
@@ -1021,8 +1037,8 @@ def test_short_problems(filename: str, expected_output: List[Problem]) -> None:
         .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),
         lazy_problem().set_code("R6101").set_line(10)
         .set_text("Iterate directly: \"for var in text\" (with appropriate name for \"var\")"),
-        lazy_problem().set_code("R6001").set_line(12)
-        .set_text("Use augmenting assignment: \"a += 1\""),
+        lazy_problem().set_code("R6609").set_line(12)
+        .set_text("Use augmenting assignment: 'a += 1'"),
     ])
 ])
 def test_umime_count_a(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:

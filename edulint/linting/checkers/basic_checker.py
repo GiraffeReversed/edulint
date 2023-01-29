@@ -8,36 +8,7 @@ if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
 from edulint.linting.checkers.utils import \
-    BaseVisitor, Named, get_name, get_assigned_to, is_any_assign, is_named, is_builtin
-
-
-class AugmentAssignments(BaseChecker):  # type: ignore
-
-    name = "augment-assignments"
-    msgs = {
-        "R6001": (
-            "Use augmenting assignment: \"%s %s= %s\"",
-            "use-augmenting-assignment",
-            "Emitted when an assignment can be simplified by using its augmented version.",
-        ),
-    }
-
-    def add_augmenting_message(self, bin_op: nodes.BinOp, param: nodes.BinOp, name: str) -> None:
-        self.add_message("use-augmenting-assignment", node=bin_op, args=(name, bin_op.op, param.as_string()))
-
-    def visit_binop(self, bin_op: nodes.BinOp) -> None:
-        if not is_any_assign(bin_op.parent):
-            return
-
-        targets = get_assigned_to(bin_op.parent)
-        if len(targets) != 1:
-            return
-
-        name = get_name(targets[0])
-        if is_named(bin_op.left) and name == get_name(bin_op.left):
-            self.add_augmenting_message(bin_op, bin_op.right, name)
-        if bin_op.op in "+*|&" and is_named(bin_op.right) and name == get_name(bin_op.right):
-            self.add_augmenting_message(bin_op, bin_op.left, name)
+    BaseVisitor, Named, get_name, get_assigned_to, is_any_assign, is_builtin
 
 
 T = TypeVar("T")
@@ -598,7 +569,12 @@ class Short(BaseChecker):
             "Redundant arithmetic: %s",
             "redundant-arithmetic",
             "Emitted when there is redundant arithmetic (e.g. +0, *1) in an expression."
-        )
+        ),
+        "R6609": (
+            "Use augmenting assignment: '%s %s= %s'",
+            "use-augmenting-assignment",
+            "Emitted when an assignment can be simplified by using its augmented version.",
+        ),
     }
 
     def _check_extend(self, node: nodes.Call) -> None:
@@ -727,6 +703,28 @@ class Short(BaseChecker):
                 or (op == "**" and right in (0, 1)):
             self.add_message("redundant-arithmetic", node=node, args=(node.as_string(),))
 
+    def _check_augmentable(self, node: Union[nodes.Assign, nodes.AnnAssign]) -> None:
+        def add_message(target: str, param: nodes.BinOp) -> None:
+            self.add_message("use-augmenting-assignment", node=node, args=(target, node.value.op, param.as_string()))
+
+        if not isinstance(node.value, nodes.BinOp):
+            return
+        bin_op = node.value
+
+        if isinstance(node, nodes.Assign):
+            if len(node.targets) != 1:
+                return
+            target = node.targets[0].as_string()
+        elif isinstance(node, nodes.AnnAssign):
+            target = node.target.as_string()
+        else:
+            assert False, "unreachable"
+
+        if target == bin_op.left.as_string():
+            add_message(target, bin_op.right)
+        if bin_op.op in "+*|&" and target == bin_op.right.as_string():
+            add_message(target, bin_op.left)
+
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
         self._check_isdecimal(node)
@@ -750,12 +748,17 @@ class Short(BaseChecker):
         self._check_repeated_operation(node)
         self._check_redundant_arithmetic(node)
 
+    def visit_assign(self, node: nodes.Assign) -> None:
+        self._check_augmentable(node)
+
+    def visit_annassign(self, node: nodes.AnnAssign) -> None:
+        self._check_augmentable(node)
+
 
 def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
     :param linter: The linter to register the checker to.
     """
-    linter.register_checker(AugmentAssignments(linter))
     linter.register_checker(ImproveForLoop(linter))
     linter.register_checker(SimplifiableIf(linter))
     linter.register_checker(NoWhileTrue(linter))
