@@ -66,8 +66,8 @@ def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
 
     groups = match.groups()
     start = groups[0]
-    outer_quote = groups[1]
-    vals = groups[4].split(", ")
+    outer_quote = groups[2]
+    vals = groups[5].split(", ")
     assert vals
 
     if all(v and v[0] == v[-1] and v[0] in "\"\'" and len(v) == 3 for v in vals):
@@ -153,7 +153,7 @@ TWEAKERS = {
     (Linter.PYLINT, "R1714"): Tweaker(  # consider-using-in
         set(),
         re.compile(
-            r"^(Consider merging these comparisons with \"in\" to "
+            r"^(Consider merging these comparisons with ['\"]in['\"] (to|by using) "
             r"(\"|\')([^\s]*)( not)? in )\(([^\)]+)\)(\"|\')"
         ),
         reword=consider_using_in_reword
