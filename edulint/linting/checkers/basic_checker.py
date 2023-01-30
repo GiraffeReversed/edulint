@@ -1,5 +1,5 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, List, Tuple, Union, TypeVar, Iterator, Any
+from typing import TYPE_CHECKING, Optional, List, Tuple, Union, TypeVar, Iterator, Any, Callable
 import re
 
 from pylint.checkers import BaseChecker  # type: ignore
@@ -579,6 +579,16 @@ class Short(BaseChecker):
             "Do not multiply list with mutable content.",
             "do-not-multiply-mutable",
             "Emitted when a list with mutable contents is being multiplied."
+        ),
+        "R6611": (
+            "Use else instead of elif.",
+            "redundant-elif",
+            "Emitted when the condition in elif is negation of the condition in the if."
+        ),
+        "R6612": (
+            "Unreachable else.",
+            "unreachable-else",
+            "Emitted when the else branch is unreachable due to totally exhaustive conditions before."
         )
     }
 
@@ -748,6 +758,66 @@ class Short(BaseChecker):
         if any(is_mutable(elem) for elem in lst.elts):
             self.add_message("do-not-multiply-mutable", node=node)
 
+    NEGATED_OP = {
+        ">=": "<", "<=": ">", ">": "<=", "<": ">=", "==": "!=", "!=": "==", "is": "is not", "is not": "is",
+        "in": "not in", "not in": "in", "and": "or", "or": "and"
+    }
+
+    def _check_redundant_elif(self, node: nodes.If) -> None:
+        def ops_match(lt: nodes.NodeNG, rt: nodes.NodeNG, lt_transform: Callable[[str], str]) -> bool:
+            return all(lt_transform(lt_op) == rt_op for (lt_op, _), (rt_op, _) in zip(lt.ops, rt.ops))
+
+        def to_values(node: nodes.NodeNG) -> List[nodes.NodeNG]:
+            return [node.left] + [val for _, val in node.ops]
+
+        def all_are_negations(lt_values: List[nodes.NodeNG], rt_values: List[nodes.NodeNG], new_rt_negated: bool) \
+                -> bool:
+            return all(is_negation(ll, rr, new_rt_negated) for ll, rr in zip(lt_values, rt_values))
+
+        def strip_nots(node: nodes.NodeNG, negated_rt: bool) -> Tuple[nodes.NodeNG, bool]:
+            while isinstance(node, nodes.UnaryOp) and node.op == "not":
+                negated_rt = not negated_rt
+                node = node.operand
+            return node, negated_rt
+
+        def is_negation(lt: nodes.NodeNG, rt: nodes.NodeNG, negated_rt: bool) -> bool:
+            lt, negated_rt = strip_nots(lt, negated_rt)
+            rt, negated_rt = strip_nots(rt, negated_rt)
+
+            if not isinstance(lt, type(rt)):
+                return False
+
+            if isinstance(lt, nodes.BoolOp) and isinstance(rt, nodes.BoolOp):
+                if len(lt.values) == len(rt.values) \
+                        and ((negated_rt and lt.op == rt.op) or (not negated_rt and Short.NEGATED_OP[lt.op] == rt.op)):
+                    return all_are_negations(lt.values, rt.values, negated_rt)
+                return False
+
+            if isinstance(lt, nodes.Compare) and isinstance(rt, nodes.Compare):
+                if len(lt.ops) != len(rt.ops):
+                    return False
+
+                if negated_rt and ops_match(lt, rt, lambda op: op):
+                    return all_are_negations(to_values(lt), to_values(rt), negated_rt)
+
+                if not negated_rt and ops_match(lt, rt, lambda op: Short.NEGATED_OP[op]):
+                    return all_are_negations(to_values(lt), to_values(rt), not negated_rt)
+
+                return False
+
+            return negated_rt and lt.as_string() == rt.as_string()
+
+        if not node.has_elif_block():
+            return
+
+        if_test = node.test
+        elif_test = node.orelse[0].test
+
+        if is_negation(if_test, elif_test, negated_rt=False):
+            self.add_message("redundant-elif", node=node.orelse[0])
+            if len(node.orelse[0].orelse) > 0:
+                self.add_message("unreachable-else", node=node.orelse[0].orelse[0])
+
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
         self._check_isdecimal(node)
@@ -766,6 +836,7 @@ class Short(BaseChecker):
 
     def visit_if(self, node: nodes.If) -> None:
         self._check_else_if(node)
+        self._check_redundant_elif(node)
 
     def visit_binop(self, node: nodes.BinOp) -> None:
         self._check_repeated_operation(node)
