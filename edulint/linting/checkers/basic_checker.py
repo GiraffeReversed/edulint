@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
 from edulint.linting.checkers.utils import \
-    BaseVisitor, Named, get_name, get_assigned_to, is_any_assign, is_builtin
+    BaseVisitor, Named, get_name, get_assigned_to, is_any_assign, is_builtin, get_range_params, get_const_value
 
 
 T = TypeVar("T")
@@ -637,20 +637,12 @@ class Short(BaseChecker):
         def get_const(node: nodes.NodeNG) -> Any:
             return node.value if isinstance(node, nodes.Const) else None
 
-        if not isinstance(node.iter, nodes.Call) or node.iter.func.as_string() != "range":
+        range_params = get_range_params(node.iter)
+        if range_params is None:
             return
 
-        func = node.iter
-
-        if len(func.args) == 1:
-            start = 0
-            stop = get_const(func.args[0])
-            step = 1
-
-        if len(func.args) in (2, 3):
-            start = get_const(func.args[0])
-            stop = get_const(func.args[1])
-            step = get_const(func.args[2]) if len(func.args) == 3 else 1
+        start, stop, step = range_params
+        start, stop, step = get_const(start), get_const(stop), get_const(step)
 
         if start is not None and stop is not None and step is not None:
             if start >= stop:
@@ -694,17 +686,14 @@ class Short(BaseChecker):
             ))
 
     def _check_redundant_arithmetic(self, node: Union[nodes.BinOp, nodes.AugAssign]) -> None:
-        def get_value(node: nodes.NodeNG) -> Any:
-            return node.value if isinstance(node, nodes.Const) else None
-
         if isinstance(node, nodes.BinOp):
             op = node.op
-            left = get_value(node.left)
-            right = get_value(node.right)
+            left = get_const_value(node.left)
+            right = get_const_value(node.right)
         elif isinstance(node, nodes.AugAssign):
             op = node.op[:-1]
             left = None
-            right = get_value(node.value)
+            right = get_const_value(node.value)
         else:
             assert False, "unreachable"
 

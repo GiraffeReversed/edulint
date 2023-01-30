@@ -1,4 +1,4 @@
-from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, cast
+from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, Tuple, cast
 from astroid import nodes  # type: ignore
 import sys
 import inspect
@@ -74,3 +74,38 @@ def is_named(node: nodes.NodeNG) -> bool:
 
 def get_name(node: Named) -> str:
     return str(node.name) if hasattr(node, "name") else f".{node.attrname}"
+
+
+def get_range_params(node: nodes.NodeNG) -> Optional[Tuple[nodes.NodeNG, nodes.NodeNG, nodes.NodeNG]]:
+    if not isinstance(node, nodes.Call) or node.func.as_string() != "range":
+        return None
+
+    default_start = nodes.Const(0)
+    default_step = nodes.Const(1)
+
+    if len(node.args) == 1:
+        return default_start, node.args[0], default_step
+
+    if len(node.args) == 2:
+        return node.args[0], node.args[1], default_step
+
+    if len(node.args) == 3:
+        return node.args[0], node.args[1], node.args[2]
+
+    assert False, "unreachable"
+
+
+def get_const_value(node: nodes.NodeNG) -> Any:
+    if isinstance(node, nodes.Const):
+        return node.value
+
+    if isinstance(node, nodes.UnaryOp) and isinstance(node.operand, nodes.Const):
+        if node.op == "+":
+            return node.operand.value
+        if node.op == "-":
+            return -node.operand.value
+        if node.op == "not":
+            return not node.operand.value
+        assert False, "unreachable" + node.op
+
+    return None
