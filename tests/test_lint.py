@@ -783,7 +783,7 @@ class TestSimplifyIf:
         apply_and_lint(filename, args, expected_output)
 
 
-class TestNoWhileTrue:
+class TestImproperLoop:
     @pytest.mark.parametrize("lines,expected_output", [
         ([
             "def xxx(x):",
@@ -801,6 +801,27 @@ class TestNoWhileTrue:
             [Arg(Option.PYLINT, "--disable=R1705"),
              Arg(Option.FLAKE8, "--extend-ignore=E501,F841")],
             [p.set_code("R6301") for p in expected_output]
+        )
+
+    @pytest.mark.parametrize("filename,expected_output", [
+        ("hw14062.py", [
+            lazy_problem().set_code("R6302").set_line(29)
+            .set_text("Use tighter range boundaries, the first iteration never happens.")
+        ]),
+        ("hw34666.py", [
+            lazy_problem().set_code("R6302").set_line(245)
+            .set_text("Use tighter range boundaries, the last iteration never happens.")
+        ]),
+        ("m1630.py", [
+            lazy_problem().set_code("R6302").set_line(107)
+            .set_text("Use tighter range boundaries, the last iteration never happens.")
+        ]),
+    ])
+    def test_tighter_bounds_files(self, filename: str, expected_output: List[Problem]) -> None:
+        apply_and_lint(
+            filename,
+            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=use-tighter-boundaries")],
+            expected_output
         )
 
 

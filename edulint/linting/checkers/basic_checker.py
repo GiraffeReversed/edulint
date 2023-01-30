@@ -469,15 +469,20 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             self._simplifiable_if_message(node, then, refactored)
 
 
-class NoWhileTrue(BaseChecker):
+class ImproperLoop(BaseChecker):
 
-    name = "no-while-true"
+    name = "improper-loop"
     msgs = {
         "R6301": (
             "The while condition can be replaced with '<negated %s>'",
-            "no-while-true-break",
+            "no-while-true",
             "Emitted when the condition of a while loop is 'True' unnecessarily.",
         ),
+        "R6302": (
+            "Use tighter range boundaries, the %s iteration never happens.",
+            "use-tighter-boundaries",
+            "Emitted when the boundaries of a range can be made tighter."
+        )
     }
 
     def visit_while(self, node: nodes.While) -> None:
@@ -486,7 +491,60 @@ class NoWhileTrue(BaseChecker):
 
         first = node.body[0]
         if isinstance(first, nodes.If) and isinstance(first.body[-1], nodes.Break):
-            self.add_message("no-while-true-break", node=node, args=(first.test.as_string()))
+            self.add_message("no-while-true", node=node, args=(first.test.as_string()))
+
+    def visit_for(self, node: nodes.For) -> None:
+        def compares_equality(node: nodes.NodeNG) -> bool:
+            return isinstance(node, nodes.Compare) and len(node.ops) == 1 and node.ops[0][0] == "=="
+
+        def compares_to_start(node: nodes.Compare, var: str, start: nodes.NodeNG) -> bool:
+            left, (_, right) = node.left, node.ops[0]
+            left, right = left.as_string(), right.as_string()
+            return (left == var and right == start.as_string()) or (left == start.as_string() and right == var)
+
+        def is_last_before_end(node: nodes.NodeNG, stop: nodes.NodeNG, step: nodes.NodeNG) -> bool:
+            const_node = get_const_value(node)
+            const_stop = get_const_value(stop)
+            const_step = get_const_value(step)
+            return (isinstance(node, nodes.BinOp) and node.op == "-"
+                    and node.left.as_string() == stop.as_string() and node.right.as_string() == step.as_string()) \
+                or (isinstance(const_node, int) and isinstance(const_stop, int) and isinstance(const_step, int)
+                    and const_node == const_stop - const_step)
+
+        def compares_to_last_before_end(node: nodes.Compare, var: str, stop: nodes.NodeNG, step: nodes.NodeNG) -> bool:
+            left, (_, right) = node.left, node.ops[0]
+            return (left.as_string() == var and is_last_before_end(right, stop, step)) \
+                or (is_last_before_end(left, stop, step) and right.as_string() == var)
+
+        def relevant_nodes(body: List[nodes.NodeNG]) -> Iterator[nodes.If]:
+            first = body[0]
+            if isinstance(first, nodes.If):
+                yield first
+                while first.has_elif_block():
+                    first = first.orelse[0]
+                    yield first
+
+            if len(body) > 1 and isinstance(body[-1], nodes.If):
+                yield body[-1]
+
+        range_params = get_range_params(node.iter)
+        if range_params is None:
+            return
+
+        start, stop, step = range_params
+
+        var = node.target.as_string()
+        if isinstance(node.body[0], nodes.If):
+            if_ = node.body[0]
+            test = if_.test
+
+            if compares_equality(test) and len(if_.body) == 1 and type(if_.body[-1]) in (nodes.Break, nodes.Continue):
+                if compares_to_start(test, var, start):
+                    self.add_message("use-tighter-boundaries", node=node, args=("first",))
+                elif compares_to_last_before_end(test, var, stop, step):
+                    self.add_message("use-tighter-boundaries", node=node, args=("last",))
+            # TODO expand, tips: len(node.body) == 1, isinstance(if_.body[-1], nodes.Return), allow nodes in the middle,
+            #                    allow longer bodies
 
 
 class NoGlobalVars(BaseChecker):
@@ -845,6 +903,6 @@ def register(linter: "PyLinter") -> None:
     """
     linter.register_checker(ImproveForLoop(linter))
     linter.register_checker(SimplifiableIf(linter))
-    linter.register_checker(NoWhileTrue(linter))
+    linter.register_checker(ImproperLoop(linter))
     linter.register_checker(NoGlobalVars(linter))
     linter.register_checker(Short(linter))
