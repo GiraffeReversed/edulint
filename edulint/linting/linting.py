@@ -14,6 +14,10 @@ import pathlib
 import os
 
 
+def get_proper_path(path: str) -> str:
+    return os.path.abspath(path) if os.path.isabs(path) else os.path.relpath(path)
+
+
 def flake8_to_problem(raw: ProblemJson) -> Problem:
     assert isinstance(raw["filename"], str), f'got {type(raw["filename"])} for filename'
     assert isinstance(raw["line_number"], int), f'got {type(raw["line_number"])} for line_number'
@@ -23,7 +27,7 @@ def flake8_to_problem(raw: ProblemJson) -> Problem:
 
     return Problem(
         Linter.FLAKE8,
-        raw["filename"],
+        get_proper_path(raw["filename"]),
         raw["line_number"],
         raw["column_number"],
         raw["code"],
@@ -48,7 +52,7 @@ def pylint_to_problem(filenames: List[str], raw: ProblemJson) -> Problem:
 
     return Problem(
         Linter.PYLINT,
-        get_used_filename(raw["path"]),
+        get_proper_path(get_used_filename(raw["path"])),
         raw["line"],
         raw["column"],
         raw["message-id"],
@@ -126,7 +130,7 @@ def lint_one(filename: str, config: Config) -> List[Problem]:
 
 
 def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
-    indices = {fn: i for i, fn in enumerate(filenames)}
+    indices = {get_proper_path(fn): i for i, fn in enumerate(filenames)}
     problems.sort(key=lambda problem: (indices[problem.path], problem.line, problem.column))
     return problems
 
