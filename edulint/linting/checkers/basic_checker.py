@@ -1,5 +1,5 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, List, Tuple, Union, TypeVar, Iterator, Any, Callable
+from typing import TYPE_CHECKING, Optional, List, Tuple, Union, TypeVar, Iterator, Any, Dict, Callable
 import re
 
 from pylint.checkers import BaseChecker  # type: ignore
@@ -50,11 +50,11 @@ class ModifiedListener(BaseVisitor[T]):
         return self.default
 
     def was_modified(self, node: nodes.NodeNG, allow_definition: bool) -> bool:
-        return len(self.modified[get_name(node)]) > (1 if allow_definition else 0)
+        return len(self.get_modifiers(node)) > (1 if allow_definition else 0)
 
     @staticmethod
     def _reassigns(node: nodes.NodeNG) -> bool:
-        return type(node) in (nodes.AssignName, nodes.AssignAttr)
+        return type(node) in (nodes.AssignName, nodes.AssignAttr, nodes.DelName, nodes.DelAttr)
 
     def was_reassigned(self, node: nodes.NodeNG, allow_definition: bool) -> bool:
         return sum(self._reassigns(mod) for mod in self.get_modifiers(node)) > (1 if allow_definition else 0)
@@ -63,25 +63,26 @@ class ModifiedListener(BaseVisitor[T]):
         return self.modified[get_name(node)]
 
     @staticmethod
-    def _is_assigned_to(node: Named) -> bool:
-        return node in get_assigned_to(node.parent)
-
-    @staticmethod
     def _strip(node: nodes.NodeNG) -> Optional[Union[nodes.Name, nodes.AssignName]]:
         while True:
             if isinstance(node, nodes.Subscript):
                 node = node.value
-            elif isinstance(node, nodes.Attribute) or isinstance(node, nodes.AssignAttr):
+            elif type(node) in (nodes.Attribute, nodes.AssignAttr, nodes.DelAttr):
                 node = node.expr
             else:
                 break
 
-        return node if isinstance(node, nodes.Name) or isinstance(node, nodes.AssignName) else None
+        return node if type(node) in (nodes.Name, nodes.AssignName, nodes.DelName) else None
+
+    def _get_var_scope(self, var: str) -> Optional[Dict[str, nodes.NodeNG]]:
+        for scope in reversed(self.stack):
+            if var in scope:
+                return scope
+        return None
 
     def _is_same_var(self, var: Named, node: Named) -> bool:
         varname = get_name(var)
-        return varname == get_name(node) and \
-            [sub[varname] for sub in reversed(self.stack) if varname in sub][0] == var.scope()
+        return varname == get_name(node) and self._get_var_scope(varname)[varname] == var.scope()
 
     def _visit_assigned_to(self, node: nodes.NodeNG) -> None:
         stripped = self._strip(node)
@@ -127,6 +128,23 @@ class ModifiedListener(BaseVisitor[T]):
             for var in self.watched:
                 if self._is_same_var(var, stripped):
                     self.modified[get_name(var)].append(node.parent)
+
+        return self.visit_many(node.get_children())
+
+    def visit_del(self, node: nodes.Delete) -> T:
+        for target in node.targets:
+            if isinstance(target, nodes.DelName):
+                scope = self._get_var_scope(target.name)
+                if scope is not None:
+                    scope.pop(target.name)
+
+            stripped = self._strip(target)
+
+            for var in self.watched:
+                if self._is_same_var(var, stripped):
+                    self.modified[get_name(var)].append(
+                        target if type(target) in (nodes.DelName, nodes.DelAttr) else node
+                    )
 
         return self.visit_many(node.get_children())
 
