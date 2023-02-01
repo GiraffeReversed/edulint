@@ -133,6 +133,11 @@ enable=comparison-with-itself,
        do-not-multiply-mutable,
        redundant-elif,
        unreachable-else,
+       invalid-name,
+       wrong-import-position,
+       consider-using-from-import,
+       wildcard-import,
+       reimported
 
 
 [REPORTS]

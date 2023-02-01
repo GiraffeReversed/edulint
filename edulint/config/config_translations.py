@@ -23,13 +23,12 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
         Linter.PYLINT,
         ["--enable=unidiomatic-typecheck,misplaced-format-function,"
          "unnecessary-lambda,protected-access,multiple-imports,"
-         "wrong-import-position,consider-using-from-import,wildcard-import,"
-         "reimported,improve-for-loop,consider-iterating-dictionary,"
+         "improve-for-loop,consider-iterating-dictionary,"
          "consider-using-dict-items,consider-using-f-string,"
          "inconsistent-return-statements,consider-swap-variables,"
          "consider-using-join,consider-using-set-comprehension,"
          "unnecessary-comprehension,use-a-generator,use-list-literal,"
-         "use-dict-literal,invalid-name,consider-using-in"]
+         "use-dict-literal,consider-using-in"]
     ),
     Option.ALLOWED_ONECHAR_NAMES: Translation(
         Linter.PYLINT,
