@@ -2,6 +2,7 @@ from astroid import nodes  # type: ignore
 from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Callable
 
 from pylint.checkers import BaseChecker  # type: ignore
+from pylint.checkers.utils import only_required_for_messages
 
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
@@ -290,34 +291,42 @@ class Short(BaseChecker):
             if len(node.orelse[0].orelse) > 0:
                 self.add_message("unreachable-else", node=node.orelse[0].orelse[0])
 
+    @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
         self._check_isdecimal(node)
         self._check_div(node)
 
+    @only_required_for_messages("use-append", "redundant-arithmetic")
     def visit_augassign(self, node: nodes.AugAssign) -> None:
         self._check_augassign_extend(node)
         self._check_redundant_arithmetic(node)
 
+    @only_required_for_messages("no-loop-else")
     def visit_while(self, node: nodes.While) -> None:
         self._check_loop_else(node.orelse, "while")
 
+    @only_required_for_messages("no-loop-else", "remove-for")
     def visit_for(self, node: nodes.For) -> None:
         self._check_loop_else(node.orelse, "for")
         self._check_iteration_count(node)
 
+    @only_required_for_messages("use-elif", "redundant-elif")
     def visit_if(self, node: nodes.If) -> None:
         self._check_else_if(node)
         self._check_redundant_elif(node)
 
+    @only_required_for_messages("no-repeated-op", "redundant-arithmetic", "do-not-multiply-mutable")
     def visit_binop(self, node: nodes.BinOp) -> None:
         self._check_repeated_operation(node)
         self._check_redundant_arithmetic(node)
         self._check_multiplied_list(node)
 
+    @only_required_for_messages("use-augmenting-assignment")
     def visit_assign(self, node: nodes.Assign) -> None:
         self._check_augmentable(node)
 
+    @only_required_for_messages("use-augmenting-assignment")
     def visit_annassign(self, node: nodes.AnnAssign) -> None:
         self._check_augmentable(node)
 

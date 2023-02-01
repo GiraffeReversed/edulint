@@ -2,6 +2,7 @@ from astroid import nodes  # type: ignore
 from typing import TYPE_CHECKING, Optional, Tuple
 
 from pylint.checkers import BaseChecker  # type: ignore
+from pylint.checkers.utils import only_required_for_messages
 
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
@@ -183,6 +184,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def _is_just_returning_if(self, node: Optional[nodes.NodeNG]) -> bool:
         return node is not None and isinstance(node, nodes.If) and isinstance(node.body[-1], nodes.Return)
 
+    @only_required_for_messages("simplifiable-if-return", "simplifiable-if-merge", "simplifiable-if-assignment",
+                                "simplifiable-if-pass", "no-value-in-one-branch-return")
     def visit_if(self, node: nodes.If) -> None:
         if len(node.orelse) == 0:
             if len(node.body) == 1 and isinstance(node.body[0], nodes.If) and len(node.body[0].orelse) == 0:
@@ -220,6 +223,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if refactored is not None:
             self._simplifiable_if_message(node, then, refactored)
 
+    @only_required_for_messages("simplifiable-if-expr")
     def visit_ifexp(self, node: nodes.IfExp) -> None:
         then, orelse = node.body, node.orelse
         assert then is not None and orelse is not None

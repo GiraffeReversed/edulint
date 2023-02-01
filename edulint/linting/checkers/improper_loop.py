@@ -2,6 +2,7 @@ from astroid import nodes  # type: ignore
 from typing import TYPE_CHECKING, List, Tuple, Iterator, Set
 
 from pylint.checkers import BaseChecker  # type: ignore
+from pylint.checkers.utils import only_required_for_messages
 
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
@@ -118,6 +119,7 @@ class ImproperLoop(BaseChecker):
 
         self.add_message("use-for-loop", node=node)
 
+    @only_required_for_messages("no-while-true", "use-for-loop")
     def visit_while(self, node: nodes.While) -> None:
         self._check_no_while_true(node)
         self._check_use_for_loop(node)
@@ -232,6 +234,8 @@ class ImproperLoop(BaseChecker):
             if is_last_block(mod_statement, node):
                 self.add_message("changing-control-variable", node=mod_statement, args=(control_var.as_string(),))
 
+    @only_required_for_messages("use-tighter-boundaries", "modifying-iterated-structure", "changing-control-variable",
+                                "loop-shadows-control-variable")
     def visit_for(self, node: nodes.For) -> None:
         self._check_use_tighter_bounds(node)
         self._check_modifying_iterable(node)
