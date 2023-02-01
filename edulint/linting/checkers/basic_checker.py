@@ -50,17 +50,25 @@ class ModifiedListener(BaseVisitor[T]):
         return self.default
 
     def was_modified(self, node: nodes.NodeNG, allow_definition: bool) -> bool:
-        return len(self.get_modifiers(node)) > (1 if allow_definition else 0)
+        return len(self.get_all_modifiers(node)) > (1 if allow_definition else 0)
 
     @staticmethod
     def _reassigns(node: nodes.NodeNG) -> bool:
         return type(node) in (nodes.AssignName, nodes.AssignAttr, nodes.DelName, nodes.DelAttr)
 
     def was_reassigned(self, node: nodes.NodeNG, allow_definition: bool) -> bool:
-        return sum(self._reassigns(mod) for mod in self.get_modifiers(node)) > (1 if allow_definition else 0)
+        return sum(self._reassigns(mod) for mod in self.get_all_modifiers(node)) > (1 if allow_definition else 0)
 
-    def get_modifiers(self, node: nodes.NodeNG) -> List[nodes.NodeNG]:
+    def get_all_modifiers(self, node: nodes.NodeNG) -> List[nodes.NodeNG]:
         return self.modified[get_name(node)]
+
+    def get_sure_modifiers(self, node: nodes.NodeNG) -> List[nodes.NodeNG]:
+        result = []
+        for modifier in self.get_all_modifiers(node):
+            if ModifiedListener._reassigns(modifier):
+                break
+            result.append(modifier)
+        return result
 
     @staticmethod
     def _strip(node: nodes.NodeNG) -> Optional[Union[nodes.Name, nodes.AssignName]]:
@@ -598,7 +606,7 @@ class NoGlobalVars(BaseChecker):
             listener.visit(frame)
             for node in vars_.values():
                 if listener.was_modified(node, allow_definition=True):
-                    nonglobal_modifiers = [n for n in listener.get_modifiers(node) if n.scope() != node.scope()]
+                    nonglobal_modifiers = [n for n in listener.get_all_modifiers(node) if n.scope() != node.scope()]
                     if nonglobal_modifiers:
                         self.add_message("no-global-vars", node=node, args=(node.name, nonglobal_modifiers[0].lineno))
 
