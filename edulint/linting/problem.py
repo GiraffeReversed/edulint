@@ -67,7 +67,9 @@ class Problem:
             for f in fields(Problem):
                 attr = f.name
                 if self.has_value(attr):
-                    result.append(f"{attr}={getattr(self, attr)}")
+                    attrval = getattr(self, attr)
+                    attrval = attrval if not isinstance(attrval, str) else f'"{attrval}"'
+                    result.append(f"{attr}={attrval}")
             return result
 
         return f"Problem({', '.join(get_attrvals())})"
