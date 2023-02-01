@@ -73,7 +73,7 @@ def is_named(node: nodes.NodeNG) -> bool:
 
 
 def get_name(node: Named) -> str:
-    return str(node.name) if hasattr(node, "name") else f".{node.attrname}"
+    return node.as_string()
 
 
 def get_range_params(node: nodes.NodeNG) -> Optional[Tuple[nodes.NodeNG, nodes.NodeNG, nodes.NodeNG]]:
