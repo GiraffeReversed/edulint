@@ -47,7 +47,8 @@ limit-inference-results=100
 # usually to register additional checkers.
 load-plugins=edulint.linting.checkers.basic_checker,
              edulint.linting.checkers.short_problems,
-             edulint.linting.checkers.improper_loop
+             edulint.linting.checkers.improper_loop,
+             edulint.linting.checkers.simplifiable_if
 
 # Pickle collected data for later comparisons.
 persistent=yes
