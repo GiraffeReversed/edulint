@@ -48,7 +48,8 @@ limit-inference-results=100
 load-plugins=edulint.linting.checkers.basic_checker,
              edulint.linting.checkers.short_problems,
              edulint.linting.checkers.improper_loop,
-             edulint.linting.checkers.simplifiable_if
+             edulint.linting.checkers.simplifiable_if,
+             edulint.linting.checkers.python_ta_checkers.py,
 
 # Pickle collected data for later comparisons.
 persistent=yes
@@ -137,7 +138,10 @@ enable=comparison-with-itself,
        wrong-import-position,
        consider-using-from-import,
        wildcard-import,
-       reimported
+       reimported,
+       invalid-for-target,
+       one-iteration,
+
 
 
 [REPORTS]

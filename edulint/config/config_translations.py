@@ -15,8 +15,9 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
         Linter.PYLINT,
         ["--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
          "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
-         "use-augmenting-assignment,simplifiable-if-merge,"
-         "loop-shadows-control-variable,use-append,no-repeated-op"
+         "use-augmenting-assignment,simplifiable-if-merge,shadowing-in-comprehension,"
+         "loop-shadows-control-variable,use-append,no-repeated-op,"
+         "forbidden-top-level-code"
          ]
     ),
     Option.PYTHON_SPEC: Translation(
@@ -28,7 +29,7 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
          "inconsistent-return-statements,consider-swap-variables,"
          "consider-using-join,consider-using-set-comprehension,"
          "unnecessary-comprehension,use-a-generator,use-list-literal,"
-         "use-dict-literal,consider-using-in"]
+         "use-dict-literal,consider-using-in,"]
     ),
     Option.ALLOWED_ONECHAR_NAMES: Translation(
         Linter.PYLINT,
