@@ -9,8 +9,7 @@ from typing import List
 def _test_simplify_if(lines: List[str], expected_output: List[Problem], code: str) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--disable=R1705"),
-            Arg(Option.FLAKE8, "--extend-ignore=E501,F841")],
+        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, f"--enable={code}"), Arg(Option.NO_FLAKE8, "on")],
         [p.set_code(code) for p in expected_output]
     )
 
@@ -460,8 +459,8 @@ def test_simplify_if_pass_custom(lines: List[str], expected_output: List[Problem
     _test_simplify_if(lines, expected_output, "R6205")
 
 
-@pytest.mark.parametrize("filename,args,expected_output", [
-    ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--disable=W0622,R1705")], [
+@pytest.mark.parametrize("filename,expected_output", [
+    ("015080-p4_geometry.py", [
         lazy_problem().set_code("R6202").set_line(14)
         .set_text("The if statement can be merged with the next to 'if len(sides) != len(set(sides))"
                   " and len(set(sides)) <= 3 and sides[1] == sides[2]:'"),
@@ -472,33 +471,25 @@ def test_simplify_if_pass_custom(lines: List[str], expected_output: List[Problem
         lazy_problem().set_code("R6201").set_line(47)
         .set_text("The if statement can be replaced with 'return <negated duplicate(sides) < max(sides)>'"),
     ]),
-    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")], [
+    ("z202817-zkouska.py", [
         lazy_problem().set_code("R6202").set_line(76)
         .set_text("The if statement can be merged with the next to 'if word == '' or word[len(word) - 1] == '.':'"),
         lazy_problem().set_code("R6205").set_line(82),
     ]),
-    (
-        "014823-p4_geometry.py",
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")],
-        [
+    ("014823-p4_geometry.py", [
             lazy_problem().set_code("R6206").set_line(17)
             .set_text("Both branches should return a value explicitly (one returns implicit None)"),
             lazy_problem().set_code("R6206").set_line(25),
             lazy_problem().set_code("R6206").set_line(33),
             lazy_problem().set_code("R6201").set_line(43),
             lazy_problem().set_code("R6201").set_line(55),
-        ]
-    ),
-    (
-        "024423-p5_credit.py",
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")],
-        []
-    ),
-    (
-        "044669-p3_person_id.py",
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")],
-        [lazy_problem().set_code("R6206").set_line(30)]
-    )
+    ]),
+    ("024423-p5_credit.py", []),
+    ("044669-p3_person_id.py", [lazy_problem().set_code("R6206").set_line(30)])
 ])
-def test_simplify_if_files(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output)
+def test_simplify_if_files(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")],
+        expected_output
+    )

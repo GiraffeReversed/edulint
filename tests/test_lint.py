@@ -12,19 +12,19 @@ from typing import List
 @pytest.mark.parametrize("filename,config,expected_output", [
     ("hello_world.py", Config(), []),
     ("z202817-zkouska.py", Config(), [
-        lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("W0107").set_line(196)
     ]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115"])]), [
-        lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128),
         lazy_problem().set_code("W0107").set_line(196)
     ]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115", "--disable=W0107"])]), [
-        lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128)
@@ -46,13 +46,14 @@ def test_lint_basic(filename: str, config: Config, expected_output: List[Problem
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT, "on")], [
         lazy_problem().set_code("R6609").set_line(10),
+        lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6202").set_line(76),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("R6609").set_line(175),
         lazy_problem().set_code("W0107").set_line(196),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC, "on")], [
-        lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6102").set_line(80),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("R6101").set_line(171),
@@ -148,7 +149,7 @@ def test_allowed_onechar_names(filename: str, args: List[Arg], expected_output: 
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
-    ("105119-p5_template.py", [Arg(Option.PYTHON_SPEC, "on"), Arg(Option.PYLINT, "--disable=C0200")], [
+    ("105119-p5_template.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=R1714")], [
         lazy_problem().set_code("R1714").set_line(22)
         .set_text("Consider merging these comparisons with \"in\" to \"i not in '[]'\""),
         lazy_problem().set_code("R1714").set_line(35)
@@ -227,7 +228,7 @@ class TestImproveFor:
         ]),
     ])
     def test_improve_for(self, filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-        apply_and_lint(filename, args, expected_output)
+        apply_and_lint(filename, [Arg(Option.PYLINT, "--disable=all")] + args, expected_output)
 
 
 class TestNoGlobals:
