@@ -70,7 +70,8 @@ def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
     vals = groups[5].split(", ")
     assert vals
 
-    if all(v and v[0] == v[-1] and v[0] in "\"\'" and len(v) == 3 for v in vals):
+    if all(val.count("(") == val.count(")") for val in vals) \
+            and all(v and v[0] == v[-1] and v[0] in "\"\'" and len(v) == 3 for v in vals):
         inner_quote = vals[0][0]
         return start + inner_quote + "".join(v.strip("\"\'") for v in vals) + inner_quote + outer_quote
 
@@ -154,7 +155,7 @@ TWEAKERS = {
         set(),
         re.compile(
             r"^(Consider merging these comparisons with ['\"]in['\"] (to|by using) "
-            r"(\"|\')([^\s]*)( not)? in )\(([^\)]+)\)(\"|\')"
+            r"(\"|\')([^\s]*)( not)? in )\((.+)\)(\"|\')"
         ),
         reword=consider_using_in_reword
     ),
