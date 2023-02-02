@@ -6,7 +6,7 @@ from pylint.checkers import BaseChecker  # type: ignore
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import get_name, is_builtin
+from edulint.linting.checkers.utils import get_name, is_builtin, get_range_params
 from edulint.linting.checkers.modified_listener import ModifiedListener
 
 
@@ -28,19 +28,6 @@ class ImproveForLoop(BaseChecker):  # type: ignore
 
     def __init__(self, linter: Optional["PyLinter"] = None) -> None:
         super().__init__(linter)
-
-    def _is_for_range(self, node: nodes.For) -> bool:
-        return isinstance(node.iter, nodes.Call) \
-            and is_builtin(node.iter.func, "range") \
-            and (len(node.iter.args) == 1
-                 or (len(node.iter.args) == 2
-                     and isinstance(node.iter.args[0], nodes.Const)
-                     and node.iter.args[0].value == 0)) \
-            and is_builtin(node.iter.args[0].func, "len") \
-            and len(node.iter.args[0].args) == 1
-
-    def _get_structure(self, node: nodes.For) -> nodes.NodeNG:
-        return node.iter.args[0].args[0]
 
     class StructureIndexedVisitor(ModifiedListener[bool]):
         default = False
@@ -97,17 +84,22 @@ class ImproveForLoop(BaseChecker):  # type: ignore
             subscript = name.parent
             if not ((isinstance(subscript.value, nodes.Name)
                     and subscript.value.name == self.structure.name)
-                    or (isinstance(subscript.value, nodes.Attirbute)
+                    or (isinstance(subscript.value, nodes.Attribute)
                     and subscript.value.attrname == self.structure.attrname)):
                 return True
 
             return isinstance(subscript.parent, nodes.Assign) and subscript in subscript.parent.targets
 
     def visit_for(self, node: nodes.For) -> None:
-        if not self._is_for_range(node):
+        range_params = get_range_params(node.iter)
+        if range_params is None:
             return
 
-        structure = self._get_structure(node)
+        _, stop, _ = range_params
+        if not isinstance(stop, nodes.Call) or not is_builtin(stop.func, "len") or len(stop.args) != 1:
+            return
+
+        structure = stop.args[0]
         index = node.target
         if not isinstance(structure, nodes.Name) and not isinstance(structure, nodes.Attribute):
             return
