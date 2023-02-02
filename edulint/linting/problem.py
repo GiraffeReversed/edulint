@@ -22,6 +22,7 @@ class Problem:
     text: str
     end_line: Optional[int] = None
     end_column: Optional[int] = None
+    symbol: Optional[str] = None
 
     def set_source(self, v: Linter) -> "Problem":
         self.source = v

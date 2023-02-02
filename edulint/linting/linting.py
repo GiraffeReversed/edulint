@@ -43,6 +43,7 @@ def pylint_to_problem(filenames: List[str], raw: ProblemJson) -> Problem:
     assert isinstance(raw["message"], str), f'got {type(raw["message"])} for message'
     assert isinstance(raw["endLine"], int) or raw["endLine"] is None, f'got {type(raw["endLine"])} for endLine'
     assert isinstance(raw["endColumn"], int) or raw["endColumn"] is None, f'got {type(raw["endColumn"])} for endColumn'
+    assert isinstance(raw["symbol"], str), f'get {type(raw["symbol"])} for symbol'
 
     def get_used_filename(path: str) -> str:
         for filename in filenames:
@@ -58,7 +59,8 @@ def pylint_to_problem(filenames: List[str], raw: ProblemJson) -> Problem:
         raw["message-id"],
         raw["message"],
         raw["endLine"],
-        raw["endColumn"]
+        raw["endColumn"],
+        raw["symbol"]
     )
 
 
