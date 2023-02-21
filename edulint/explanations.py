@@ -1,11 +1,10 @@
 from typing import Dict
-import toml
+import tomli
 
 
 def get_explanations() -> Dict[str, Dict[str, str]]:
-    with open('explanations.toml', encoding="utf8") as f:
-        toml_str = f.read()
-    parsed_toml = toml.loads(toml_str)
+    with open('explanations.toml', "rb") as f:
+        parsed_toml = tomli.load(f)
     return parsed_toml
 
 # todo: add test to load explanantions (toml parser is sensitive to small mistakes)
