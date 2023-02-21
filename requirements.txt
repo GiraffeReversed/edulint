@@ -2,3 +2,4 @@ flake8==4.0.1
 flake8-json==21.7.0
 pylint==2.14.5
 dataclasses-json==0.5.7
+toml==0.10.2
