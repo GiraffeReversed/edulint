@@ -49,7 +49,11 @@ def convert_to_edulint():
         tomli_w.dump(answer, f, multiline_strings=True)
 
 
-if __name__ == "__main__":
-    extract_msgs_from_thonny()
+def process_from_stored_data():
+    extract_msgs_from_thonny(reload_from_source=True)
     convert_to_edulint()
+
+
+if __name__ == "__main__":
+    process_from_stored_data()
 
