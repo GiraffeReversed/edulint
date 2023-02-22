@@ -1,0 +1,2 @@
+# requests==2.28.2
+tomli-w==1.0.0
