@@ -91,7 +91,7 @@ def _check_placeholders(
 ) -> None:
     if bad_code or related:
         placeholder_details = "help us make the doc better" in details
-        with open(good_py_path) as f:
+        with open(good_py_path, encoding='utf8') as f:
             placeholder_good = "placeholder" in f.read()
         assert_msg = (
             f"Please remove placeholders in '{good_py_path.parent}' "

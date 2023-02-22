@@ -7,7 +7,7 @@ import os
 
 def read(rel_path):
     here = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(here, rel_path), 'r') as fp:
+    with open(os.path.join(here, rel_path), 'r', encoding='utf8') as fp:
         return fp.read()
 
 

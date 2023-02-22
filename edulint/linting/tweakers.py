@@ -80,7 +80,7 @@ def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
 
 def _get_if_condition(filename: str, line: int) -> str:
     line -= 1  # -1 adjusts for indexing from 0
-    with open(filename) as f:
+    with open(filename, encoding='utf8') as f:
         lines = f.readlines()
         result = [lines[line].strip()]
         while result[-1][-1] == "\\":
@@ -101,7 +101,7 @@ def simplifiable_if_statement_reword(self: Tweaker, problem: Problem) -> str:
 
 
 def _get_if_expression(problem: Problem) -> str:
-    with open(problem.path) as f:
+    with open(problem.path, encoding='utf8') as f:
         selected_lines = f.readlines()[problem.line - 1:problem.end_line]
     selected_lines[0] = selected_lines[0][problem.column:]  # no -1, columns indexed from 0
 
