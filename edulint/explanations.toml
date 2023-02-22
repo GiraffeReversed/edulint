@@ -1,27 +1,26 @@
 [F0001]
 why = "It looks like the error occurred preventing the analysis of a               module (unable to find it for instance)."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/fatal.html\">Additional information</a>"
 
 [F0002]
 why = "It looks like the unexpected error occurred while building the Astroid  representation. This is usually accompanied by a traceback. Please report such errors !"
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/astroid-error.html\">Additional information</a>"
 
 [F0010]
 why = "It looks like the exception occurred while building the Astroid representation which could be handled by astroid."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/parse-error.html\">Additional information</a>"
 
 [F0011]
 why = "It looks like the exception occurred while parsing a pylint configuration file."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/config-parse-error.html\">Additional information</a>"
 
 [F0202]
 why = "It looks like Pylint has been unable to check methods signature compatibility for an unexpected reason. Please report this kind if you don't make sense of it."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/method-check-failed.html\">Additional information</a>"
 
 [E0001]
 why = "It looks like the syntax error is raised for a module."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -48,7 +47,6 @@ fruit_stock = {
 [E0011]
 why = "It looks like the unknown inline option is encountered."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -67,20 +65,19 @@ examples = """
 
 [E0013]
 why = "It looks like the bad value is used in 'load-plugins'."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/bad-plugin-value.html\">Additional information</a>"
 
 [E0014]
 why = "It looks like we detect a setting in the top level of a toml configuration that shouldn't be there."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/bad-configuration-section.html\">Additional information</a>"
 
 [E0015]
 why = "It looks like we detect an option that we do not recognize."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/unrecognized-option.html\">Additional information</a>"
 
 [E1700]
 why = "It looks like the `yield` or `yield from` statement is found inside an async function."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -101,12 +98,12 @@ async def foo():
     yield 42
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/yield-inside-async-function.html\">Additional information</a>"""
 
 [E1701]
 why = "It looks like the async context manager is used with an object that does not implement the async context management protocol."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -140,12 +137,12 @@ async def foo():
         pass
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/not-async-context-manager.html\">Additional information</a>"""
 
 [E0111]
 why = "It looks like the first argument to reversed() builtin isn't a sequence (does not implement __reversed__, nor __getitem__ and __len__"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -164,7 +161,6 @@ reversed([1, 2, 3, 4])
 [E0119]
 why = "It looks like format function is not called on str object. e.g doing print(\"value: {}\").format(123) instead of print(\"value: {}\".format(123)). This might not be what the user intended to do."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -183,7 +179,6 @@ print('Value: {}'.format('Car'))
 [E0100]
 why = "It looks like the special class method __init__ is turned into a generator by a yield in its body."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -215,7 +210,6 @@ for worm in apple.worms():
 [E0101]
 why = "It looks like the special class method __init__ has an explicit return value."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -240,7 +234,6 @@ class Sum:
 [E0102]
 why = "It looks like the function / class / method is redefined."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -265,7 +258,6 @@ def get_email():
 [E0103]
 why = "It looks like break or continue keywords are used outside a loop."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -293,7 +285,6 @@ def print_even_numbers():
 [E0104]
 why = "It looks like the \"return\" statement is found outside a function or method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -313,7 +304,6 @@ def get_the_answer():
 [E0105]
 why = "It looks like the \"yield\" statement is found outside a function or method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -334,12 +324,11 @@ def one_to_ten():
 
 [E0106]
 why = "It looks like the \"return\" statement with an argument is found outside in a generator function or method (e.g. with some \"yield\" statements)."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/return-arg-in-generator.html\">Additional information</a>"
 
 [E0107]
 why = "It looks like you attempt to use the C-style pre-increment or pre-decrement operator -- and ++, which doesn't exist in Python."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -366,7 +355,6 @@ while i <= 10:
 [E0108]
 why = "Duplicate argument names in function definitions are syntax errors."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -387,7 +375,6 @@ def get_fruits(apple, banana, orange):
 [E0110]
 why = "It looks like the abstract class with `abc.ABCMeta` as metaclass has abstract methods and is instantiated."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -429,7 +416,6 @@ sheep = Sheep()
 [E0112]
 why = "It looks like there are more than one starred expressions (`*x`) in an assignment. This is a SyntaxError."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -448,7 +434,6 @@ examples = """
 [E0113]
 why = "It looks like the star expression is used as a starred assignment target."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -467,7 +452,6 @@ fruit = ['apple', 'banana', 'orange']
 [E0114]
 why = "It looks like the star expression is not used in an assignment target."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -486,7 +470,6 @@ sirius, *arcturus_and_vega = [\"Sirius\", \"Arcturus\", \"Vega\"]
 [E0115]
 why = "It looks like the name is both nonlocal and global."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -524,7 +507,6 @@ update_number(24)
 [E0116]
 why = "It looks like the `continue` keyword is found inside a finally clause, which is a SyntaxError."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -548,12 +530,12 @@ while True:
         continue
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/continue-in-finally.html\">Additional information</a>"""
 
 [E0117]
 why = "It looks like the nonlocal variable does not have an attached name somewhere in the parent scopes"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -578,7 +560,6 @@ class Fruit:
 [E0118]
 why = "It looks like the name is used prior a global declaration, which results in an error since Python 3.6."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -608,7 +589,6 @@ def update_tomato():
 [E0301]
 why = "It looks like the __iter__ method returns something which is not an iterable (i.e. has no `__next__` method)"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -668,7 +648,6 @@ for sign, prediction in GenericAstrology(SIGNS, PREDICTIONS):
 [E0302]
 why = "It looks like the special method was defined with an invalid number of parameters. If it has too few or too many, it might not work at all."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -697,7 +676,6 @@ class ContextManager:
 [E0303]
 why = "It looks like the __len__ method returns something which is not a non-negative integer"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -726,7 +704,6 @@ class FruitBasket:
 [E0304]
 why = "It looks like the __bool__ method returns something which is not a bool"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -753,7 +730,6 @@ class GoodBool:
 [E0305]
 why = "It looks like the __index__ method returns something which is not an integer"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -780,7 +756,6 @@ class GoodIndex:
 [E0306]
 why = "It looks like the __repr__ method returns something which is not a string"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -807,7 +782,6 @@ class Repr:
 [E0307]
 why = "It looks like the __str__ method returns something which is not a string"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -834,7 +808,6 @@ class Str:
 [E0308]
 why = "It looks like the __bytes__ method returns something which is not bytes"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -861,7 +834,6 @@ class GoodBytes:
 [E0309]
 why = "It looks like the __hash__ method returns something which is not an integer"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -888,7 +860,6 @@ class GoodHash:
 [E0310]
 why = "It looks like the __length_hint__ method returns something which is not a non-negative integer"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -915,7 +886,6 @@ class GoodLengthHint:
 [E0311]
 why = "It looks like the __format__ method returns something which is not a string"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -942,7 +912,6 @@ class GoodFormat:
 [E0312]
 why = "It looks like the __getnewargs__ method returns something which is not a tuple"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -969,7 +938,6 @@ class GoodGetNewArgs:
 [E0313]
 why = "It looks like the __getnewargs_ex__ method returns something which is not of the form tuple(tuple, dict)"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -996,7 +964,6 @@ class GoodGetNewArgsEx:
 [E0202]
 why = "It looks like the class defines a method which is hidden by an instance attribute from an ancestor class or set by some client code."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1025,7 +992,6 @@ class Fruit:
 [E0203]
 why = "It looks like the instance member is accessed before it's actually assigned."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1052,7 +1018,6 @@ class Foo:
 [E0211]
 why = "It looks like the method which should have the bound instance as first argument has no argument defined."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1075,7 +1040,6 @@ class Person:
 [E0213]
 why = "It looks like the method has an attribute different the \"self\" as first argument. This is considered as an error since this is a so common convention that you shouldn't break it!"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1098,7 +1062,6 @@ class Fruit:
 [E0236]
 why = "It looks like the invalid (non-string) object occurs in __slots__."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1119,7 +1082,6 @@ class Person:
 [E0237]
 why = "It looks like assigning to an attribute not defined in the class slots."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1156,7 +1118,6 @@ class Student:
 [E0238]
 why = "It looks like the invalid __slots__ is found in class. Only a string, an iterable or a sequence is permitted."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1177,7 +1138,6 @@ class Person:
 [E0239]
 why = "It looks like the class inherits from something which is not a class."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1198,12 +1158,11 @@ class Fruit:
 
 [E0240]
 why = "It looks like the class has an inconsistent method resolution order."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/inconsistent-mro.html\">Additional information</a>"
 
 [E0241]
 why = "Duplicate use of base classes in derived classes raise TypeErrors."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1236,7 +1195,6 @@ class Cat(Animal):
 [E0242]
 why = "It looks like the value in __slots__ conflicts with a class variable, property or method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1281,7 +1239,6 @@ class Person:
 [E0243]
 why = "It looks like the invalid object is assigned to a __class__ property. Only a class is permitted."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1312,7 +1269,6 @@ Apple.__class__ = RedDelicious
 [E0244]
 why = "It looks like the class tries to extend an inherited Enum class. Doing so will raise a TypeError at runtime."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1351,7 +1307,6 @@ class Fruit(Enum):
 [E0701]
 why = "It looks like except clauses are not in the correct order (from the more specific to the more generic). If you don't fix the order, some exceptions may not be caught by the most specific handler."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1382,7 +1337,6 @@ except Exception:
 [E0702]
 why = "It looks like something which is neither a class nor an instance is raised (i.e. a `TypeError` will be raised)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1418,12 +1372,11 @@ def calculate_speed(distance: float, time: float) -> float:
 
 [E0703]
 why = "It looks like using the syntax \"raise ... from ...\", where the exception context is not an exception, nor None."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/bad-exception-context.html\">Additional information</a>"
 
 [E0704]
 why = "It looks like the bare raise is not used inside an except clause. This generates an error, since there are no active exceptions to be reraised. An exception to this rule is represented by a bare raise inside a finally clause, which might work, as long as an exception is raised inside the try block, but it is nevertheless a code smell that must not be relied upon."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1446,7 +1399,6 @@ def validate_positive(x):
 [E0710]
 why = "It looks like the new style class which doesn't inherit from BaseException is raised."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1465,7 +1417,6 @@ raise Exception(\"Goodbye world !\")
 [E0711]
 why = "It looks like NotImplemented is raised instead of NotImplementedError"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1488,7 +1439,6 @@ class Worm:
 [E0712]
 why = "It looks like the class which doesn't inherit from Exception is used as an exception in an except clause."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1521,7 +1471,6 @@ except FooError:
 [E0401]
 why = "It looks like pylint has been unable to import a module."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1535,20 +1484,20 @@ from patlib import Path  # [import-error]
 from pathlib import Path
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/import-error.html\">Additional information</a>"""
 
 [E0402]
 why = "It looks like the relative import tries to access too many levels in the current package."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/relative-beyond-top-level.html\">Additional information</a>"
 
 [E1200]
 why = "It looks like the unsupported format character is used in a logging statement format string."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/logging-unsupported-format.html\">Additional information</a>"
 
 [E1201]
 why = "It looks like the logging statement format string terminates before the end of a conversion specifier."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1571,7 +1520,6 @@ logging.warning(\"Here is a variable: %s\", my_var)
 [E1205]
 why = "It looks like the logging format string is given too many arguments."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1602,7 +1550,6 @@ except Exception as e:
 [E1206]
 why = "It looks like the logging format string is given too few arguments."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1633,7 +1580,6 @@ except Exception as e:
 [E4702]
 why = "It looks like items are added or removed to a dict being iterated through. Doing so raises a RuntimeError."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1662,7 +1608,6 @@ for fruit in fruits.copy():
 [E4703]
 why = "It looks like items are added or removed to a set being iterated through. Doing so raises a RuntimeError."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1685,7 +1630,6 @@ for fruit in fruits.copy():
 [E1003]
 why = "It looks like another argument than the current class is given as first argument of the super builtin."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1720,11 +1664,12 @@ class Cat(Animal):
         super(Animal, self).__init__()
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/bad-super-call.html\">Additional information</a>"""
 
 [E2501]
 why = "For compatibility use UTF-8 instead of UTF-16/UTF-32. See also https://bugs.python.org/issue1503789 for a history of this issue. And https://softwareengineering.stackexchange.com/questions/102205/should-utf-16-be-considered-harmful for some possible problems when using UTF-16 for instance."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/invalid-unicode-codec.html\">Additional information</a>"
 
 [E2502]
 why = """
@@ -1732,36 +1677,35 @@ bidirectional unicode are typically not displayed characters required to display
 More Information:
 https://en.wikipedia.org/wiki/Bidirectional_text
 https://trojansource.codes/"""
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/bidirectional-unicode.html\">Additional information</a>"
 
 [E2510]
 why = "Moves the cursor back, so the character after it will overwrite the character before."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/invalid-character-backspace.html\">Additional information</a>"
 
 [E2511]
 why = "Moves the cursor to the start of line, subsequent characters overwrite the start of the line."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/invalid-character-carriage-return.html\">Additional information</a>"
 
 [E2512]
 why = "Ctrl+Z \"End of text\" on Windows. Some programs (such as type) ignore the rest of the file after it."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/invalid-character-sub.html\">Additional information</a>"
 
 [E2513]
 why = "Commonly initiates escape codes which allow arbitrary control of the terminal."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/invalid-character-esc.html\">Additional information</a>"
 
 [E2514]
 why = "Mostly end of input for python."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/invalid-character-nul.html\">Additional information</a>"
 
 [E2515]
 why = "Invisible space character could hide real code execution."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/invalid-character-zero-width-space.html\">Additional information</a>"
 
 [E0601]
 why = "It looks like the local variable is accessed before its assignment took place. Assignments in try blocks are assumed not to have occurred when evaluating associated except/finally blocks. Assignments in except blocks are assumed not to have occurred when evaluating statements outside the block, except when the associated try block contains a return statement."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1782,7 +1726,6 @@ print(hello)
 [E0602]
 why = "It looks like the undefined variable is accessed."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1802,7 +1745,6 @@ print(number + 2)
 [E0603]
 why = "It looks like the undefined variable name is referenced in __all__."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1827,7 +1769,6 @@ def get_fruit_color():
 [E0604]
 why = "It looks like the invalid (non-string) object occurs in __all__."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1857,12 +1798,12 @@ class Worm:
     pass
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/invalid-all-object.html\">Additional information</a>"""
 
 [E0605]
 why = "It looks like __all__ has an invalid format."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1885,7 +1826,6 @@ CONST = 42
 [E0611]
 why = "It looks like the name cannot be found in a module."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1904,7 +1844,6 @@ from os import path
 [E0633]
 why = "It looks like something which is not a sequence is used in an unpack assignment"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1923,7 +1862,6 @@ a, b, c = 1, 2, 3
 [E0643]
 why = "It looks like the index used on an iterable goes beyond the length of that iterable."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1942,7 +1880,6 @@ print([1, 2, 3][2])
 [E1507]
 why = "Env manipulation functions support only string type arguments. See https://docs.python.org/3/library/os.html#os.getenv."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1965,7 +1902,6 @@ os.getenv('1')
 [E1300]
 why = "It looks like the unsupported format character is used in a format string."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -1979,16 +1915,16 @@ print(\"%s %z\" % (\"hello\", \"world\"))  # [bad-format-character]
 print(\"%s %s\" % (\"hello\", \"world\"))
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/bad-format-character.html\">Additional information</a>"""
 
 [E1301]
 why = "It looks like the format string terminates before the end of a conversion specifier."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/truncated-format-string.html\">Additional information</a>"
 
 [E1302]
 why = "It looks like the format string contains both named (e.g. '%(foo)d') and unnamed (e.g. '%d') conversion specifiers.  This is also used when a named conversion specifier contains * for the minimum field width and/or precision."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2008,7 +1944,6 @@ print(\"x=%(x)d, y=%(y)d\" % {\"x\": 0, \"y\": 1})
 [E1303]
 why = "It looks like the format string that uses named conversion specifiers is used with an argument that is not a mapping."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2026,12 +1961,11 @@ print(\"%(x)d %(y)d\" % {\"x\": 1, \"y\": 2})
 
 [E1304]
 why = "It looks like the format string that uses named conversion specifiers is used with a dictionary that doesn't contain all the keys required by the format string."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/missing-format-string-key.html\">Additional information</a>"
 
 [E1305]
 why = "It looks like the format string that uses unnamed conversion specifiers is given too many arguments."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2051,7 +1985,6 @@ print(\"Today is {0}, so tomorrow will be {1}\".format(\"Monday\", \"Tuesday\"))
 [E1306]
 why = "It looks like the format string that uses unnamed conversion specifiers is given too few arguments"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2070,7 +2003,6 @@ print(\"Today is {0}, so tomorrow will be {1}\".format(\"Monday\", \"Tuesday\"))
 [E1307]
 why = "It looks like the type required by format string is not suitable for actual argument type"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2084,12 +2016,12 @@ print(\"%d\" % \"1\")  # [bad-string-format-type]
 print(\"%d\" % 1)
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/bad-string-format-type.html\">Additional information</a>"""
 
 [E1310]
 why = "The argument to a str.{l,r,}strip call contains a duplicate character,"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2109,12 +2041,12 @@ examples = """
 # >>> 'def'
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/bad-str-strip-call.html\">Additional information</a>"""
 
 [E1133]
 why = "It looks like the non-iterable value is used in place where iterable is expected"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2135,7 +2067,6 @@ for i in \"10\":
 [E1134]
 why = "It looks like the non-mapping value is used in place where mapping is expected"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2162,7 +2093,6 @@ print_colors(**dict(red=1, black=2))
 [E1101]
 why = "It looks like the variable is accessed for a nonexistent member."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2196,12 +2126,12 @@ class Cat:
 Cat().meow()
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/no-member.html\">Additional information</a>"""
 
 [E1102]
 why = "It looks like the object being called has been inferred to a non callable object."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2222,7 +2152,6 @@ print(NUMBER)
 [E1111]
 why = "It looks like the assignment is done on a function call but the inferred function doesn't return anything."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2249,7 +2178,6 @@ value = add(10, 10)
 [E1120]
 why = "It looks like the function call passes too few arguments."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2274,7 +2202,6 @@ add(1, 2)
 [E1121]
 why = "It looks like the function call passes too many positional arguments."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2304,7 +2231,6 @@ apple = Fruit(\"red\", \"apple\")
 [E1123]
 why = "It looks like the function call passes a keyword argument that doesn't correspond to one of the function's parameter names."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2331,7 +2257,6 @@ print_coordinates(x=1, y=2)
 [E1124]
 why = "It looks like the function call would result in assigning multiple values to a function parameter, one value from a positional argument and one from a keyword argument."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2359,12 +2284,11 @@ square(5)
 
 [E1125]
 why = "It looks like the function call does not pass a mandatory keyword-only argument."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/missing-kwoa.html\">Additional information</a>"
 
 [E1126]
 why = "It looks like the sequence type is indexed with an invalid type. Valid types are ints, slices, and objects with an __index__ method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2380,12 +2304,12 @@ fruits = ['apple', 'banana', 'orange']
 print(fruits[0])
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/invalid-sequence-index.html\">Additional information</a>"""
 
 [E1127]
 why = "It looks like the slice index is not an integer, None, or an object with an __index__ method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2408,7 +2332,6 @@ FIRST_THREE = LETTERS[:3]
 [E1128]
 why = "It looks like the assignment is done on a function call but the inferred function returns nothing but None."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2435,7 +2358,6 @@ f = function() if function() else 1
 [E1129]
 why = "It looks like the instance in a with statement doesn't implement the context manager protocol(__enter__/__exit__)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2469,7 +2391,6 @@ with MyContextManager() as c:
 [E1130]
 why = "It looks like the unary operand is used on an object which does not support this type of operation."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2491,12 +2412,11 @@ cherries -= eaten_cherries
 
 [E1131]
 why = "It looks like the binary arithmetic operation between two operands is not supported."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/unsupported-binary-operation.html\">Additional information</a>"
 
 [E1132]
 why = "It looks like the function call got multiple values for a keyword."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2524,7 +2444,6 @@ func(1, 2, c=3)
 [E1135]
 why = "It looks like the instance in membership test expression doesn't implement membership protocol (__contains__/__iter__/__getitem__)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2553,7 +2472,6 @@ apple = \"apple\" in Fruit()
 [E1136]
 why = "It looks like the subscripted value doesn't support subscription (i.e. doesn't define __getitem__ method or __class_getitem__ for a class)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2584,7 +2502,6 @@ Fruit()[1]
 [E1137]
 why = "It looks like the object does not support item assignment (i.e. doesn't define __setitem__ method)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2615,7 +2532,6 @@ pick_fruits([\"apple\"])[0] = \"orange\"
 [E1138]
 why = "It looks like the object does not support item deletion (i.e. doesn't define __delitem__ method)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2638,7 +2554,6 @@ del FRUITS[0]
 [E1139]
 why = "Emitted whenever we can detect that a class is using, as a metaclass, something which might be invalid for using as a metaclass."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2661,12 +2576,11 @@ class Apple(Plant):
 
 [E1140]
 why = "It looks like the dict key is not hashable (i.e. doesn't define __hash__ method)."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/error/unhashable-dict-key.html\">Additional information</a>"
 
 [E1141]
 why = "It looks like trying to iterate through a dict without calling .items()"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2689,7 +2603,6 @@ for city, population in data.items():
 [E1142]
 why = "It looks like await is used outside an async function."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2716,7 +2629,6 @@ async def main():
 [E6004]
 why = "``typing.NoReturn`` inside compound types is broken in Python 3.7.0 and 3.7.1. If not dependent on runtime introspection, use string annotation instead. E.g. ``Callable[..., 'NoReturn']``. https://bugs.python.org/issue34921"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2744,7 +2656,6 @@ def exploding_apple(apple) -> NoReturn:
 [E6005]
 why = "``collections.abc.Callable`` inside Optional and Union is broken in Python 3.9.0 and 3.9.1. Use ``typing.Callable`` for these cases instead. https://bugs.python.org/issue42965"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2772,7 +2683,6 @@ def func() -> Optional[Callable[[int], None]]:
 [W0012]
 why = "It looks like the unknown value is encountered for an option."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2791,7 +2701,6 @@ examples = """
 [W0143]
 why = "This message is emitted when pylint detects that a comparison with a callable was made, which might suggest that some parenthesis were omitted, resulting in potential unwanted behaviour."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2820,7 +2729,6 @@ def is_an_orange(fruit: str = \"apple\"):
 [W0177]
 why = "It looks like the expression is compared to NaNvalues like numpy.NaN and float('nan')"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2847,7 +2755,6 @@ def both_nan(x, y) -> bool:
 [W0107]
 why = "It looks like the \"pass\" statement that can be avoided is encountered."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2869,7 +2776,6 @@ class Foo:
 [W0101]
 why = "It looks like there is some code behind a \"return\" or \"raise\" statement, which will never be accessed."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2892,7 +2798,6 @@ def say_hello():
 [W0102]
 why = "It looks like the mutable value as list or dictionary is detected in a default value for an argument."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2912,12 +2817,12 @@ def whats_on_the_telly(penguin=None):
     return penguin
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/dangerous-default-value.html\">Additional information</a>"""
 
 [W0104]
 why = "It looks like the statement doesn't have (or at least seems to) any effect."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2938,7 +2843,6 @@ print(NUMBERS)
 [W0105]
 why = "It looks like the string is used as a statement (which of course has no effect). This is a particular case of W0104 with its own message so you can easily disable it if you're using those strings as documentation, instead of comments."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2961,7 +2865,6 @@ examples = """
 [W0106]
 why = "It looks like the expression that is not a function call is assigned to nothing. Probably something else was intended."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -2980,7 +2883,6 @@ are_equal: bool = str(42) == \"42\"
 [W0108]
 why = "It looks like the body of a lambda expression is a function call on the same argument list as the lambda itself; such lambda expressions are in all but a few cases replaceable with the function being called in the body of the lambda."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3005,7 +2907,6 @@ df.apply(str)
 [W0109]
 why = "It looks like the dictionary expression binds the same key multiple times."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3024,7 +2925,6 @@ test_score = {\"Mathematics\": 85, \"Biology\": 90, \"History\": 75}
 [W0122]
 why = "It looks like you use the \"exec\" statement (function for Python 3), to discourage its usage. That doesn't mean you cannot use it !"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3048,12 +2948,12 @@ allowed_locals = {'print': print}
 exec(get_user_code(username), allowed_globals, allowed_locals)  # pylint: disable=exec-used
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/exec-used.html\">Additional information</a>"""
 
 [W0123]
 why = "It looks like you use the \"eval\" function, to discourage its usage. Consider using `ast.literal_eval` for safely evaluating strings containing Python expressions from untrusted sources."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3074,7 +2974,6 @@ literal_eval(\"[1, 2, 3]\")
 [W0124]
 why = "It looks like the `with` statement component returns multiple values and uses name binding with `as` only for a part of those values, as in with ctx() as a, b. This can be misleading, since it's not clear if the context manager returns a tuple or if the node without a name binding is another context manager."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3096,7 +2995,6 @@ with open('file.txt', 'w', encoding=\"utf8\") as fh1:
 [W0125]
 why = "It looks like the conditional statement (If or ternary if) uses a constant value for its test. This might not be what the user intended to do."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3117,12 +3015,11 @@ print('This code is always executed.')
 
 [W0126]
 why = "It looks like the conditional statement (If or ternary if) seems to wrongly call a function due to missing parentheses"
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/missing-parentheses-for-call-in-test.html\">Additional information</a>"
 
 [W0127]
 why = "It looks like we detect that a variable is assigned to itself"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3142,7 +3039,6 @@ year = 2000
 [W0128]
 why = "It looks like we detect that a variable was redeclared in the same assignment."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3161,7 +3057,6 @@ FIRST, SECOND = (1, 2)
 [W0129]
 why = "It looks like the assert statement has a string literal as its first argument, which will cause the assert to always pass."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3179,12 +3074,12 @@ def test_division():
     assert a == 3
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/assert-on-string-literal.html\">Additional information</a>"""
 
 [W0130]
 why = "This message is emitted when a set contains the same value two or more times."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3203,7 +3098,6 @@ correct_set = {'value1', 23, 5}
 [W0150]
 why = "It looks like the break or a return statement is found inside the finally clause of a try...finally block: the exceptions raised in the try clause will be silently swallowed instead of being re-raised."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3242,7 +3136,6 @@ def calculate_speed(distance: float, time: float) -> float:
 [W0199]
 why = "A call of assert on a tuple will always evaluate to true if the tuple is not empty, and will always evaluate to false if it is."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3258,12 +3151,12 @@ assert x
 assert y
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/assert-on-tuple.html\">Additional information</a>"""
 
 [W0120]
 why = "Loops should only have an else clause if they can exit early with a break statement, otherwise the statements under else should be on the same scope as the loop itself."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3291,7 +3184,6 @@ def find_even_number(numbers):
 [W0717]
 why = "Try clause contains too many statements."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3329,7 +3221,6 @@ def pick_fruit(name):
 [W0201]
 why = "It looks like the instance attribute is defined outside the __init__ method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3355,7 +3246,6 @@ class Student:
 [W0211]
 why = "It looks like the static method has \"self\" or a value specified in valid-classmethod-first-arg option or valid-metaclass-classmethod-first-arg option as first argument."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3380,7 +3270,6 @@ class Wolf:
 [W0212]
 why = "It looks like the protected member (i.e. class member with a name beginning with an underscore) is access outside the class or a descendant of the class where it's defined."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3414,7 +3303,6 @@ jim.eat()
 [W0221]
 why = "It looks like the method has a different number of arguments than in the implemented interface or in an overridden method. Extra arguments with default values are ignored."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3473,12 +3361,12 @@ class Airplane:
         self.kerosene_tank += kerosene
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/arguments-differ.html\">Additional information</a>"""
 
 [W0222]
 why = "It looks like the method signature is different than in the implemented interface or in an overridden method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3513,7 +3401,6 @@ class Dog(Animal):
 [W0223]
 why = "It looks like the abstract method (i.e. raise NotImplementedError) is not overridden in concrete class."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3572,7 +3459,6 @@ class Panther(WildAnimal):
 [W0231]
 why = "It looks like the ancestor class method has an __init__ method which is not called by a derived class."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3607,7 +3493,6 @@ class Apple(Fruit):
 [W0233]
 why = "It looks like the __init__ method is called on a class which is not in the direct ancestors for the analysed class."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3653,12 +3538,11 @@ class Cat(Vertebrate):
 
 [W0235]
 why = "Used whenever we can detect that an overridden method is useless, relying on super() delegation to do the same thing as another method from the MRO."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/useless-super-delegation.html\">Additional information</a>"
 
 [W0236]
 why = "It looks like we detect that a method was overridden in a way that does not match its base class which could result in potential bugs at runtime."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3689,7 +3573,6 @@ class Apple(Fruit):
 [W0237]
 why = "It looks like the method parameter has a different name than in the implemented interface or in an overridden method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3732,7 +3615,6 @@ for fruit, ingredient_name in [[Orange(), \"thyme\"], [Apple(), \"cinnamon\"]]:
 [W0238]
 why = "It looks like the private member of a class is defined but not used."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3763,7 +3645,6 @@ class Fruit:
 [W0239]
 why = "It looks like the method decorated with typing.final has been overridden."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3799,12 +3680,12 @@ class Cat(Animal):
         return True
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/overridden-final-method.html\">Additional information</a>"""
 
 [W0240]
 why = "It looks like the class decorated with typing.final has been subclassed."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3843,12 +3724,12 @@ def print_average_length_platypus():
     print(output)
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/subclassed-final-class.html\">Additional information</a>"""
 
 [W0244]
 why = "It looks like the slot is re-defined in a subclass."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3877,7 +3758,6 @@ class Subclass(Base):
 [W0245]
 why = "It looks like the call to super does not have brackets and thus is not an actual call and does not work as expected."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3916,7 +3796,6 @@ class TomatoSoup(Soup):
 [W0160]
 why = "Multiple assign statements spread across if/else blocks can be rewritten with a single assignment and ternary expression"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3940,7 +3819,6 @@ maximum = x if x >= y else y
 [W0141]
 why = "It looks like the disallowed builtin function is used (see the bad-function option). Usual disallowed functions are the ones like map, or filter , where Python offers now some cleaner alternative like list comprehension."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3961,7 +3839,6 @@ print(numbers)
 [W1641]
 why = "It looks like the class implements __eq__ but not __hash__. Objects get None as their default __hash__ implementation if they also implement __eq__."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -3993,7 +3870,6 @@ class Fruit:
 [W0702]
 why = "It looks like the except clause doesn't specify exceptions type to catch."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4013,16 +3889,16 @@ except ImportError:
     platform_specific_module = None
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/bare-except.html\">Additional information</a>"""
 
 [W0703]
 why = "It looks like the except catches a too general exception, possibly burying unrelated errors."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/broad-except.html\">Additional information</a>"
 
 [W0705]
 why = "It looks like the except catches a type that was already caught by a previous handler."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4049,7 +3925,6 @@ except ZeroDivisionError:
 [W0706]
 why = "It looks like the except handler uses raise as its first or only operator. This is useless because it raises back the exception immediately. Remove the raise operator or the entire try-except-raise block!"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4073,12 +3948,12 @@ except ZeroDivisionError as e:
     raise ValueError(\"The area of the rectangle cannot be zero\") from e
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/try-except-raise.html\">Additional information</a>"""
 
 [W0707]
 why = "Python's exception chaining shows the traceback of the current exception, but also of the original exception. When you raise a new exception after another exception was caught it's likely that the second exception is a friendly re-wrapping of the first exception. In such cases `raise from` provides a better link between the two tracebacks in the final error."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4103,7 +3978,6 @@ except ZeroDivisionError as e:
 [W0711]
 why = "It looks like the exception to catch is of the form \"except A or B:\".  If intending to catch multiple, rewrite as \"except (A, B):\""
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4128,7 +4002,6 @@ except (ZeroDivisionError, ValueError):
 [W0715]
 why = "It looks like passing multiple arguments to an exception constructor, the first of them a string literal containing what appears to be placeholders intended for formatting"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4147,7 +4020,6 @@ raise RuntimeError(\"This looks wrong %s %s\" % (\"a\", \"b\"))
 [W0716]
 why = "It looks like the operation is done against an exception, but the operation is not valid for the exception in question. Usually emitted when having binary operations between exceptions in except handlers."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4172,7 +4044,6 @@ except (ValueError, TypeError):
 [W0301]
 why = "It looks like the statement is ended by a semi-colon (\";\"), which isn't necessary (that's python, not C ;)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4191,7 +4062,6 @@ print(\"Hello World!\")
 [W0311]
 why = "It looks like the unexpected number of indentation's tabulations or spaces has been found."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4207,12 +4077,12 @@ if input():
     print('yes')
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/bad-indentation.html\">Additional information</a>"""
 
 [W0401]
 why = "It looks like `from module import *` is detected."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4233,12 +4103,11 @@ from abc import ABC, abstractmethod
 
 [W0402]
 why = "A module marked as deprecated is imported."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/deprecated-module.html\">Additional information</a>"
 
 [W0404]
 why = "It looks like the module is reimported multiple times."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4258,7 +4127,6 @@ import re
 [W0406]
 why = "It looks like the module is importing itself."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4282,7 +4150,6 @@ def a_function():
 [W0407]
 why = "It looks like the module imported has a preferred replacement module."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4301,7 +4168,6 @@ import requests
 [W0410]
 why = "Python 2.5 and greater require __future__ import to be the first non docstring statement in the module."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4319,12 +4185,12 @@ from __future__ import print_function
 import sys
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/misplaced-future.html\">Additional information</a>"""
 
 [W1201]
 why = "It looks like the logging statement has a call form of \"logging.<logging method>(format_string % (format_args...))\". Use another type of string formatting instead. You can use % formatting but leave interpolation to the logging function by passing the parameters as arguments. If logging-fstring-interpolation is disabled then you can use fstring formatting. If logging-format-interpolation is disabled then you can use str.format."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4350,12 +4216,12 @@ except Exception as e:
     raise
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/logging-not-lazy.html\">Additional information</a>"""
 
 [W1202]
 why = "It looks like the logging statement has a call form of \"logging.<logging method>(format_string.format(format_args...))\". Use another type of string formatting instead. You can use % formatting but leave interpolation to the logging function by passing the parameters as arguments. If logging-fstring-interpolation is disabled then you can use fstring formatting. If logging-not-lazy is disabled then you can use % formatting as normal."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4375,12 +4241,12 @@ import sys
 logging.error('Python version: %s', sys.version)
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/logging-format-interpolation.html\">Additional information</a>"""
 
 [W1203]
 why = "It looks like the logging statement has a call form of \"logging.<logging method>(f\"...\")\".Use another type of string formatting instead. You can use % formatting but leave interpolation to the logging function by passing the parameters as arguments. If logging-format-interpolation is disabled then you can use str.format. If logging-not-lazy is disabled then you can use % formatting as normal."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4400,12 +4266,12 @@ import sys
 logging.error('Python version: %s', sys.version)
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/logging-fstring-interpolation.html\">Additional information</a>"""
 
 [W4701]
 why = "It looks like items are added or removed to a list being iterated through. Doing so can result in unexpected behaviour, that is why it is preferred to use a copy of the list."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4428,7 +4294,6 @@ for fruit in fruits.copy():
 [W0714]
 why = "It looks like exceptions in handler overlap or are identical"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4466,7 +4331,6 @@ def divide_x_by_y(x: float, y: float):
 [W9005]
 why = "Please remove parameter declarations in the class or constructor."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4502,12 +4366,12 @@ class Point:
         self.y = y
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/multiple-constructor-doc.html\">Additional information</a>"""
 
 [W9006]
 why = "Please document exceptions for all raised exception types."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4541,7 +4405,6 @@ def integer_sum(a: int, b: int):
 [W9008]
 why = "Please remove the return/rtype documentation from this method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4576,7 +4439,6 @@ def print_fruits(fruits):
 [W9010]
 why = "Please remove the yields documentation from this method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4612,7 +4474,6 @@ def give_fruits(fruits):
 [W9011]
 why = "Please add documentation about what this method returns."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4637,12 +4498,12 @@ def integer_sum(a: int, b: int) -> int:
     return a + b
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/missing-return-doc.html\">Additional information</a>"""
 
 [W9012]
 why = "Please document the type returned by this method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4668,12 +4529,12 @@ def integer_sum(a: int, b: int) -> int:
     return a + b
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/missing-return-type-doc.html\">Additional information</a>"""
 
 [W9013]
 why = "Please add documentation about what this generator yields."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4709,12 +4570,12 @@ def even_number_under(n: int) -> Iterator[int]:
         yield i
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/missing-yield-doc.html\">Additional information</a>"""
 
 [W9014]
 why = "Please document the type yielded by this method."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4753,12 +4614,12 @@ def even_number_under(n: int) -> Iterator[int]:
         yield i
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/missing-yield-type-doc.html\">Additional information</a>"""
 
 [W9015]
 why = "Please add parameter declarations for all parameters."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4786,7 +4647,6 @@ def integer_sum(a: int, b: int):
 [W9016]
 why = "Please add parameter type declarations for all parameters."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4814,16 +4674,15 @@ def integer_sum(a: int, b: int):
 
 [W9017]
 why = "Please check parameter names in declarations."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/differing-param-doc.html\">Additional information</a>"
 
 [W9018]
 why = "Please check parameter names in type declarations."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/differing-type-doc.html\">Additional information</a>"
 
 [W9019]
 why = "Please remove the ignored parameter documentation."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4853,7 +4712,6 @@ def say_hello(_new: str) -> str:
 [W9020]
 why = "Please remove the ignored parameter type documentation."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4884,12 +4742,11 @@ def print_fruit(fruit):
 
 [W9021]
 why = "Please add parameter and/or type documentation."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/missing-any-param-doc.html\">Additional information</a>"
 
 [W2901]
 why = "It looks like the loop variable is overwritten in the loop body."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4910,7 +4767,6 @@ for name in names:
 [W0601]
 why = "It looks like the variable is defined through the \"global\" statement but the variable is not defined in the module scope."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4936,7 +4792,6 @@ def update_tomato():
 [W0602]
 why = "It looks like the variable is defined through the \"global\" statement but no assignment to this variable is done."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -4965,7 +4820,6 @@ def update_tomato():
 [W0603]
 why = "It looks like you use the \"global\" statement to update a global variable. Pylint just try to discourage this usage. That doesn't mean you cannot use it !"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5003,7 +4857,6 @@ print(var)
 [W0604]
 why = "It looks like you use the \"global\" statement at the module level since it has no effect"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5023,7 +4876,6 @@ price = 25
 [W0611]
 why = "It looks like the imported module or variable is not used."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5047,7 +4899,6 @@ LOGGER = getLogger(__name__)
 [W0612]
 why = "It looks like the variable is defined but not used."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5072,7 +4923,6 @@ def print_fruits():
 [W0613]
 why = "It looks like the function or method argument is not used."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5093,7 +4943,6 @@ def print_point(x, y):
 [W0614]
 why = "It looks like the imported module or variable is not used from a `'from X import *'` style import."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5118,7 +4967,6 @@ class Animal(ABC): ...
 [W0621]
 why = "It looks like the variable's name hides a name defined in an outer scope or except handler."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5142,12 +4990,12 @@ def count_it(limit):
         print(i)
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/redefined-outer-name.html\">Additional information</a>"""
 
 [W0622]
 why = "It looks like the variable or function override a built-in."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5168,7 +5016,6 @@ def map_iterable():
 [W0631]
 why = "It looks like the loop variable (i.e. defined by a for loop or a list comprehension or a generator expression) is used outside the loop."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5195,7 +5042,6 @@ def find_even_number(numbers):
 [W0632]
 why = "It looks like there is an unbalanced tuple unpacking in assignment"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5216,7 +5062,6 @@ orange, apple, *remaining_fruits = fruits
 [W0640]
 why = "A variable used in a closure is defined in a loop. This will result in all closures using the same value for the closed-over variable."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5245,7 +5090,6 @@ def foo(numbers):
 [W0641]
 why = "It looks like the variable is defined but might not be used. The possibility comes from the fact that locals() might be used, which could consume or not the said variable"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5272,7 +5116,6 @@ def choose_fruits(fruits):
 [W0642]
 why = "Invalid assignment to self or cls in instance or class method respectively."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5307,7 +5150,6 @@ class Fruit:
 [W1501]
 why = "Python supports: r, w, a[, x] modes with b, +, and U (only with r) options. See https://docs.python.org/3/library/functions.html#open"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5329,12 +5171,11 @@ def foo(file_path):
 
 [W1502]
 why = "Using datetime.time in a boolean context can hide subtle bugs when the time they represent matches midnight UTC. This behaviour was fixed in Python 3.5. See https://bugs.python.org/issue13936 for reference."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/boolean-datetime.html\">Additional information</a>"
 
 [W1503]
 why = "The first argument of assertTrue and assertFalse is a condition. If a constant is passed as parameter, that condition will be always true. In this case a warning should be emitted."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5359,16 +5200,16 @@ class DummyTestCase(unittest.TestCase):
         self.assertEqual(actual, \"expected\")
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/redundant-unittest-assert.html\">Additional information</a>"""
 
 [W1505]
 why = "The method is marked as deprecated and will be removed in the future."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/deprecated-method.html\">Additional information</a>"
 
 [W1506]
 why = "The warning is emitted when a threading.Thread class is instantiated without the target function being passed. By default, the first parameter is the group param, not the target param."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5403,7 +5244,6 @@ thread.start()
 [W1507]
 why = "os.environ is not a dict object but proxy object, so shallow copy has still effects on original object. See https://bugs.python.org/issue15373 for reference."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5427,7 +5267,6 @@ copied_env = os.environ.copy()
 [W1508]
 why = "Env manipulation functions return None or str values. Supplying anything different as a default may cause bugs. See https://docs.python.org/3/library/os.html#os.getenv."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5449,12 +5288,11 @@ env = os.getenv('SECRET_KEY', '1')
 
 [W1509]
 why = "The preexec_fn parameter is not safe to use in the presence of threads in your application. The child process could deadlock before exec is called. If you must use it, keep it trivial! Minimize the number of libraries you call into.https://docs.python.org/3/library/subprocess.html#popen-constructor"
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/subprocess-popen-preexec-fn.html\">Additional information</a>"
 
 [W1510]
 why = "The check parameter should always be used with explicitly set `check` keyword to make clear what the error-handling behavior is.https://docs.python.org/3/library/subprocess.html#subprocess.run"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5476,20 +5314,19 @@ proc = subprocess.run([\"ls\"], check=False)
 
 [W1511]
 why = "The argument is marked as deprecated and will be removed in the future."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/deprecated-argument.html\">Additional information</a>"
 
 [W1512]
 why = "The class is marked as deprecated and will be removed in the future."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/deprecated-class.html\">Additional information</a>"
 
 [W1513]
 why = "The decorator is marked as deprecated and will be removed in the future."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/deprecated-decorator.html\">Additional information</a>"
 
 [W1514]
 why = "It is better to specify an encoding when opening documents. Using the system default implicitly can create problems on other operating systems. See https://peps.python.org/pep-0597/"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5511,12 +5348,11 @@ def foo(file_path):
 
 [W1515]
 why = "Calls to breakpoint(), sys.breakpointhook() and pdb.set_trace() should be removed from code that is not actively being debugged."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/forgotten-debug-statement.html\">Additional information</a>"
 
 [W1518]
 why = "By decorating a method with lru_cache or cache the 'self' argument will be linked to the function and therefore never garbage collected. Unless your instance will never need to be garbage collected (singleton) it is recommended to refactor code to avoid this pattern or add a maxsize to the cache.The default value for maxsize is 128."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5561,7 +5397,6 @@ class Fibonnaci:
 [W1401]
 why = "It looks like the backslash is in a literal string but not as an escape."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5581,7 +5416,6 @@ string = \"\\n\"
 [W1402]
 why = "It looks like the escape like \\u is encountered in a byte string where it has no effect."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5600,7 +5434,6 @@ print(b\"\\\\u%b\" % b\"0394\")
 [W1404]
 why = "String literals are implicitly concatenated in a literal iterable definition : maybe a comma is missing ?"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5624,12 +5457,11 @@ with open(\"hello.txt\", \"r\") as f:
 
 [W1405]
 why = "Quote delimiters are not used consistently throughout a module (with allowances made for avoiding unnecessary escaping)."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/inconsistent-quotes.html\">Additional information</a>"
 
 [W1406]
 why = "It looks like we detect a string with a u prefix. These prefixes were necessary in Python 2 to indicate a string was Unicode, but since Python 3.0 strings are Unicode by default."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5650,7 +5482,6 @@ def print_fruit():
 [W1300]
 why = "It looks like the format string that uses named conversion specifiers is used with a dictionary whose keys are not all strings."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5664,16 +5495,16 @@ print(\"%(one)d\" % {\"one\": 1, 2: 2})  # [bad-format-string-key]
 print(\"%(one)d, %(two)d\" % {\"one\": 1, \"two\": 2})
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/bad-format-string-key.html\">Additional information</a>"""
 
 [W1301]
 why = "It looks like the format string that uses named conversion specifiers is used with a dictionary that contains keys not required by the format string."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/unused-format-string-key.html\">Additional information</a>"
 
 [W1302]
 why = "It looks like the PEP 3101 format string is invalid."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5692,7 +5523,6 @@ print('{a[0]} + {a[1]}'.format(a=[0, 1]))
 [W1303]
 why = "It looks like the PEP 3101 format string that uses named fields doesn't receive one or more required keywords."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5711,7 +5541,6 @@ print(\"My name is {first} {last}\".format(first=\"John\", last=\"Wick\"))
 [W1304]
 why = "It looks like the PEP 3101 format string that uses named fields is used with an argument that is not required by the format string."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5732,7 +5561,6 @@ print(\"{x} {y}\".format(x=1, y=2))
 [W1305]
 why = "It looks like the PEP 3101 format string contains both automatic field numbering (e.g. '{}') and manual field specification (e.g. '{0}')."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5753,7 +5581,6 @@ print('{} {}'.format('hello', 'world'))
 [W1306]
 why = "It looks like the PEP 3101 format string uses an attribute specifier ({0.length}), but the argument passed for formatting doesn't have that attribute."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5772,7 +5599,6 @@ print(\"{0.real}\".format(1))
 [W1307]
 why = "It looks like the PEP 3101 format string uses a lookup specifier ({a[1]}), but the argument passed for formatting doesn't contain or doesn't have that key as an attribute."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5792,12 +5618,11 @@ print('The second fruit is a {fruits[1]}'.format(fruits=enough_fruits))
 
 [W1308]
 why = "It looks like we detect that a string formatting is repeating an argument instead of using named string arguments"
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/duplicate-string-formatting-argument.html\">Additional information</a>"
 
 [W1309]
 why = "It looks like we detect an f-string that does not use any interpolation variables, in which case it can be either a normal string or a bug in the code."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5820,7 +5645,6 @@ print(f\"{x} + {y} = {x + y}\")
 [W1310]
 why = "It looks like we detect a string that does not have any interpolation variables, in which case it can be either a normal string without formatting or a bug in the code."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5839,7 +5663,6 @@ print(\"number: {}\".format(1))
 [W1113]
 why = "When defining a keyword argument before variable positional arguments, one can end up in having multiple values passed for the aforementioned parameter in case the method is called with keyword arguments."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5860,7 +5683,6 @@ def func(*args, x=None):
 [W1114]
 why = "Emitted  when the caller's argument names fully match the parameter names in the function signature but do not have the same order."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5901,7 +5723,6 @@ def args_out_of_order():
 [W1115]
 why = "It looks like the non-string value is assigned to __name__"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5928,7 +5749,6 @@ Fruit.__name__ = \"FRUIT\"
 [W1116]
 why = "It looks like the second argument of an isinstance call is not a type."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5947,7 +5767,6 @@ isinstance(\"apples and oranges\", str)
 [W2301]
 why = "It looks like the ellipsis constant is encountered and can be avoided. A line of code consisting of an ellipsis is unnecessary if there is a docstring on the preceding line or if there is a statement in the same scope."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5969,7 +5788,6 @@ def my_function():
 [W0511]
 why = "It looks like the warning note as FIXME or XXX is detected."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -5991,7 +5809,8 @@ examples = """
 # I have fixed the issue
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/fixme.html\">Additional information</a>"""
 
 [W2402]
 why = """
@@ -5999,12 +5818,11 @@ Some editors don't support non-ASCII file names properly. Even though Python sup
 - https://peps.python.org/pep-0489/#export-hook-name
 - https://peps.python.org/pep-0672/#confusing-features
 - https://bugs.python.org/issue20485"""
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/non-ascii-file-name.html\">Additional information</a>"
 
 [W2101]
 why = "It looks like the new lock instance is created by using with statement which has no effect. Instead, an existing instance should be used to acquire lock."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6033,16 +5851,15 @@ with lock:
 
 [W6001]
 why = "It looks like the deprecated typing alias is used."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/deprecated-typing-alias.html\">Additional information</a>"
 
 [W2601]
 why = "It looks like the py-version set by the user is lower than 3.6 and pylint encounters a f-string."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/using-f-string-in-unsupported-version.html\">Additional information</a>"
 
 [W2602]
 why = "It looks like the py-version set by the user is lower than 3.8 and pylint encounters a ``typing.final`` decorator."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6065,12 +5882,12 @@ class Playtypus(Animal):
         ...
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/using-final-decorator-in-unsupported-version.html\">Additional information</a>"""
 
 [W0149]
 why = "Unbounded `while` loops can often be rewritten as bounded `for` loops."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6109,7 +5926,6 @@ def fetch_data():
 [C0121]
 why = "It looks like the expression is compared to singleton values like True, False or None."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6132,7 +5948,6 @@ if game_won:
 [C0123]
 why = "The idiomatic way to perform an explicit typecheck in Python is to use isinstance(x, Y) rather than type(x) == Y, type(x) is Y. Though there are unusual situations where these give different results."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6155,7 +5970,6 @@ if isinstance(test_score, dict):
 [C0112]
 why = "It looks like the module, function, class or method has an empty docstring (it would be too easy ;)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6176,7 +5990,6 @@ def foo():
 [C0114]
 why = "It looks like the module has no docstring.Empty modules do not require a docstring."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6204,7 +6017,6 @@ def print_python_version():
 [C0115]
 why = "It looks like the class has no docstring.Even an empty class must have a docstring."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6232,7 +6044,6 @@ class Person:
 [C0116]
 why = "It looks like the function or method has no docstring.Some special methods like __init__ do not require a docstring."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6260,7 +6071,6 @@ def print_python_version():
 [C0103]
 why = "It looks like the name doesn't conform to naming rules associated to its type (constant, variable, class...)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6288,12 +6098,12 @@ class Cat:
 CAT = Cat().meow(42)
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/invalid-name.html\">Additional information</a>"""
 
 [C0104]
 why = "It looks like the name matches bad-names or bad-names-rgxs- (unauthorized names)."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6313,12 +6123,11 @@ def print_fruit():
 
 [C0105]
 why = "It looks like the TypeVar name doesn't reflect its type variance. According to PEP8, it is recommended to add suffixes '_co' and '_contra' to the variables used to declare covariant or contravariant behaviour respectively. Invariant (default) variables do not require a suffix. The message is also emitted when invariant variables do have a suffix."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/typevar-name-incorrect-variance.html\">Additional information</a>"
 
 [C0131]
 why = "It looks like both the \"covariant\" and \"contravariant\" keyword arguments are set to \"True\" in a TypeVar."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6342,7 +6151,6 @@ T_contra = TypeVar(\"T_contra\", contravariant=True)
 [C0132]
 why = "It looks like the TypeVar is assigned to a variable that does not match its name argument."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6365,7 +6173,6 @@ T = TypeVar(\"T\")
 [C0202]
 why = "It looks like the class method has a first argument named differently than the value specified in valid-classmethod-first-arg option (default to \"cls\"), recommended to easily differentiate them from regular instance methods."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6391,16 +6198,15 @@ class Klass:
 
 [C0203]
 why = "It looks like the metaclass method has a first argument named differently than the value specified in valid-classmethod-first-arg option (default to \"cls\"), recommended to easily differentiate them from regular instance methods."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/bad-mcs-method-argument.html\">Additional information</a>"
 
 [C0204]
 why = "It looks like the metaclass class method has a first argument named differently than the value specified in valid-metaclass-classmethod-first-arg option (default to \"mcs\"), recommended to easily differentiate them from regular instance methods."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/bad-mcs-classmethod-argument.html\">Additional information</a>"
 
 [C0205]
 why = "It looks like the class __slots__ is a simple string, rather than an iterable."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6427,7 +6233,6 @@ class Fruit:
 [C1901]
 why = "It looks like Pylint detects comparison to an empty string constant."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6460,7 +6265,6 @@ if y:
 [C2001]
 why = "It looks like Pylint detects comparison to a 0 constant."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6493,7 +6297,6 @@ if y:
 [C2201]
 why = "It looks like the constant is placed on the left side of a comparison. It is usually clearer in intent to place it in the right hand side of the comparison."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6526,7 +6329,6 @@ def compare_apples(apples=20):
 [C0501]
 why = "A for loop that checks for a condition and return a bool can be replaced with any or all."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6565,7 +6367,6 @@ def all_even(items):
 [C0198]
 why = "It looks like the docstring does not have triple double quotes."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6583,16 +6384,16 @@ def foo():
     return
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/bad-docstring-quotes.html\">Additional information</a>"""
 
 [C0199]
 why = "It looks like the blank line is found at the beginning of a docstring."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/docstring-first-line-empty.html\">Additional information</a>"
 
 [C0301]
 why = "It looks like the line is longer than a given number of characters."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6615,16 +6416,16 @@ FRUIT = [
 ]
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/line-too-long.html\">Additional information</a>"""
 
 [C0302]
 why = "It looks like the module has too many lines, reducing its readability."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/too-many-lines.html\">Additional information</a>"
 
 [C0303]
 why = "It looks like there is whitespace between the end of a line and the newline."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6643,12 +6444,11 @@ print(\"Hello\")
 
 [C0304]
 why = "It looks like the last line in a file is missing a newline."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/missing-final-newline.html\">Additional information</a>"
 
 [C0305]
 why = "It looks like there are trailing blank lines in a file."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6669,7 +6469,6 @@ print(\"apple\")
 [C0321]
 why = "It looks like more than on statement are found on the same line."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6697,7 +6496,6 @@ else:
 [C0325]
 why = "It looks like the single item in parentheses follows an if, for, or other keyword."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6731,20 +6529,19 @@ if i - 0 in exclude:
 
 [C0327]
 why = "It looks like there are mixed (LF and CRLF) newline signs in a file."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/mixed-line-endings.html\">Additional information</a>"
 
 [C0328]
 why = "It looks like there is different newline than expected."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/unexpected-line-ending-format.html\">Additional information</a>"
 
 [C2701]
 why = "It looks like the private module or object prefixed with _ is imported. PEP8 guidance on Naming Conventions states that public attributes with leading underscores should be considered private."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/import-private-name.html\">Additional information</a>"
 
 [C0410]
 why = "It looks like import statement importing multiple modules is detected."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6764,7 +6561,6 @@ import sys
 [C0411]
 why = "It looks like PEP8 import order is not respected (standard imports first, then third-party libraries, then local imports)"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6791,7 +6587,6 @@ from . import utils
 [C0412]
 why = "It looks like imports are not grouped by packages"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6818,7 +6613,6 @@ from logging.handlers import FileHandler
 [C0413]
 why = "It looks like code and imports are mixed"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6847,7 +6641,6 @@ print(f'Home directory is {home}', file=sys.stderr)
 [C0414]
 why = "It looks like the import alias is same as original package.e.g using import numpy as numpy instead of import numpy as np"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6861,12 +6654,12 @@ import pandas as pandas  # [useless-import-alias]
 import pandas as pd
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/useless-import-alias.html\">Additional information</a>"""
 
 [C0415]
 why = "It looks like the import statement is used anywhere other than the module toplevel. Move this import to the top of the file."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6891,7 +6684,6 @@ def print_python_version():
 [C3001]
 why = "It looks like the lambda expression is assigned to variable rather than defining a standard function with the \"def\" keyword."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6911,7 +6703,6 @@ def foo(x):
 [C3002]
 why = "It looks like the lambda expression is directly called rather than executing its contents inline."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6929,12 +6720,11 @@ y = a**2 + 2*a + 1
 
 [C2503]
 why = "PEP8 recommends UTF-8 default encoding for Python files. See https://peps.python.org/pep-0008/#source-file-encoding"
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/bad-file-encoding.html\">Additional information</a>"
 
 [C1802]
 why = "It looks like Pylint detects that len(sequence) is being used without explicit comparison inside a condition to determine if a sequence is empty. Instead of coercing the length to a boolean, either rely on the fact that empty sequences are false or compare the length against a scalar."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6959,7 +6749,6 @@ if fruits:
 [C1803]
 why = "It looks like Pylint detects that collection literal comparison is being used to check for emptiness; Use implicit booleaness insteadof a collection classes; empty collections are considered as false"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -6984,7 +6773,6 @@ if z:
 [C0200]
 why = "It looks like code that iterates with range and len is encountered. Such code can be simplified by using the enumerate builtin."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7009,7 +6797,6 @@ for i, season in enumerate(seasons):
 [C0201]
 why = "It looks like the keys of a dictionary are iterated through the ``.keys()`` method or when ``.keys()`` is used for a membership check. It is enough to iterate through the dictionary itself, ``for key in dictionary``. For membership checks, ``if key in dictionary`` is faster."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7036,7 +6823,6 @@ for fruit in FRUITS:
 [C0206]
 why = "It looks like iterating over the keys of a dictionary and accessing the value by index lookup. Both the key and value can be accessed by iterating using the .items() method of the dictionary instead."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7073,7 +6859,6 @@ for instrument, section in ORCHESTRA.items():
 [C0207]
 why = "It looks like accessing only the first or last element of str.split(). The first and last element can be accessed by using str.split(sep, maxsplit=1)[0] or str.rsplit(sep, maxsplit=1)[-1] instead."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7089,16 +6874,16 @@ url = \"www.example.com\"
 suffix = url.rsplit(\".\", maxsplit=1)[-1]
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/use-maxsplit-arg.html\">Additional information</a>"""
 
 [C0208]
 why = "When iterating over values, sequence types (e.g., ``lists``, ``tuples``, ``ranges``) are more efficient than ``sets``."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/use-sequence-for-iteration.html\">Additional information</a>"
 
 [C0209]
 why = "It looks like we detect a string that is being formatted with format() or % which could potentially be a f-string. The use of f-strings is preferred. Requires Python 3.6 and ``py-version >= 3.6``."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7129,12 +6914,12 @@ menu = ('eggs', 'spam', 42.4)
 f_string_order = f\"{menu[0]} and {menu[1]}: {menu[2]:0.2f} ¤\"
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/consider-using-f-string.html\">Additional information</a>"""
 
 [C0113]
 why = "It looks like the boolean expression contains an unneeded negation."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7157,7 +6942,6 @@ why = """
 It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad. 
 If your programming guideline defines that you are programming in English, then there should be no need for non ASCII characters in Python Names. If not you can simply disable this check."""
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7178,7 +6962,6 @@ why = """
 It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad. 
 If your programming guideline defines that you are programming in English, then there should be no need for non ASCII characters in Python Names. If not you can simply disable this check."""
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7201,7 +6984,6 @@ foo = os_join(\"a\", \"b\")
 [C0401]
 why = "It looks like the word in comment is not spelled correctly."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7220,7 +7002,6 @@ examples = """
 [C0402]
 why = "It looks like the word in docstring is not spelled correctly."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7238,12 +7019,11 @@ examples = """
 
 [C0403]
 why = "It looks like the word in docstring cannot be checked by enchant."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/invalid-characters-in-docstring.html\">Additional information</a>"
 
 [C2801]
 why = "It looks like the dunder method is manually called instead of using the corresponding function/method/operator."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7272,7 +7052,6 @@ def is_bigger_than_two(x):
 [R0022]
 why = "It looks like the value for an option that is now deleted from pylint is encountered."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7288,12 +7067,12 @@ examples = """
 \"\"\"'bad-continuation' was removed from pylint in https://github.com/PyCQA/pylint/pull/3571\"\"\"
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/useless-option-value.html\">Additional information</a>"""
 
 [R0123]
 why = "It looks like comparing an object to a literal, which is usually what you do not want to do, since you can compare to a different literal than what was expected altogether."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7314,7 +7093,6 @@ def is_an_orange(fruit):
 [R0124]
 why = "It looks like something is compared against itself."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7337,7 +7115,6 @@ def is_an_orange(fruit):
 [R0133]
 why = "When two literals are compared with each other the result is a constant. Using the constant directly is both easier to read and more performant. Initializing 'True' and 'False' this way is not required since Python 2.3."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7358,7 +7135,6 @@ def is_the_answer(meaning_of_life: int) -> bool:
 [R0202]
 why = "It looks like the class method is defined without using the decorator syntax."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7396,7 +7172,6 @@ class Fruit:
 [R0203]
 why = "It looks like the static method is defined without using the decorator syntax."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7422,7 +7197,6 @@ class Worm:
 [R0205]
 why = "It looks like the class inherit from object, which under python3 is implicit, hence can be safely removed from bases."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7443,7 +7217,6 @@ class Banana:
 [R0206]
 why = "It looks like we detect that a property also has parameters, which are useless, given that properties cannot be called with additional arguments."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7472,12 +7245,11 @@ class Worm:
 
 [R6101]
 why = "It looks like dictionary values can be replaced by namedtuples or dataclass instances."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/consider-using-namedtuple-or-dataclass.html\">Additional information</a>"
 
 [R6102]
 why = "Only for style consistency! Emitted where an in-place defined ``list`` can be replaced by a ``tuple``. Due to optimizations by CPython, there is no performance benefit from it."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7498,7 +7270,6 @@ for i in (1, 2, 3):
 [R6103]
 why = "It looks like the if assignment is directly followed by an if statement and both can be combined by using an assignment expression ``:=``. Requires Python 3.8 and ``py-version >= 3.8``."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7521,7 +7292,6 @@ if apples := 2:
 [R5601]
 why = "It looks like the elif statement follows right after an indented block which itself ends with if or elif. It may not be ovious if the elif statement was willingly or mistakenly unindented. Extracting the indented if statement into a separate function might avoid confusion and prevent errors."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7561,12 +7331,12 @@ def myfunc2(shall_continue: bool, shall_exit: bool):
         print(\"Exiting.\")
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/confusing-consecutive-elif.html\">Additional information</a>"""
 
 [R5501]
 why = "It looks like the else statement is immediately followed by an if statement and does not contain statements that would be unrelated to it."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7595,12 +7365,11 @@ else:
 
 [R0401]
 why = "It looks like the cyclic import between two or more modules is detected."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/cyclic-import.html\">Additional information</a>"
 
 [R0402]
 why = "It looks like the submodule of a package is imported and aliased with the same name. E.g., instead of ``import concurrent.futures as futures`` use ``from concurrent import futures``"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7619,7 +7388,6 @@ from os import path
 [R0204]
 why = "It looks like the type of a variable changes inside a method or a function."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7640,7 +7408,6 @@ x = 2
 [R6301]
 why = "It looks like the method doesn't use its bound instance, and so could be written as a function."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7675,12 +7442,12 @@ class Person:
         print(\"Hi!\")
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/no-self-use.html\">Additional information</a>"""
 
 [R6201]
 why = "Membership tests are more efficient when performed on a lookup optimized datatype like ``sets``."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7703,7 +7470,6 @@ def fruit_is_dangerous_for_cat(fruit: str) -> bool:
 [R2044]
 why = "It looks like the # symbol appears on a line not followed by an actual comment"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7728,7 +7494,6 @@ x = 0  # comment
 [R1701]
 why = "It looks like multiple consecutive isinstance calls can be merged into one."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7755,7 +7520,6 @@ def is_number(value: Any) -> bool:
 [R1702]
 why = "It looks like the function or a method has too many nested blocks. This makes the code less understandable and maintainable."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7788,7 +7552,6 @@ def correct_fruits(fruits):
 [R1703]
 why = "It looks like the if statement can be replaced with 'bool(test)'."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7820,7 +7583,6 @@ def is_flying_animal(an_object):
 [R1704]
 why = "It looks like the local name is redefining an argument, which might suggest a potential error. This is taken in account only for a handful of name binding operations, such as for iteration, with statement assignment and exception handler assignment."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7843,7 +7605,6 @@ def show(host_id=10.11):
 [R1705]
 why = "Used in order to highlight an unnecessary block of code following an if containing a return statement. As such, it will warn when it encounters an else following a chain of ifs, all of them containing a return statement."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7873,7 +7634,6 @@ def compare_numbers(a: int, b: int) -> int:
 [R1706]
 why = "It looks like one of known pre-python 2.5 ternary syntax is used."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7894,7 +7654,6 @@ maximum = x if x >= y else y
 [R1707]
 why = "In Python, a tuple is actually created by the comma symbol, not by the parentheses. Unfortunately, one can actually create a tuple by misplacing a trailing comma, which can lead to potential weird bugs in your code. You should always use parentheses explicitly for creating a tuple."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7913,7 +7672,6 @@ COMPASS = (\"north\", \"south\", \"east\", \"west\")
 [R1708]
 why = "According to PEP479, the raise of StopIteration to end the loop of a generator may lead to hard to find bugs. This PEP specify that raise StopIteration has to be replaced by a simple return statement"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -7977,12 +7735,12 @@ def two_good_fruits_generator(fruits):
                 break
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/stop-iteration-return.html\">Additional information</a>"""
 
 [R1709]
 why = "It looks like redundant pre-python 2.5 ternary syntax is used."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8003,7 +7761,6 @@ def has_oranges(oranges, apples=None) -> bool:
 [R1710]
 why = "According to PEP8, if any return statement returns an expression, any return statements where no value is returned should explicitly state this as return None, and an explicit return statement should be present at the end of the function (if reachable)"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8027,7 +7784,6 @@ def get_the_answer(value: str) -> str | None:
 [R1711]
 why = "It looks like the single \"return\" or \"return None\" statement is found at the end of function or method definition. This statement can safely be removed because Python will implicitly return None"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8055,7 +7811,6 @@ def print_python_version():
 [R1712]
 why = "You do not have to use a temporary variable in order to swap variables. Using \"tuple unpacking\" to directly swap variables makes the intention more clear."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8082,7 +7837,6 @@ a, b = b, a
 [R1713]
 why = "Using str.join(sequence) is faster, uses less memory and increases readability compared to for-loop iteration."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8107,7 +7861,6 @@ print(\"\".join([\"apple\", \"pear\", \"peach\"]))
 [R1714]
 why = "To check if a variable is equal to one of many values,combine the values into a tuple and check if the variable is contained \"in\" it instead of checking for equality against each of the values.This is faster and less verbose."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8128,7 +7881,6 @@ def fruit_is_round(fruit):
 [R1715]
 why = "Using the builtin dict.get for getting a value from a dictionary if a key is present or a default if not, is simpler and considered more idiomatic, although sometimes a bit slower"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8154,7 +7906,6 @@ description = knights.get(\"Gallahad\", \"\")
 [R1716]
 why = "This message is emitted when pylint encounters boolean operation like\"a < b and b < c\", suggesting instead to refactor it to \"a < b < c\""
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8181,7 +7932,6 @@ if a < b < c:
 [R1717]
 why = "It looks like we detect the creation of a dictionary using the dict() callable and a transient list. Although there is nothing syntactically wrong with this code, it is hard to read and can be simplified to a dict comprehension.Also it is faster since you don't need to create another transient list"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8200,12 +7950,12 @@ NUMBERS = [1, 2, 3]
 DOUBLED_NUMBERS = {number: number * 2 for number in NUMBERS}
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/consider-using-dict-comprehension.html\">Additional information</a>"""
 
 [R1718]
 why = "Although there is nothing syntactically wrong with this code, it is hard to read and can be simplified to a set comprehension.Also it is faster since you don't need to create another transient list"
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8224,12 +7974,12 @@ NUMBERS = [1, 2, 2, 3, 4, 4]
 UNIQUE_EVEN_NUMBERS = {number for number in NUMBERS if number % 2 == 0}
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/consider-using-set-comprehension.html\">Additional information</a>"""
 
 [R1719]
 why = "It looks like the if expression can be replaced with 'bool(test)' or simply 'test' if the boolean cast is implicit."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8264,7 +8014,6 @@ def is_not_flying_thing(an_object):
 [R1720]
 why = "Used in order to highlight an unnecessary block of code following an if containing a raise statement. As such, it will warn when it encounters an else following a chain of ifs, all of them containing a raise statement."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8290,7 +8039,6 @@ def integer_sum(a: int, b: int) -> int:
 [R1721]
 why = "Instead of using an identity comprehension, consider using the list, dict or set constructor. It is faster and simpler."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8313,7 +8061,6 @@ UNIQUE_NUMBERS = set(NUMBERS)
 [R1722]
 why = "Instead of using exit() or quit(), consider using the sys.exit()."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8340,7 +8087,6 @@ if __name__ == \"__main__\":
 [R1723]
 why = "Used in order to highlight an unnecessary block of code following an if containing a break statement. As such, it will warn when it encounters an else following a chain of ifs, all of them containing a break statement."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8368,7 +8114,6 @@ def next_seven_elements(iterator):
 [R1724]
 why = "Used in order to highlight an unnecessary block of code following an if containing a continue statement. As such, it will warn when it encounters an else following a chain of ifs, all of them containing a continue statement."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8396,7 +8141,6 @@ def even_number_under(n: int):
 [R1725]
 why = "It looks like calling the super() builtin with the current class and instance. On Python 3 these arguments are the default and they can be omitted."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8427,7 +8171,6 @@ class Orange(Fruit):
 [R1726]
 why = "It looks like the boolean condition is able to be simplified."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8448,7 +8191,6 @@ def has_apples(apples) -> bool:
 [R1727]
 why = "It looks like the boolean condition can be simplified to a constant value."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8469,7 +8211,6 @@ def is_a_fruit(fruit):
 [R1728]
 why = "If your container can be large using a generator will bring better performance."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8491,12 +8232,12 @@ max(y**2 for y in list(range(10)))
 min(y**2 for y in list(range(10)))
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/consider-using-generator.html\">Additional information</a>"""
 
 [R1729]
 why = "Comprehension inside of 'any', 'all', 'max', 'min' or 'sum' is unnecessary. A generator would be sufficient and faster."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8516,12 +8257,12 @@ all(randint(-5, 5) > 0 for _ in range(10))
 any(randint(-5, 5) > 0 for _ in range(10))
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/use-a-generator.html\">Additional information</a>"""
 
 [R1730]
 why = "Using the min builtin instead of a conditional improves readability and conciseness."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8546,7 +8287,6 @@ print(min(1, 2))
 [R1731]
 why = "Using the max builtin instead of a conditional improves readability and conciseness."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8571,7 +8311,6 @@ print(max(1, 2))
 [R1732]
 why = "Emitted if a resource-allocating assignment or call may be replaced by a 'with' block. By using 'with' the release of the allocated resources is ensured even in the case of an exception."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8593,12 +8332,12 @@ with open(\"banana.txt\", \"r\", encoding=\"utf8\") as f:
     best = f.read()
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/consider-using-with.html\">Additional information</a>"""
 
 [R1733]
 why = "It looks like iterating over the dictionary items (key-item pairs) and accessing the value by index lookup. The value can be accessed directly instead."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8623,7 +8362,6 @@ for fruit_name, fruit_count in FRUITS.items():
 [R1734]
 why = "It looks like using list() to create an empty list instead of the literal []. The literal is faster as it avoids an additional function call."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8642,7 +8380,6 @@ empty_list = []
 [R1735]
 why = "It looks like using dict() to create an empty dictionary instead of the literal {}. The literal is faster as it avoids an additional function call."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8664,12 +8401,12 @@ new_dict = {\"foo\": \"bar\"}
 new_dict = {**another_dict}
 
 ```
-"""
+
+<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/use-dict-literal.html\">Additional information</a>"""
 
 [R1736]
 why = "It looks like iterating over an enumeration and accessing the value by index lookup. The value can be accessed directly instead."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8693,12 +8430,11 @@ for index, letter in enumerate(letters):
 
 [R1260]
 why = "It looks like the method or function is too complex based on McCabe Complexity Cyclomatic"
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/too-complex.html\">Additional information</a>"
 
 [R0901]
 why = "It looks like class has too many parent classes, try to reduce this to get a simpler (and so easier to use) class."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8772,7 +8508,6 @@ class Playtypus(Mammal):
 [R0902]
 why = "It looks like class has too many instance attributes, try to reduce this to get a simpler (and so easier to use) class."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8822,7 +8557,6 @@ class Fruit:
 [R0903]
 why = "It looks like class has too few public methods, so be sure it's really worth it."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8873,12 +8607,11 @@ def bore(fruit: Fruit, worm_name: str):
 
 [R0904]
 why = "It looks like class has too many public methods, try to reduce this to get a simpler (and so easier to use) class."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/too-many-public-methods.html\">Additional information</a>"
 
 [R0911]
 why = "It looks like the function or method has too many return statement, making it hard to follow."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8924,7 +8657,6 @@ def to_string(x):
 [R0912]
 why = "It looks like the function or method has too many branches, making it hard to follow."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -8977,7 +8709,6 @@ def num_to_word(x):
 [R0913]
 why = "It looks like the function or method takes too many arguments."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -9027,16 +8758,15 @@ def three_d_chess_move(
 
 [R0914]
 why = "It looks like the function or method has too many local variables."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/too-many-locals.html\">Additional information</a>"
 
 [R0915]
 why = "It looks like the function or method has too many statements. You should then split it in smaller functions / methods."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/too-many-statements.html\">Additional information</a>"
 
 [R0916]
 why = "It looks like the if statement contains too many boolean expressions."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -9060,24 +8790,23 @@ def can_be_divided_by_two_and_are_not_zero(x, y, z):
 
 [R0801]
 why = "Indicates that a set of similar lines has been detected among multiple file. This usually means that the code should be refactored to avoid this duplication."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/duplicate-code.html\">Additional information</a>"
 
 [R6002]
 why = "Only emitted if 'runtime-typing=no' and a deprecated typing alias is used in a type annotation context in Python 3.7 or 3.8."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/consider-using-alias.html\">Additional information</a>"
 
 [R6003]
 why = "It looks like 'typing.Union' or 'typing.Optional' is used instead of the alternative Union syntax 'int | None'."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/consider-alternative-union-syntax.html\">Additional information</a>"
 
 [I0001]
 why = "Used to inform that a built-in module has not been checked using the raw checkers."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/information/raw-checker-failed.html\">Additional information</a>"
 
 [I0010]
 why = "It looks like the inline option is either badly formatted or can't be used inside modules."
 examples = """
-
 ## Problematic code
 
 ```py
@@ -9096,31 +8825,31 @@ examples = """
 
 [I0011]
 why = "It looks like the inline option disables a message or a messages category."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/information/locally-disabled.html\">Additional information</a>"
 
 [I0013]
 why = "Used to inform that the file will not be checked"
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/information/file-ignored.html\">Additional information</a>"
 
 [I0020]
 why = "A message was triggered on a line, but suppressed explicitly by a disable= comment in the file. This message is not generated for messages that are ignored due to configuration settings."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/information/suppressed-message.html\">Additional information</a>"
 
 [I0021]
 why = "Reported when a message is explicitly disabled for a line or a block of code, but never triggered."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/information/useless-suppression.html\">Additional information</a>"
 
 [I0022]
 why = "Some inline pylint options have been renamed or reworked, only the most recent form should be used. NOTE:skip-all is only available with pylint >= 0.26"
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/information/deprecated-pragma.html\">Additional information</a>"
 
 [I0023]
 why = "It looks like the message is enabled or disabled by id."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/information/use-symbolic-message-instead.html\">Additional information</a>"
 
 [I1101]
 why = "It looks like the variable is accessed for non-existent member of C extension. Due to unavailability of source static analysis is impossible, but it may be performed by introspecting living objects in run-time."
-examples = ""
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/information/c-extension-no-member.html\">Additional information</a>"
 
 [W1613]
 why = "Used when the xrange built-in function is referenced (missing from Python 3). Use range instead."

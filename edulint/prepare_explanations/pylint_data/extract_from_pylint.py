@@ -1,11 +1,14 @@
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 import os
+from time import sleep
 
 from pylint.lint import PyLinter
 import tomli
 import tomli_w
+import requests
+from tqdm import tqdm
 
 from thonny_process_slim import make_explanation_more_friedly
 
@@ -93,29 +96,48 @@ def md_code_block_with_headline(code: str, headline: Optional[str] = None) -> st
     return answer
 
 
-def convert_pylint_toml_to_EDULINT_TOML(input_filename: str, output_filename: str):
+def produce_doc_link_if_available(checker: Dict[str, Any], skip_online_check: bool = True) -> str:
+    non_viable_text = '"**Additional details:**\n\nYou can help us make the doc better `by contributing'
+    if not checker['details'] or checker['details'].startswith(non_viable_text):
+        return ""
+    
+    doc_url = f'https://pylint.pycqa.org/en/latest/user_guide/messages/{checker["level"]}/{checker["name"]}.html'
+    if not skip_online_check:
+        resp = requests.get(doc_url)
+        sleep(0.5)
+        if resp.status_code != 200:
+            return ""
+    
+    return f'\n<a href="{doc_url}">Additional information</a>'
+
+
+def convert_pylint_toml_to_edulint_toml(input_filename: str, output_filename: str):
     with open(input_filename, 'rb') as f:
         data = tomli.load(f)
 
-    for key in data:
-        examples = ''
-        if data[key]['bad_code']:
-            examples += md_code_block_with_headline(data[key]['bad_code'], 'Problematic code')
-        if data[key]['good_code']:
-            examples += md_code_block_with_headline(data[key]['good_code'], 'How to fix it')
+    edulint_data = {}
 
-        data[key] = {
-            'why': make_explanation_more_friedly(data[key]['description']),
-            'examples': examples,
+    for checker_id, checker in tqdm(data.items()):
+        examples = ''
+        if checker['bad_code']:
+            examples += md_code_block_with_headline(checker['bad_code'], 'Problematic code')
+        if checker['good_code']:
+            examples += md_code_block_with_headline(checker['good_code'], 'How to fix it')
+        
+        examples += produce_doc_link_if_available(checker)
+
+        edulint_data[checker_id] = {
+            'why': make_explanation_more_friedly(checker['description']),
+            'examples': examples.lstrip(),
         }
         
     with open(output_filename, 'wb') as f:
-        tomli_w.dump(data, f, multiline_strings=True)
+        tomli_w.dump(edulint_data, f, multiline_strings=True)
 
 
 def process_from_stored_data():
     convert_json_to_toml(PYLINT_EXPORT_JSON, PYLINT_EXPORT_TOML)
-    convert_pylint_toml_to_EDULINT_TOML(PYLINT_EXPORT_TOML, EDULINT_TOML)
+    convert_pylint_toml_to_edulint_toml(PYLINT_EXPORT_TOML, EDULINT_TOML)
 
 
 if __name__ == "__main__":
