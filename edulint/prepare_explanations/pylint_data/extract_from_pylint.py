@@ -78,6 +78,9 @@ def convert_json_to_toml(input_filename: str, output_filename: str):
 
 
 def md_code_block_with_headline(code: str, headline: Optional[str] = None) -> str:
+    if "# This is a placeholder for correct code for this message." in code:
+        return ""
+
     answer = ''
     if headline:
         answer += f"\n## {headline}\n"

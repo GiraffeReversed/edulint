@@ -1,0 +1,3 @@
+old/
+*.toml
+!edulint_manual.toml

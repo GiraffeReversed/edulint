@@ -1,49 +1,9135 @@
-[W0612]
-why = "Having unused variables in code makes the code unnecessarily complicated."
-examples = """A solution is to remove the variable, if possible, or rename it to `_`, which is a common convention for naming unused variables. A variable named `_` should never be used anywhere later in code."""
+[F0001]
+why = "It looks like the error occurred preventing the analysis of a               module (unable to find it for instance)."
+examples = ""
 
-[R6201]
-why = "Having unnecessary conditions in code makes the code harder to understand."
+[F0002]
+why = "It looks like the unexpected error occurred while building the Astroid  representation. This is usually accompanied by a traceback. Please report such errors !"
+examples = ""
+
+[F0010]
+why = "It looks like the exception occurred while building the Astroid representation which could be handled by astroid."
+examples = ""
+
+[F0011]
+why = "It looks like the exception occurred while parsing a pylint configuration file."
+examples = ""
+
+[F0202]
+why = "It looks like Pylint has been unable to check methods signature compatibility for an unexpected reason. Please report this kind if you don't make sense of it."
+examples = ""
+
+[E0001]
+why = "It looks like the syntax error is raised for a module."
 examples = """
-A condition that returns bool in both branches can be simplified even if it contains a logical statement.
+
+## Problematic code
 
 ```py
-def problematic(a: bool, b: bool) -> bool:
-    if a or b:
-        return True
-    else:
-        return False
+fruit_stock = {
+    'apple': 42,
+    'orange': 21  # [syntax-error]
+    'banana': 12
+}
+
 ```
 
+## How to fix it
+
 ```py
-def good(a: bool, b: bool) -> bool:
-    return a or b
+fruit_stock = {
+    'apple': 42,
+    'orange': 21,
+    'banana': 12
+}
+
+```
+"""
+
+[E0011]
+why = "It looks like the unknown inline option is encountered."
+examples = """
+
+## Problematic code
+
+```py
+# +1: [unrecognized-inline-option]
+# pylint:applesoranges=1
+
+```
+
+## How to fix it
+
+```py
+# pylint: enable=too-many-public-methods
+
+```
+"""
+
+[E0013]
+why = "It looks like the bad value is used in 'load-plugins'."
+examples = ""
+
+[E0014]
+why = "It looks like we detect a setting in the top level of a toml configuration that shouldn't be there."
+examples = ""
+
+[E0015]
+why = "It looks like we detect an option that we do not recognize."
+examples = ""
+
+[E1700]
+why = "It looks like the `yield` or `yield from` statement is found inside an async function."
+examples = """
+
+## Problematic code
+
+```py
+async def foo():
+    yield from [1, 2, 3]  # [yield-inside-async-function]
+
+```
+
+## How to fix it
+
+```py
+async def foo():
+    def _inner_foo():
+        yield from [1, 2, 3]
+
+
+async def foo():
+    yield 42
+
+```
+"""
+
+[E1701]
+why = "It looks like the async context manager is used with an object that does not implement the async context management protocol."
+examples = """
+
+## Problematic code
+
+```py
+class ContextManager:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *exc):
+        pass
+
+
+async def foo():
+    async with ContextManager():  # [not-async-context-manager]
+        pass
+
+```
+
+## How to fix it
+
+```py
+class AsyncContextManager:
+    def __aenter__(self):
+        pass
+
+    def __aexit__(self, *exc):
+        pass
+
+
+async def foo():
+    async with AsyncContextManager():
+        pass
+
+```
+"""
+
+[E0111]
+why = "It looks like the first argument to reversed() builtin isn't a sequence (does not implement __reversed__, nor __getitem__ and __len__"
+examples = """
+
+## Problematic code
+
+```py
+reversed({1, 2, 3, 4})  # [bad-reversed-sequence]
+
+```
+
+## How to fix it
+
+```py
+reversed([1, 2, 3, 4])
+
+```
+"""
+
+[E0119]
+why = "It looks like format function is not called on str object. e.g doing print(\"value: {}\").format(123) instead of print(\"value: {}\".format(123)). This might not be what the user intended to do."
+examples = """
+
+## Problematic code
+
+```py
+print('Value: {}').format('Car')  # [misplaced-format-function]
+
+```
+
+## How to fix it
+
+```py
+print('Value: {}'.format('Car'))
+
+```
+"""
+
+[E0100]
+why = "It looks like the special class method __init__ is turned into a generator by a yield in its body."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    def __init__(self, worms):  # [init-is-generator]
+        yield from worms
+
+apple = Fruit([\"Fahad\", \"Anisha\", \"Tabatha\"])
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    def __init__(self, worms):
+        self.__worms = worms
+
+    def worms(self):
+        yield from self.__worms
+
+apple = Fruit([\"Fahad\", \"Anisha\", \"Tabatha\"])
+for worm in apple.worms():
+    pass
+
+```
+"""
+
+[E0101]
+why = "It looks like the special class method __init__ has an explicit return value."
+examples = """
+
+## Problematic code
+
+```py
+class Sum:
+
+    def __init__(self, a, b):  # [return-in-init]
+        return a + b
+
+```
+
+## How to fix it
+
+```py
+class Sum:
+
+    def __init__(self, a, b) -> None:
+        self.result = a + b
+
+```
+"""
+
+[E0102]
+why = "It looks like the function / class / method is redefined."
+examples = """
+
+## Problematic code
+
+```py
+def get_email():
+    pass
+
+
+def get_email():  # [function-redefined]
+    pass
+
+```
+
+## How to fix it
+
+```py
+def get_email():
+    pass
+
+```
+"""
+
+[E0103]
+why = "It looks like break or continue keywords are used outside a loop."
+examples = """
+
+## Problematic code
+
+```py
+def print_even_numbers():
+    for i in range(100):
+        if i % 2 == 0:
+            print(i)
+    else:
+        continue  # [not-in-loop]
+
+```
+
+## How to fix it
+
+```py
+def print_even_numbers():
+    for i in range(100):
+        if i % 2:
+            continue
+        print(i)
+
+```
+"""
+
+[E0104]
+why = "It looks like the \"return\" statement is found outside a function or method."
+examples = """
+
+## Problematic code
+
+```py
+return 42  # [return-outside-function]
+
+```
+
+## How to fix it
+
+```py
+def get_the_answer():
+    return 42
+
+```
+"""
+
+[E0105]
+why = "It looks like the \"yield\" statement is found outside a function or method."
+examples = """
+
+## Problematic code
+
+```py
+for i in range(10):
+    yield i  # [yield-outside-function]
+
+```
+
+## How to fix it
+
+```py
+def one_to_ten():
+    for i in range(10):
+        yield i
+
+```
+"""
+
+[E0106]
+why = "It looks like the \"return\" statement with an argument is found outside in a generator function or method (e.g. with some \"yield\" statements)."
+examples = ""
+
+[E0107]
+why = "It looks like you attempt to use the C-style pre-increment or pre-decrement operator -- and ++, which doesn't exist in Python."
+examples = """
+
+## Problematic code
+
+```py
+i = 0
+
+while i <= 10:
+    print(i)
+    ++i  # [nonexistent-operator]
+
+```
+
+## How to fix it
+
+```py
+i = 0
+
+while i <= 10:
+    print(i)
+    i += 1
+
+```
+"""
+
+[E0108]
+why = "Duplicate argument names in function definitions are syntax errors."
+examples = """
+
+## Problematic code
+
+```py
+def get_fruits(apple, banana, apple):  # [duplicate-argument-name]
+    pass
+
+```
+
+## How to fix it
+
+```py
+def get_fruits(apple, banana, orange):
+    pass
+
+```
+"""
+
+[E0110]
+why = "It looks like the abstract class with `abc.ABCMeta` as metaclass has abstract methods and is instantiated."
+examples = """
+
+## Problematic code
+
+```py
+import abc
+
+
+class Animal(abc.ABC):
+    @abc.abstractmethod
+    def make_sound(self):
+        pass
+
+
+sheep = Animal()  # [abstract-class-instantiated]
+
+```
+
+## How to fix it
+
+```py
+import abc
+
+
+class Animal(abc.ABC):
+    @abc.abstractmethod
+    def make_sound(self):
+        pass
+
+
+class Sheep(Animal):
+    def make_sound(self):
+        print(\"bhaaaaa\")
+
+
+sheep = Sheep()
+
+```
+"""
+
+[E0112]
+why = "It looks like there are more than one starred expressions (`*x`) in an assignment. This is a SyntaxError."
+examples = """
+
+## Problematic code
+
+```py
+*stars, *constellations = [\"Sirius\", \"Arcturus\", \"Vega\"]  # [too-many-star-expressions]
+
+```
+
+## How to fix it
+
+```py
+*sirius_and_arcturus, vega = [\"Sirius\", \"Arcturus\", \"Vega\"]
+
+```
+"""
+
+[E0113]
+why = "It looks like the star expression is used as a starred assignment target."
+examples = """
+
+## Problematic code
+
+```py
+*fruit = ['apple', 'banana', 'orange']  # [invalid-star-assignment-target]
+
+```
+
+## How to fix it
+
+```py
+fruit = ['apple', 'banana', 'orange']
+
+```
+"""
+
+[E0114]
+why = "It looks like the star expression is not used in an assignment target."
+examples = """
+
+## Problematic code
+
+```py
+stars = *[\"Sirius\", \"Arcturus\", \"Vega\"]  # [star-needs-assignment-target]
+
+```
+
+## How to fix it
+
+```py
+sirius, *arcturus_and_vega = [\"Sirius\", \"Arcturus\", \"Vega\"]
+
+```
+"""
+
+[E0115]
+why = "It looks like the name is both nonlocal and global."
+examples = """
+
+## Problematic code
+
+```py
+NUMBER = 42
+
+
+def update_number(number):  # [nonlocal-and-global]
+    global NUMBER
+    nonlocal NUMBER
+    NUMBER = number
+    print(f\"New global number is: {NUMBER}\")
+
+
+update_number(24)
+
+```
+
+## How to fix it
+
+```py
+NUMBER = 42
+
+
+def update_number(number):
+    global NUMBER
+    NUMBER = number
+    print(f\"New global number is: {NUMBER}\")
+
+
+update_number(24)
+
+```
+"""
+
+[E0116]
+why = "It looks like the `continue` keyword is found inside a finally clause, which is a SyntaxError."
+examples = """
+
+## Problematic code
+
+```py
+while True:
+    try:
+        pass
+    finally:
+        continue  # [continue-in-finally]
+
+```
+
+## How to fix it
+
+```py
+while True:
+    try:
+        pass
+    except ValueError:
+        pass
+    else:
+        continue
+
+```
+"""
+
+[E0117]
+why = "It looks like the nonlocal variable does not have an attached name somewhere in the parent scopes"
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    def get_color(self):
+        nonlocal colors  # [nonlocal-without-binding]
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    colors = [\"red\", \"green\"]
+
+    def get_color(self):
+        nonlocal colors
+
+```
+"""
+
+[E0118]
+why = "It looks like the name is used prior a global declaration, which results in an error since Python 3.6."
+examples = """
+
+## Problematic code
+
+```py
+TOMATO = \"black cherry\"
+
+
+def update_tomato():
+    print(TOMATO)  # [used-prior-global-declaration]
+    global TOMATO
+    TOMATO = \"cherry tomato\"
+
+```
+
+## How to fix it
+
+```py
+TOMATO = \"black cherry\"
+
+
+def update_tomato():
+    global TOMATO
+    TOMATO = \"moneymaker\"
+
+```
+"""
+
+[E0301]
+why = "It looks like the __iter__ method returns something which is not an iterable (i.e. has no `__next__` method)"
+examples = """
+
+## Problematic code
+
+```py
+import random
+
+
+class GenericAstrology:
+    def __init__(self, signs, predictions):
+        self.signs = signs
+        self.predictions = predictions
+
+    def __iter__(self):  # [non-iterator-returned]
+        self.index = 0
+        self.number_of_prediction = len(self.predictions)
+        return self
+
+
+SIGNS = [\"Aries\", \"Taurus\", \"Gemini\", \"Cancer\", \"Leo\", \"Virgo\", \"Libra\"]
+PREDICTIONS = [\"good things\", \"bad thing\", \"existential dread\"]
+for sign, prediction in GenericAstrology(SIGNS, PREDICTIONS):
+    print(f\"{sign} : {prediction} today\")
+
+```
+
+## How to fix it
+
+```py
+import random
+
+
+class GenericAstrology:
+    def __init__(self, signs, predictions):
+        self.signs = signs
+        self.predictions = predictions
+
+    def __iter__(self):
+        self.index = 0
+        self.number_of_prediction = len(self.predictions)
+        return self
+
+    def __next__(self):
+        if self.index == len(self.signs):
+            raise StopIteration
+        self.index += 1
+        prediction_index = random.randint(0, self.number_of_prediction - 1)
+        return self.signs[self.index - 1], self.predictions[prediction_index]
+
+
+SIGNS = [\"Aries\", \"Taurus\", \"Gemini\", \"Cancer\", \"Leo\", \"Virgo\", \"Libra\"]
+PREDICTIONS = [\"good things\", \"bad thing\", \"existential dread\"]
+for sign, prediction in GenericAstrology(SIGNS, PREDICTIONS):
+    print(f\"{sign} : {prediction} today\")
+
+```
+"""
+
+[E0302]
+why = "It looks like the special method was defined with an invalid number of parameters. If it has too few or too many, it might not work at all."
+examples = """
+
+## Problematic code
+
+```py
+class ContextManager:
+    def __enter__(self, context):  # [unexpected-special-method-signature]
+        pass
+
+    def __exit__(self, type):  # [unexpected-special-method-signature]
+        pass
+
+```
+
+## How to fix it
+
+```py
+class ContextManager:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, type, value, traceback):
+        pass
+
+```
+"""
+
+[E0303]
+why = "It looks like the __len__ method returns something which is not a non-negative integer"
+examples = """
+
+## Problematic code
+
+```py
+class FruitBasket:
+    def __init__(self, fruits):
+        self.fruits = [\"Apple\", \"Banana\", \"Orange\"]
+
+    def __len__(self):  # [invalid-length-returned]
+        return - len(self.fruits)
+
+```
+
+## How to fix it
+
+```py
+class FruitBasket:
+    def __init__(self, fruits):
+        self.fruits = [\"Apple\", \"Banana\", \"Orange\"]
+
+    def __len__(self):
+        return len(self.fruits)
+
+```
+"""
+
+[E0304]
+why = "It looks like the __bool__ method returns something which is not a bool"
+examples = """
+
+## Problematic code
+
+```py
+class BadBool:
+    \"\"\"__bool__ returns an int\"\"\"
+
+    def __bool__(self):  # [invalid-bool-returned]
+        return 1
+
+```
+
+## How to fix it
+
+```py
+class GoodBool:
+    \"\"\"__bool__ returns `bool`\"\"\"
+
+    def __bool__(self):
+        return True
+
+```
+"""
+
+[E0305]
+why = "It looks like the __index__ method returns something which is not an integer"
+examples = """
+
+## Problematic code
+
+```py
+class BadIndex:
+    \"\"\"__index__ returns a dict\"\"\"
+
+    def __index__(self):  # [invalid-index-returned]
+        return {\"19\": \"19\"}
+
+```
+
+## How to fix it
+
+```py
+class GoodIndex:
+    \"\"\"__index__ returns <type 'int'>\"\"\"
+
+    def __index__(self):
+        return 19
+
+```
+"""
+
+[E0306]
+why = "It looks like the __repr__ method returns something which is not a string"
+examples = """
+
+## Problematic code
+
+```py
+class Repr:
+    \"\"\"__repr__ returns <type 'int'>\"\"\"
+
+    def __repr__(self):  # [invalid-repr-returned]
+        return 1
+
+```
+
+## How to fix it
+
+```py
+class Repr:
+    \"\"\"__repr__ returns <type 'str'>\"\"\"
+
+    def __repr__(self):
+        return \"apples\"
+
+```
+"""
+
+[E0307]
+why = "It looks like the __str__ method returns something which is not a string"
+examples = """
+
+## Problematic code
+
+```py
+class Str:
+    \"\"\"__str__ returns int\"\"\"
+
+    def __str__(self):  # [invalid-str-returned]
+        return 1
+
+```
+
+## How to fix it
+
+```py
+class Str:
+    \"\"\"__str__ returns <type 'str'>\"\"\"
+
+    def __str__(self):
+        return \"oranges\"
+
+```
+"""
+
+[E0308]
+why = "It looks like the __bytes__ method returns something which is not bytes"
+examples = """
+
+## Problematic code
+
+```py
+class BadBytes:
+    \"\"\"__bytes__ returns <type 'str'>\"\"\"
+
+    def __bytes__(self):  # [invalid-bytes-returned]
+        return \"123\"
+
+```
+
+## How to fix it
+
+```py
+class GoodBytes:
+    \"\"\"__bytes__ returns <type 'bytes'>\"\"\"
+
+    def __bytes__(self):
+        return b\"some bytes\"
+
+```
+"""
+
+[E0309]
+why = "It looks like the __hash__ method returns something which is not an integer"
+examples = """
+
+## Problematic code
+
+```py
+class BadHash:
+    \"\"\"__hash__ returns dict\"\"\"
+
+    def __hash__(self):  # [invalid-hash-returned]
+        return {}
+
+```
+
+## How to fix it
+
+```py
+class GoodHash:
+    \"\"\"__hash__ returns `int`\"\"\"
+
+    def __hash__(self):
+        return 19
+
+```
+"""
+
+[E0310]
+why = "It looks like the __length_hint__ method returns something which is not a non-negative integer"
+examples = """
+
+## Problematic code
+
+```py
+class BadLengthHint:
+    \"\"\"__length_hint__ returns non-int\"\"\"
+
+    def __length_hint__(self):  # [invalid-length-hint-returned]
+        return 3.0
+
+```
+
+## How to fix it
+
+```py
+class GoodLengthHint:
+    \"\"\"__length_hint__ returns <type 'int'>\"\"\"
+
+    def __length_hint__(self):
+        return 10
+
+```
+"""
+
+[E0311]
+why = "It looks like the __format__ method returns something which is not a string"
+examples = """
+
+## Problematic code
+
+```py
+class BadFormat:
+    \"\"\"__format__ returns <type 'int'>\"\"\"
+
+    def __format__(self, format_spec):  # [invalid-format-returned]
+        return 1
+
+```
+
+## How to fix it
+
+```py
+class GoodFormat:
+    \"\"\"__format__ returns <type 'str'>\"\"\"
+
+    def __format__(self, format_spec):
+        return \"hello!\"
+
+```
+"""
+
+[E0312]
+why = "It looks like the __getnewargs__ method returns something which is not a tuple"
+examples = """
+
+## Problematic code
+
+```py
+class BadGetNewArgs:
+    \"\"\"__getnewargs__ returns an integer\"\"\"
+
+    def __getnewargs__(self):  # [invalid-getnewargs-returned]
+        return 1
+
+```
+
+## How to fix it
+
+```py
+class GoodGetNewArgs:
+    \"\"\"__getnewargs__ returns <type 'tuple'>\"\"\"
+
+    def __getnewargs__(self):
+        return (1, 2)
+
+```
+"""
+
+[E0313]
+why = "It looks like the __getnewargs_ex__ method returns something which is not of the form tuple(tuple, dict)"
+examples = """
+
+## Problematic code
+
+```py
+class BadGetNewArgsEx:
+    \"\"\"__getnewargs_ex__ returns tuple with incorrect arg length\"\"\"
+
+    def __getnewargs_ex__(self):  # [invalid-getnewargs-ex-returned]
+        return (tuple(1), dict(x=\"y\"), 1)
+
+```
+
+## How to fix it
+
+```py
+class GoodGetNewArgsEx:
+    \"\"\"__getnewargs_ex__ returns <type 'tuple'>\"\"\"
+
+    def __getnewargs_ex__(self):
+        return ((1,), {\"2\": 2})
+
+```
+"""
+
+[E0202]
+why = "It looks like the class defines a method which is hidden by an instance attribute from an ancestor class or set by some client code."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    def __init__(self, vitamins):
+        self.vitamins = vitamins
+
+    def vitamins(self):  # [method-hidden]
+        pass
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    def __init__(self, vitamins):
+        self.vitamins = vitamins
+
+    def antioxidants(self):
+        pass
+
+```
+"""
+
+[E0203]
+why = "It looks like the instance member is accessed before it's actually assigned."
+examples = """
+
+## Problematic code
+
+```py
+class Foo:
+    def __init__(self, param):
+        if self.param:  # [access-member-before-definition]
+            pass
+        self.param = param
+
+```
+
+## How to fix it
+
+```py
+class Foo:
+    def __init__(self, param):
+        self.param = param
+        if self.param:
+            pass
+
+```
+"""
+
+[E0211]
+why = "It looks like the method which should have the bound instance as first argument has no argument defined."
+examples = """
+
+## Problematic code
+
+```py
+class Person:
+    def print_greeting():  # [no-method-argument]
+        print(\"hello\")
+
+```
+
+## How to fix it
+
+```py
+class Person:
+    def print_greeting(self):
+        print(\"hello\")
+
+```
+"""
+
+[E0213]
+why = "It looks like the method has an attribute different the \"self\" as first argument. This is considered as an error since this is a so common convention that you shouldn't break it!"
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    def __init__(this, name):  # [no-self-argument]
+        this.name = name
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    def __init__(self, name):
+        self.name = name
+
+```
+"""
+
+[E0236]
+why = "It looks like the invalid (non-string) object occurs in __slots__."
+examples = """
+
+## Problematic code
+
+```py
+class Person:
+    __slots__ = ('name', 3)  # [invalid-slots-object]
+
+```
+
+## How to fix it
+
+```py
+class Person:
+    __slots__ = ('name', 'surname')
+
+```
+"""
+
+[E0237]
+why = "It looks like assigning to an attribute not defined in the class slots."
+examples = """
+
+## Problematic code
+
+```py
+class Student:
+    __slots__ = ('name',)
+
+    def __init__(self, name, surname):
+        self.name = name
+        self.surname = surname  # [assigning-non-slot]
+        self.setup()
+
+    def setup(self):
+        pass
+
+```
+
+## How to fix it
+
+```py
+class Student:
+    __slots__ = ('name', 'surname')
+
+    def __init__(self, name, surname):
+        self.name = name
+        self.surname = surname
+        self.setup()
+
+    def setup(self):
+        pass
+
+```
+"""
+
+[E0238]
+why = "It looks like the invalid __slots__ is found in class. Only a string, an iterable or a sequence is permitted."
+examples = """
+
+## Problematic code
+
+```py
+class Person:  # [invalid-slots]
+    __slots__ = 42
+
+```
+
+## How to fix it
+
+```py
+class Person:
+    __slots__ = (\"name\", \"age\",)
+
+```
+"""
+
+[E0239]
+why = "It looks like the class inherits from something which is not a class."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit(bool):  # [inherit-non-class]
+    pass
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    def __bool__(self):
+        pass
+
+```
+"""
+
+[E0240]
+why = "It looks like the class has an inconsistent method resolution order."
+examples = ""
+
+[E0241]
+why = "Duplicate use of base classes in derived classes raise TypeErrors."
+examples = """
+
+## Problematic code
+
+```py
+class Animal:
+    pass
+
+
+class Cat(Animal, Animal):  # [duplicate-bases]
+    pass
+
+```
+
+## How to fix it
+
+```py
+class Animal:
+    pass
+
+
+class Bird(Animal):
+    pass
+
+
+class Cat(Animal):
+    pass
+
+```
+"""
+
+[E0242]
+why = "It looks like the value in __slots__ conflicts with a class variable, property or method."
+examples = """
+
+## Problematic code
+
+```py
+class Person:
+    # +1: [class-variable-slots-conflict, class-variable-slots-conflict, class-variable-slots-conflict]
+    __slots__ = (\"age\", \"name\", \"say_hi\")
+    name = None
+
+    def __init__(self, age, name):
+        self.age = age
+        self.name = name
+
+    @property
+    def age(self):
+        return self.age
+
+    def say_hi(self):
+        print(f\"Hi, I'm {self.name}.\")
+
+```
+
+## How to fix it
+
+```py
+class Person:
+    __slots__ = (\"_age\", \"name\",)
+
+    def __init__(self, age, name):
+        self._age = age
+        self.name = name
+
+    @property
+    def age(self):
+        return self._age
+
+    def say_hi(self):
+        print(f\"Hi, I'm {self.name}.\")
+
+```
+"""
+
+[E0243]
+why = "It looks like the invalid object is assigned to a __class__ property. Only a class is permitted."
+examples = """
+
+## Problematic code
+
+```py
+class Apple:
+    pass
+
+
+Apple.__class__ = 1  # [invalid-class-object]
+
+```
+
+## How to fix it
+
+```py
+class Apple:
+    pass
+
+
+class RedDelicious:
+    pass
+
+
+Apple.__class__ = RedDelicious
+
+```
+"""
+
+[E0244]
+why = "It looks like the class tries to extend an inherited Enum class. Doing so will raise a TypeError at runtime."
+examples = """
+
+## Problematic code
+
+```py
+from enum import Enum
+
+
+class Color(Enum):
+    ORANGE = 1
+    CHERRY = 2
+
+
+class Fruit(Color):  # [invalid-enum-extension]
+    APPLE = 3
+
+```
+
+## How to fix it
+
+```py
+from enum import Enum
+
+
+class Color(Enum):
+    ORANGE = 1
+    CHERRY = 2
+
+
+class Fruit(Enum):
+    ORANGE = 1
+    CHERRY = 2
+    APPLE = 3
+
+```
+"""
+
+[E0701]
+why = "It looks like except clauses are not in the correct order (from the more specific to the more generic). If you don't fix the order, some exceptions may not be caught by the most specific handler."
+examples = """
+
+## Problematic code
+
+```py
+try:
+    print(int(input()))
+except Exception:
+    raise
+except TypeError:  # [bad-except-order]
+    # This block cannot be reached since TypeError exception
+    # is caught by previous exception handler.
+    raise
+
+```
+
+## How to fix it
+
+```py
+try:
+    print(int(input()))
+except TypeError:
+    raise
+except Exception:
+    raise
+
+```
+"""
+
+[E0702]
+why = "It looks like something which is neither a class nor an instance is raised (i.e. a `TypeError` will be raised)."
+examples = """
+
+## Problematic code
+
+```py
+class FasterThanTheSpeedOfLightError(ZeroDivisionError):
+    def __init__(self):
+        super().__init__(\"You can't go faster than the speed of light !\")
+
+
+def calculate_speed(distance: float, time: float) -> float:
+    try:
+        return distance / time
+    except ZeroDivisionError as e:
+        raise None  # [raising-bad-type]
+
+```
+
+## How to fix it
+
+```py
+class FasterThanTheSpeedOfLightError(ZeroDivisionError):
+    def __init__(self):
+        super().__init__(\"You can't go faster than the speed of light !\")
+
+
+def calculate_speed(distance: float, time: float) -> float:
+    try:
+        return distance / time
+    except ZeroDivisionError as e:
+        raise FasterThanTheSpeedOfLightError() from e
+
+```
+"""
+
+[E0703]
+why = "It looks like using the syntax \"raise ... from ...\", where the exception context is not an exception, nor None."
+examples = ""
+
+[E0704]
+why = "It looks like the bare raise is not used inside an except clause. This generates an error, since there are no active exceptions to be reraised. An exception to this rule is represented by a bare raise inside a finally clause, which might work, as long as an exception is raised inside the try block, but it is nevertheless a code smell that must not be relied upon."
+examples = """
+
+## Problematic code
+
+```py
+def validate_positive(x):
+    if x <= 0:
+        raise  # [misplaced-bare-raise]
+
+```
+
+## How to fix it
+
+```py
+def validate_positive(x):
+    if x <= 0:
+        raise ValueError(f\"{x} is not positive\")
+
+```
+"""
+
+[E0710]
+why = "It looks like the new style class which doesn't inherit from BaseException is raised."
+examples = """
+
+## Problematic code
+
+```py
+raise str  # [raising-non-exception]
+
+```
+
+## How to fix it
+
+```py
+raise Exception(\"Goodbye world !\")
+
+```
+"""
+
+[E0711]
+why = "It looks like NotImplemented is raised instead of NotImplementedError"
+examples = """
+
+## Problematic code
+
+```py
+class Worm:
+    def bore(self):
+        raise NotImplemented  # [notimplemented-raised]
+
+```
+
+## How to fix it
+
+```py
+class Worm:
+    def bore(self):
+        raise NotImplementedError
+
+```
+"""
+
+[E0712]
+why = "It looks like the class which doesn't inherit from Exception is used as an exception in an except clause."
+examples = """
+
+## Problematic code
+
+```py
+class FooError:
+    pass
+
+
+try:
+    1 / 0
+except FooError:  # [catching-non-exception]
+    pass
+
+```
+
+## How to fix it
+
+```py
+class FooError(Exception):
+    pass
+
+
+try:
+    1 / 0
+except FooError:
+    pass
+
+```
+"""
+
+[E0401]
+why = "It looks like pylint has been unable to import a module."
+examples = """
+
+## Problematic code
+
+```py
+from patlib import Path  # [import-error]
+
+```
+
+## How to fix it
+
+```py
+from pathlib import Path
+
+```
+"""
+
+[E0402]
+why = "It looks like the relative import tries to access too many levels in the current package."
+examples = ""
+
+[E1200]
+why = "It looks like the unsupported format character is used in a logging statement format string."
+examples = ""
+
+[E1201]
+why = "It looks like the logging statement format string terminates before the end of a conversion specifier."
+examples = """
+
+## Problematic code
+
+```py
+import logging
+
+logging.warning(\"Here is a variable: %\", my_var)  # [logging-format-truncated]
+
+```
+
+## How to fix it
+
+```py
+import logging
+
+logging.warning(\"Here is a variable: %s\", my_var)
+
+```
+"""
+
+[E1205]
+why = "It looks like the logging format string is given too many arguments."
+examples = """
+
+## Problematic code
+
+```py
+import logging
+
+try:
+    function()
+except Exception as e:
+    logging.error('Error occurred: %s', type(e), e)  # [logging-too-many-args]
+    raise
+
+```
+
+## How to fix it
+
+```py
+import logging
+
+try:
+    function()
+except Exception as e:
+    logging.error('%s error occurred: %s', type(e), e)
+    raise
+
+```
+"""
+
+[E1206]
+why = "It looks like the logging format string is given too few arguments."
+examples = """
+
+## Problematic code
+
+```py
+import logging
+
+try:
+    function()
+except Exception as e:
+    logging.error('%s error occurred: %s', e)  # [logging-too-few-args]
+    raise
+
+```
+
+## How to fix it
+
+```py
+import logging
+
+try:
+    function()
+except Exception as e:
+    logging.error('%s error occurred: %s', type(e), e)
+    raise
+
+```
+"""
+
+[E4702]
+why = "It looks like items are added or removed to a dict being iterated through. Doing so raises a RuntimeError."
+examples = """
+
+## Problematic code
+
+```py
+fruits = {\"apple\": 1, \"orange\": 2, \"mango\": 3}
+
+i = 0
+for fruit in fruits:
+    fruits[\"apple\"] = i  # [modified-iterating-dict]
+    i += 1
+
+```
+
+## How to fix it
+
+```py
+fruits = {\"apple\": 1, \"orange\": 2, \"mango\": 3}
+
+i = 0
+for fruit in fruits.copy():
+    fruits[\"apple\"] = i
+    i += 1
+
+```
+"""
+
+[E4703]
+why = "It looks like items are added or removed to a set being iterated through. Doing so raises a RuntimeError."
+examples = """
+
+## Problematic code
+
+```py
+fruits = {\"apple\", \"orange\", \"mango\"}
+for fruit in fruits:
+    fruits.add(fruit + \"yum\")  # [modified-iterating-set]
+
+```
+
+## How to fix it
+
+```py
+fruits = {\"apple\", \"orange\", \"mango\"}
+for fruit in fruits.copy():
+    fruits.add(fruit + \"yum\")
+
+```
+"""
+
+[E1003]
+why = "It looks like another argument than the current class is given as first argument of the super builtin."
+examples = """
+
+## Problematic code
+
+```py
+class Animal:
+    pass
+
+
+class Tree:
+    pass
+
+
+class Cat(Animal):
+    def __init__(self):
+        super(Tree, self).__init__()  # [bad-super-call]
+        super(Animal, self).__init__()
+
+```
+
+## How to fix it
+
+```py
+class Animal:
+    pass
+
+
+class Tree:
+    pass
+
+
+class Cat(Animal):
+    def __init__(self):
+        super(Animal, self).__init__()
+
+```
+"""
+
+[E2501]
+why = "For compatibility use UTF-8 instead of UTF-16/UTF-32. See also https://bugs.python.org/issue1503789 for a history of this issue. And https://softwareengineering.stackexchange.com/questions/102205/should-utf-16-be-considered-harmful for some possible problems when using UTF-16 for instance."
+examples = ""
+
+[E2502]
+why = """
+bidirectional unicode are typically not displayed characters required to display right-to-left (RTL) script (i.e. Chinese, Japanese, Arabic, Hebrew, ...) correctly. So can you trust this code? Are you sure it displayed correctly in all editors? If you did not write it or your language is not RTL, remove the special characters, as they could be used to trick you into executing code, that does something else than what it looks like.
+More Information:
+https://en.wikipedia.org/wiki/Bidirectional_text
+https://trojansource.codes/"""
+examples = ""
+
+[E2510]
+why = "Moves the cursor back, so the character after it will overwrite the character before."
+examples = ""
+
+[E2511]
+why = "Moves the cursor to the start of line, subsequent characters overwrite the start of the line."
+examples = ""
+
+[E2512]
+why = "Ctrl+Z \"End of text\" on Windows. Some programs (such as type) ignore the rest of the file after it."
+examples = ""
+
+[E2513]
+why = "Commonly initiates escape codes which allow arbitrary control of the terminal."
+examples = ""
+
+[E2514]
+why = "Mostly end of input for python."
+examples = ""
+
+[E2515]
+why = "Invisible space character could hide real code execution."
+examples = ""
+
+[E0601]
+why = "It looks like the local variable is accessed before its assignment took place. Assignments in try blocks are assumed not to have occurred when evaluating associated except/finally blocks. Assignments in except blocks are assumed not to have occurred when evaluating statements outside the block, except when the associated try block contains a return statement."
+examples = """
+
+## Problematic code
+
+```py
+print(hello)  # [used-before-assignment]
+hello = \"Hello World !\"
+
+```
+
+## How to fix it
+
+```py
+hello = \"Hello World !\"
+print(hello)
+
+```
+"""
+
+[E0602]
+why = "It looks like the undefined variable is accessed."
+examples = """
+
+## Problematic code
+
+```py
+print(number + 2)  # [undefined-variable]
+
+```
+
+## How to fix it
+
+```py
+number = 3
+print(number + 2)
+
+```
+"""
+
+[E0603]
+why = "It looks like the undefined variable name is referenced in __all__."
+examples = """
+
+## Problematic code
+
+```py
+__all__ = [\"get_fruit_colour\"]  # [undefined-all-variable]
+
+def get_fruit_color():
+    pass
+
+```
+
+## How to fix it
+
+```py
+__all__ = [\"get_fruit_color\"]
+
+def get_fruit_color():
+    pass
+
+```
+"""
+
+[E0604]
+why = "It looks like the invalid (non-string) object occurs in __all__."
+examples = """
+
+## Problematic code
+
+```py
+__all__ = (
+    None,  # [invalid-all-object]
+    Fruit,
+    Worm,
+)
+
+class Fruit:
+    pass
+
+class Worm:
+    pass
+
+```
+
+## How to fix it
+
+```py
+__all__ = ['Fruit', 'Worm']
+
+class Fruit:
+    pass
+
+class Worm:
+    pass
+
+```
+"""
+
+[E0605]
+why = "It looks like __all__ has an invalid format."
+examples = """
+
+## Problematic code
+
+```py
+__all__ = (\"CONST\")  # [invalid-all-format]
+
+CONST = 42
+
+```
+
+## How to fix it
+
+```py
+__all__ = (\"CONST\",)
+
+CONST = 42
+
+```
+"""
+
+[E0611]
+why = "It looks like the name cannot be found in a module."
+examples = """
+
+## Problematic code
+
+```py
+from os import pizza  # [no-name-in-module]
+
+```
+
+## How to fix it
+
+```py
+from os import path
+
+```
+"""
+
+[E0633]
+why = "It looks like something which is not a sequence is used in an unpack assignment"
+examples = """
+
+## Problematic code
+
+```py
+a, b, c = 1  # [unpacking-non-sequence]
+
+```
+
+## How to fix it
+
+```py
+a, b, c = 1, 2, 3
+
+```
+"""
+
+[E0643]
+why = "It looks like the index used on an iterable goes beyond the length of that iterable."
+examples = """
+
+## Problematic code
+
+```py
+print([1, 2, 3][3])  # [potential-index-error]
+
+```
+
+## How to fix it
+
+```py
+print([1, 2, 3][2])
+
+```
+"""
+
+[E1507]
+why = "Env manipulation functions support only string type arguments. See https://docs.python.org/3/library/os.html#os.getenv."
+examples = """
+
+## Problematic code
+
+```py
+import os
+
+os.getenv(1)  # [invalid-envvar-value]
+
+```
+
+## How to fix it
+
+```py
+import os
+
+os.getenv('1')
+
+```
+"""
+
+[E1300]
+why = "It looks like the unsupported format character is used in a format string."
+examples = """
+
+## Problematic code
+
+```py
+print(\"%s %z\" % (\"hello\", \"world\"))  # [bad-format-character]
+
+```
+
+## How to fix it
+
+```py
+print(\"%s %s\" % (\"hello\", \"world\"))
+
+```
+"""
+
+[E1301]
+why = "It looks like the format string terminates before the end of a conversion specifier."
+examples = ""
+
+[E1302]
+why = "It looks like the format string contains both named (e.g. '%(foo)d') and unnamed (e.g. '%d') conversion specifiers.  This is also used when a named conversion specifier contains * for the minimum field width and/or precision."
+examples = """
+
+## Problematic code
+
+```py
+print(\"x=%(x)d, y=%d\" % (0, 1))  # [mixed-format-string]
+
+```
+
+## How to fix it
+
+```py
+print(\"x=%d, y=%d\" % (0, 1))
+print(\"x=%(x)d, y=%(y)d\" % {\"x\": 0, \"y\": 1})
+
+```
+"""
+
+[E1303]
+why = "It looks like the format string that uses named conversion specifiers is used with an argument that is not a mapping."
+examples = """
+
+## Problematic code
+
+```py
+print(\"%(x)d %(y)d\" % [1, 2])  # [format-needs-mapping]
+
+```
+
+## How to fix it
+
+```py
+print(\"%(x)d %(y)d\" % {\"x\": 1, \"y\": 2})
+
+```
+"""
+
+[E1304]
+why = "It looks like the format string that uses named conversion specifiers is used with a dictionary that doesn't contain all the keys required by the format string."
+examples = ""
+
+[E1305]
+why = "It looks like the format string that uses unnamed conversion specifiers is given too many arguments."
+examples = """
+
+## Problematic code
+
+```py
+# +1: [too-many-format-args]
+print(\"Today is {0}, so tomorrow will be {1}\".format(\"Monday\", \"Tuesday\", \"Wednesday\"))
+
+```
+
+## How to fix it
+
+```py
+print(\"Today is {0}, so tomorrow will be {1}\".format(\"Monday\", \"Tuesday\"))
+
+```
+"""
+
+[E1306]
+why = "It looks like the format string that uses unnamed conversion specifiers is given too few arguments"
+examples = """
+
+## Problematic code
+
+```py
+print(\"Today is {0}, so tomorrow will be {1}\".format(\"Monday\"))  # [too-few-format-args]
+
+```
+
+## How to fix it
+
+```py
+print(\"Today is {0}, so tomorrow will be {1}\".format(\"Monday\", \"Tuesday\"))
+
+```
+"""
+
+[E1307]
+why = "It looks like the type required by format string is not suitable for actual argument type"
+examples = """
+
+## Problematic code
+
+```py
+print(\"%d\" % \"1\")  # [bad-string-format-type]
+
+```
+
+## How to fix it
+
+```py
+print(\"%d\" % 1)
+
+```
+"""
+
+[E1310]
+why = "The argument to a str.{l,r,}strip call contains a duplicate character,"
+examples = """
+
+## Problematic code
+
+```py
+\"Hello World\".strip(\"Hello\")  # [bad-str-strip-call]
+# >>> ' World'
+\"abcbc def bacabc\".strip(\"abcbc \")  # [bad-str-strip-call]
+# >>> 'def'
+
+```
+
+## How to fix it
+
+```py
+\"Hello World\".strip(\"Helo\")
+# >>> ' World'
+\"abcbc def bacabc\".strip(\"abc \")
+# >>> 'def'
+
+```
+"""
+
+[E1133]
+why = "It looks like the non-iterable value is used in place where iterable is expected"
+examples = """
+
+## Problematic code
+
+```py
+for i in 10:  # [not-an-iterable]
+    pass
+
+```
+
+## How to fix it
+
+```py
+for i in \"10\":
+    pass
+
+```
+"""
+
+[E1134]
+why = "It looks like the non-mapping value is used in place where mapping is expected"
+examples = """
+
+## Problematic code
+
+```py
+def print_colors(**colors):
+    print(colors)
+
+
+print_colors(**list(\"red\", \"black\"))  # [not-a-mapping]
+
+```
+
+## How to fix it
+
+```py
+def print_colors(**colors):
+    print(colors)
+
+
+print_colors(**dict(red=1, black=2))
+
+```
+"""
+
+[E1101]
+why = "It looks like the variable is accessed for a nonexistent member."
+examples = """
+
+## Problematic code
+
+```py
+from pathlib import Path
+
+directories = Path(\".\").mothers  # [no-member]
+
+
+class Cat:
+    def meow(self):
+        print(\"Meow\")
+
+
+Cat().roar()  # [no-member]
+
+```
+
+## How to fix it
+
+```py
+from pathlib import Path
+
+directories = Path(\".\").parents
+
+
+class Cat:
+    def meow(self):
+        print(\"Meow\")
+
+
+Cat().meow()
+
+```
+"""
+
+[E1102]
+why = "It looks like the object being called has been inferred to a non callable object."
+examples = """
+
+## Problematic code
+
+```py
+NUMBER = 42
+print(NUMBER())  # [not-callable]
+
+```
+
+## How to fix it
+
+```py
+NUMBER = 42
+print(NUMBER)
+
+```
+"""
+
+[E1111]
+why = "It looks like the assignment is done on a function call but the inferred function doesn't return anything."
+examples = """
+
+## Problematic code
+
+```py
+def add(x, y):
+    print(x + y)
+
+
+value = add(10, 10)  # [assignment-from-no-return]
+
+```
+
+## How to fix it
+
+```py
+def add(x, y):
+    return x + y
+
+
+value = add(10, 10)
+
+```
+"""
+
+[E1120]
+why = "It looks like the function call passes too few arguments."
+examples = """
+
+## Problematic code
+
+```py
+def add(x, y):
+    return x + y
+
+add(1)  # [no-value-for-parameter]
+
+```
+
+## How to fix it
+
+```py
+def add(x, y):
+    return x + y
+
+add(1, 2)
+
+```
+"""
+
+[E1121]
+why = "It looks like the function call passes too many positional arguments."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    def __init__(self, color):
+        self.color = color
+
+
+apple = Fruit(\"red\", \"apple\", [1, 2, 3])  # [too-many-function-args]
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    def __init__(self, color, name):
+        self.color = color
+        self.name = name
+
+
+apple = Fruit(\"red\", \"apple\")
+
+```
+"""
+
+[E1123]
+why = "It looks like the function call passes a keyword argument that doesn't correspond to one of the function's parameter names."
+examples = """
+
+## Problematic code
+
+```py
+def print_coordinates(x=0, y=0):
+    print(f\"{x=}, {y=}\")
+
+
+print_coordinates(x=1, y=2, z=3)  # [unexpected-keyword-arg]
+
+```
+
+## How to fix it
+
+```py
+def print_coordinates(x=0, y=0):
+    print(f\"{x=}, {y=}\")
+
+
+print_coordinates(x=1, y=2)
+
+```
+"""
+
+[E1124]
+why = "It looks like the function call would result in assigning multiple values to a function parameter, one value from a positional argument and one from a keyword argument."
+examples = """
+
+## Problematic code
+
+```py
+def square(x):
+    return x * x
+
+
+square(5, x=4)  # [redundant-keyword-arg]
+
+```
+
+## How to fix it
+
+```py
+def square(x):
+    return x * x
+
+
+square(x=4)
+# or
+square(5)
+
+```
+"""
+
+[E1125]
+why = "It looks like the function call does not pass a mandatory keyword-only argument."
+examples = ""
+
+[E1126]
+why = "It looks like the sequence type is indexed with an invalid type. Valid types are ints, slices, and objects with an __index__ method."
+examples = """
+
+## Problematic code
+
+```py
+fruits = ['apple', 'banana', 'orange']
+print(fruits['apple'])  # [invalid-sequence-index]
+
+```
+
+## How to fix it
+
+```py
+fruits = ['apple', 'banana', 'orange']
+print(fruits[0])
+
+```
+"""
+
+[E1127]
+why = "It looks like the slice index is not an integer, None, or an object with an __index__ method."
+examples = """
+
+## Problematic code
+
+```py
+LETTERS = [\"a\", \"b\", \"c\", \"d\"]
+
+FIRST_THREE = LETTERS[:\"3\"]  # [invalid-slice-index]
+
+```
+
+## How to fix it
+
+```py
+LETTERS = [\"a\", \"b\", \"c\", \"d\"]
+
+FIRST_THREE = LETTERS[:3]
+
+```
+"""
+
+[E1128]
+why = "It looks like the assignment is done on a function call but the inferred function returns nothing but None."
+examples = """
+
+## Problematic code
+
+```py
+def function():
+    return None
+
+
+f = function()  # [assignment-from-none]
+
+```
+
+## How to fix it
+
+```py
+def function():
+    return None
+
+
+f = function() if function() else 1
+
+```
+"""
+
+[E1129]
+why = "It looks like the instance in a with statement doesn't implement the context manager protocol(__enter__/__exit__)."
+examples = """
+
+## Problematic code
+
+```py
+class MyContextManager:
+    def __enter__(self):
+        pass
+
+
+with MyContextManager() as c:  # [not-context-manager]
+    pass
+
+```
+
+## How to fix it
+
+```py
+class MyContextManager:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *exc):
+        pass
+
+
+with MyContextManager() as c:
+    pass
+
+```
+"""
+
+[E1130]
+why = "It looks like the unary operand is used on an object which does not support this type of operation."
+examples = """
+
+## Problematic code
+
+```py
+cherries = 10
+eaten_cherries = int
+cherries = - eaten_cherries  # [invalid-unary-operand-type]
+
+```
+
+## How to fix it
+
+```py
+cherries = 10
+eaten_cherries = 2
+cherries -= eaten_cherries
+
+```
+"""
+
+[E1131]
+why = "It looks like the binary arithmetic operation between two operands is not supported."
+examples = ""
+
+[E1132]
+why = "It looks like the function call got multiple values for a keyword."
+examples = """
+
+## Problematic code
+
+```py
+def func(a, b, c):
+    return a, b, c
+
+
+func(1, 2, c=3, **{\"c\": 4})  # [repeated-keyword]
+func(1, 2, **{\"c\": 3}, **{\"c\": 4})  # [repeated-keyword]
+
+```
+
+## How to fix it
+
+```py
+def func(a, b, c):
+    return a, b, c
+
+
+func(1, 2, c=3)
+
+```
+"""
+
+[E1135]
+why = "It looks like the instance in membership test expression doesn't implement membership protocol (__contains__/__iter__/__getitem__)."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    pass
+
+
+apple = \"apple\" in Fruit()  # [unsupported-membership-test]
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    FRUITS = [\"apple\", \"orange\"]
+    def __contains__(self, name):
+        return name in self.FRUITS
+
+
+apple = \"apple\" in Fruit()
+
+```
+"""
+
+[E1136]
+why = "It looks like the subscripted value doesn't support subscription (i.e. doesn't define __getitem__ method or __class_getitem__ for a class)."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    pass
+
+
+Fruit()[1]  # [unsubscriptable-object]
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    def __init__(self):
+        self.colors = [\"red\", \"orange\", \"yellow\"]
+
+    def __getitem__(self, idx):
+        return self.colors[idx]
+
+
+Fruit()[1]
+
+```
+"""
+
+[E1137]
+why = "It looks like the object does not support item assignment (i.e. doesn't define __setitem__ method)."
+examples = """
+
+## Problematic code
+
+```py
+def pick_fruits(fruits):
+    for fruit in fruits:
+        print(fruit)
+
+
+pick_fruits([\"apple\"])[0] = \"orange\"  # [unsupported-assignment-operation]
+
+```
+
+## How to fix it
+
+```py
+def pick_fruits(fruits):
+    for fruit in fruits:
+        print(fruit)
+
+    return []
+
+
+pick_fruits([\"apple\"])[0] = \"orange\"
+
+```
+"""
+
+[E1138]
+why = "It looks like the object does not support item deletion (i.e. doesn't define __delitem__ method)."
+examples = """
+
+## Problematic code
+
+```py
+FRUITS = (\"apple\", \"orange\", \"berry\")
+
+del FRUITS[0]  # [unsupported-delete-operation]
+
+```
+
+## How to fix it
+
+```py
+FRUITS = [\"apple\", \"orange\", \"berry\"]
+
+del FRUITS[0]
+
+```
+"""
+
+[E1139]
+why = "Emitted whenever we can detect that a class is using, as a metaclass, something which might be invalid for using as a metaclass."
+examples = """
+
+## Problematic code
+
+```py
+class Apple(metaclass=int):  # [invalid-metaclass]
+    pass
+
+```
+
+## How to fix it
+
+```py
+class Plant:
+    pass
+
+class Apple(Plant):
+    pass
+
+```
+"""
+
+[E1140]
+why = "It looks like the dict key is not hashable (i.e. doesn't define __hash__ method)."
+examples = ""
+
+[E1141]
+why = "It looks like trying to iterate through a dict without calling .items()"
+examples = """
+
+## Problematic code
+
+```py
+data = {'Paris': 2_165_423, 'New York City': 8_804_190, 'Tokyo': 13_988_129}
+for city, population in data:  # [dict-iter-missing-items]
+    print(f\"{city} has population {population}.\")
+
+```
+
+## How to fix it
+
+```py
+data = {'Paris': 2_165_423, 'New York City': 8_804_190, 'Tokyo': 13_988_129}
+for city, population in data.items():
+    print(f\"{city} has population {population}.\")
+
+```
+"""
+
+[E1142]
+why = "It looks like await is used outside an async function."
+examples = """
+
+## Problematic code
+
+```py
+import asyncio
+
+
+def main():
+    await asyncio.sleep(1)  # [await-outside-async]
+
+```
+
+## How to fix it
+
+```py
+import asyncio
+
+
+async def main():
+    await asyncio.sleep(1)
+
+```
+"""
+
+[E6004]
+why = "``typing.NoReturn`` inside compound types is broken in Python 3.7.0 and 3.7.1. If not dependent on runtime introspection, use string annotation instead. E.g. ``Callable[..., 'NoReturn']``. https://bugs.python.org/issue34921"
+examples = """
+
+## Problematic code
+
+```py
+from typing import NoReturn, Union
+
+
+def exploding_apple(apple) -> Union[None, NoReturn]:  # [broken-noreturn]
+    print(f\"{apple} is about to explode\")
+
+```
+
+## How to fix it
+
+```py
+from typing import NoReturn
+
+
+def exploding_apple(apple) -> NoReturn:
+    print(f\"{apple} is about to explode\")
+    raise Exception(\"{apple} exploded !\")
+
+```
+"""
+
+[E6005]
+why = "``collections.abc.Callable`` inside Optional and Union is broken in Python 3.9.0 and 3.9.1. Use ``typing.Callable`` for these cases instead. https://bugs.python.org/issue42965"
+examples = """
+
+## Problematic code
+
+```py
+from collections.abc import Callable
+from typing import Optional
+
+
+def func() -> Optional[Callable[[int], None]]:  # [broken-collections-callable]
+    ...
+
+```
+
+## How to fix it
+
+```py
+from typing import Callable, Optional
+
+
+def func() -> Optional[Callable[[int], None]]:
+    ...
+
+```
+"""
+
+[W0012]
+why = "It looks like the unknown value is encountered for an option."
+examples = """
+
+## Problematic code
+
+```py
+# pylint: disable=missnig-docstring  # [unknown-option-value]
+
+```
+
+## How to fix it
+
+```py
+# pylint: disable=missing-docstring
+
+```
+"""
+
+[W0143]
+why = "This message is emitted when pylint detects that a comparison with a callable was made, which might suggest that some parenthesis were omitted, resulting in potential unwanted behaviour."
+examples = """
+
+## Problematic code
+
+```py
+def function_returning_a_fruit() -> str:
+    return \"orange\"
+
+def is_an_orange(fruit: str = \"apple\"):
+    # apple == <function function_returning_a_fruit at 0x7f343ff0a1f0>
+    return fruit == function_returning_a_fruit  # [comparison-with-callable]
+
+```
+
+## How to fix it
+
+```py
+def function_returning_a_fruit() -> str:
+    return \"orange\"
+
+def is_an_orange(fruit: str = \"apple\"):
+    # apple == orange
+    return fruit == function_returning_a_fruit()
+
+```
+"""
+
+[W0177]
+why = "It looks like the expression is compared to NaNvalues like numpy.NaN and float('nan')"
+examples = """
+
+## Problematic code
+
+```py
+import numpy as np
+
+
+def both_nan(x, y) -> bool:
+    return x == np.NaN and y == float(\"nan\")  # [nan-comparison, nan-comparison]
+
+```
+
+## How to fix it
+
+```py
+import numpy as np
+
+
+def both_nan(x, y) -> bool:
+    return np.isnan(x) and np.isnan(y)
+
+```
+"""
+
+[W0107]
+why = "It looks like the \"pass\" statement that can be avoided is encountered."
+examples = """
+
+## Problematic code
+
+```py
+class Foo:
+    \"\"\"Foo docstring.\"\"\"
+    pass  # [unnecessary-pass]
+
+```
+
+## How to fix it
+
+```py
+class Foo:
+    \"\"\"Foo docstring.\"\"\"
+
+```
+"""
+
+[W0101]
+why = "It looks like there is some code behind a \"return\" or \"raise\" statement, which will never be accessed."
+examples = """
+
+## Problematic code
+
+```py
+def say_hello():
+    return True
+    print(\"Hello World!, Outside function.\")  # [unreachable]
+
+```
+
+## How to fix it
+
+```py
+def say_hello():
+    print(\"Hello World!, Inside function.\")
+    return True
+
+```
+"""
+
+[W0102]
+why = "It looks like the mutable value as list or dictionary is detected in a default value for an argument."
+examples = """
+
+## Problematic code
+
+```py
+def whats_on_the_telly(penguin=[]):  # [dangerous-default-value]
+    penguin.append(\"property of the zoo\")
+    return penguin
+
+```
+
+## How to fix it
+
+```py
+def whats_on_the_telly(penguin=None):
+    if penguin is None:
+        penguin = []
+    penguin.append(\"property of the zoo\")
+    return penguin
+
+```
+"""
+
+[W0104]
+why = "It looks like the statement doesn't have (or at least seems to) any effect."
+examples = """
+
+## Problematic code
+
+```py
+[1, 2, 3]  # [pointless-statement]
+
+```
+
+## How to fix it
+
+```py
+NUMBERS = [1, 2, 3]
+
+print(NUMBERS)
+
+```
+"""
+
+[W0105]
+why = "It looks like the string is used as a statement (which of course has no effect). This is a particular case of W0104 with its own message so you can easily disable it if you're using those strings as documentation, instead of comments."
+examples = """
+
+## Problematic code
+
+```py
+\"\"\"This is a docstring which describes the module\"\"\"
+
+\"\"\"This is not a docstring\"\"\"  # [pointless-string-statement]
+
+```
+
+## How to fix it
+
+```py
+\"\"\"This is a docstring which describes the module\"\"\"
+
+# This is comment which describes a particular part of the module.
+
+```
+"""
+
+[W0106]
+why = "It looks like the expression that is not a function call is assigned to nothing. Probably something else was intended."
+examples = """
+
+## Problematic code
+
+```py
+str(42) == \"42\"  # [expression-not-assigned]
+
+```
+
+## How to fix it
+
+```py
+are_equal: bool = str(42) == \"42\"
+
+```
+"""
+
+[W0108]
+why = "It looks like the body of a lambda expression is a function call on the same argument list as the lambda itself; such lambda expressions are in all but a few cases replaceable with the function being called in the body of the lambda."
+examples = """
+
+## Problematic code
+
+```py
+function = lambda x: print(x)  # [unnecessary-lambda]
+
+function(\"Hello world !\")
+
+df.apply(lambda x: str(x))  # [unnecessary-lambda]
+
+```
+
+## How to fix it
+
+```py
+print(\"Hello world !\")
+
+df.apply(str)
+
+```
+"""
+
+[W0109]
+why = "It looks like the dictionary expression binds the same key multiple times."
+examples = """
+
+## Problematic code
+
+```py
+test_score = {\"Mathematics\": 85, \"Biology\": 90, \"Mathematics\": 75}  # [duplicate-key]
+
+```
+
+## How to fix it
+
+```py
+test_score = {\"Mathematics\": 85, \"Biology\": 90, \"History\": 75}
+
+```
+"""
+
+[W0122]
+why = "It looks like you use the \"exec\" statement (function for Python 3), to discourage its usage. That doesn't mean you cannot use it !"
+examples = """
+
+## Problematic code
+
+```py
+username = \"Ada\"
+code_to_execute = f\"\"\"input('Enter code to be executed please, {username}: ')\"\"\"
+program = exec(code_to_execute)  # [exec-used]
+exec(program)  # [exec-used]
+
+```
+
+## How to fix it
+
+```py
+def get_user_code(name):
+    return input(f'Enter code to be executed please, {name}: ')
+
+
+username = \"Ada\"
+allowed_globals = {'__builtins__' : None}
+allowed_locals = {'print': print}
+exec(get_user_code(username), allowed_globals, allowed_locals)  # pylint: disable=exec-used
+
+```
+"""
+
+[W0123]
+why = "It looks like you use the \"eval\" function, to discourage its usage. Consider using `ast.literal_eval` for safely evaluating strings containing Python expressions from untrusted sources."
+examples = """
+
+## Problematic code
+
+```py
+eval(\"[1, 2, 3]\")  # [eval-used]
+
+```
+
+## How to fix it
+
+```py
+from ast import literal_eval
+
+literal_eval(\"[1, 2, 3]\")
+
+```
+"""
+
+[W0124]
+why = "It looks like the `with` statement component returns multiple values and uses name binding with `as` only for a part of those values, as in with ctx() as a, b. This can be misleading, since it's not clear if the context manager returns a tuple or if the node without a name binding is another context manager."
+examples = """
+
+## Problematic code
+
+```py
+with open('file.txt', 'w') as fh1, fh2:  # [confusing-with-statement]
+    pass
+
+```
+
+## How to fix it
+
+```py
+with open('file.txt', 'w', encoding=\"utf8\") as fh1:
+    with open('file.txt', 'w', encoding=\"utf8\") as fh2:
+        pass
+
+```
+"""
+
+[W0125]
+why = "It looks like the conditional statement (If or ternary if) uses a constant value for its test. This might not be what the user intended to do."
+examples = """
+
+## Problematic code
+
+```py
+if 0:  # [using-constant-test]
+    print('This code is never executed.')
+if 1:  # [using-constant-test]
+    print('This code is always executed.')
+
+```
+
+## How to fix it
+
+```py
+print('This code is always executed.')
+
+```
+"""
+
+[W0126]
+why = "It looks like the conditional statement (If or ternary if) seems to wrongly call a function due to missing parentheses"
+examples = ""
+
+[W0127]
+why = "It looks like we detect that a variable is assigned to itself"
+examples = """
+
+## Problematic code
+
+```py
+year = 2000
+year = year  # [self-assigning-variable]
+
+```
+
+## How to fix it
+
+```py
+year = 2000
+
+```
+"""
+
+[W0128]
+why = "It looks like we detect that a variable was redeclared in the same assignment."
+examples = """
+
+## Problematic code
+
+```py
+FIRST, FIRST = (1, 2)  # [redeclared-assigned-name]
+
+```
+
+## How to fix it
+
+```py
+FIRST, SECOND = (1, 2)
+
+```
+"""
+
+[W0129]
+why = "It looks like the assert statement has a string literal as its first argument, which will cause the assert to always pass."
+examples = """
+
+## Problematic code
+
+```py
+def test_division():
+    a = 9 / 3
+    assert \"No ZeroDivisionError were raised\"  # [assert-on-string-literal]
+
+```
+
+## How to fix it
+
+```py
+def test_division():
+    a = 9 / 3
+    assert a == 3
+
+```
+"""
+
+[W0130]
+why = "This message is emitted when a set contains the same value two or more times."
+examples = """
+
+## Problematic code
+
+```py
+incorrect_set = {'value1', 23, 5, 'value1'} # [duplicate-value]
+
+```
+
+## How to fix it
+
+```py
+correct_set = {'value1', 23, 5}
+
+```
+"""
+
+[W0150]
+why = "It looks like the break or a return statement is found inside the finally clause of a try...finally block: the exceptions raised in the try clause will be silently swallowed instead of being re-raised."
+examples = """
+
+## Problematic code
+
+```py
+class FasterThanTheSpeedOfLightError(ZeroDivisionError):
+    def __init__(self):
+        super().__init__(\"You can't go faster than the speed of light !\")
+
+
+def calculate_speed(distance: float, time: float) -> float:
+    try:
+        return distance / time
+    except ZeroDivisionError as e:
+        raise FasterThanTheSpeedOfLightError() from e
+    finally:
+        return 299792458  # [lost-exception]
+
+```
+
+## How to fix it
+
+```py
+class FasterThanTheSpeedOfLightError(ZeroDivisionError):
+    def __init__(self):
+        super().__init__(\"You can't go faster than the speed of light !\")
+
+
+def calculate_speed(distance: float, time: float) -> float:
+    try:
+        return distance / time
+    except ZeroDivisionError as e:
+        raise FasterThanTheSpeedOfLightError() from e
+
+```
+"""
+
+[W0199]
+why = "A call of assert on a tuple will always evaluate to true if the tuple is not empty, and will always evaluate to false if it is."
+examples = """
+
+## Problematic code
+
+```py
+assert (1, None)  # [assert-on-tuple]
+
+```
+
+## How to fix it
+
+```py
+x, y = (1, None)
+assert x
+assert y
+
+```
+"""
+
+[W0120]
+why = "Loops should only have an else clause if they can exit early with a break statement, otherwise the statements under else should be on the same scope as the loop itself."
+examples = """
+
+## Problematic code
+
+```py
+def find_even_number(numbers):
+    for x in numbers:
+        if x % 2 == 0:
+            return x
+    else:  # [useless-else-on-loop]
+        print(\"Did not find an even number\")
+
+```
+
+## How to fix it
+
+```py
+def find_even_number(numbers):
+    for x in numbers:
+        if x % 2 == 0:
+            return x
+    print(\"Did not find an even number\")
+
+```
+"""
+
+[W0717]
+why = "Try clause contains too many statements."
+examples = """
+
+## Problematic code
+
+```py
+FRUITS = {\"apple\": 1, \"orange\": 10}
+
+
+def pick_fruit(name):
+    try:  # [too-many-try-statements]
+        count = FRUITS[name]
+        count += 1
+        print(f\"Got fruit count {count}\")
+    except KeyError:
+        return
+
+```
+
+## How to fix it
+
+```py
+FRUITS = {\"apple\": 1, \"orange\": 10}
+
+
+def pick_fruit(name):
+    try:
+        count = FRUITS[name]
+    except KeyError:
+        return
+
+    count += 1
+    print(f\"Got fruit count {count}\")
+
+```
+"""
+
+[W0201]
+why = "It looks like the instance attribute is defined outside the __init__ method."
+examples = """
+
+## Problematic code
+
+```py
+class Student:
+    def register(self):
+        self.is_registered = True  # [attribute-defined-outside-init]
+
+```
+
+## How to fix it
+
+```py
+class Student:
+    def __init__(self):
+        self.is_registered = False
+
+    def register(self):
+        self.is_registered = True
+
+```
+"""
+
+[W0211]
+why = "It looks like the static method has \"self\" or a value specified in valid-classmethod-first-arg option or valid-metaclass-classmethod-first-arg option as first argument."
+examples = """
+
+## Problematic code
+
+```py
+class Wolf:
+    @staticmethod
+    def eat(self):  # [bad-staticmethod-argument]
+        pass
+
+```
+
+## How to fix it
+
+```py
+class Wolf:
+    @staticmethod
+    def eat(sheep):
+        pass
+
+```
+"""
+
+[W0212]
+why = "It looks like the protected member (i.e. class member with a name beginning with an underscore) is access outside the class or a descendant of the class where it's defined."
+examples = """
+
+## Problematic code
+
+```py
+class Worm:
+    def __swallow(self):
+        pass
+
+
+jim = Worm()
+jim.__swallow()  # [protected-access]
+
+```
+
+## How to fix it
+
+```py
+class Worm:
+    def __swallow(self):
+        pass
+
+    def eat(self):
+        return self.__swallow()
+
+
+jim = Worm()
+jim.eat()
+
+```
+"""
+
+[W0221]
+why = "It looks like the method has a different number of arguments than in the implemented interface or in an overridden method. Extra arguments with default values are ignored."
+examples = """
+
+## Problematic code
+
+```py
+class Drink:
+    def mix(self, fluid_one, fluid_two):
+        return fluid_one + fluid_two
+
+
+class Cocktail(Drink):
+    def mix(self, fluid_one, fluid_two, alcoholic_fluid_one):  # [arguments-differ]
+        return fluid_one + fluid_two + alcoholic_fluid_one
+
+
+class Car:
+    tank = 0
+
+    def fill_tank(self, gas):
+        self.tank += gas
+
+
+class Airplane(Car):
+    kerosene_tank = 0
+
+    def fill_tank(self, gas, kerosene):  # [arguments-differ]
+        self.tank += gas
+        self.kerosene_tank += kerosene
+
+```
+
+## How to fix it
+
+```py
+class Drink:
+    def mix(self, fluid_one, fluid_two):
+        return fluid_one + fluid_two
+
+
+class Cocktail(Drink):
+    def mix(self, fluid_one, fluid_two, alcoholic_fluid_one=\"Beer\"):
+        return fluid_one + fluid_two + alcoholic_fluid_one
+
+
+class Car:
+    tank = 0
+
+    def fill_tank(self, gas):
+        self.tank += gas
+
+
+class Airplane:
+    tank = 0
+    kerosene_tank = 0
+
+    def fill_tank(self, gas, kerosene):
+        self.tank += gas
+        self.kerosene_tank += kerosene
+
+```
+"""
+
+[W0222]
+why = "It looks like the method signature is different than in the implemented interface or in an overridden method."
+examples = """
+
+## Problematic code
+
+```py
+class Animal:
+    def run(self, distance=0):
+        print(f\"Ran {distance} km!\")
+
+
+class Dog(Animal):
+    def run(self, distance):  # [signature-differs]
+        super(Animal, self).run(distance)
+        print(\"Fetched that stick, wuff !\")
+
+```
+
+## How to fix it
+
+```py
+class Animal:
+    def run(self, distance=0):
+        print(f\"Ran {distance} km!\")
+
+
+class Dog(Animal):
+    def run(self, distance=0):
+        super(Animal, self).run(distance)
+        print(\"Fetched that stick, wuff !\")
+
+```
+"""
+
+[W0223]
+why = "It looks like the abstract method (i.e. raise NotImplementedError) is not overridden in concrete class."
+examples = """
+
+## Problematic code
+
+```py
+class Pet:
+    def make_sound(self):
+        raise NotImplementedError
+
+
+class Cat(Pet):  # [abstract-method]
+    pass
+
+
+import abc
+
+
+class WildAnimal:
+    @abc.abstractmethod
+    def make_sound(self):
+        pass
+
+
+class Panther(WildAnimal):  # [abstract-method]
+    pass
+
+```
+
+## How to fix it
+
+```py
+class Pet:
+    def make_sound(self):
+        raise NotImplementedError
+
+
+class Cat(Pet):
+    def make_sound(self):
+        print(\"Meeeow\")
+
+
+import abc
+
+
+class WildAnimal:
+    @abc.abstractmethod
+    def make_sound(self):
+        pass
+
+
+class Panther(WildAnimal):
+    def make_sound(self):
+        print(\"MEEEOW\")
+
+```
+"""
+
+[W0231]
+why = "It looks like the ancestor class method has an __init__ method which is not called by a derived class."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    def __init__(self, name=\"fruit\"):
+        self.name = name
+        print(\"Creating a {self.name}\")
+
+
+class Apple(Fruit):
+    def __init__(self):  # [super-init-not-called]
+        print(\"Creating an apple\")
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    def __init__(self, name=\"fruit\"):
+        self.name = name
+        print(\"Creating a {self.name}\")
+
+
+class Apple(Fruit):
+    def __init__(self):
+        super().__init__(\"apple\")
+
+```
+"""
+
+[W0233]
+why = "It looks like the __init__ method is called on a class which is not in the direct ancestors for the analysed class."
+examples = """
+
+## Problematic code
+
+```py
+class Animal:
+    def __init__(self):
+        self.is_multicellular = True
+
+
+class Vertebrate(Animal):
+    def __init__(self):
+        super().__init__()
+        self.has_vertebrae = True
+
+
+class Cat(Vertebrate):
+    def __init__(self):
+        Animal.__init__(self)  # [non-parent-init-called]
+        self.is_adorable = True
+
+```
+
+## How to fix it
+
+```py
+class Animal:
+    def __init__(self):
+        self.is_multicellular = True
+
+
+class Vertebrate(Animal):
+    def __init__(self):
+        super().__init__()
+        self.has_vertebrae = True
+
+
+class Cat(Vertebrate):
+    def __init__(self):
+        super().__init__()
+        self.is_adorable = True
+
+```
+"""
+
+[W0235]
+why = "Used whenever we can detect that an overridden method is useless, relying on super() delegation to do the same thing as another method from the MRO."
+examples = ""
+
+[W0236]
+why = "It looks like we detect that a method was overridden in a way that does not match its base class which could result in potential bugs at runtime."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    async def bore(self, insect):
+        insect.eat(self)
+
+class Apple(Fruit):
+    def bore(self, insect):  # [invalid-overridden-method]
+        insect.eat(self)
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    async def bore(self, insect):
+        insect.eat(self)
+
+class Apple(Fruit):
+    async def bore(self, insect):
+        insect.eat(self)
+
+```
+"""
+
+[W0237]
+why = "It looks like the method parameter has a different name than in the implemented interface or in an overridden method."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    def brew(self, ingredient_name: str):
+        print(f\"Brewing a {type(self)} with {ingredient_name}\")
+
+class Apple(Fruit):
+    ...
+
+class Orange(Fruit):
+    def brew(self, flavor: str):  # [arguments-renamed]
+        print(f\"Brewing an orange with {flavor}\")
+
+for fruit, ingredient_name in [[Orange(), \"thyme\"], [Apple(), \"cinnamon\"]]:
+    fruit.brew(ingredient_name=ingredient_name)
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    def brew(self, ingredient_name: str):
+        print(f\"Brewing a {type(self)} with {ingredient_name}\")
+
+class Apple(Fruit):
+    ...
+
+class Orange(Fruit):
+    def brew(self, ingredient_name: str):
+        print(f\"Brewing an orange with {ingredient_name}\")
+
+for fruit, ingredient_name in [[Orange(), \"thyme\"], [Apple(), \"cinnamon\"]]:
+    fruit.brew(ingredient_name=ingredient_name)
+
+```
+"""
+
+[W0238]
+why = "It looks like the private member of a class is defined but not used."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    FRUITS = {\"apple\": \"red\", \"orange\": \"orange\"}
+
+    def __print_color(self):  # [unused-private-member]
+        pass
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    FRUITS = {\"apple\": \"red\", \"orange\": \"orange\"}
+
+    def __print_color(self, name, color):
+        print(f\"{name}: {color}\")
+
+    def print(self):
+        for fruit, color in self.FRUITS.items():
+            self.__print_color(fruit, color)
+
+```
+"""
+
+[W0239]
+why = "It looks like the method decorated with typing.final has been overridden."
+examples = """
+
+## Problematic code
+
+```py
+from typing import final
+
+
+class Animal:
+    @final
+    def can_breathe(self):
+        return True
+
+
+class Cat(Animal):
+    def can_breathe(self):  # [overridden-final-method]
+        pass
+
+```
+
+## How to fix it
+
+```py
+from typing import final
+
+
+class Animal:
+    @final
+    def can_breathe(self):
+        return True
+
+
+class Cat(Animal):
+    def can_purr(self):
+        return True
+
+```
+"""
+
+[W0240]
+why = "It looks like the class decorated with typing.final has been subclassed."
+examples = """
+
+## Problematic code
+
+```py
+from typing import final
+
+
+@final
+class PlatypusData:
+    \"\"\"General Platypus data.\"\"\"
+
+    average_length = 46
+    average_body_temperature = 32
+
+
+class FluorescentPlaytipus(PlatypusData):  # [subclassed-final-class]
+    \"\"\"Playtipus with fluorescent fur.\"\"\"
+
+```
+
+## How to fix it
+
+```py
+from typing import final
+
+
+@final
+class PlatypusData:
+    \"\"\"General Platypus data.\"\"\"
+
+    average_length = 46
+    average_body_temperature = 32
+
+
+def print_average_length_platypus():
+    output = f\"The average length of a platypus is: {PlatypusData.average_length}cm\"
+    print(output)
+
+```
+"""
+
+[W0244]
+why = "It looks like the slot is re-defined in a subclass."
+examples = """
+
+## Problematic code
+
+```py
+class Base:
+    __slots__ = (\"a\", \"b\")
+
+
+class Subclass(Base):
+    __slots__ = (\"a\", \"d\")  # [redefined-slots-in-subclass]
+
+```
+
+## How to fix it
+
+```py
+class Base:
+    __slots__ = (\"a\", \"b\")
+
+
+class Subclass(Base):
+    __slots__ = (\"d\",)
+
+```
+"""
+
+[W0245]
+why = "It looks like the call to super does not have brackets and thus is not an actual call and does not work as expected."
+examples = """
+
+## Problematic code
+
+```py
+class Soup:
+    @staticmethod
+    def temp():
+        print(\"Soup is hot!\")
+
+
+class TomatoSoup(Soup):
+    @staticmethod
+    def temp():
+        super.temp()  # [super-without-brackets]
+        print(\"But tomato soup is even hotter!\")
+
+```
+
+## How to fix it
+
+```py
+class Soup:
+    @staticmethod
+    def temp():
+        print(\"Soup is hot!\")
+
+
+class TomatoSoup(Soup):
+    @staticmethod
+    def temp():
+        super().temp()
+        print(\"But tomato soup is even hotter!\")
+
+```
+"""
+
+[W0160]
+why = "Multiple assign statements spread across if/else blocks can be rewritten with a single assignment and ternary expression"
+examples = """
+
+## Problematic code
+
+```py
+x, y = input(), input()
+if x >= y:  # [consider-ternary-expression]
+    maximum = x
+else:
+    maximum = y
+
+```
+
+## How to fix it
+
+```py
+x, y = input(), input()
+maximum = x if x >= y else y
+
+```
+"""
+
+[W0141]
+why = "It looks like the disallowed builtin function is used (see the bad-function option). Usual disallowed functions are the ones like map, or filter , where Python offers now some cleaner alternative like list comprehension."
+examples = """
+
+## Problematic code
+
+```py
+numbers = list(map(lambda x: 2 * x, [1, 2, 3]))  # [bad-builtin]
+print(numbers)
+
+```
+
+## How to fix it
+
+```py
+numbers = [2 * x for x in [1, 2, 3]]
+print(numbers)
+
+```
+"""
+
+[W1641]
+why = "It looks like the class implements __eq__ but not __hash__. Objects get None as their default __hash__ implementation if they also implement __eq__."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:  # [eq-without-hash]
+    def __init__(self) -> None:
+        self.name = \"apple\"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Fruit) and other.name == self.name
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    def __init__(self) -> None:
+        self.name = \"apple\"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Fruit) and other.name == self.name
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+```
+"""
+
+[W0702]
+why = "It looks like the except clause doesn't specify exceptions type to catch."
+examples = """
+
+## Problematic code
+
+```py
+try:
+    import platform_specific_module
+except:  # [bare-except]
+    platform_specific_module = None
+
+```
+
+## How to fix it
+
+```py
+try:
+    import platform_specific_module
+except ImportError:
+    platform_specific_module = None
+
+```
+"""
+
+[W0703]
+why = "It looks like the except catches a too general exception, possibly burying unrelated errors."
+examples = ""
+
+[W0705]
+why = "It looks like the except catches a type that was already caught by a previous handler."
+examples = """
+
+## Problematic code
+
+```py
+try:
+    1 / 0
+except ZeroDivisionError:
+    pass
+except ZeroDivisionError:  # [duplicate-except]
+    pass
+
+```
+
+## How to fix it
+
+```py
+try:
+    1 / 0
+except ZeroDivisionError:
+    pass
+
+```
+"""
+
+[W0706]
+why = "It looks like the except handler uses raise as its first or only operator. This is useless because it raises back the exception immediately. Remove the raise operator or the entire try-except-raise block!"
+examples = """
+
+## Problematic code
+
+```py
+try:
+    1 / 0
+except ZeroDivisionError as e:  # [try-except-raise]
+    raise
+
+```
+
+## How to fix it
+
+```py
+# The try except might be removed entirely:
+1 / 0
+
+# Or another more detailed exception can be raised:
+try:
+    1 / 0
+except ZeroDivisionError as e:
+    raise ValueError(\"The area of the rectangle cannot be zero\") from e
+
+```
+"""
+
+[W0707]
+why = "Python's exception chaining shows the traceback of the current exception, but also of the original exception. When you raise a new exception after another exception was caught it's likely that the second exception is a friendly re-wrapping of the first exception. In such cases `raise from` provides a better link between the two tracebacks in the final error."
+examples = """
+
+## Problematic code
+
+```py
+try:
+    1 / 0
+except ZeroDivisionError as e:
+    raise ValueError(\"Rectangle Area cannot be zero\")  # [raise-missing-from]
+
+```
+
+## How to fix it
+
+```py
+try:
+    1 / 0
+except ZeroDivisionError as e:
+    raise ValueError(\"Rectangle Area cannot be zero\") from e
+
+```
+"""
+
+[W0711]
+why = "It looks like the exception to catch is of the form \"except A or B:\".  If intending to catch multiple, rewrite as \"except (A, B):\""
+examples = """
+
+## Problematic code
+
+```py
+try:
+    1 / 0
+except ZeroDivisionError or ValueError:  # [binary-op-exception]
+    pass
+
+```
+
+## How to fix it
+
+```py
+try:
+    1 / 0
+except (ZeroDivisionError, ValueError):
+    pass
+
+```
+"""
+
+[W0715]
+why = "It looks like passing multiple arguments to an exception constructor, the first of them a string literal containing what appears to be placeholders intended for formatting"
+examples = """
+
+## Problematic code
+
+```py
+raise RuntimeError(\"This looks wrong %s %s\", (\"a\", \"b\"))  # [raising-format-tuple]
+
+```
+
+## How to fix it
+
+```py
+raise RuntimeError(\"This looks wrong %s %s\" % (\"a\", \"b\"))
+
+```
+"""
+
+[W0716]
+why = "It looks like the operation is done against an exception, but the operation is not valid for the exception in question. Usually emitted when having binary operations between exceptions in except handlers."
+examples = """
+
+## Problematic code
+
+```py
+try:
+    1/0
+except (ValueError + TypeError):  # [wrong-exception-operation]
+    pass
+
+```
+
+## How to fix it
+
+```py
+try:
+    1/0
+except (ValueError, TypeError):
+    pass
+
+```
+"""
+
+[W0301]
+why = "It looks like the statement is ended by a semi-colon (\";\"), which isn't necessary (that's python, not C ;)."
+examples = """
+
+## Problematic code
+
+```py
+print(\"Hello World!\");  # [unnecessary-semicolon]
+
+```
+
+## How to fix it
+
+```py
+print(\"Hello World!\")
+
+```
+"""
+
+[W0311]
+why = "It looks like the unexpected number of indentation's tabulations or spaces has been found."
+examples = """
+
+## Problematic code
+
+```py
+if input():
+   print('yes')  # [bad-indentation]
+
+```
+
+## How to fix it
+
+```py
+if input():
+    print('yes')
+
+```
+"""
+
+[W0401]
+why = "It looks like `from module import *` is detected."
+examples = """
+
+## Problematic code
+
+```py
+from abc import *  # [wildcard-import]
+
+```
+
+## How to fix it
+
+```py
+# Either import module or
+# only import required objects from module.
+import abc
+from abc import ABC, abstractmethod
+
+```
+"""
+
+[W0402]
+why = "A module marked as deprecated is imported."
+examples = ""
+
+[W0404]
+why = "It looks like the module is reimported multiple times."
+examples = """
+
+## Problematic code
+
+```py
+import re
+import re  # [reimported]
+
+```
+
+## How to fix it
+
+```py
+import re
+
+```
+"""
+
+[W0406]
+why = "It looks like the module is importing itself."
+examples = """
+
+## Problematic code
+
+```py
+from bad import a_function  # [import-self]
+
+
+def a_function():
+    pass
+
+```
+
+## How to fix it
+
+```py
+def a_function():
+    pass
+
+```
+"""
+
+[W0407]
+why = "It looks like the module imported has a preferred replacement module."
+examples = """
+
+## Problematic code
+
+```py
+import urllib  # [preferred-module]
+
+```
+
+## How to fix it
+
+```py
+import requests
+
+```
+"""
+
+[W0410]
+why = "Python 2.5 and greater require __future__ import to be the first non docstring statement in the module."
+examples = """
+
+## Problematic code
+
+```py
+import sys
+
+from __future__ import print_function  # [misplaced-future]
+
+```
+
+## How to fix it
+
+```py
+from __future__ import print_function
+
+import sys
+
+```
+"""
+
+[W1201]
+why = "It looks like the logging statement has a call form of \"logging.<logging method>(format_string % (format_args...))\". Use another type of string formatting instead. You can use % formatting but leave interpolation to the logging function by passing the parameters as arguments. If logging-fstring-interpolation is disabled then you can use fstring formatting. If logging-format-interpolation is disabled then you can use str.format."
+examples = """
+
+## Problematic code
+
+```py
+import logging
+
+try:
+    function()
+except Exception as e:
+    logging.error('Error occurred: %s' % e)  # [logging-not-lazy]
+    raise
+
+```
+
+## How to fix it
+
+```py
+import logging
+
+try:
+    function()
+except Exception as e:
+    logging.error('Error occurred: %s', e)
+    raise
+
+```
+"""
+
+[W1202]
+why = "It looks like the logging statement has a call form of \"logging.<logging method>(format_string.format(format_args...))\". Use another type of string formatting instead. You can use % formatting but leave interpolation to the logging function by passing the parameters as arguments. If logging-fstring-interpolation is disabled then you can use fstring formatting. If logging-not-lazy is disabled then you can use % formatting as normal."
+examples = """
+
+## Problematic code
+
+```py
+import logging
+import sys
+
+logging.error('Python version: {}'.format(sys.version))  # [logging-format-interpolation]
+
+```
+
+## How to fix it
+
+```py
+import logging
+import sys
+
+logging.error('Python version: %s', sys.version)
+
+```
+"""
+
+[W1203]
+why = "It looks like the logging statement has a call form of \"logging.<logging method>(f\"...\")\".Use another type of string formatting instead. You can use % formatting but leave interpolation to the logging function by passing the parameters as arguments. If logging-format-interpolation is disabled then you can use str.format. If logging-not-lazy is disabled then you can use % formatting as normal."
+examples = """
+
+## Problematic code
+
+```py
+import logging
+import sys
+
+logging.error(f'Python version: {sys.version}')  # [logging-fstring-interpolation]
+
+```
+
+## How to fix it
+
+```py
+import logging
+import sys
+
+logging.error('Python version: %s', sys.version)
+
+```
+"""
+
+[W4701]
+why = "It looks like items are added or removed to a list being iterated through. Doing so can result in unexpected behaviour, that is why it is preferred to use a copy of the list."
+examples = """
+
+## Problematic code
+
+```py
+fruits = [\"apple\", \"orange\", \"mango\"]
+for fruit in fruits:
+    fruits.append(\"pineapple\")  # [modified-iterating-list]
+
+```
+
+## How to fix it
+
+```py
+fruits = [\"apple\", \"orange\", \"mango\"]
+for fruit in fruits.copy():
+    fruits.append(\"pineapple\")
+
+```
+"""
+
+[W0714]
+why = "It looks like exceptions in handler overlap or are identical"
+examples = """
+
+## Problematic code
+
+```py
+def divide_x_by_y(x: float, y: float):
+    try:
+        print(x / y)
+    except (ArithmeticError, FloatingPointError) as e:  # [overlapping-except]
+        print(f\"There was an issue: {e}\")
+
+```
+
+## How to fix it
+
+```py
+def divide_x_by_y(x: float, y: float):
+    try:
+        print(x / y)
+    except FloatingPointError as e:
+        print(f\"There was a FloatingPointError: {e}\")
+    except ArithmeticError as e:
+        # FloatingPointError  were already caught at this point
+        print(f\"There was an OverflowError or a ZeroDivisionError: {e}\")
+
+# Or:
+
+def divide_x_by_y(x: float, y: float):
+    try:
+        print(x / y)
+    except ArithmeticError as e:
+        print(f\"There was an OverflowError, a ZeroDivisionError or a FloatingPointError: {e}\")
+
+```
+"""
+
+[W9005]
+why = "Please remove parameter declarations in the class or constructor."
+examples = """
+
+## Problematic code
+
+```py
+class Point:  # [multiple-constructor-doc]
+    \"\"\"Represents a point in the xy-coordinate plane.
+
+    :param x: coordinate
+    :param y: coordinate
+    \"\"\"
+
+    def __init__(self, x, y):
+        \"\"\"Represents a point in the xy-coordinate plane.
+
+        :param x: coordinate
+        :param y: coordinate
+        \"\"\"
+        self.x = x
+        self.y = y
+
+```
+
+## How to fix it
+
+```py
+class Point:
+    def __init__(self, x, y):
+        \"\"\"Represents a point in the xy-coordinate plane.
+
+        :param x: x coordinate
+        :param y: y coordinate
+        \"\"\"
+        self.x = x
+        self.y = y
+
+```
+"""
+
+[W9006]
+why = "Please document exceptions for all raised exception types."
+examples = """
+
+## Problematic code
+
+```py
+def integer_sum(a: int, b: int):  # [missing-raises-doc]
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    :param b: second integer
+    \"\"\"
+    if not (isinstance(a, int) and isinstance(b, int)):
+        raise ValueError('Function supports only integer parameters.')
+    return a + b
+
+```
+
+## How to fix it
+
+```py
+def integer_sum(a: int, b: int):
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    :param b: second integer
+    :raises ValueError: One of the parameters is not an integer.
+    \"\"\"
+    if not (isinstance(a, int) and isinstance(b, int)):
+        raise ValueError('Function supports only integer parameters.')
+    return a + b
+
+```
+"""
+
+[W9008]
+why = "Please remove the return/rtype documentation from this method."
+examples = """
+
+## Problematic code
+
+```py
+def print_fruits(fruits):  # [redundant-returns-doc]
+    \"\"\"Print list of fruits
+
+    Returns
+    -------
+        str
+    \"\"\"
+    print(fruits)
+    return None
+
+```
+
+## How to fix it
+
+```py
+def print_fruits(fruits):
+    \"\"\"Print list of fruits
+
+    Returns
+    -------
+        str
+    \"\"\"
+    print(fruits)
+    return \",\".join(fruits)
+
+```
+"""
+
+[W9010]
+why = "Please remove the yields documentation from this method."
+examples = """
+
+## Problematic code
+
+```py
+def give_fruits(fruits):  # [redundant-yields-doc]
+    \"\"\"Something about fruits
+
+    Yields
+    -------
+        list
+            fruits
+    \"\"\"
+    return fruits
+
+```
+
+## How to fix it
+
+```py
+def give_fruits(fruits):
+    \"\"\"Something about fruits
+
+    Yields
+    -------
+        str
+            fruit
+    \"\"\"
+    for fruit in fruits:
+        yield fruit
+
+```
+"""
+
+[W9011]
+why = "Please add documentation about what this method returns."
+examples = """
+
+## Problematic code
+
+```py
+def integer_sum(a: int, b: int):  # [missing-return-doc]
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    :param b: second integer
+    \"\"\"
+    return a + b
+
+```
+
+## How to fix it
+
+```py
+def integer_sum(a: int, b: int) -> int:
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    :param b: second integer
+    :return: sum of parameters a and b
+    \"\"\"
+    return a + b
+
+```
+"""
+
+[W9012]
+why = "Please document the type returned by this method."
+examples = """
+
+## Problematic code
+
+```py
+def integer_sum(a: int, b: int):  # [missing-return-type-doc]
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    :param b: second integer
+    :return: sum of parameters a and b
+    \"\"\"
+    return a + b
+
+```
+
+## How to fix it
+
+```py
+def integer_sum(a: int, b: int) -> int:
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    :param b: second integer
+    :return: sum of parameters a and b
+    \"\"\"
+    return a + b
+
+```
+"""
+
+[W9013]
+why = "Please add documentation about what this generator yields."
+examples = """
+
+## Problematic code
+
+```py
+def even_number_under(n: int):  # [missing-yield-doc]
+    \"\"\"Prints even numbers smaller than n.
+    Args:
+        n: Upper limit of even numbers.
+    \"\"\"
+    for i in range(n):
+        if i % 2 == 1:
+            continue
+        yield i
+
+```
+
+## How to fix it
+
+```py
+from typing import Iterator
+
+
+def even_number_under(n: int) -> Iterator[int]:
+    \"\"\"Prints even numbers smaller than n.
+    Args:
+        n: Upper limit of even numbers.
+
+    Yields:
+        even numbers
+    \"\"\"
+    for i in range(n):
+        if i % 2 == 1:
+            continue
+        yield i
+
+```
+"""
+
+[W9014]
+why = "Please document the type yielded by this method."
+examples = """
+
+## Problematic code
+
+```py
+def even_number_under(n: int):  # [missing-yield-type-doc]
+    \"\"\"Prints even numbers smaller than n.
+    Args:
+        n: Upper limit of even numbers.
+
+    Yields:
+        even numbers
+    \"\"\"
+    for i in range(n):
+        if i % 2 == 1:
+            continue
+        yield i
+
+```
+
+## How to fix it
+
+```py
+from typing import Iterator
+
+
+def even_number_under(n: int) -> Iterator[int]:
+    \"\"\"Prints even numbers smaller than n.
+    Args:
+        n: Upper limit of even numbers.
+
+    Yields:
+        even numbers
+    \"\"\"
+    for i in range(n):
+        if i % 2 == 1:
+            continue
+        yield i
+
+```
+"""
+
+[W9015]
+why = "Please add parameter declarations for all parameters."
+examples = """
+
+## Problematic code
+
+```py
+def integer_sum(a: int, b):  # [missing-param-doc]
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    \"\"\"
+    return a + b
+
+```
+
+## How to fix it
+
+```py
+def integer_sum(a: int, b: int):
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    :param b: second integer
+    \"\"\"
+    return a + b
+
+```
+"""
+
+[W9016]
+why = "Please add parameter type declarations for all parameters."
+examples = """
+
+## Problematic code
+
+```py
+def integer_sum(a: int, b):  # [missing-type-doc]
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    :param b: second integer
+    \"\"\"
+    return a + b
+
+```
+
+## How to fix it
+
+```py
+def integer_sum(a: int, b: int):
+    \"\"\"Returns sum of two integers
+    :param a: first integer
+    :param b: second integer
+    \"\"\"
+    return a + b
+
+```
+"""
+
+[W9017]
+why = "Please check parameter names in declarations."
+examples = ""
+
+[W9018]
+why = "Please check parameter names in type declarations."
+examples = ""
+
+[W9019]
+why = "Please remove the ignored parameter documentation."
+examples = """
+
+## Problematic code
+
+```py
+def say_hello(_new: str) -> str:  # [useless-param-doc]
+    \"\"\"say hello!
+
+    :param _new:
+    :return: comment
+    \"\"\"
+    return \"hello\"
+
+```
+
+## How to fix it
+
+```py
+def say_hello(_new: str) -> str:
+    \"\"\"say hello!
+
+    :return: comment
+    \"\"\"
+    return \"hello\"
+
+```
+"""
+
+[W9020]
+why = "Please remove the ignored parameter type documentation."
+examples = """
+
+## Problematic code
+
+```py
+def print_fruit(fruit, _):  # [useless-type-doc]
+    \"\"\"docstring ...
+
+    Args:
+        fruit (str): A fruit.
+        _ (float): Another argument.
+    \"\"\"
+    print(fruit)
+
+```
+
+## How to fix it
+
+```py
+def print_fruit(fruit):
+    \"\"\"docstring ...
+
+    Args:
+        fruit (str): A fruit.
+    \"\"\"
+    print(fruit)
+
+```
+"""
+
+[W9021]
+why = "Please add parameter and/or type documentation."
+examples = ""
+
+[W2901]
+why = "It looks like the loop variable is overwritten in the loop body."
+examples = """
+
+## Problematic code
+
+```py
+for name in names:
+    name = name.lower()  # [redefined-loop-name]
+
+```
+
+## How to fix it
+
+```py
+for name in names:
+    lowercased_name = name.lower()
+
+```
+"""
+
+[W0601]
+why = "It looks like the variable is defined through the \"global\" statement but the variable is not defined in the module scope."
+examples = """
+
+## Problematic code
+
+```py
+def update_tomato():
+    global TOMATO  # [global-variable-undefined]
+    TOMATO = \"moneymaker\"
+
+```
+
+## How to fix it
+
+```py
+TOMATO = \"black cherry\"
+
+
+def update_tomato():
+    global TOMATO
+    TOMATO = \"moneymaker\"
+
+```
+"""
+
+[W0602]
+why = "It looks like the variable is defined through the \"global\" statement but no assignment to this variable is done."
+examples = """
+
+## Problematic code
+
+```py
+TOMATO = \"black cherry\"
+
+
+def update_tomato():
+    global TOMATO  # [global-variable-not-assigned]
+    print(TOMATO)
+
+```
+
+## How to fix it
+
+```py
+TOMATO = \"black cherry\"
+
+
+def update_tomato():
+    global TOMATO
+    TOMATO = \"moneymaker\"
+
+```
+"""
+
+[W0603]
+why = "It looks like you use the \"global\" statement to update a global variable. Pylint just try to discourage this usage. That doesn't mean you cannot use it !"
+examples = """
+
+## Problematic code
+
+```py
+var = 1
+
+
+def foo():
+    global var  # [global-statement]
+    var = 10
+    print(var)
+
+
+foo()
+print(var)
+
+```
+
+## How to fix it
+
+```py
+var = 1
+
+
+def foo():
+    print(var)
+    return 10
+
+
+var = foo()
+print(var)
+
+```
+"""
+
+[W0604]
+why = "It looks like you use the \"global\" statement at the module level since it has no effect"
+examples = """
+
+## Problematic code
+
+```py
+price = 25
+global price  # [global-at-module-level]
+
+```
+
+## How to fix it
+
+```py
+price = 25
+
+```
+"""
+
+[W0611]
+why = "It looks like the imported module or variable is not used."
+examples = """
+
+## Problematic code
+
+```py
+from logging import getLogger
+from pathlib import Path  # [unused-import]
+
+LOGGER = getLogger(__name__)
+
+```
+
+## How to fix it
+
+```py
+from logging import getLogger
+
+LOGGER = getLogger(__name__)
+
+```
+"""
+
+[W0612]
+why = "It looks like the variable is defined but not used."
+examples = """
+
+## Problematic code
+
+```py
+def print_fruits():
+    fruit1 = \"orange\"
+    fruit2 = \"apple\"  # [unused-variable]
+    print(fruit1)
+
+```
+
+## How to fix it
+
+```py
+def print_fruits():
+    fruit1 = \"orange\"
+    fruit2 = \"apple\"
+    print(fruit1, fruit2)
+
+```
+"""
+
+[W0613]
+why = "It looks like the function or method argument is not used."
+examples = """
+
+## Problematic code
+
+```py
+def print_point(x, y):  # [unused-argument]
+    print(f\"Point is located at {x},{x}\")
+
+```
+
+## How to fix it
+
+```py
+def print_point(x, y):
+    print(f\"Point is located at {x},{y}\")
+
+```
+"""
+
+[W0614]
+why = "It looks like the imported module or variable is not used from a `'from X import *'` style import."
+examples = """
+
+## Problematic code
+
+```py
+from abc import *  # [unused-wildcard-import]
+
+
+class Animal(ABC): ...
+
+```
+
+## How to fix it
+
+```py
+from abc import ABC
+
+
+class Animal(ABC): ...
+
+```
+"""
+
+[W0621]
+why = "It looks like the variable's name hides a name defined in an outer scope or except handler."
+examples = """
+
+## Problematic code
+
+```py
+count = 10
+
+
+def count_it(count):  # [redefined-outer-name]
+    for i in range(count):
+        print(i)
+
+```
+
+## How to fix it
+
+```py
+count = 10
+
+
+def count_it(limit):
+    for i in range(limit):
+        print(i)
+
+```
+"""
+
+[W0622]
+why = "It looks like the variable or function override a built-in."
+examples = """
+
+## Problematic code
+
+```py
+def map():  # [redefined-builtin]
+    pass
+
+```
+
+## How to fix it
+
+```py
+def map_iterable():
+    pass
+
+```
+"""
+
+[W0631]
+why = "It looks like the loop variable (i.e. defined by a for loop or a list comprehension or a generator expression) is used outside the loop."
+examples = """
+
+## Problematic code
+
+```py
+def find_even_number(numbers):
+    for x in numbers:
+        if x % 2 == 0:
+            break
+    return x  # [undefined-loop-variable]
+
+```
+
+## How to fix it
+
+```py
+def find_even_number(numbers):
+    for x in numbers:
+        if x % 2:
+            return x
+    return None
+
+```
+"""
+
+[W0632]
+why = "It looks like there is an unbalanced tuple unpacking in assignment"
+examples = """
+
+## Problematic code
+
+```py
+fruits = (\"orange\", \"apple\", \"strawberry\", \"peer\")
+orange, apple, strawberry = fruits  # [unbalanced-tuple-unpacking]
+
+```
+
+## How to fix it
+
+```py
+fruits = (\"orange\", \"apple\", \"strawberry\", \"peer\")
+orange, apple, *remaining_fruits = fruits
+
+```
+"""
+
+[W0640]
+why = "A variable used in a closure is defined in a loop. This will result in all closures using the same value for the closed-over variable."
+examples = """
+
+## Problematic code
+
+```py
+def foo(numbers):
+    for i in numbers:
+        def bar():
+            print(i)  # [cell-var-from-loop]
+        bar()
+
+```
+
+## How to fix it
+
+```py
+def bar(x):
+    print(x)
+
+
+def foo(numbers):
+    for i in numbers:
+        bar(i)
+
+```
+"""
+
+[W0641]
+why = "It looks like the variable is defined but might not be used. The possibility comes from the fact that locals() might be used, which could consume or not the said variable"
+examples = """
+
+## Problematic code
+
+```py
+def choose_fruits(fruits):
+    print(fruits)
+    color = \"red\"  # [possibly-unused-variable]
+    return locals()
+
+```
+
+## How to fix it
+
+```py
+def choose_fruits(fruits):
+    current_locals = locals()
+    print(fruits)
+    color = \"red\"
+    print(color)
+    return current_locals
+
+```
+"""
+
+[W0642]
+why = "Invalid assignment to self or cls in instance or class method respectively."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    @classmethod
+    def list_fruits(cls):
+        cls = 'apple'  # [self-cls-assignment]
+
+    def print_color(self, *colors):
+        self = \"red\"  # [self-cls-assignment]
+        color = colors[1]
+        print(color)
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    @classmethod
+    def list_fruits(cls):
+        fruit = 'apple'
+        print(fruit)
+
+    def print_color(self, *colors):
+        color = colors[1]
+        print(color)
+
+```
+"""
+
+[W1501]
+why = "Python supports: r, w, a[, x] modes with b, +, and U (only with r) options. See https://docs.python.org/3/library/functions.html#open"
+examples = """
+
+## Problematic code
+
+```py
+def foo(file_path):
+    with open(file_path, \"rwx\") as file:  # [bad-open-mode]
+        contents = file.read()
+
+```
+
+## How to fix it
+
+```py
+def foo(file_path):
+    with open(file_path, \"r\") as file:
+        contents = file.read()
+
+```
+"""
+
+[W1502]
+why = "Using datetime.time in a boolean context can hide subtle bugs when the time they represent matches midnight UTC. This behaviour was fixed in Python 3.5. See https://bugs.python.org/issue13936 for reference."
+examples = ""
+
+[W1503]
+why = "The first argument of assertTrue and assertFalse is a condition. If a constant is passed as parameter, that condition will be always true. In this case a warning should be emitted."
+examples = """
+
+## Problematic code
+
+```py
+import unittest
+
+
+class DummyTestCase(unittest.TestCase):
+    def test_dummy(self):
+        self.assertTrue(\"foo\")  # [redundant-unittest-assert]
+
+```
+
+## How to fix it
+
+```py
+import unittest
+
+
+class DummyTestCase(unittest.TestCase):
+    def test_dummy(self):
+        actual = \"test_result\"
+        self.assertEqual(actual, \"expected\")
+
+```
+"""
+
+[W1505]
+why = "The method is marked as deprecated and will be removed in the future."
+examples = ""
+
+[W1506]
+why = "The warning is emitted when a threading.Thread class is instantiated without the target function being passed. By default, the first parameter is the group param, not the target param."
+examples = """
+
+## Problematic code
+
+```py
+import threading
+
+
+def thread_target(n):
+    print(n ** 2)
+
+
+thread = threading.Thread(lambda: None)  # [bad-thread-instantiation]
+thread.start()
+
+```
+
+## How to fix it
+
+```py
+import threading
+
+
+def thread_target(n):
+    print(n ** 2)
+
+
+thread = threading.Thread(target=thread_target, args=(10,))
+thread.start()
+
+```
+"""
+
+[W1507]
+why = "os.environ is not a dict object but proxy object, so shallow copy has still effects on original object. See https://bugs.python.org/issue15373 for reference."
+examples = """
+
+## Problematic code
+
+```py
+import copy
+import os
+
+copied_env = copy.copy(os.environ)  # [shallow-copy-environ]
+
+```
+
+## How to fix it
+
+```py
+import os
+
+copied_env = os.environ.copy()
+
+```
+"""
+
+[W1508]
+why = "Env manipulation functions return None or str values. Supplying anything different as a default may cause bugs. See https://docs.python.org/3/library/os.html#os.getenv."
+examples = """
+
+## Problematic code
+
+```py
+import os
+
+env = os.getenv('SECRET_KEY', 1)  # [invalid-envvar-default]
+
+```
+
+## How to fix it
+
+```py
+import os
+
+env = os.getenv('SECRET_KEY', '1')
+
+```
+"""
+
+[W1509]
+why = "The preexec_fn parameter is not safe to use in the presence of threads in your application. The child process could deadlock before exec is called. If you must use it, keep it trivial! Minimize the number of libraries you call into.https://docs.python.org/3/library/subprocess.html#popen-constructor"
+examples = ""
+
+[W1510]
+why = "The check parameter should always be used with explicitly set `check` keyword to make clear what the error-handling behavior is.https://docs.python.org/3/library/subprocess.html#subprocess.run"
+examples = """
+
+## Problematic code
+
+```py
+import subprocess
+
+proc = subprocess.run([\"ls\"])  # [subprocess-run-check]
+
+```
+
+## How to fix it
+
+```py
+import subprocess
+
+proc = subprocess.run([\"ls\"], check=False)
+
+```
+"""
+
+[W1511]
+why = "The argument is marked as deprecated and will be removed in the future."
+examples = ""
+
+[W1512]
+why = "The class is marked as deprecated and will be removed in the future."
+examples = ""
+
+[W1513]
+why = "The decorator is marked as deprecated and will be removed in the future."
+examples = ""
+
+[W1514]
+why = "It is better to specify an encoding when opening documents. Using the system default implicitly can create problems on other operating systems. See https://peps.python.org/pep-0597/"
+examples = """
+
+## Problematic code
+
+```py
+def foo(file_path):
+    with open(file_path) as file:  # [unspecified-encoding]
+        contents = file.read()
+
+```
+
+## How to fix it
+
+```py
+def foo(file_path):
+    with open(file_path, encoding=\"utf-8\") as file:
+        contents = file.read()
+
+```
+"""
+
+[W1515]
+why = "Calls to breakpoint(), sys.breakpointhook() and pdb.set_trace() should be removed from code that is not actively being debugged."
+examples = ""
+
+[W1518]
+why = "By decorating a method with lru_cache or cache the 'self' argument will be linked to the function and therefore never garbage collected. Unless your instance will never need to be garbage collected (singleton) it is recommended to refactor code to avoid this pattern or add a maxsize to the cache.The default value for maxsize is 128."
+examples = """
+
+## Problematic code
+
+```py
+import functools
+
+
+class Fibonnaci:
+    def __init__(self):
+        self.result = []
+
+    @functools.lru_cache(maxsize=None)  # [method-cache-max-size-none]
+    def fibonacci(self, n):
+        if n in {0, 1}:
+            self.result.append(n)
+        self.result.append(self.fibonacci(n - 1) + self.fibonacci(n - 2))
+
+```
+
+## How to fix it
+
+```py
+import functools
+
+
+@functools.cache
+def cached_fibonacci(n):
+    if n in {0, 1}:
+        return n
+    return cached_fibonacci(n - 1) + cached_fibonacci(n - 2)
+
+
+class Fibonnaci:
+    def __init__(self):
+        self.result = []
+
+    def fibonacci(self, n):
+        self.result.append(cached_fibonacci(n))
+
+```
+"""
+
+[W1401]
+why = "It looks like the backslash is in a literal string but not as an escape."
+examples = """
+
+## Problematic code
+
+```py
+string = \"\\z\"  # [anomalous-backslash-in-string]
+
+```
+
+## How to fix it
+
+```py
+string = r\"\\z\"
+string = \"\\n\"
+
+```
+"""
+
+[W1402]
+why = "It looks like the escape like \\u is encountered in a byte string where it has no effect."
+examples = """
+
+## Problematic code
+
+```py
+print(b\"\\u%b\" % b\"0394\")  # [anomalous-unicode-escape-in-string]
+
+```
+
+## How to fix it
+
+```py
+print(b\"\\\\u%b\" % b\"0394\")
+
+```
+"""
+
+[W1404]
+why = "String literals are implicitly concatenated in a literal iterable definition : maybe a comma is missing ?"
+examples = """
+
+## Problematic code
+
+```py
+x = [\"a\" \"b\"]  # [implicit-str-concat]
+
+with open(\"hello.txt\" \"r\") as f:  # [implicit-str-concat]
+    print(f.read())
+
+```
+
+## How to fix it
+
+```py
+x = [\"a\", \"b\"]
+
+with open(\"hello.txt\", \"r\") as f:
+    print(f.read())
+
+```
+"""
+
+[W1405]
+why = "Quote delimiters are not used consistently throughout a module (with allowances made for avoiding unnecessary escaping)."
+examples = ""
+
+[W1406]
+why = "It looks like we detect a string with a u prefix. These prefixes were necessary in Python 2 to indicate a string was Unicode, but since Python 3.0 strings are Unicode by default."
+examples = """
+
+## Problematic code
+
+```py
+def print_fruit():
+    print(u\"Apple\")  # [redundant-u-string-prefix]
+
+```
+
+## How to fix it
+
+```py
+def print_fruit():
+    print(\"Apple\")
+
+```
+"""
+
+[W1300]
+why = "It looks like the format string that uses named conversion specifiers is used with a dictionary whose keys are not all strings."
+examples = """
+
+## Problematic code
+
+```py
+print(\"%(one)d\" % {\"one\": 1, 2: 2})  # [bad-format-string-key]
+
+```
+
+## How to fix it
+
+```py
+print(\"%(one)d, %(two)d\" % {\"one\": 1, \"two\": 2})
+
+```
+"""
+
+[W1301]
+why = "It looks like the format string that uses named conversion specifiers is used with a dictionary that contains keys not required by the format string."
+examples = ""
+
+[W1302]
+why = "It looks like the PEP 3101 format string is invalid."
+examples = """
+
+## Problematic code
+
+```py
+print('{a[0] + a[1]}'.format(a=[0, 1])) # [bad-format-string]
+
+```
+
+## How to fix it
+
+```py
+print('{a[0]} + {a[1]}'.format(a=[0, 1]))
+
+```
+"""
+
+[W1303]
+why = "It looks like the PEP 3101 format string that uses named fields doesn't receive one or more required keywords."
+examples = """
+
+## Problematic code
+
+```py
+print(\"My name is {first} {last}\".format(first=\"John\"))  # [missing-format-argument-key]
+
+```
+
+## How to fix it
+
+```py
+print(\"My name is {first} {last}\".format(first=\"John\", last=\"Wick\"))
+
+```
+"""
+
+[W1304]
+why = "It looks like the PEP 3101 format string that uses named fields is used with an argument that is not required by the format string."
+examples = """
+
+## Problematic code
+
+```py
+print(\"{x} {y}\".format(x=1, y=2, z=3))  # [unused-format-string-argument]
+
+```
+
+## How to fix it
+
+```py
+print(\"{x} {y} {z}\".format(x=1, y=2, z=3))
+# or
+print(\"{x} {y}\".format(x=1, y=2))
+
+```
+"""
+
+[W1305]
+why = "It looks like the PEP 3101 format string contains both automatic field numbering (e.g. '{}') and manual field specification (e.g. '{0}')."
+examples = """
+
+## Problematic code
+
+```py
+print('{} {1}'.format('hello', 'world'))  # [format-combined-specification]
+
+```
+
+## How to fix it
+
+```py
+print('{0} {1}'.format('hello', 'world'))
+# or
+print('{} {}'.format('hello', 'world'))
+
+```
+"""
+
+[W1306]
+why = "It looks like the PEP 3101 format string uses an attribute specifier ({0.length}), but the argument passed for formatting doesn't have that attribute."
+examples = """
+
+## Problematic code
+
+```py
+print(\"{0.real}\".format(\"1\"))  # [missing-format-attribute]
+
+```
+
+## How to fix it
+
+```py
+print(\"{0.real}\".format(1))
+
+```
+"""
+
+[W1307]
+why = "It looks like the PEP 3101 format string uses a lookup specifier ({a[1]}), but the argument passed for formatting doesn't contain or doesn't have that key as an attribute."
+examples = """
+
+## Problematic code
+
+```py
+not_enough_fruits = [\"apple\"]
+print('The second fruit is a {fruits[1]}'.format(fruits=not_enough_fruits))  # [invalid-format-index]
+
+```
+
+## How to fix it
+
+```py
+enough_fruits = [\"apple\", \"banana\"]
+print('The second fruit is a {fruits[1]}'.format(fruits=enough_fruits))
+
+```
+"""
+
+[W1308]
+why = "It looks like we detect that a string formatting is repeating an argument instead of using named string arguments"
+examples = ""
+
+[W1309]
+why = "It looks like we detect an f-string that does not use any interpolation variables, in which case it can be either a normal string or a bug in the code."
+examples = """
+
+## Problematic code
+
+```py
+x = 1
+y = 2
+print(f\"x + y = x + y\")  # [f-string-without-interpolation]
+
+```
+
+## How to fix it
+
+```py
+x = 1
+y = 2
+print(f\"{x} + {y} = {x + y}\")
+
+```
+"""
+
+[W1310]
+why = "It looks like we detect a string that does not have any interpolation variables, in which case it can be either a normal string without formatting or a bug in the code."
+examples = """
+
+## Problematic code
+
+```py
+print(\"number\".format(1))  # [format-string-without-interpolation]
+
+```
+
+## How to fix it
+
+```py
+print(\"number: {}\".format(1))
+
+```
+"""
+
+[W1113]
+why = "When defining a keyword argument before variable positional arguments, one can end up in having multiple values passed for the aforementioned parameter in case the method is called with keyword arguments."
+examples = """
+
+## Problematic code
+
+```py
+def func(x=None, *args):  # [keyword-arg-before-vararg]
+    return [x, *args]
+
+```
+
+## How to fix it
+
+```py
+def func(*args, x=None):
+    return [*args, x]
+
+```
+"""
+
+[W1114]
+why = "Emitted  when the caller's argument names fully match the parameter names in the function signature but do not have the same order."
+examples = """
+
+## Problematic code
+
+```py
+def function_3_args(first_argument, second_argument, third_argument):
+    \"\"\"Three arguments function\"\"\"
+    return first_argument, second_argument, third_argument
+
+
+def args_out_of_order():
+    first_argument = 1
+    second_argument = 2
+    third_argument = 3
+
+    function_3_args(  # [arguments-out-of-order]
+        first_argument, third_argument, second_argument
+    )
+
+```
+
+## How to fix it
+
+```py
+def function_3_args(first_argument, second_argument, third_argument):
+    \"\"\"Three arguments function\"\"\"
+    return first_argument, second_argument, third_argument
+
+
+def args_out_of_order():
+    first_argument = 1
+    second_argument = 2
+    third_argument = 3
+
+    function_3_args(first_argument, second_argument, third_argument)
+
+```
+"""
+
+[W1115]
+why = "It looks like the non-string value is assigned to __name__"
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    pass
+
+
+Fruit.__name__ = 1  # [non-str-assignment-to-dunder-name]
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    pass
+
+
+Fruit.__name__ = \"FRUIT\"
+
+```
+"""
+
+[W1116]
+why = "It looks like the second argument of an isinstance call is not a type."
+examples = """
+
+## Problematic code
+
+```py
+isinstance(\"apples and oranges\", hex)  # [isinstance-second-argument-not-valid-type]
+
+```
+
+## How to fix it
+
+```py
+isinstance(\"apples and oranges\", str)
+
+```
+"""
+
+[W2301]
+why = "It looks like the ellipsis constant is encountered and can be avoided. A line of code consisting of an ellipsis is unnecessary if there is a docstring on the preceding line or if there is a statement in the same scope."
+examples = """
+
+## Problematic code
+
+```py
+def my_function():
+    \"\"\"My docstring\"\"\"
+    ...  # [unnecessary-ellipsis]
+
+```
+
+## How to fix it
+
+```py
+def my_function():
+    \"\"\"My docstring\"\"\"
+
+```
+"""
+
+[W0511]
+why = "It looks like the warning note as FIXME or XXX is detected."
+examples = """
+
+## Problematic code
+
+```py
+# FIXME: Create an issue on the bug tracker for this refactor we might do someday  # [fixme]
+
+...
+
+# TODO: We should also fix this at some point  # [fixme]
+
+```
+
+## How to fix it
+
+```py
+# I no longer want to fix this
+
+...
+
+# I have fixed the issue
+
+```
+"""
+
+[W2402]
+why = """
+Some editors don't support non-ASCII file names properly. Even though Python supports UTF-8 files since Python 3.5 this isn't recommended for interoperability. Further reading:
+- https://peps.python.org/pep-0489/#export-hook-name
+- https://peps.python.org/pep-0672/#confusing-features
+- https://bugs.python.org/issue20485"""
+examples = ""
+
+[W2101]
+why = "It looks like the new lock instance is created by using with statement which has no effect. Instead, an existing instance should be used to acquire lock."
+examples = """
+
+## Problematic code
+
+```py
+import threading
+
+with threading.Lock():  # [useless-with-lock]
+    print(\"Make your bed.\")
+with threading.Lock():  # [useless-with-lock]
+    print(\"Sleep in it\")
+
+```
+
+## How to fix it
+
+```py
+import threading
+
+lock = threading.Lock()
+with lock:
+    print(\"Make your bed.\")
+with lock:
+    print(\"Sleep in it.\")
+
+```
+"""
+
+[W6001]
+why = "It looks like the deprecated typing alias is used."
+examples = ""
+
+[W2601]
+why = "It looks like the py-version set by the user is lower than 3.6 and pylint encounters a f-string."
+examples = ""
+
+[W2602]
+why = "It looks like the py-version set by the user is lower than 3.8 and pylint encounters a ``typing.final`` decorator."
+examples = """
+
+## Problematic code
+
+```py
+from typing import final
+
+
+@final  # [using-final-decorator-in-unsupported-version]
+class Playtypus(Animal):
+    @final  # [using-final-decorator-in-unsupported-version]
+    def lay_egg(self):
+        ...
+
+```
+
+## How to fix it
+
+```py
+class Playtypus(Animal):
+    def lay_egg(self):
+        ...
+
+```
+"""
+
+[W0149]
+why = "Unbounded `while` loops can often be rewritten as bounded `for` loops."
+examples = """
+
+## Problematic code
+
+```py
+import requests
+
+
+def fetch_data():
+    i = 1
+    while i < 6:  # [while-used]
+        print(f'Attempt {i}...')
+        try:
+            return requests.get('https://example.com/data')
+        except requests.exceptions.RequestException:
+            pass
+        i += 1
+
+```
+
+## How to fix it
+
+```py
+import requests
+
+
+def fetch_data():
+    for i in range(1, 6):
+        print(f'Attempt {i}...')
+        try:
+            return requests.get('https://example.com/data')
+        except requests.exceptions.RequestException:
+            pass
+
+```
+"""
+
+[C0121]
+why = "It looks like the expression is compared to singleton values like True, False or None."
+examples = """
+
+## Problematic code
+
+```py
+game_won = True
+if game_won == True:  # [singleton-comparison]
+    print(\"Game won !\")
+
+```
+
+## How to fix it
+
+```py
+game_won = True
+if game_won:
+    print(\"Game won !\")
+
+```
+"""
+
+[C0123]
+why = "The idiomatic way to perform an explicit typecheck in Python is to use isinstance(x, Y) rather than type(x) == Y, type(x) is Y. Though there are unusual situations where these give different results."
+examples = """
+
+## Problematic code
+
+```py
+test_score = {\"Biology\": 95, \"History\": 80}
+if type(test_score) is dict:  # [unidiomatic-typecheck]
+    pass
+
+```
+
+## How to fix it
+
+```py
+test_score = {\"Biology\": 95, \"History\": 80}
+if isinstance(test_score, dict):
+    pass
+
+```
+"""
+
+[C0112]
+why = "It looks like the module, function, class or method has an empty docstring (it would be too easy ;)."
+examples = """
+
+## Problematic code
+
+```py
+def foo():  # [empty-docstring]
+    \"\"\"\"\"\"
+
+```
+
+## How to fix it
+
+```py
+def foo():
+    \"\"\"A dummy description.\"\"\"
+
+```
+"""
+
+[C0114]
+why = "It looks like the module has no docstring.Empty modules do not require a docstring."
+examples = """
+
+## Problematic code
+
+```py
+import sys  # [missing-module-docstring]
+
+
+def print_python_version():
+    print(sys.version)
+
+```
+
+## How to fix it
+
+```py
+\"\"\"Module providingFunction printing python version.\"\"\"
+import sys
+
+
+def print_python_version():
+    print(sys.version)
+
+```
+"""
+
+[C0115]
+why = "It looks like the class has no docstring.Even an empty class must have a docstring."
+examples = """
+
+## Problematic code
+
+```py
+class Person:  # [missing-class-docstring]
+
+    def __init__(self, first_name, last_name):
+        self.first_name = first_name
+        self.last_name = last_name
+
+```
+
+## How to fix it
+
+```py
+class Person:
+    \"\"\"Class representing a person\"\"\"
+
+    def __init__(self, first_name, last_name):
+        self.first_name = first_name
+        self.last_name = last_name
+
+```
+"""
+
+[C0116]
+why = "It looks like the function or method has no docstring.Some special methods like __init__ do not require a docstring."
+examples = """
+
+## Problematic code
+
+```py
+import sys
+
+
+def print_python_version():  # [missing-function-docstring]
+    print(sys.version)
+
+```
+
+## How to fix it
+
+```py
+import sys
+
+
+def print_python_version():
+    \"\"\"Function printing python version.\"\"\"
+    print(sys.version)
+
+```
+"""
+
+[C0103]
+why = "It looks like the name doesn't conform to naming rules associated to its type (constant, variable, class...)."
+examples = """
+
+## Problematic code
+
+```py
+class cat:  # [invalid-name]
+
+    def Meow(self, NUMBER_OF_MEOW):  # [invalid-name, invalid-name]
+        print(\"Meow\" * NUMBER_OF_MEOW)
+        return NUMBER_OF_MEOW
+
+
+Cat = cat().Meow(42)  # [invalid-name]
+
+```
+
+## How to fix it
+
+```py
+class Cat:
+
+    def meow(self, number_of_meow):
+        print(\"Meow\" * number_of_meow)
+        return number_of_meow
+
+
+CAT = Cat().meow(42)
+
+```
+"""
+
+[C0104]
+why = "It looks like the name matches bad-names or bad-names-rgxs- (unauthorized names)."
+examples = """
+
+## Problematic code
+
+```py
+def foo():  # [disallowed-name]
+    print(\"apples\")
+
+```
+
+## How to fix it
+
+```py
+def print_fruit():
+    print(\"apples\")
+
+```
+"""
+
+[C0105]
+why = "It looks like the TypeVar name doesn't reflect its type variance. According to PEP8, it is recommended to add suffixes '_co' and '_contra' to the variables used to declare covariant or contravariant behaviour respectively. Invariant (default) variables do not require a suffix. The message is also emitted when invariant variables do have a suffix."
+examples = ""
+
+[C0131]
+why = "It looks like both the \"covariant\" and \"contravariant\" keyword arguments are set to \"True\" in a TypeVar."
+examples = """
+
+## Problematic code
+
+```py
+from typing import TypeVar
+
+T = TypeVar(\"T\", covariant=True, contravariant=True)  # [typevar-double-variance]
+
+```
+
+## How to fix it
+
+```py
+from typing import TypeVar
+
+T_co = TypeVar(\"T_co\", covariant=True)
+T_contra = TypeVar(\"T_contra\", contravariant=True)
+
+```
+"""
+
+[C0132]
+why = "It looks like the TypeVar is assigned to a variable that does not match its name argument."
+examples = """
+
+## Problematic code
+
+```py
+from typing import TypeVar
+
+X = TypeVar(\"T\")  # [typevar-name-mismatch]
+
+```
+
+## How to fix it
+
+```py
+from typing import TypeVar
+
+T = TypeVar(\"T\")
+
+```
+"""
+
+[C0202]
+why = "It looks like the class method has a first argument named differently than the value specified in valid-classmethod-first-arg option (default to \"cls\"), recommended to easily differentiate them from regular instance methods."
+examples = """
+
+## Problematic code
+
+```py
+class Klass:
+
+    @classmethod
+    def get_instance(self):  # [bad-classmethod-argument]
+        return self()
+
+```
+
+## How to fix it
+
+```py
+class Klass:
+
+    @classmethod
+    def get_instance(cls):
+        return cls()
+
+```
+"""
+
+[C0203]
+why = "It looks like the metaclass method has a first argument named differently than the value specified in valid-classmethod-first-arg option (default to \"cls\"), recommended to easily differentiate them from regular instance methods."
+examples = ""
+
+[C0204]
+why = "It looks like the metaclass class method has a first argument named differently than the value specified in valid-metaclass-classmethod-first-arg option (default to \"mcs\"), recommended to easily differentiate them from regular instance methods."
+examples = ""
+
+[C0205]
+why = "It looks like the class __slots__ is a simple string, rather than an iterable."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:  # [single-string-used-for-slots]
+    __slots__ = \"name\"
+
+    def __init__(self, name):
+        self.name = name
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    __slots__ = (\"name\",)
+
+    def __init__(self, name):
+        self.name = name
+
+```
+"""
+
+[C1901]
+why = "It looks like Pylint detects comparison to an empty string constant."
+examples = """
+
+## Problematic code
+
+```py
+x = \"\"
+y = \"hello\"
+
+if x == \"\":  # [compare-to-empty-string]
+    print(\"x is an empty string\")
+
+if y != \"\":  # [compare-to-empty-string]
+    print(\"y is not an empty string\")
+
+```
+
+## How to fix it
+
+```py
+x = \"\"
+y = \"hello\"
+
+if not x:
+    print(\"x is an empty string\")
+
+if y:
+    print(\"y is not an empty string\")
+
+```
+"""
+
+[C2001]
+why = "It looks like Pylint detects comparison to a 0 constant."
+examples = """
+
+## Problematic code
+
+```py
+x = 0
+y = 1
+
+if x == 0:   # [compare-to-zero]
+    print(\"x is equal to zero\")
+
+if y != 0:   # [compare-to-zero]
+    print(\"y is not equal to zero\")
+
+```
+
+## How to fix it
+
+```py
+x = 0
+y = 1
+
+if not x:
+    print(\"x is equal to zero\")
+
+if y:
+    print(\"y is not equal to zero\")
+
+```
+"""
+
+[C2201]
+why = "It looks like the constant is placed on the left side of a comparison. It is usually clearer in intent to place it in the right hand side of the comparison."
+examples = """
+
+## Problematic code
+
+```py
+def compare_apples(apples=20):
+    for i in range(10):
+        if 5 <= i:  # [misplaced-comparison-constant]
+            pass
+        if 1 == i:  # [misplaced-comparison-constant]
+            pass
+        if 20 < len(apples):  # [misplaced-comparison-constant]
+            pass
+
+```
+
+## How to fix it
+
+```py
+def compare_apples(apples=20):
+    for i in range(10):
+        if i >= 5:
+            pass
+        if i == 1:
+            pass
+        if len(apples) > 20:
+            pass
+
+```
+"""
+
+[C0501]
+why = "A for loop that checks for a condition and return a bool can be replaced with any or all."
+examples = """
+
+## Problematic code
+
+```py
+def any_even(items):
+    \"\"\"Return True if the list contains any even numbers\"\"\"
+    for item in items:  # [consider-using-any-or-all]
+        if item % 2 == 0:
+            return True
+    return False
+
+
+def all_even(items):
+    \"\"\"Return True if the list contains all even numbers\"\"\"
+    for item in items:  # [consider-using-any-or-all]
+        if not item % 2 == 0:
+            return False
+    return True
+
+```
+
+## How to fix it
+
+```py
+
+def any_even(items):
+    \"\"\"Return True if the list contains any even numbers\"\"\"
+    return any(item % 2 == 0 for item in items)
+
+def all_even(items):
+    \"\"\"Return True if the list contains all even numbers\"\"\"
+    return all(item % 2 == 0 for item in items)
+
+```
+"""
+
+[C0198]
+why = "It looks like the docstring does not have triple double quotes."
+examples = """
+
+## Problematic code
+
+```py
+def foo():  # [bad-docstring-quotes]
+    'Docstring.'
+    return
+
+```
+
+## How to fix it
+
+```py
+def foo():
+    \"\"\"Docstring.\"\"\"
+    return
+
+```
+"""
+
+[C0199]
+why = "It looks like the blank line is found at the beginning of a docstring."
+examples = ""
+
+[C0301]
+why = "It looks like the line is longer than a given number of characters."
+examples = """
+
+## Problematic code
+
+```py
+# +1: [line-too-long]
+FRUIT = [\"apricot\", \"blackcurrant\", \"cantaloupe\", \"dragon fruit\", \"elderberry\", \"fig\", \"grapefruit\", ]
+
+```
+
+## How to fix it
+
+```py
+FRUIT = [
+    \"apricot\",
+    \"blackcurrant\",
+    \"cantaloupe\",
+    \"dragon fruit\",
+    \"elderberry\",
+    \"fig\",
+    \"grapefruit\",
+]
+
+```
+"""
+
+[C0302]
+why = "It looks like the module has too many lines, reducing its readability."
+examples = ""
+
+[C0303]
+why = "It looks like there is whitespace between the end of a line and the newline."
+examples = """
+
+## Problematic code
+
+```py
+print(\"Hello\")  # [trailing-whitespace]   
+#                                       ^^^ trailing whitespaces
+
+```
+
+## How to fix it
+
+```py
+print(\"Hello\")
+
+```
+"""
+
+[C0304]
+why = "It looks like the last line in a file is missing a newline."
+examples = ""
+
+[C0305]
+why = "It looks like there are trailing blank lines in a file."
+examples = """
+
+## Problematic code
+
+```py
+print(\"apple\")
+# The file ends with 2 lines that are empty # +1: [trailing-newlines]
+
+
+```
+
+## How to fix it
+
+```py
+print(\"apple\")
+
+```
+"""
+
+[C0321]
+why = "It looks like more than on statement are found on the same line."
+examples = """
+
+## Problematic code
+
+```py
+fruits = [\"apple\", \"orange\", \"mango\"]
+
+if \"apple\" in fruits: pass  # [multiple-statements]
+else:
+    print(\"no apples!\")
+
+```
+
+## How to fix it
+
+```py
+fruits = [\"apple\", \"orange\", \"mango\"]
+
+if \"apple\" in fruits:
+    pass
+else:
+    print(\"no apples!\")
+
+```
+"""
+
+[C0325]
+why = "It looks like the single item in parentheses follows an if, for, or other keyword."
+examples = """
+
+## Problematic code
+
+```py
+x = input()
+y = input()
+if (x == y):  # [superfluous-parens]
+    pass
+
+i = 0
+exclude = []
+if (i - 0) in exclude:  # [superfluous-parens]
+    pass
+
+```
+
+## How to fix it
+
+```py
+x = input()
+y = input()
+if x == y:
+    pass
+
+i = 0
+exclude = []
+if i - 0 in exclude:
+    pass
+
+```
+"""
+
+[C0327]
+why = "It looks like there are mixed (LF and CRLF) newline signs in a file."
+examples = ""
+
+[C0328]
+why = "It looks like there is different newline than expected."
+examples = ""
+
+[C2701]
+why = "It looks like the private module or object prefixed with _ is imported. PEP8 guidance on Naming Conventions states that public attributes with leading underscores should be considered private."
+examples = ""
+
+[C0410]
+why = "It looks like import statement importing multiple modules is detected."
+examples = """
+
+## Problematic code
+
+```py
+import os, sys  # [multiple-imports]
+
+```
+
+## How to fix it
+
+```py
+import os
+import sys
+
+```
+"""
+
+[C0411]
+why = "It looks like PEP8 import order is not respected (standard imports first, then third-party libraries, then local imports)"
+examples = """
+
+## Problematic code
+
+```py
+import os
+from . import utils
+import pylint  # [wrong-import-order]
+import sys  # [wrong-import-order]
+
+```
+
+## How to fix it
+
+```py
+import os
+import sys
+
+import pylint
+
+from . import utils
+
+```
+"""
+
+[C0412]
+why = "It looks like imports are not grouped by packages"
+examples = """
+
+## Problematic code
+
+```py
+import logging
+import os
+import sys
+import logging.config  # [ungrouped-imports]
+from logging.handlers import WatchedFileHandler
+
+```
+
+## How to fix it
+
+```py
+import logging
+import logging.config
+import os
+import sys
+from logging.handlers import FileHandler
+
+```
+"""
+
+[C0413]
+why = "It looks like code and imports are mixed"
+examples = """
+
+## Problematic code
+
+```py
+import os
+
+home = os.environ['HOME']
+
+import sys  # [wrong-import-position]
+
+print(f'Home directory is {home}', file=sys.stderr)
+
+```
+
+## How to fix it
+
+```py
+import os
+import sys
+
+home = os.environ['HOME']
+print(f'Home directory is {home}', file=sys.stderr)
+
+```
+"""
+
+[C0414]
+why = "It looks like the import alias is same as original package.e.g using import numpy as numpy instead of import numpy as np"
+examples = """
+
+## Problematic code
+
+```py
+import pandas as pandas  # [useless-import-alias]
+
+```
+
+## How to fix it
+
+```py
+import pandas as pd
+
+```
+"""
+
+[C0415]
+why = "It looks like the import statement is used anywhere other than the module toplevel. Move this import to the top of the file."
+examples = """
+
+## Problematic code
+
+```py
+def print_python_version():
+    import sys  # [import-outside-toplevel]
+    print(sys.version_info)
+
+```
+
+## How to fix it
+
+```py
+import sys
+
+
+def print_python_version():
+    print(sys.version_info)
+
+```
+"""
+
+[C3001]
+why = "It looks like the lambda expression is assigned to variable rather than defining a standard function with the \"def\" keyword."
+examples = """
+
+## Problematic code
+
+```py
+foo = lambda x: x**2 + 2*x + 1  # [unnecessary-lambda-assignment]
+
+```
+
+## How to fix it
+
+```py
+def foo(x):
+    return x**2 + 2*x + 1
+
+```
+"""
+
+[C3002]
+why = "It looks like the lambda expression is directly called rather than executing its contents inline."
+examples = """
+
+## Problematic code
+
+```py
+y = (lambda x: x**2 + 2*x + 1)(a)  # [unnecessary-direct-lambda-call]
+
+```
+
+## How to fix it
+
+```py
+y = a**2 + 2*a + 1
+
+```
+"""
+
+[C2503]
+why = "PEP8 recommends UTF-8 default encoding for Python files. See https://peps.python.org/pep-0008/#source-file-encoding"
+examples = ""
+
+[C1802]
+why = "It looks like Pylint detects that len(sequence) is being used without explicit comparison inside a condition to determine if a sequence is empty. Instead of coercing the length to a boolean, either rely on the fact that empty sequences are false or compare the length against a scalar."
+examples = """
+
+## Problematic code
+
+```py
+fruits = [\"orange\", \"apple\"]
+
+if len(fruits):  # [use-implicit-booleaness-not-len]
+    print(fruits)
+
+```
+
+## How to fix it
+
+```py
+fruits = [\"orange\", \"apple\"]
+
+if fruits:
+    print(fruits)
+
+```
+"""
+
+[C1803]
+why = "It looks like Pylint detects that collection literal comparison is being used to check for emptiness; Use implicit booleaness insteadof a collection classes; empty collections are considered as false"
+examples = """
+
+## Problematic code
+
+```py
+z = []
+
+if z != []:  # [use-implicit-booleaness-not-comparison]
+    print(\"z is not an empty sequence\")
+
+```
+
+## How to fix it
+
+```py
+z = []
+
+if z:
+    print(\"z is not an empty sequence\")
+
+```
+"""
+
+[C0200]
+why = "It looks like code that iterates with range and len is encountered. Such code can be simplified by using the enumerate builtin."
+examples = """
+
+## Problematic code
+
+```py
+seasons = ['Spring', 'Summer', 'Fall', 'Winter']
+
+for i in range(len(seasons)):  # [consider-using-enumerate]
+    print(i, seasons[i])
+
+```
+
+## How to fix it
+
+```py
+seasons = ['Spring', 'Summer', 'Fall', 'Winter']
+
+for i, season in enumerate(seasons):
+    print(i, season)
+
+```
+"""
+
+[C0201]
+why = "It looks like the keys of a dictionary are iterated through the ``.keys()`` method or when ``.keys()`` is used for a membership check. It is enough to iterate through the dictionary itself, ``for key in dictionary``. For membership checks, ``if key in dictionary`` is faster."
+examples = """
+
+## Problematic code
+
+```py
+FRUITS = {\"apple\": 1, \"pear\": 5, \"peach\": 10}
+
+
+for fruit in FRUITS.keys():  # [consider-iterating-dictionary]
+    print(fruit)
+
+```
+
+## How to fix it
+
+```py
+FRUITS = {\"apple\": 1, \"pear\": 5, \"peach\": 10}
+
+
+for fruit in FRUITS:
+    print(fruit)
+
+```
+"""
+
+[C0206]
+why = "It looks like iterating over the keys of a dictionary and accessing the value by index lookup. Both the key and value can be accessed by iterating using the .items() method of the dictionary instead."
+examples = """
+
+## Problematic code
+
+```py
+ORCHESTRA = {
+    \"violin\": \"strings\",
+    \"oboe\": \"woodwind\",
+    \"tuba\": \"brass\",
+    \"gong\": \"percussion\",
+}
+
+
+for instrument in ORCHESTRA:  # [consider-using-dict-items]
+    print(f\"{instrument}: {ORCHESTRA[instrument]}\")
+
+```
+
+## How to fix it
+
+```py
+ORCHESTRA = {
+    \"violin\": \"strings\",
+    \"oboe\": \"woodwind\",
+    \"tuba\": \"brass\",
+    \"gong\": \"percussion\",
+}
+
+
+for instrument, section in ORCHESTRA.items():
+    print(f\"{instrument}: {section}\")
+
+```
+"""
+
+[C0207]
+why = "It looks like accessing only the first or last element of str.split(). The first and last element can be accessed by using str.split(sep, maxsplit=1)[0] or str.rsplit(sep, maxsplit=1)[-1] instead."
+examples = """
+
+## Problematic code
+
+```py
+url = \"www.example.com\"
+suffix = url.split(\".\")[-1]  # [use-maxsplit-arg]
+
+```
+
+## How to fix it
+
+```py
+url = \"www.example.com\"
+suffix = url.rsplit(\".\", maxsplit=1)[-1]
+
+```
+"""
+
+[C0208]
+why = "When iterating over values, sequence types (e.g., ``lists``, ``tuples``, ``ranges``) are more efficient than ``sets``."
+examples = ""
+
+[C0209]
+why = "It looks like we detect a string that is being formatted with format() or % which could potentially be a f-string. The use of f-strings is preferred. Requires Python 3.6 and ``py-version >= 3.6``."
+examples = """
+
+## Problematic code
+
+```py
+from string import Template
+
+menu = (\"eggs\", \"spam\", 42.4)
+
+old_order = \"%s and %s: %.2f ¤\" % menu  # [consider-using-f-string]
+beginner_order = menu[0] + \" and \" + menu[1] + \": \" + str(menu[2]) + \" ¤\"
+joined_order = \" and \".join(menu[:2])
+# +1: [consider-using-f-string]
+format_order = \"{} and {}: {:0.2f} ¤\".format(menu[0], menu[1], menu[2])
+# +1: [consider-using-f-string]
+named_format_order = \"{eggs} and {spam}: {price:0.2f} ¤\".format(
+    eggs=menu[0], spam=menu[1], price=menu[2]
+)
+template_order = Template(\"$eggs and $spam: $price ¤\").substitute(
+    eggs=menu[0], spam=menu[1], price=menu[2]
+)
+
+```
+
+## How to fix it
+
+```py
+menu = ('eggs', 'spam', 42.4)
+
+f_string_order = f\"{menu[0]} and {menu[1]}: {menu[2]:0.2f} ¤\"
+
+```
+"""
+
+[C0113]
+why = "It looks like the boolean expression contains an unneeded negation."
+examples = """
+
+## Problematic code
+
+```py
+if not not input():  # [unneeded-not]
+    pass
+
+```
+
+## How to fix it
+
+```py
+if input():
+    pass
+
+```
+"""
+
+[C2401]
+why = """
+It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad. 
+If your programming guideline defines that you are programming in English, then there should be no need for non ASCII characters in Python Names. If not you can simply disable this check."""
+examples = """
+
+## Problematic code
+
+```py
+ápple_count = 4444  # [non-ascii-name]
+
+```
+
+## How to fix it
+
+```py
+apple_count = 4444
+
+```
+"""
+
+[C2403]
+why = """
+It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad. 
+If your programming guideline defines that you are programming in English, then there should be no need for non ASCII characters in Python Names. If not you can simply disable this check."""
+examples = """
+
+## Problematic code
+
+```py
+from os.path import join as łos  # [non-ascii-module-import]
+
+foo = łos(\"a\", \"b\")
+
+```
+
+## How to fix it
+
+```py
+from os.path import join as os_join
+
+foo = os_join(\"a\", \"b\")
+
+```
+"""
+
+[C0401]
+why = "It looks like the word in comment is not spelled correctly."
+examples = """
+
+## Problematic code
+
+```py
+# There's a mistkae in this string  # [wrong-spelling-in-comment]
+
+```
+
+## How to fix it
+
+```py
+# There's no mistake in this string
+
+```
+"""
+
+[C0402]
+why = "It looks like the word in docstring is not spelled correctly."
+examples = """
+
+## Problematic code
+
+```py
+\"\"\"There's a mistkae in this string\"\"\"  # [wrong-spelling-in-docstring]
+
+```
+
+## How to fix it
+
+```py
+\"\"\"There's no mistake in this string\"\"\"
+
+```
+"""
+
+[C0403]
+why = "It looks like the word in docstring cannot be checked by enchant."
+examples = ""
+
+[C2801]
+why = "It looks like the dunder method is manually called instead of using the corresponding function/method/operator."
+examples = """
+
+## Problematic code
+
+```py
+three = 3.0.__str__()  # [unnecessary-dunder-call]
+twelve = \"1\".__add__(\"2\")  # [unnecessary-dunder-call]
+
+
+def is_bigger_than_two(x):
+    return x.__gt__(2)  # [unnecessary-dunder-call]
+
+```
+
+## How to fix it
+
+```py
+three = str(3.0)
+twelve = \"1\" + \"2\"
+
+
+def is_bigger_than_two(x):
+    return x > 2
+
+```
+"""
+
+[R0022]
+why = "It looks like the value for an option that is now deleted from pylint is encountered."
+examples = """
+
+## Problematic code
+
+```py
+\"\"\"'bad-continuation' was removed from pylint in https://github.com/PyCQA/pylint/pull/3571\"\"\"
+
+# pylint: disable=bad-continuation  # [useless-option-value]
+
+```
+
+## How to fix it
+
+```py
+\"\"\"'bad-continuation' was removed from pylint in https://github.com/PyCQA/pylint/pull/3571\"\"\"
+
+```
+"""
+
+[R0123]
+why = "It looks like comparing an object to a literal, which is usually what you do not want to do, since you can compare to a different literal than what was expected altogether."
+examples = """
+
+## Problematic code
+
+```py
+def is_an_orange(fruit):
+    return fruit is \"orange\"  # [literal-comparison]
+
+```
+
+## How to fix it
+
+```py
+def is_an_orange(fruit):
+    return fruit == \"orange\"
+
+```
+"""
+
+[R0124]
+why = "It looks like something is compared against itself."
+examples = """
+
+## Problematic code
+
+```py
+def is_an_orange(fruit):
+    an_orange = \"orange\"
+    return fruit == fruit  # [comparison-with-itself]
+
+```
+
+## How to fix it
+
+```py
+def is_an_orange(fruit):
+    an_orange = \"orange\"
+    return an_orange == fruit
+
+```
+"""
+
+[R0133]
+why = "When two literals are compared with each other the result is a constant. Using the constant directly is both easier to read and more performant. Initializing 'True' and 'False' this way is not required since Python 2.3."
+examples = """
+
+## Problematic code
+
+```py
+def is_the_answer() -> bool:
+    return 42 == 42  # [comparison-of-constants]
+
+```
+
+## How to fix it
+
+```py
+def is_the_answer(meaning_of_life: int) -> bool:
+    return meaning_of_life == 42
+
+```
+"""
+
+[R0202]
+why = "It looks like the class method is defined without using the decorator syntax."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    COLORS = []
+
+    def __init__(self, color):
+        self.color = color
+
+    def pick_colors(cls, *args):
+        \"\"\"classmethod to pick fruit colors\"\"\"
+        cls.COLORS = args
+
+    pick_colors = classmethod(pick_colors)  # [no-classmethod-decorator]
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    COLORS = []
+
+    def __init__(self, color):
+        self.color = color
+
+    @classmethod
+    def pick_colors(cls, *args):
+        \"\"\"classmethod to pick fruit colors\"\"\"
+        cls.COLORS = args
+
+```
+"""
+
+[R0203]
+why = "It looks like the static method is defined without using the decorator syntax."
+examples = """
+
+## Problematic code
+
+```py
+class Worm:
+    def bore(self):
+        pass
+
+    bore = staticmethod(bore)  # [no-staticmethod-decorator]
+
+```
+
+## How to fix it
+
+```py
+class Worm:
+    @staticmethod
+    def bore(self):
+        pass
+
+```
+"""
+
+[R0205]
+why = "It looks like the class inherit from object, which under python3 is implicit, hence can be safely removed from bases."
+examples = """
+
+## Problematic code
+
+```py
+class Banana(object):  # [useless-object-inheritance]
+    ...
+
+```
+
+## How to fix it
+
+```py
+class Banana:
+    ...
+
+```
+"""
+
+[R0206]
+why = "It looks like we detect that a property also has parameters, which are useless, given that properties cannot be called with additional arguments."
+examples = """
+
+## Problematic code
+
+```py
+class Worm:
+    @property
+    def bore(self, depth):  # [property-with-parameters]
+        pass
+
+```
+
+## How to fix it
+
+```py
+class Worm:
+    @property
+    def bore(self):
+        \"\"\"Property accessed with '.bore'.\"\"\"
+        pass
+
+    def bore_with_depth(depth):
+        \"\"\"Function called with .bore_with_depth(depth).\"\"\"
+        pass
+
+```
+"""
+
+[R6101]
+why = "It looks like dictionary values can be replaced by namedtuples or dataclass instances."
+examples = ""
+
+[R6102]
+why = "Only for style consistency! Emitted where an in-place defined ``list`` can be replaced by a ``tuple``. Due to optimizations by CPython, there is no performance benefit from it."
+examples = """
+
+## Problematic code
+
+```py
+for i in [1, 2, 3]:  # [consider-using-tuple]
+    print(i)
+
+```
+
+## How to fix it
+
+```py
+for i in (1, 2, 3):
+    print(i)
+
+```
+"""
+
+[R6103]
+why = "It looks like the if assignment is directly followed by an if statement and both can be combined by using an assignment expression ``:=``. Requires Python 3.8 and ``py-version >= 3.8``."
+examples = """
+
+## Problematic code
+
+```py
+apples = 2
+
+if apples:  # [consider-using-assignment-expr]
+    print(\"God apples!\")
+
+```
+
+## How to fix it
+
+```py
+if apples := 2:
+    print(\"God apples!\")
+
+```
+"""
+
+[R5601]
+why = "It looks like the elif statement follows right after an indented block which itself ends with if or elif. It may not be ovious if the elif statement was willingly or mistakenly unindented. Extracting the indented if statement into a separate function might avoid confusion and prevent errors."
+examples = """
+
+## Problematic code
+
+```py
+def myfunc(shall_continue: bool, shall_exit: bool):
+    if shall_continue:
+        if input(\"Are you sure?\") == \"y\":
+            print(\"Moving on.\")
+    elif shall_exit:  # [confusing-consecutive-elif]
+        print(\"Exiting.\")
+
+```
+
+## How to fix it
+
+```py
+# Option 1: add explicit 'else'
+def myfunc(shall_continue: bool, shall_exit: bool):
+    if shall_continue:
+        if input(\"Are you sure?\") == \"y\":
+            print(\"Moving on.\")
+        else:
+            pass
+    elif shall_exit:
+        print(\"Exiting.\")
+
+
+# Option 2: extract function
+def user_confirmation():
+    if input(\"Are you sure?\") == \"y\":
+        print(\"Moving on.\")
+
+
+def myfunc2(shall_continue: bool, shall_exit: bool):
+    if shall_continue:
+        user_confirmation()
+    elif shall_exit:
+        print(\"Exiting.\")
+
+```
+"""
+
+[R5501]
+why = "It looks like the else statement is immediately followed by an if statement and does not contain statements that would be unrelated to it."
+examples = """
+
+## Problematic code
+
+```py
+if input():
+    pass
+else:
+    if len(input()) >= 10:  # [else-if-used]
+        pass
+    else:
+        pass
+
+```
+
+## How to fix it
+
+```py
+if input():
+    pass
+elif len(input()) >= 10:
+    pass
+else:
+    pass
+
+```
+"""
+
+[R0401]
+why = "It looks like the cyclic import between two or more modules is detected."
+examples = ""
+
+[R0402]
+why = "It looks like the submodule of a package is imported and aliased with the same name. E.g., instead of ``import concurrent.futures as futures`` use ``from concurrent import futures``"
+examples = """
+
+## Problematic code
+
+```py
+import os.path as path  # [consider-using-from-import]
+
+```
+
+## How to fix it
+
+```py
+from os import path
+
+```
+"""
+
+[R0204]
+why = "It looks like the type of a variable changes inside a method or a function."
+examples = """
+
+## Problematic code
+
+```py
+x = 1
+x = \"2\"  # [redefined-variable-type]
+
+```
+
+## How to fix it
+
+```py
+x = 1
+x = 2
+
+```
+"""
+
+[R6301]
+why = "It looks like the method doesn't use its bound instance, and so could be written as a function."
+examples = """
+
+## Problematic code
+
+```py
+class Person:
+
+    def developer_greeting(self):  # [no-self-use]
+        print(\"Greetings developer!\")
+
+    def greeting_1(self):  # [no-self-use]
+        print(\"Hello!\")
+
+    def greeting_2(self):  # [no-self-use]
+        print(\"Hi!\")
+
+```
+
+## How to fix it
+
+```py
+def developer_greeting():
+    print(\"Greetings developer!\")
+
+
+class Person:
+    name = \"Paris\"
+
+    def greeting_1(self):
+        print(f\"Hello from {self.name} !\")
+
+    @staticmethod
+    def greeting_2():
+        print(\"Hi!\")
+
+```
+"""
+
+[R6201]
+why = "Membership tests are more efficient when performed on a lookup optimized datatype like ``sets``."
+examples = """
+
+## Problematic code
+
+```py
+def fruit_is_dangerous_for_cat(fruit: str) -> bool:
+    \"\"\"This list is only a silly example, don't make decision regarding your cat diet based on it.\"\"\"
+    return fruit in [\"cherry\", \"grapes\"]  # [use-set-for-membership]
+
+```
+
+## How to fix it
+
+```py
+def fruit_is_dangerous_for_cat(fruit: str) -> bool:
+    \"\"\"This list is only a silly example, don't make decision regarding your cat diet based on it.\"\"\"
+    return fruit in {\"cherry\", \"grapes\"}
+
+```
+"""
+
+[R2044]
+why = "It looks like the # symbol appears on a line not followed by an actual comment"
+examples = """
+
+## Problematic code
+
+```py
+# +1:[empty-comment]
+#
+
+# +1:[empty-comment]
+x = 0  #
+
+```
+
+## How to fix it
+
+```py
+# comment
+
+x = 0  # comment
+
+```
+"""
+
+[R1701]
+why = "It looks like multiple consecutive isinstance calls can be merged into one."
+examples = """
+
+## Problematic code
+
+```py
+from typing import Any
+
+
+def is_number(value: Any) -> bool:
+    return isinstance(value, int) or isinstance(value, float)  # [consider-merging-isinstance]
+
+```
+
+## How to fix it
+
+```py
+from typing import Any
+
+
+def is_number(value: Any) -> bool:
+    return isinstance(value, (int, float))
+
+```
+"""
+
+[R1702]
+why = "It looks like the function or a method has too many nested blocks. This makes the code less understandable and maintainable."
+examples = """
+
+## Problematic code
+
+```py
+def correct_fruits(fruits):
+    if len(fruits) > 1:  # [too-many-nested-blocks]
+        if \"apple\" in fruits:
+            if \"orange\" in fruits:
+                count = fruits[\"orange\"]
+                if count % 2:
+                    if \"kiwi\" in fruits:
+                        if count == 2:
+                            return True
+    return False
+
+```
+
+## How to fix it
+
+```py
+def correct_fruits(fruits):
+    if len(fruits) > 1 and \"apple\" in fruits and \"orange\" in fruits:
+        count = fruits[\"orange\"]
+        if count % 2 and \"kiwi\" in fruits and count == 2:
+            return True
+    return False
+
+```
+"""
+
+[R1703]
+why = "It looks like the if statement can be replaced with 'bool(test)'."
+examples = """
+
+## Problematic code
+
+```py
+FLYING_THINGS = [\"bird\", \"plane\", \"superman\", \"this example\"]
+
+
+def is_flying_animal(an_object):
+    if isinstance(an_object, Animal) and an_object in FLYING_THINGS:  # [simplifiable-if-statement]
+        is_flying = True
+    else:
+        is_flying = False
+    return is_flying
+
+```
+
+## How to fix it
+
+```py
+FLYING_THINGS = [\"bird\", \"plane\", \"superman\", \"this example\"]
+
+
+def is_flying_animal(an_object):
+    is_flying = isinstance(an_object, Animal) and an_object.name in FLYING_THINGS
+    return is_flying
+
+```
+"""
+
+[R1704]
+why = "It looks like the local name is redefining an argument, which might suggest a potential error. This is taken in account only for a handful of name binding operations, such as for iteration, with statement assignment and exception handler assignment."
+examples = """
+
+## Problematic code
+
+```py
+def show(host_id=10.11):
+    for host_id, host in [[12.13, 'Venus'], [14.15, 'Mars']]:  # [redefined-argument-from-local]
+        print(host_id, host)
+
+```
+
+## How to fix it
+
+```py
+def show(host_id=10.11):
+    for inner_host_id, host in [[12.13, 'Venus'], [14.15, 'Mars']]:
+        print(host_id, inner_host_id, host)
+
+```
+"""
+
+[R1705]
+why = "Used in order to highlight an unnecessary block of code following an if containing a return statement. As such, it will warn when it encounters an else following a chain of ifs, all of them containing a return statement."
+examples = """
+
+## Problematic code
+
+```py
+def compare_numbers(a: int, b: int) -> int:
+    if a == b:  # [no-else-return]
+        return 0
+    elif a < b:
+        return -1
+    else:
+        return 1
+
+```
+
+## How to fix it
+
+```py
+def compare_numbers(a: int, b: int) -> int:
+    if a == b:
+        return 0
+    if a < b:
+        return -1
+    return 1
+
+```
+"""
+
+[R1706]
+why = "It looks like one of known pre-python 2.5 ternary syntax is used."
+examples = """
+
+## Problematic code
+
+```py
+x, y = 1, 2
+maximum = x >= y and x or y  # [consider-using-ternary]
+
+```
+
+## How to fix it
+
+```py
+x, y = 1, 2
+maximum = x if x >= y else y
+
+```
+"""
+
+[R1707]
+why = "In Python, a tuple is actually created by the comma symbol, not by the parentheses. Unfortunately, one can actually create a tuple by misplacing a trailing comma, which can lead to potential weird bugs in your code. You should always use parentheses explicitly for creating a tuple."
+examples = """
+
+## Problematic code
+
+```py
+COMPASS = \"north\", \"south\", \"east\", \"west\",  # [trailing-comma-tuple]
+
+```
+
+## How to fix it
+
+```py
+COMPASS = (\"north\", \"south\", \"east\", \"west\")
+
+```
+"""
+
+[R1708]
+why = "According to PEP479, the raise of StopIteration to end the loop of a generator may lead to hard to find bugs. This PEP specify that raise StopIteration has to be replaced by a simple return statement"
+examples = """
+
+## Problematic code
+
+```py
+def fruit_generator():
+    for fruit in [\"apple\", \"banana\"]:
+        yield fruit
+    raise StopIteration  # [stop-iteration-return]
+
+
+def two_fruits_generator(fruits):
+    for fruit in fruits:
+        yield fruit, next(fruits)  # [stop-iteration-return]
+
+
+def two_good_fruits_generator(fruits):
+    for fruit in fruits:
+        if not fruit.is_tasty():
+            continue
+        while True:
+            next_fruit = next(fruits)  # [stop-iteration-return]
+            if next_fruit.is_tasty():
+                yield fruit, next_fruit
+                break
+
+```
+
+## How to fix it
+
+```py
+def fruit_generator():
+    \"\"\"The example is simple enough you don't need an explicit return.\"\"\"
+    for fruit in [\"apple\", \"banana\"]:
+        yield fruit
+
+
+def two_fruits_generator(fruits):
+    \"\"\"Catching the StopIteration.\"\"\"
+    for fruit in fruits:
+        try:
+            yield fruit, next(fruits)
+        except StopIteration:
+            print(\"Sorry there is only one fruit left.\")
+            yield fruit, None
+
+
+def two_good_fruits_generator(fruits):
+    \"\"\"A return can be used to end the iterator early, but not a StopIteration.\"\"\"
+    for fruit in fruits:
+        if not fruit.is_tasty():
+            continue
+        while True:
+            next_fruit = next(fruits, None)
+            if next_fruit is None:
+                print(\"Sorry there is only one fruit left.\")
+                yield fruit, None
+                # We reached the end of the 'fruits' generator but raising a
+                # StopIteration instead of returning would create a RuntimeError
+                return
+            if next_fruit.is_tasty():
+                yield fruit, next_fruit
+                break
+
+```
+"""
+
+[R1709]
+why = "It looks like redundant pre-python 2.5 ternary syntax is used."
+examples = """
+
+## Problematic code
+
+```py
+def has_oranges(oranges, apples=None) -> bool:
+    return apples and False or oranges  # [simplify-boolean-expression]
+
+```
+
+## How to fix it
+
+```py
+def has_oranges(oranges, apples=None) -> bool:
+    return oranges
+
+```
+"""
+
+[R1710]
+why = "According to PEP8, if any return statement returns an expression, any return statements where no value is returned should explicitly state this as return None, and an explicit return statement should be present at the end of the function (if reachable)"
+examples = """
+
+## Problematic code
+
+```py
+def get_the_answer(value: str) -> str | None:  # [inconsistent-return-statements]
+    if value:
+        return value
+
+```
+
+## How to fix it
+
+```py
+def get_the_answer(value: str) -> str | None:
+    if value:
+        return value
+    return None
+
+```
+"""
+
+[R1711]
+why = "It looks like the single \"return\" or \"return None\" statement is found at the end of function or method definition. This statement can safely be removed because Python will implicitly return None"
+examples = """
+
+## Problematic code
+
+```py
+import sys
+
+
+def print_python_version():  # [useless-return]
+    print(sys.version)
+    return None
+
+```
+
+## How to fix it
+
+```py
+import sys
+
+
+def print_python_version():
+    print(sys.version)
+
+```
+"""
+
+[R1712]
+why = "You do not have to use a temporary variable in order to swap variables. Using \"tuple unpacking\" to directly swap variables makes the intention more clear."
+examples = """
+
+## Problematic code
+
+```py
+a = 1
+b = 2
+
+temp = a  # [consider-swap-variables]
+a = b
+b = temp
+
+```
+
+## How to fix it
+
+```py
+a = 1
+b = 2
+
+a, b = b, a
+
+```
+"""
+
+[R1713]
+why = "Using str.join(sequence) is faster, uses less memory and increases readability compared to for-loop iteration."
+examples = """
+
+## Problematic code
+
+```py
+def fruits_to_string(fruits):
+    formatted_fruit = \"\"
+    for fruit in fruits:
+        formatted_fruit += fruit  # [consider-using-join]
+    return formatted_fruit
+
+print(fruits_to_string([\"apple\", \"pear\", \"peach\"]))
+
+```
+
+## How to fix it
+
+```py
+print(\"\".join([\"apple\", \"pear\", \"peach\"]))
+
 ```
 """
 
 [R1714]
-why = "Shorter conditions are ussually easier to read."
+why = "To check if a variable is equal to one of many values,combine the values into a tuple and check if the variable is contained \"in\" it instead of checking for equality against each of the values.This is faster and less verbose."
 examples = """
-Comparison of a variable to two values can be simplified using the `in` operator.
-This is more readable and also safer against copy-paste errors.
+
+## Problematic code
 
 ```py
-def problematic(text: str):
-    if text == 'a' or text == 'b':
-        return
+def fruit_is_round(fruit):
+    return fruit == \"apple\" or fruit == \"orange\" or fruit == \"melon\"  # [consider-using-in]
+
 ```
 
-```py
-def good(text: str):
-    if text in ('a', 'b'):
-        return
-```
-
-If you are comparing a single character, you can also do this:
+## How to fix it
 
 ```py
-def good(char: str):
-    if char in 'ab':
-        return
+def fruit_is_round(fruit):
+    return fruit in {\"apple\", \"orange\", \"melon\"}
+
 ```
 """
+
+[R1715]
+why = "Using the builtin dict.get for getting a value from a dictionary if a key is present or a default if not, is simpler and considered more idiomatic, although sometimes a bit slower"
+examples = """
+
+## Problematic code
+
+```py
+knights = {\"Gallahad\": \"the pure\", \"Robin\": \"the brave\"}
+
+if \"Gallahad\" in knights:  # [consider-using-get]
+    DESCRIPTION = knights[\"Gallahad\"]
+else:
+    DESCRIPTION = \"\"
+
+```
+
+## How to fix it
+
+```py
+knights = {\"Gallahad\": \"the pure\", \"Robin\": \"the brave\"}
+
+description = knights.get(\"Gallahad\", \"\")
+
+```
+"""
+
+[R1716]
+why = "This message is emitted when pylint encounters boolean operation like\"a < b and b < c\", suggesting instead to refactor it to \"a < b < c\""
+examples = """
+
+## Problematic code
+
+```py
+a = int(input())
+b = int(input())
+c = int(input())
+if a < b and b < c:  # [chained-comparison]
+    pass
+
+```
+
+## How to fix it
+
+```py
+a = int(input())
+b = int(input())
+c = int(input())
+if a < b < c:
+    pass
+
+```
+"""
+
+[R1717]
+why = "It looks like we detect the creation of a dictionary using the dict() callable and a transient list. Although there is nothing syntactically wrong with this code, it is hard to read and can be simplified to a dict comprehension.Also it is faster since you don't need to create another transient list"
+examples = """
+
+## Problematic code
+
+```py
+NUMBERS = [1, 2, 3]
+
+# +1: [consider-using-dict-comprehension]
+DOUBLED_NUMBERS = dict([(number, number * 2) for number in NUMBERS])
+
+```
+
+## How to fix it
+
+```py
+NUMBERS = [1, 2, 3]
+
+DOUBLED_NUMBERS = {number: number * 2 for number in NUMBERS}
+
+```
+"""
+
+[R1718]
+why = "Although there is nothing syntactically wrong with this code, it is hard to read and can be simplified to a set comprehension.Also it is faster since you don't need to create another transient list"
+examples = """
+
+## Problematic code
+
+```py
+NUMBERS = [1, 2, 2, 3, 4, 4]
+
+# +1: [consider-using-set-comprehension]
+UNIQUE_EVEN_NUMBERS = set([number for number in NUMBERS if number % 2 == 0])
+
+```
+
+## How to fix it
+
+```py
+NUMBERS = [1, 2, 2, 3, 4, 4]
+
+UNIQUE_EVEN_NUMBERS = {number for number in NUMBERS if number % 2 == 0}
+
+```
+"""
+
+[R1719]
+why = "It looks like the if expression can be replaced with 'bool(test)' or simply 'test' if the boolean cast is implicit."
+examples = """
+
+## Problematic code
+
+```py
+FLYING_THINGS = [\"bird\", \"plane\", \"superman\", \"this example\"]
+
+
+def is_flying_thing(an_object):
+    return True if an_object in FLYING_THINGS else False  # [simplifiable-if-expression]
+
+
+def is_not_flying_thing(an_object):
+    return False if an_object in FLYING_THINGS else True  # [simplifiable-if-expression]
+
+```
+
+## How to fix it
+
+```py
+FLYING_THINGS = [\"bird\", \"plane\", \"superman\", \"this example\"]
+
+
+def is_flying_thing(an_object):
+    return an_object in FLYING_THINGS
+
+
+def is_not_flying_thing(an_object):
+    return an_object not in FLYING_THINGS
+
+```
+"""
+
+[R1720]
+why = "Used in order to highlight an unnecessary block of code following an if containing a raise statement. As such, it will warn when it encounters an else following a chain of ifs, all of them containing a raise statement."
+examples = """
+
+## Problematic code
+
+```py
+def integer_sum(a: int, b: int) -> int:
+    if not (isinstance(a, int) and isinstance(b, int)):    # [no-else-raise]
+        raise ValueError('Function supports only integer parameters.')
+    else:
+        return a + b
+
+```
+
+## How to fix it
+
+```py
+def integer_sum(a: int, b: int) -> int:
+    if not (isinstance(a, int) and isinstance(b, int)):
+        raise ValueError('Function supports only integer parameters.')
+    return a + b
+
+```
+"""
+
+[R1721]
+why = "Instead of using an identity comprehension, consider using the list, dict or set constructor. It is faster and simpler."
+examples = """
+
+## Problematic code
+
+```py
+NUMBERS = [1, 1, 2, 2, 3, 3]
+
+UNIQUE_NUMBERS = {number for number in NUMBERS}  # [unnecessary-comprehension]
+
+```
+
+## How to fix it
+
+```py
+NUMBERS = [1, 1, 2, 2, 3, 3]
+
+UNIQUE_NUMBERS = set(NUMBERS)
+
+```
+"""
+
+[R1722]
+why = "Instead of using exit() or quit(), consider using the sys.exit()."
+examples = """
+
+## Problematic code
+
+```py
+if __name__ == \"__main__\":
+    user = input(\"Enter user name: \")
+    print(f\"Hello, {user}\")
+    exit(0)  # [consider-using-sys-exit]
+
+```
+
+## How to fix it
+
+```py
+import sys
+
+if __name__ == \"__main__\":
+    user = input(\"Enter user name: \")
+    print(f\"Hello, {user}\")
+    sys.exit(0)
+
+```
+"""
+
+[R1723]
+why = "Used in order to highlight an unnecessary block of code following an if containing a break statement. As such, it will warn when it encounters an else following a chain of ifs, all of them containing a break statement."
+examples = """
+
+## Problematic code
+
+```py
+def next_seven_elements(iterator):
+    for i, item in enumerate(iterator):
+        if i == 7:  # [no-else-break]
+            break
+        else:
+            yield item
+
+```
+
+## How to fix it
+
+```py
+def next_seven_elements(iterator):
+    for i, item in enumerate(iterator):
+        if i == 7:
+            break
+        yield item
+
+```
+"""
+
+[R1724]
+why = "Used in order to highlight an unnecessary block of code following an if containing a continue statement. As such, it will warn when it encounters an else following a chain of ifs, all of them containing a continue statement."
+examples = """
+
+## Problematic code
+
+```py
+def even_number_under(n: int):
+    for i in range(n):
+        if i%2 == 1:  # [no-else-continue]
+            continue
+        else:
+            yield i
+
+```
+
+## How to fix it
+
+```py
+def even_number_under(n: int):
+    for i in range(n):
+        if i%2 == 1:
+            continue
+        yield i
+
+```
+"""
+
+[R1725]
+why = "It looks like calling the super() builtin with the current class and instance. On Python 3 these arguments are the default and they can be omitted."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:
+    pass
+
+
+class Orange(Fruit):
+    def __init__(self):
+        super(Orange, self).__init__()  # [super-with-arguments]
+
+```
+
+## How to fix it
+
+```py
+class Fruit:
+    pass
+
+
+class Orange(Fruit):
+    def __init__(self):
+        super().__init__()
+
+```
+"""
+
+[R1726]
+why = "It looks like the boolean condition is able to be simplified."
+examples = """
+
+## Problematic code
+
+```py
+def has_apples(apples) -> bool:
+    return bool(apples or False)  # [simplifiable-condition]
+
+```
+
+## How to fix it
+
+```py
+def has_apples(apples) -> bool:
+    return bool(apples)
+
+```
+"""
+
+[R1727]
+why = "It looks like the boolean condition can be simplified to a constant value."
+examples = """
+
+## Problematic code
+
+```py
+def is_a_fruit(fruit):
+    return bool(fruit in {\"apple\", \"orange\"} or True)  # [condition-evals-to-constant]
+
+```
+
+## How to fix it
+
+```py
+def is_a_fruit(fruit):
+    return fruit in {\"apple\", \"orange\"}
+
+```
+"""
+
+[R1728]
+why = "If your container can be large using a generator will bring better performance."
+examples = """
+
+## Problematic code
+
+```py
+list([0 for y in list(range(10))])  # [consider-using-generator]
+tuple([0 for y in list(range(10))])  # [consider-using-generator]
+sum([y**2 for y in list(range(10))])  # [consider-using-generator]
+max([y**2 for y in list(range(10))])  # [consider-using-generator]
+min([y**2 for y in list(range(10))])  # [consider-using-generator]
+
+```
+
+## How to fix it
+
+```py
+list(0 for y in list(range(10)))
+tuple(0 for y in list(range(10)))
+sum(y**2 for y in list(range(10)))
+max(y**2 for y in list(range(10)))
+min(y**2 for y in list(range(10)))
+
+```
+"""
+
+[R1729]
+why = "Comprehension inside of 'any', 'all', 'max', 'min' or 'sum' is unnecessary. A generator would be sufficient and faster."
+examples = """
+
+## Problematic code
+
+```py
+from random import randint
+
+all([randint(-5, 5) > 0 for _ in range(10)])  # [use-a-generator]
+any([randint(-5, 5) > 0 for _ in range(10)])  # [use-a-generator]
+
+```
+
+## How to fix it
+
+```py
+from random import randint
+
+all(randint(-5, 5) > 0 for _ in range(10))
+any(randint(-5, 5) > 0 for _ in range(10))
+
+```
+"""
+
+[R1730]
+why = "Using the min builtin instead of a conditional improves readability and conciseness."
+examples = """
+
+## Problematic code
+
+```py
+def get_min(value1, value2):
+    if value1 > value2:  # [consider-using-min-builtin]
+        value1 = value2
+    return value1
+
+
+print(get_min(1, 2))
+
+```
+
+## How to fix it
+
+```py
+print(min(1, 2))
+
+```
+"""
+
+[R1731]
+why = "Using the max builtin instead of a conditional improves readability and conciseness."
+examples = """
+
+## Problematic code
+
+```py
+def get_max(value1, value2):
+    if value1 < value2:  # [consider-using-max-builtin]
+        value1 = value2
+    return value1
+
+
+print(get_max(1, 2))
+
+```
+
+## How to fix it
+
+```py
+print(max(1, 2))
+
+```
+"""
+
+[R1732]
+why = "Emitted if a resource-allocating assignment or call may be replaced by a 'with' block. By using 'with' the release of the allocated resources is ensured even in the case of an exception."
+examples = """
+
+## Problematic code
+
+```py
+file = open(\"apple.txt\", \"r\", encoding=\"utf8\")  # [consider-using-with]
+contents = file.read()
+file.close()
+
+worst = open(\"banana.txt\", \"r\", encoding=\"utf8\").read()  # [consider-using-with]
+
+```
+
+## How to fix it
+
+```py
+with open(\"apple.txt\", \"r\", encoding=\"utf8\") as file:
+    contents = file.read()
+
+with open(\"banana.txt\", \"r\", encoding=\"utf8\") as f:
+    best = f.read()
+
+```
+"""
+
+[R1733]
+why = "It looks like iterating over the dictionary items (key-item pairs) and accessing the value by index lookup. The value can be accessed directly instead."
+examples = """
+
+## Problematic code
+
+```py
+FRUITS = {\"apple\": 1, \"orange\": 10, \"berry\": 22}
+
+for fruit_name, fruit_count in FRUITS.items():
+    print(FRUITS[fruit_name])  # [unnecessary-dict-index-lookup]
+
+```
+
+## How to fix it
+
+```py
+FRUITS = {\"apple\": 1, \"orange\": 10, \"berry\": 22}
+
+for fruit_name, fruit_count in FRUITS.items():
+    print(fruit_count)
+
+```
+"""
+
+[R1734]
+why = "It looks like using list() to create an empty list instead of the literal []. The literal is faster as it avoids an additional function call."
+examples = """
+
+## Problematic code
+
+```py
+empty_list = list()  # [use-list-literal]
+
+```
+
+## How to fix it
+
+```py
+empty_list = []
+
+```
+"""
+
+[R1735]
+why = "It looks like using dict() to create an empty dictionary instead of the literal {}. The literal is faster as it avoids an additional function call."
+examples = """
+
+## Problematic code
+
+```py
+empty_dict = dict()  # [use-dict-literal]
+new_dict = dict(foo=\"bar\")  # [use-dict-literal]
+new_dict = dict(**another_dict)  # [use-dict-literal]
+
+```
+
+## How to fix it
+
+```py
+empty_dict = {}
+
+# create using a literal dict
+new_dict = {\"foo\": \"bar\"}
+
+# shallow copy a dict
+new_dict = {**another_dict}
+
+```
+"""
+
+[R1736]
+why = "It looks like iterating over an enumeration and accessing the value by index lookup. The value can be accessed directly instead."
+examples = """
+
+## Problematic code
+
+```py
+letters = ['a', 'b', 'c']
+
+for index, letter in enumerate(letters):
+    print(letters[index])  # [unnecessary-list-index-lookup]
+
+```
+
+## How to fix it
+
+```py
+letters = ['a', 'b', 'c']
+
+for index, letter in enumerate(letters):
+    print(letter)
+
+```
+"""
+
+[R1260]
+why = "It looks like the method or function is too complex based on McCabe Complexity Cyclomatic"
+examples = ""
+
+[R0901]
+why = "It looks like class has too many parent classes, try to reduce this to get a simpler (and so easier to use) class."
+examples = """
+
+## Problematic code
+
+```py
+class Animal: ...
+class BeakyAnimal(Animal): ...
+class FurryAnimal(Animal): ...
+class Swimmer(Animal): ...
+class EggLayer(Animal): ...
+class VenomousAnimal(Animal): ...
+class ProtectedSpecie(Animal): ...
+class BeaverTailedAnimal(Animal): ...
+class Vertebrate(Animal): ...
+
+
+# max of 7 by default, can be configured
+# each edge of a diamond inheritance counts
+class Playtypus(  # [too-many-ancestors]
+    BeakyAnimal,
+    FurryAnimal,
+    Swimmer,
+    EggLayer,
+    VenomousAnimal,
+    ProtectedSpecie,
+    BeaverTailedAnimal,
+    Vertebrate,
+):
+    pass
+
+```
+
+## How to fix it
+
+```py
+class Animal:
+    beaver_tailed: bool
+    can_swim: bool
+    has_beak: bool
+    has_fur: bool
+    has_vertebrae: bool
+    lays_egg: bool
+    protected_specie: bool
+    venomous: bool
+
+
+class Invertebrate(Animal):
+    has_vertebrae = False
+
+
+class Vertebrate(Animal):
+    has_vertebrae = True
+
+
+class Mammal(Vertebrate):
+    has_beak = False
+    has_fur = True
+    lays_egg = False
+    venomous = False
+
+
+class Playtypus(Mammal):
+    beaver_tailed = True
+    can_swim = True
+    has_beak = True
+    lays_egg = False
+    protected_specie = True
+    venomous = True
+
+```
+"""
+
+[R0902]
+why = "It looks like class has too many instance attributes, try to reduce this to get a simpler (and so easier to use) class."
+examples = """
+
+## Problematic code
+
+```py
+class Fruit:  # [too-many-instance-attributes]
+    def __init__(self):
+        # max of 7 attributes by default, can be configured
+        self.worm_name = \"Jimmy\"
+        self.worm_type = \"Codling Moths\"
+        self.worm_color = \"light brown\"
+        self.fruit_name = \"Little Apple\"
+        self.fruit_color = \"Bright red\"
+        self.fruit_vitamins = [\"A\", \"B1\"]
+        self.fruit_antioxidants = None
+        self.secondary_worm_name = \"Kim\"
+        self.secondary_worm_type = \"Apple maggot\"
+        self.secondary_worm_color = \"Whitish\"
+
+```
+
+## How to fix it
+
+```py
+import dataclasses
+
+
+@dataclasses.dataclass
+class Worm:
+    name: str
+    type: str
+    color: str
+
+
+class Fruit:
+    def __init__(self):
+        self.name = \"Little Apple\"
+        self.color = \"Bright red\"
+        self.vitamins = [\"A\", \"B1\"]
+        self.antioxidants = None
+        self.worms = [
+            Worm(name=\"Jimmy\", type=\"Codling Moths\", color=\"light brown\"),
+            Worm(name=\"Kim\", type=\"Apple maggot\", color=\"Whitish\"),
+        ]
+
+```
+"""
+
+[R0903]
+why = "It looks like class has too few public methods, so be sure it's really worth it."
+examples = """
+
+## Problematic code
+
+```py
+class Worm:  # [too-few-public-methods]
+    def __init__(self, name: str, fruit_of_residence: Fruit):
+        self.name = name
+        self.fruit_of_residence = fruit_of_residence
+
+    def bore(self):
+        print(f\"{self.name} is boring into {self.fruit_of_residence}\")
+
+```
+
+## How to fix it
+
+```py
+import dataclasses
+
+
+class Worm:
+    def __init__(self, name: str, fruit_of_residence: Fruit):
+        self.name = name
+        self.fruit_of_residence = fruit_of_residence
+
+    def bore(self):
+        print(f\"{self.name} is boring into {self.fruit_of_residence}\")
+
+    def wiggle(self):
+        print(f\"{self.name} wiggle around wormily.\")
+
+# or
+
+@dataclasses.dataclass
+class Worm:
+    name:str
+    fruit_of_residence: Fruit
+
+def bore(worm: Worm):
+    print(f\"{worm.name} is boring into {worm.fruit_of_residence}\")
+
+# or
+
+def bore(fruit: Fruit, worm_name: str):
+    print(f\"{worm_name} is boring into {fruit}\")
+
+```
+"""
+
+[R0904]
+why = "It looks like class has too many public methods, try to reduce this to get a simpler (and so easier to use) class."
+examples = ""
+
+[R0911]
+why = "It looks like the function or method has too many return statement, making it hard to follow."
+examples = """
+
+## Problematic code
+
+```py
+def to_string(x):  # [too-many-return-statements]
+    # max of 6 by default, can be configured
+    if x == 1:
+        return 'This is one.'
+    if x == 2:
+        return 'This is two.'
+    if x == 3:
+        return 'This is three.'
+    if x == 4:
+        return 'This is four.'
+    if x == 5:
+        return 'This is five.'
+    if x == 6:
+        return 'This is six.'
+    if x == 7:
+        return 'This is seven.'
+
+```
+
+## How to fix it
+
+```py
+NUMBERS_TO_STRINGS = {
+    1: 'one',
+    2: 'two',
+    3: 'three',
+    4: 'four',
+    5: 'five',
+    6: 'six',
+    7: 'seven'
+}
+
+
+def to_string(x):
+    return f'This is {NUMBERS_TO_STRINGS.get(x)}.'
+
+```
+"""
+
+[R0912]
+why = "It looks like the function or method has too many branches, making it hard to follow."
+examples = """
+
+## Problematic code
+
+```py
+def num_to_word(x):  # [too-many-branches]
+    if x == 0:
+        return \"zero\"
+    elif x == 1:
+        return \"one\"
+    elif x == 2:
+        return \"two\"
+    elif x == 3:
+        return \"three\"
+    elif x == 4:
+        return \"four\"
+    elif x == 5:
+        return \"five\"
+    elif x == 6:
+        return \"six\"
+    elif x == 7:
+        return \"seven\"
+    elif x == 8:
+        return \"eight\"
+    elif x == 9:
+        return \"nine\"
+    else:
+        return None
+
+```
+
+## How to fix it
+
+```py
+def num_to_word(x):
+    return {
+        0: \"zero\",
+        1: \"one\",
+        2: \"two\",
+        3: \"three\",
+        4: \"for\",
+        5: \"fie\",
+        6: \"six\",
+        7: \"seven\",
+        8: \"eight\",
+        9: \"nine\",
+    }.get(x)
+
+```
+"""
+
+[R0913]
+why = "It looks like the function or method takes too many arguments."
+examples = """
+
+## Problematic code
+
+```py
+def three_d_chess_move(  # [too-many-arguments]
+    x_white,
+    y_white,
+    z_white,
+    piece_white,
+    x_black,
+    y_black,
+    z_black,
+    piece_black,
+    x_blue,
+    y_blue,
+    z_blue,
+    piece_blue,
+    current_player,
+):
+    pass
+
+```
+
+## How to fix it
+
+```py
+from dataclasses import dataclass
+
+
+@dataclass
+class ThreeDChessPiece:
+    x: int
+    y: int
+    z: int
+    type: str
+
+
+def three_d_chess_move(
+    white: ThreeDChessPiece,
+    black: ThreeDChessPiece,
+    blue: ThreeDChessPiece,
+    current_player,
+):
+    pass
+
+```
+"""
+
+[R0914]
+why = "It looks like the function or method has too many local variables."
+examples = ""
+
+[R0915]
+why = "It looks like the function or method has too many statements. You should then split it in smaller functions / methods."
+examples = ""
+
+[R0916]
+why = "It looks like the if statement contains too many boolean expressions."
+examples = """
+
+## Problematic code
+
+```py
+def can_be_divided_by_two_and_are_not_zero(x, y, z):
+    # Maximum number of boolean expressions in an if statement (by default 5)
+    # +1: [too-many-boolean-expressions]
+    if (x and y and z) and (x % 2 == 0 and y % 2 == 0 and z % 2 == 0):
+        pass
+
+```
+
+## How to fix it
+
+```py
+def can_be_divided_by_two_and_are_not_zero(x, y, z):
+    if all(i and i%2==0 for i in [x, y, z]):
+        pass
+
+```
+"""
+
+[R0801]
+why = "Indicates that a set of similar lines has been detected among multiple file. This usually means that the code should be refactored to avoid this duplication."
+examples = ""
+
+[R6002]
+why = "Only emitted if 'runtime-typing=no' and a deprecated typing alias is used in a type annotation context in Python 3.7 or 3.8."
+examples = ""
+
+[R6003]
+why = "It looks like 'typing.Union' or 'typing.Optional' is used instead of the alternative Union syntax 'int | None'."
+examples = ""
+
+[I0001]
+why = "Used to inform that a built-in module has not been checked using the raw checkers."
+examples = ""
+
+[I0010]
+why = "It looks like the inline option is either badly formatted or can't be used inside modules."
+examples = """
+
+## Problematic code
+
+```py
+# 2:[bad-inline-option]
+# pylint: disable line-too-long
+
+```
+
+## How to fix it
+
+```py
+# pylint: disable=line-too-long
+
+```
+"""
+
+[I0011]
+why = "It looks like the inline option disables a message or a messages category."
+examples = ""
+
+[I0013]
+why = "Used to inform that the file will not be checked"
+examples = ""
+
+[I0020]
+why = "A message was triggered on a line, but suppressed explicitly by a disable= comment in the file. This message is not generated for messages that are ignored due to configuration settings."
+examples = ""
+
+[I0021]
+why = "Reported when a message is explicitly disabled for a line or a block of code, but never triggered."
+examples = ""
+
+[I0022]
+why = "Some inline pylint options have been renamed or reworked, only the most recent form should be used. NOTE:skip-all is only available with pylint >= 0.26"
+examples = ""
+
+[I0023]
+why = "It looks like the message is enabled or disabled by id."
+examples = ""
+
+[I1101]
+why = "It looks like the variable is accessed for non-existent member of C extension. Due to unavailability of source static analysis is impossible, but it may be performed by introspecting living objects in run-time."
+examples = ""
+
+[W1613]
+why = "Used when the xrange built-in function is referenced (missing from Python 3). Use range instead."
+examples = ""
+
+[W1620]
+why = "Used for calls to dict.iterkeys(), itervalues() or iteritems(). Python 3 lacks these methods, use dict.keys(), values() or items()."
+examples = ""
+
+[W1621]
+why = "Used for calls to dict.viewkeys(), viewvalues() or viewitems(). Python 3 lacks these methods,  use dict.keys(), values() or items()."
+examples = ""
