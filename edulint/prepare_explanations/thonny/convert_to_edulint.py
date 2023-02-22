@@ -1,13 +1,16 @@
 from typing import Dict
 from pathlib import Path
+import os
 
 import tomli
 import tomli_w
 
 import thonny_messages
 
-FILENAME_TOML = "thonny_pylint.toml"  # todo: set relative path to this file, not pwd?
-EDULINT_TOML = "../edulint_thonny.toml"
+
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+FILENAME_TOML = os.path.join(SCRIPT_PATH, "thonny_pylint.toml")
+EDULINT_TOML = os.path.join(SCRIPT_PATH, "../edulint_thonny.toml")
 
 
 def extract_msgs_from_thonny(reload_from_source: bool = False) -> Dict[str, Dict[str, str]]:

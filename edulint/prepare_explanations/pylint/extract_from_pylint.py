@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import Optional
+import os
 
 from pylint.lint import PyLinter
 import tomli
@@ -15,6 +16,12 @@ from thonny_process_slim import make_explanation_more_friedly
 # _get_all_messages has to be modified:
             # getattr(message, "shared", False),
             # getattr(message, "default_enabled", False),
+
+
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+PYLINT_EXPORT_JSON = os.path.join(SCRIPT_PATH, 'pylint_export.json')
+PYLINT_EXPORT_TOML = os.path.join(SCRIPT_PATH, 'pylint_export.toml')
+EDULINT_TOML = os.path.join(SCRIPT_PATH, '../edulint_pylint.toml')
 
 
 class MyEncoder(json.JSONEncoder):
@@ -83,7 +90,7 @@ def md_code_block_with_headline(code: str, headline: Optional[str] = None) -> st
     return answer
 
 
-def convert_pylint_toml_to_edulint_toml(input_filename: str, output_filename: str):
+def convert_pylint_toml_to_EDULINT_TOML(input_filename: str, output_filename: str):
     with open(input_filename, 'rb') as f:
         data = tomli.load(f)
 
@@ -103,11 +110,11 @@ def convert_pylint_toml_to_edulint_toml(input_filename: str, output_filename: st
         tomli_w.dump(data, f, multiline_strings=True)
 
 
-if __name__ == "__main__":
-    pylint_export_json = 'pylint_export.json'
-    pylint_export_toml = 'pylint_export.toml'
-    edulint_toml = '../edulint_pylint.toml'
+def process_from_stored_data():
+    convert_json_to_toml(PYLINT_EXPORT_JSON, PYLINT_EXPORT_TOML)
+    convert_pylint_toml_to_EDULINT_TOML(PYLINT_EXPORT_TOML, EDULINT_TOML)
 
-    # pylint_to_json(pylint_export_json)
-    convert_json_to_toml(pylint_export_json, pylint_export_toml)
-    convert_pylint_toml_to_edulint_toml(pylint_export_toml, edulint_toml)
+
+if __name__ == "__main__":
+    # pylint_to_json(PYLINT_EXPORT_JSON)
+    process_from_stored_data()
