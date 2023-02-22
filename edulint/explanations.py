@@ -1,9 +1,14 @@
 from typing import Dict
+import os
+
 import tomli
+
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+EXPLANATIONS_FILENAME = os.path.join(SCRIPT_PATH, 'explanations.toml')
 
 
 def get_explanations() -> Dict[str, Dict[str, str]]:
-    with open('explanations.toml', "rb") as f:
+    with open(EXPLANATIONS_FILENAME, "rb") as f:
         parsed_toml = tomli.load(f)
     return parsed_toml
 
