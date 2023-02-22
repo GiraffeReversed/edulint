@@ -48,7 +48,7 @@ def extract_args(filename: str) -> List[str]:
     ib111_re = re.compile(r"\s*from\s+ib111\s+import\s+week_(\d+)", re.IGNORECASE)
 
     result: List[str] = []
-    with open(filename) as f:
+    with open(filename, encoding="utf-8") as f:
         for i, line in enumerate(f):
             line = line.strip()
 
