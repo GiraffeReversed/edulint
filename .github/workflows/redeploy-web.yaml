@@ -1,0 +1,35 @@
+name: Test - redeploy web apps
+
+on:
+  push:
+    branches:
+      - dev
+      - development
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Redeploy DEV server
+      uses: convictional/trigger-workflow-and-wait@v1.6.5
+      with:
+        owner: GiraffeReversed
+        repo: edulint-web
+        github_token: ${{ secrets.PAT_TRIGGER_WORKFLOW }}
+        workflow_file_name: deploy.yaml
+        ref: dev
+        wait_workflow: false
+
+    - name: Redeploy Prod server
+      uses: convictional/trigger-workflow-and-wait@v1.6.5
+      with:
+        owner: GiraffeReversed
+        repo: edulint-web
+        github_token: ${{ secrets.PAT_TRIGGER_WORKFLOW }}
+        workflow_file_name: deploy.yaml
+        ref: main
+        wait_workflow: false
