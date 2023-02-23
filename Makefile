@@ -8,11 +8,12 @@ LINTINGS_PATH = ${EDULINT_PATH}../lintings
 
 all: setup dist check
 
-setup: requirements.txt requirements.dev.txt
+setup: requirements.txt requirements.dev.txt tests/requirements.txt
 	python3 -m venv ${EDULINT_VENV_PATH} && \
 	. ${EDULINT_VENV_PATH}/bin/activate && \
 	python3 -m pip install -r requirements.txt && \
-	python3 -m pip install -r requirements.dev.txt
+	python3 -m pip install -r requirements.dev.txt && \
+	python3 -m pip install -r tests/requirements.txt
 
 clean:
 	rm -rf __pycache__ edulint.egg-info .mypy_cache .venv dist

@@ -3,4 +3,4 @@ tomli-w==1.0.0
 tqdm==4.64.1
 build
 mypy
-pytest
+# additional in test/requirements.txt
