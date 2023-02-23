@@ -4,17 +4,15 @@ EDULINT_VENV_PATH = ${EDULINT_PATH}/.venv
 DATA_PATH = ${EDULINT_PATH}../data
 LINTINGS_PATH = ${EDULINT_PATH}../lintings
 
-.PHONY: all dist mypy test check run setup clean venv_create
+.PHONY: all dist mypy test check run setup clean
 
-all: setup venv_create dist check
+all: setup dist check
 
-setup: requirements.dev.txt
-	python3 -m pip install --user -r requirements.dev.txt
-
-venv_create: requirements.txt
-	python3 -m venv ${EDULINT_VENV_PATH}
-	. ${EDULINT_VENV_PATH}/bin/activate
-	python3 -m pip install -r requirements.txt
+setup: requirements.txt requirements.dev.txt
+	python3 -m venv ${EDULINT_VENV_PATH} && \
+	. ${EDULINT_VENV_PATH}/bin/activate && \
+	python3 -m pip install -r requirements.txt && \
+	python3 -m pip install -r requirements.dev.txt
 
 clean:
 	rm -rf __pycache__ edulint.egg-info .mypy_cache .venv dist
