@@ -367,6 +367,7 @@ def test_problem_can_be_dumped_to_json() -> None:
   "line": 5,
   "path": "path",
   "source": "flake8",
+  "symbol": null,
   "text": "too many blank lines (3)"
 }"""
 
@@ -380,6 +381,7 @@ def test_problem_can_be_dumped_to_json() -> None:
     "line": 5,
     "path": "path",
     "source": "flake8",
+    "symbol": null,
     "text": "too many blank lines (3)"
   }
 ]"""
