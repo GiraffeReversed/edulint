@@ -86,7 +86,7 @@ def md_code_block_with_headline(code: str, headline: Optional[str] = None) -> st
 
     answer = ''
     if headline:
-        answer += f"\n## {headline}\n"
+        answer += f"\n**{headline}**\n"
     
     answer += f"""
 ```py
