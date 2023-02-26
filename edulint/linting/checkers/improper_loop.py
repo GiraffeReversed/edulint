@@ -223,13 +223,15 @@ class ImproperLoop(BaseChecker):
             return
 
         control_var = node.target
+        if control_var.as_string().startswith("_"):
+            return
+
         listener = ModifiedListener({control_var})
         listener.visit_many(node.body)
 
         for modifier in listener.get_all_modifiers(control_var):
             mod_statement = self._get_block_line(modifier)
-            if isinstance(mod_statement, nodes.For) and mod_statement.target.as_string() == control_var.as_string() \
-                    and control_var.as_string() != "_":
+            if isinstance(mod_statement, nodes.For) and mod_statement.target.as_string() == control_var.as_string():
                 self.add_message("loop-shadows-control-variable", node=mod_statement, args=(modifier.as_string()))
             if is_last_block(mod_statement, node):
                 self.add_message("changing-control-variable", node=mod_statement, args=(control_var.as_string(),))

@@ -56,6 +56,22 @@ def test_use_for_loop_custom(lines: List[str], expected_output: List[Problem]) -
     ], [
         lazy_problem().set_line(3).set_text("Changing the control variable i of a for loop has no effect.")
     ]),
+    ([
+        "for _ in range(10):",
+        "    _ = 'a,b,c,d'.split(',', 1)",
+    ], [
+    ]),
+    ([
+        "for _ in range(10):",
+        "    _, rest = 'a,b,c,d'.split(',', 1)",
+    ], [
+    ]),
+    ([
+        "for _ in range(10):",
+        "    for _ in range(10):"
+        "        _, rest = 'a,b,c,d'.split(',', 1)",
+    ], [
+    ])
 ])
 def test_changing_control_variable_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
