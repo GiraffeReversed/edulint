@@ -7,6 +7,12 @@ jobs:
   pytest:
     # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [3.8, 3.9, "3.10", 3.11]
+
     steps:
       - name: Check out repository code
         uses: actions/checkout@v3
@@ -17,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.7
+          python-version: ${{ matrix.version }}
           cache: 'pip'
 
       - name: Install dependencies
