@@ -1,11 +1,6 @@
-name: Test - redeploy web apps
+name: Redeploy web apps
 
 on:
-  push:
-    branches:
-      - dev
-      - development
-      - main
   workflow_dispatch:
 
 jobs:
