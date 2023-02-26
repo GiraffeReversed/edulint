@@ -306,7 +306,6 @@ class Short(BaseChecker):
                 self.add_message("unreachable-else", node=node.orelse[0].orelse[0])
 
     def _check_no_is(self, node: nodes.Compare) -> None:
-        eprint(node)
         for op, val in node.ops:
             if op in ("is", "is not") and (not isinstance(val, nodes.Const) or val.value is not None):
                 self.add_message("no-is", node=node, args=(val.as_string(),))
