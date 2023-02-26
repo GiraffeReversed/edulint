@@ -174,6 +174,23 @@ class TestImproveFor:
             .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
         ]), ([
             "A = list(range(10))",
+            "for i in range(5, len(A)):",
+            "    print(A[i])"
+        ], [
+        ]), ([
+            "A = list(range(10))",
+            "a = 5",
+            "for i in range(a, len(A)):",
+            "    print(A[i])"
+        ], [
+        ]), ([
+            "A = list(range(10))",
+            "a = 5",
+            "for i in range(a, len(A)):",
+            "    print(i, A[i])"
+        ], [
+        ]), ([
+            "A = list(range(10))",
             "B = []",
             "for x in range(len(A)):",
             "    x += 1",

@@ -95,8 +95,10 @@ class ImproveForLoop(BaseChecker):  # type: ignore
         if range_params is None:
             return
 
-        _, stop, _ = range_params
-        if not isinstance(stop, nodes.Call) or not is_builtin(stop.func, "len") or len(stop.args) != 1:
+        start, stop, step = range_params
+        if not isinstance(start, nodes.Const) or start.value != 0 \
+                or not isinstance(stop, nodes.Call) or not is_builtin(stop.func, "len") or len(stop.args) != 1 \
+                or not isinstance(step, nodes.Const) or step.value != 1:
             return
 
         structure = stop.args[0]
