@@ -72,6 +72,12 @@ class Short(BaseChecker):
             "Unreachable else.",
             "unreachable-else",
             "Emitted when the else branch is unreachable due to totally exhaustive conditions before."
+        ),
+        "R6613": (
+            "Do not use 'is' with %s ('is' is usually used only with None). Use == for comparing "
+            "or in case of a bool value, use it directly.",
+            "no-is",
+            "Emitted when the is operator is used with other value than None."
         )
     }
 
@@ -299,6 +305,12 @@ class Short(BaseChecker):
             if len(node.orelse[0].orelse) > 0:
                 self.add_message("unreachable-else", node=node.orelse[0].orelse[0])
 
+    def _check_no_is(self, node: nodes.Compare) -> None:
+        eprint(node)
+        for op, val in node.ops:
+            if op in ("is", "is not") and (not isinstance(val, nodes.Const) or val.value is not None):
+                self.add_message("no-is", node=node, args=(val.as_string(),))
+
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
@@ -337,6 +349,10 @@ class Short(BaseChecker):
     @only_required_for_messages("use-augmenting-assignment")
     def visit_annassign(self, node: nodes.AnnAssign) -> None:
         self._check_augmentable(node)
+
+    @only_required_for_messages("no-is")
+    def visit_compare(self, node: nodes.Compare) -> None:
+        self._check_no_is(node)
 
 
 def register(linter: "PyLinter") -> None:

@@ -140,7 +140,7 @@ enable=comparison-with-itself,
        reimported,
        invalid-for-target,
        one-iteration,
-
+       no-is
 
 
 [REPORTS]

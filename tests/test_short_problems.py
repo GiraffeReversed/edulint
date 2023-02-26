@@ -65,6 +65,21 @@ class TestShort:
             [problem.set_code("R6609") for problem in expected_output]
         )
 
+    @pytest.mark.parametrize("lines,expected_output", [
+        (["1 is True"], [lazy_problem()]),
+        (["1 is not True"], [lazy_problem()]),
+        (["1 is None"], []),
+        (["1 is not None"], []),
+    ])
+    def test_no_is_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        create_apply_and_lint(
+            lines,
+            [Arg(Option.PYLINT, "--disable=all"),
+             Arg(Option.PYLINT, "--enable=no-is"),
+             Arg(Option.NO_FLAKE8, "on")],
+            [problem.set_code("R6613") for problem in expected_output]
+        )
+
     @pytest.mark.parametrize("filename,expected_output", [
         ("010666-prime.py", [
             lazy_problem().set_code("R6604").set_line(12).set_text("Do not use while loop with else."),
@@ -99,7 +114,11 @@ class TestShort:
             .set_text("Use lst.append(number % 7) instead of lst += [number % 7].")
         ]),
         ("024042-cards.py", [
-            lazy_problem().set_code("R6609").set_line(9).set_text("Use augmenting assignment: 'number //= 10'")
+            lazy_problem().set_code("R6609").set_line(9).set_text("Use augmenting assignment: 'number //= 10'"),
+            lazy_problem().set_code("R6613").set_line(37)
+            .set_text("Do not use 'is' with True ('is' is usually used only with None). Use == for comparing or "
+                      "in case of a bool value, use it directly."),
+            lazy_problem().set_code("R6613").set_line(55),
         ]),
         ("024180-delete.py", [
             lazy_problem().set_code("R6606").set_line(7)
@@ -174,6 +193,9 @@ class TestShort:
             .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
             lazy_problem().set_code("R6607").set_line(66)
             .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
+            lazy_problem().set_code("R6613").set_line(98)
+            .set_text("Do not use 'is' with False ('is' is usually used only with None). Use == for comparing or "
+                      "in case of a bool value, use it directly.")
         ]),
         ("hw35219.py", [
             lazy_problem().set_code("R6601").set_line(34)
@@ -192,6 +214,8 @@ class TestShort:
             lazy_problem().set_code("R6608").set_line(83).set_text("Redundant arithmetic: num //= num"),
             lazy_problem().set_code("R6608").set_line(86).set_text("Redundant arithmetic: num //= num"),
             lazy_problem().set_code("R6608").set_line(97).set_text("Redundant arithmetic: position * 1"),
+            lazy_problem().set_code("R6613").set_line(144),
+            lazy_problem().set_code("R6613").set_line(144),
         ]),
         ("m2650.py", [
             lazy_problem().set_code("R6609").set_line(11),
