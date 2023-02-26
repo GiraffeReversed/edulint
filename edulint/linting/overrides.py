@@ -13,6 +13,8 @@ OVERRIDERS = {
     # R1705=no-else-return, R1703=simplifiable-if-statement
     "R6610": {"R6608"},
     # R6610=do-not-multiply-mutable, R6608=redundant-arithmetic
+    "W0107": {"W0101"},
+    # W0107=unnecessary-pass, W0101=unreachable
 }
 
 

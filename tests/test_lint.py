@@ -395,6 +395,23 @@ def test_umime_count_a(filename: str, args: List[Arg], expected_output: List[Pro
     apply_and_lint(filename, args, expected_output)
 
 
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "def fun():",
+        "    return 42",
+        "    pass"
+    ], [
+        lazy_problem().set_code("W0101")
+    ]),
+])
+def test_overrides_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.NO_FLAKE8, "on")],
+        expected_output
+    )
+
+
 @pytest.mark.filterwarnings("ignore:The 'default' argument to fields is deprecated. Use 'dump_default' instead.")
 def test_problem_can_be_dumped_to_json() -> None:
     problem = Problem(source=Linter.FLAKE8, path='path', line=5, column=1, code='E303',
