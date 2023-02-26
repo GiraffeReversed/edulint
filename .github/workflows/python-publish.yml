@@ -46,6 +46,6 @@ jobs:
       uses: convictional/trigger-workflow-and-wait@v1.6.5
       with:
         owner: GiraffeReversed
-        repo: edulint-web
+        repo: edulint
         github_token: ${{ secrets.PAT_TRIGGER_WORKFLOW }}
         workflow_file_name: redeploy-web.yaml
