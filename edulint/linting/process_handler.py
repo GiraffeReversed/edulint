@@ -7,6 +7,9 @@ from typing import Optional, Tuple, List
 
 """ Author: Ondrej Borysek, License: MIT, Last update: 2021-04-19"""
 
+SIGKILL_STATUS_CODE = 137-128  # -9
+SIGTERM_STATUS_CODE = 143-128  # -15
+
 
 class ProcessHandler:
     """
@@ -96,6 +99,10 @@ class ProcessHandler:
             return
         print("""Please check that you don't see any zombie processes from the process of testing. They would have nice
               value of 19. You can use command "ps a -o pid,ni,time,cmd" """, file=sys.stderr)
+
+    @staticmethod
+    def is_status_code_by_timeout(status_code: int) -> bool:
+        return status_code in [SIGTERM_STATUS_CODE, SIGKILL_STATUS_CODE]
 
 
 def usage_example() -> None:
