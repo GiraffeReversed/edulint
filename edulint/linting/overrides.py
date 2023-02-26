@@ -2,6 +2,7 @@ from typing import Dict, Set
 
 
 OVERRIDERS = {
+    # overriden: { overriders }
     "C0104": {"R6101", "R6609", "F841", "W0613"},
     # C0104=diallowed-name; R6101=use-for-each; R6609=augmenting-assignment
     #                       F841=unused variable; W0613=unused-argument
