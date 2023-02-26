@@ -7,7 +7,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import get_range_params, get_const_value
+from edulint.linting.checkers.utils import get_range_params, get_const_value, infer_to_value
 
 
 class Short(BaseChecker):
@@ -195,23 +195,31 @@ class Short(BaseChecker):
         def add_message(target: str, param: nodes.BinOp) -> None:
             self.add_message("use-augmenting-assignment", node=node, args=(target, node.value.op, param.as_string()))
 
+        def is_mutable(node: nodes.NodeNG):
+            return type(node) in (nodes.List, nodes.Dict, nodes.Set, nodes.ListComp, nodes.DictComp)
+
         if not isinstance(node.value, nodes.BinOp):
             return
         bin_op = node.value
 
         if isinstance(node, nodes.Assign):
-            if len(node.targets) != 1:
-                return
             target = node.targets[0].as_string()
         elif isinstance(node, nodes.AnnAssign):
             target = node.target.as_string()
         else:
             assert False, "unreachable"
 
+        left_value = infer_to_value(bin_op.left)
+        right_value = infer_to_value(bin_op.right)
+
+        if is_mutable(left_value) or is_mutable(right_value):
+            return
+
         if target == bin_op.left.as_string():
             add_message(target, bin_op.right)
         if bin_op.op in "+*|&" and target == bin_op.right.as_string():
-            add_message(target, bin_op.left)
+            if not isinstance(left_value, nodes.Const) or not isinstance(left_value.value, (str, bytes)):
+                add_message(target, bin_op.left)
 
     def _check_multiplied_list(self, node: nodes.BinOp) -> None:
         def is_mutable(elem: nodes.NodeNG) -> bool:

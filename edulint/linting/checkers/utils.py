@@ -1,5 +1,5 @@
 from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, Tuple, cast
-from astroid import nodes  # type: ignore
+from astroid import nodes, Uninferable  # type: ignore
 import sys
 import inspect
 from pylint.checkers import utils  # type: ignore
@@ -107,5 +107,16 @@ def get_const_value(node: nodes.NodeNG) -> Any:
         if node.op == "not":
             return not node.operand.value
         assert False, "unreachable" + node.op
+
+    return None
+
+
+def infer_to_value(node: nodes.NodeNG) -> Optional[nodes.NodeNG]:
+    if isinstance(node, nodes.Name):
+        inferred = utils.safe_infer(node)
+        return None if inferred is Uninferable else inferred
+
+    if type(node) in (nodes.Const, nodes.List, nodes.Set, nodes.Dict, nodes.ListComp, nodes.DictComp):
+        return node
 
     return None

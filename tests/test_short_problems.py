@@ -26,6 +26,45 @@ class TestShort:
             expected_output
         )
 
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "def foo(a):",
+            "    a = a + 1",
+        ], [lazy_problem()]),
+        ([
+            "def foo(a):",
+            "    a = a + [0]",
+        ], []),
+        ([
+            "def foo(a):",
+            "    a = [0] + a",
+        ], []),
+        ([
+            "def foo(a):",
+            "    a = a + 'a'",
+        ], [lazy_problem()]),
+        ([
+            "def foo(a):",
+            "    a = 'a' + a",
+        ], []),
+        ([
+            "def foo(a):",
+            "    a = a & 2",
+        ], [lazy_problem()]),
+        ([
+            "def foo(a):",
+            "    a = a & {'a'}",
+        ], []),
+    ])
+    def test_augassign_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        create_apply_and_lint(
+            lines,
+            [Arg(Option.PYLINT, "--disable=all"),
+             Arg(Option.PYLINT, "--enable=use-augmenting-assignment"),
+             Arg(Option.NO_FLAKE8, "on")],
+            [problem.set_code("R6609") for problem in expected_output]
+        )
+
     @pytest.mark.parametrize("filename,expected_output", [
         ("010666-prime.py", [
             lazy_problem().set_code("R6604").set_line(12).set_text("Do not use while loop with else."),
