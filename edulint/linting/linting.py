@@ -14,10 +14,6 @@ import pathlib
 import os
 
 
-class LintingTimeout(Exception):
-    pass
-
-
 def get_proper_path(path: str) -> str:
     return os.path.abspath(path) if os.path.isabs(path) else os.path.relpath(path)
 
@@ -77,7 +73,7 @@ def lint_any(
 
     if ProcessHandler.is_status_code_by_timeout(return_code):
         print(f"edulint: {linter} was likely killed by timeout", file=sys.stderr)
-        raise LintingTimeout(f"Timeout from {linter}")
+        raise TimeoutError(f"Timeout from {linter}")
 
     print(errs, file=sys.stderr, end="")
     if (linter == Linter.FLAKE8 and return_code not in (0, 1)) or (linter == Linter.PYLINT and return_code == 32):
