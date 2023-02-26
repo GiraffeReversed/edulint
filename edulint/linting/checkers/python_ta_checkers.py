@@ -148,7 +148,7 @@ class TopLevelCodeChecker(BaseChecker):
             if not (
                 _is_import(statement)
                 or _is_definition(statement)
-                or _is_constant_assignment(statement)
+                or _is_assignment(statement)
                 or _is_main_block(statement)
             ):
                 self.add_message("forbidden-top-level-code", node=statement, args=statement.lineno)
@@ -181,6 +181,10 @@ def _is_constant_assignment(statement) -> bool:
         names.extend(node.name for node in target.nodes_of_class(nodes.AssignName, nodes.Name))
 
     return all(re.match(UpperCaseStyle.CONST_NAME_RGX, name) for name in names)
+
+
+def _is_assignment(statement) -> bool:
+    return isinstance(statement, nodes.Assign)
 
 
 def _is_main_block(statement) -> bool:

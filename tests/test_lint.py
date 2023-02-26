@@ -231,6 +231,31 @@ class TestImproveFor:
         apply_and_lint(filename, [Arg(Option.PYLINT, "--disable=all")] + args, expected_output)
 
 
+class TestPyTA:
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "from typing import Tuple",
+
+            "Point = Tuple[int, int]"
+        ], [
+        ]),
+        ([
+            "if 0 == 1:",
+            "    print('noooooooo')"
+        ], [
+            lazy_problem().set_line(1)
+        ]),
+    ])
+    def test_forbidden_toplevel_code_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
+        create_apply_and_lint(
+            lines,
+            [Arg(Option.PYLINT, "--disable=all"),
+             Arg(Option.PYLINT, "--enable=forbidden-top-level-code"),
+             Arg(Option.NO_FLAKE8, "on")],
+            [p.set_code("E9992") for p in expected_output]
+        )
+
+
 class TestNoGlobals:
     @pytest.mark.parametrize("lines,expected_output", [
         ([
