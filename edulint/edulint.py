@@ -4,6 +4,7 @@ from edulint.linting.linting import lint_many, sort
 from typing import List, Tuple
 import argparse
 import os
+import sys
 
 
 def setup_argparse() -> argparse.Namespace:
@@ -32,7 +33,12 @@ def main() -> int:
 
     configs = [get_config(filename, cmd_args=cmd_args) for filename in args.files]
 
-    result = sort(args.files, lint_many(partition(args.files, configs)))
+    try:
+        result = sort(args.files, lint_many(partition(args.files, configs)))
+    except TimeoutError as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
+
     if args.json:
         print(Problem.schema().dumps(result, indent=2, many=True))  # type: ignore
     else:

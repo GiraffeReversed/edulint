@@ -60,15 +60,19 @@ class ProcessHandler:
         proc = subprocess.Popen(user_command, shell=False, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         self.last_child = proc
 
+        return_code = SIGKILL_STATUS_CODE
+
         try:
             outb, errb = proc.communicate(input=input_str.encode("utf8") if input_str else None, timeout=self.timeout)
+            return_code = proc.returncode
         except TimeoutExpired:
             print("Timeout, trying to kill.", file=sys.stderr)
             proc.kill()
             outb, errb = proc.communicate()
+            # proc.returncode will be ignored
 
         self.__kill_children()
-        return proc.returncode, outb.decode(), errb.decode()
+        return return_code, outb.decode(), errb.decode()
 
     @staticmethod
     def run(command: List[str],
