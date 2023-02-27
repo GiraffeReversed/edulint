@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Wait 10 seconds (let PyPi propagate new version)
+      run: sleep 10s
+      shell: bash
 
     - name: Redeploy DEV server
       uses: convictional/trigger-workflow-and-wait@v1.6.5
