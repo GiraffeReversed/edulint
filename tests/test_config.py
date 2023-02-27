@@ -101,17 +101,20 @@ def test_extract_args(mocker, contents, args):
 @pytest.fixture
 def options() -> Dict[Option, OptionParse]:
     return {
-        Option.PYTHON_SPEC: OptionParse(Option.PYTHON_SPEC, "", TakesVal.NO, False, Type.BOOL, Combine.REPLACE),
+        Option.PYTHON_SPECIFIC: OptionParse(Option.PYTHON_SPECIFIC, "", TakesVal.NO, False, Type.BOOL, Combine.REPLACE),
         Option.FLAKE8: OptionParse(Option.FLAKE8, "", TakesVal.YES, [], Type.STR, Combine.APPEND),
         Option.IB111_WEEK: OptionParse(Option.IB111_WEEK, "", TakesVal.YES, None, Type.INT, Combine.REPLACE)
     }
 
 
 @pytest.mark.parametrize("raw,parsed", [
-    (["python-spec"], [UnprocessedArg(Option.PYTHON_SPEC, None)]),
+    (["python-specific"], [UnprocessedArg(Option.PYTHON_SPECIFIC, None)]),
+    (["python-spec"], [UnprocessedArg(Option.PYTHON_SPECIFIC, None)]),
     (["flake8=foo"], [UnprocessedArg(Option.FLAKE8, "foo")]),
     (["flake8="], [UnprocessedArg(Option.FLAKE8, "")]),
-    (["python-spec", "flake8=foo"], [UnprocessedArg(Option.PYTHON_SPEC, None), UnprocessedArg(Option.FLAKE8, "foo")]),
+    (["python-specific", "flake8=foo"], [
+        UnprocessedArg(Option.PYTHON_SPECIFIC, None), UnprocessedArg(Option.FLAKE8, "foo")
+    ]),
     (["flake8=--enable=xxx"], [UnprocessedArg(Option.FLAKE8, "--enable=xxx")]),
     (["ib111-week=02"], [UnprocessedArg(Option.IB111_WEEK, "02")]),
     (["ib111-week=12", "ib111-week=02"], [
@@ -129,7 +132,7 @@ def config_translations() -> Dict[Option, Translation]:
             Linter.PYLINT,
             ["aaa"]
         ),
-        Option.PYTHON_SPEC: Translation(
+        Option.PYTHON_SPECIFIC: Translation(
             Linter.PYLINT,
             ["bbb"]
         ),

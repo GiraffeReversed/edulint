@@ -21,7 +21,7 @@ class Option(NumberFromZero):
     PYLINT = ()
     FLAKE8 = ()
     ENHANCEMENT = ()
-    PYTHON_SPEC = ()
+    PYTHON_SPECIFIC = ()
     COMPLEXITY = ()
     ALLOWED_ONECHAR_NAMES = ()
     IB111_WEEK = ()
@@ -144,7 +144,7 @@ OPTIONS: List[OptionParse] = [
         Combine.REPLACE
     ),
     OptionParse(
-        Option.PYTHON_SPEC,
+        Option.PYTHON_SPECIFIC,
         "enable checking for ways to improve the code with Python-specific constructions",
         TakesVal.NO,
         False,
@@ -185,10 +185,14 @@ OPTIONS: List[OptionParse] = [
     )
 ]
 
+OLD_NAMES = {"python-spec": Option.PYTHON_SPECIFIC}
+
 
 def get_option_parses() -> Dict[Option, OptionParse]:
     return {parse.option: parse for parse in OPTIONS}
 
 
 def get_name_to_option(option_parses: Dict[Option, OptionParse]) -> Dict[str, Option]:
-    return {parse.option.to_name(): opt for opt, parse in option_parses.items()}
+    from_options = {parse.option.to_name(): opt for opt, parse in option_parses.items()}
+    from_options.update(OLD_NAMES)
+    return from_options

@@ -20,7 +20,7 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
          "forbidden-top-level-code,use-elif"
          ]
     ),
-    Option.PYTHON_SPEC: Translation(
+    Option.PYTHON_SPECIFIC: Translation(
         Linter.PYLINT,
         ["--enable=unidiomatic-typecheck,misplaced-format-function,"
          "unnecessary-lambda,multiple-imports,"

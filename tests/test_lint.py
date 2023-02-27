@@ -51,7 +51,7 @@ def test_lint_basic(filename: str, config: Config, expected_output: List[Problem
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("W0107").set_line(196),
     ]),
-    ("z202817-zkouska.py", [Arg(Option.PYTHON_SPEC, "on")], [
+    ("z202817-zkouska.py", [Arg(Option.PYTHON_SPECIFIC, "on")], [
         lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6102").set_line(80),
         lazy_problem().set_code("R6205").set_line(82),
@@ -59,12 +59,12 @@ def test_lint_basic(filename: str, config: Config, expected_output: List[Problem
         lazy_problem().set_code("C0123").set_line(172),
         lazy_problem().set_code("W0107").set_line(196),
     ]),
-    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPEC, "on")], [
+    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPECIFIC, "on")], [
         lazy_problem().set_code("R6102").set_line(80),
         lazy_problem().set_code("R6101").set_line(171),
         lazy_problem().set_code("C0123").set_line(172),
     ]),
-    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPEC, "off")], []),
+    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPECIFIC, "off")], []),
     ("hw34406.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.COMPLEXITY, "on")], [
         lazy_problem().set_line(240).set_code("R0913"),
         lazy_problem().set_line(266).set_code("R0911"),
@@ -87,33 +87,33 @@ class TestIB111Week:
             "    tmp = a",
             "    a = b",
             "    b = tmp",
-        ], [Arg(Option.PYTHON_SPEC, "on")], [
+        ], [Arg(Option.PYTHON_SPECIFIC, "on")], [
             lazy_problem().set_code("R1712").set_line(2),
         ]), ([
             "def swap(a, b):",
             "    tmp = a",
             "    a = b",
             "    b = tmp",
-        ], [Arg(Option.PYTHON_SPEC, "on"), Arg(Option.IB111_WEEK, "2")], [
+        ], [Arg(Option.PYTHON_SPECIFIC, "on"), Arg(Option.IB111_WEEK, "2")], [
         ]), ([
             "def swap(a, b):",
             "    tmp = a",
             "    a = b",
             "    b = tmp",
-        ], [Arg(Option.PYTHON_SPEC, "on"), Arg(Option.IB111_WEEK, "3")], [
+        ], [Arg(Option.PYTHON_SPECIFIC, "on"), Arg(Option.IB111_WEEK, "3")], [
             lazy_problem().set_code("R1712").set_line(2),
         ]), ([
             "def is_one_or_two(n):",
             "    if n == 1 or n == 2:",
             "        return True",
             "    return False"
-        ], [Arg(Option.PYTHON_SPEC, "on"), Arg(Option.IB111_WEEK, "6"), Arg(Option.PYLINT, "--disable=R6201")], [
+        ], [Arg(Option.PYTHON_SPECIFIC, "on"), Arg(Option.IB111_WEEK, "6"), Arg(Option.PYLINT, "--disable=R6201")], [
         ]), ([
             "def is_one_or_two(n):",
             "    if n == 1 or n == 2:",
             "        return True",
             "    return False"
-        ], [Arg(Option.PYTHON_SPEC, "on"), Arg(Option.IB111_WEEK, "7"), Arg(Option.PYLINT, "--disable=R6201")], [
+        ], [Arg(Option.PYTHON_SPECIFIC, "on"), Arg(Option.IB111_WEEK, "7"), Arg(Option.PYLINT, "--disable=R6201")], [
             lazy_problem().set_code("R1714").set_line(2),
         ])
     ])
@@ -122,7 +122,7 @@ class TestIB111Week:
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
-    ("014186-p2_nested.py", [Arg(Option.PYTHON_SPEC, "on")], [
+    ("014186-p2_nested.py", [Arg(Option.PYTHON_SPECIFIC, "on")], [
         lazy_problem().set_code("C0103").set_line(20),
         lazy_problem().set_code("C0103").set_line(21),
         lazy_problem().set_code("C0103").set_line(27),
@@ -131,7 +131,7 @@ class TestIB111Week:
         lazy_problem().set_code("C0103").set_line(34),
         lazy_problem().set_code("W0622").set_line(48),
     ]),
-    ("custom_pep_assign.py", [Arg(Option.PYTHON_SPEC, "on")], [
+    ("custom_pep_assign.py", [Arg(Option.PYTHON_SPECIFIC, "on")], [
         lazy_problem().set_code("C0103").set_line(1),
     ])
 ])
@@ -241,7 +241,7 @@ class TestImproveFor:
         ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--enable=iterate-directly"),
                                    Arg(Option.PYLINT, "--disable=W0622,R1705,R1703,R6201,R6202")], [
         ]),
-        ("014771-p2_nested.py", [Arg(Option.PYTHON_SPEC, "on")], [
+        ("014771-p2_nested.py", [Arg(Option.PYTHON_SPECIFIC, "on")], [
             lazy_problem().set_code("R6101").set_line(25)
             .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
             lazy_problem().set_code("R6101").set_line(35)
@@ -370,7 +370,7 @@ class TestNoGlobals:
 
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("umime_count_a.py", [
-        Arg(Option.PYTHON_SPEC, "on"),
+        Arg(Option.PYTHON_SPECIFIC, "on"),
         Arg(Option.ALLOWED_ONECHAR_NAMES, ""),
         Arg(Option.ENHANCEMENT, "on"),
     ], [
@@ -385,7 +385,7 @@ class TestNoGlobals:
         .set_text("Use augmenting assignment: 'a += 1'"),
     ]),
     ("umime_count_a_extended.py", [
-        Arg(Option.PYTHON_SPEC, "on"),
+        Arg(Option.PYTHON_SPECIFIC, "on"),
         Arg(Option.ALLOWED_ONECHAR_NAMES, ""),
         Arg(Option.ENHANCEMENT, "on"),
     ], [
