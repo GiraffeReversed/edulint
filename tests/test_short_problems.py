@@ -81,6 +81,62 @@ class TestShort:
         )
 
     @pytest.mark.parametrize("filename,expected_output", [
+        ("044050-vigenere.py", [
+            lazy_problem().set_code("R6614").set_line(38)
+            .set_text("Use \"ord('A')\" instead of using the magical constant 65."),
+            lazy_problem().set_code("R6615").set_line(39)
+            .set_text("Remove the call to 'ord' and compare to the string directly \"> 'Z'\" instead of using "
+                      "the magical constant 91. Careful, this may require changing the comparison operator."),
+            lazy_problem().set_code("R6614").set_line(40)
+            .set_text("Use \"(ord('Z') + 1)\" instead of using the magical constant 91."),
+            lazy_problem().set_code("R6614").set_line(68)
+            .set_text("Use \"ord('A')\" instead of using the magical constant 65."),
+            lazy_problem().set_code("R6615").set_line(69)
+            .set_text("Remove the call to 'ord' and compare to the string directly \"< 'A'\" instead of using "
+                      "the magical constant 65. Careful, this may require changing the comparison operator."),
+            lazy_problem().set_code("R6614").set_line(70)
+            .set_text("Use \"ord('A')\" instead of using the magical constant 65.")
+        ]),
+        ("044262-vigenere.py", [  # TODO detect also 42 and 72
+            lazy_problem().set_code("R6615").set_line(36)
+            .set_text("Remove the call to 'ord' and compare to the string directly \"< 'A'\" instead of using "
+                      "the magical constant 65. Careful, this may require changing the comparison operator."),
+            lazy_problem().set_code("R6615").set_line(36)
+            .set_text("Remove the call to 'ord' and compare to the string directly \"> '['\" instead of using "
+                      "the magical constant 91. Careful, this may require changing the comparison operator."),
+            lazy_problem().set_code("R6615").set_line(66),
+            lazy_problem().set_code("R6615").set_line(66)
+            .set_text("Remove the call to 'ord' and compare to the string directly \"> '['\" instead of using "
+                      "the magical constant 91. Careful, this may require changing the comparison operator."),
+        ]),
+        ("048426-ipv4.py", [
+            lazy_problem().set_code("R6614").set_line(4)
+            .set_text("Use \"ord('0')\" instead of using the magical constant 48.")
+        ]),
+        ("hw34017.py", [
+            lazy_problem().set_code("R6615").set_line(177),
+            lazy_problem().set_code("R6615").set_line(177)
+            .set_text("Remove the call to 'ord' and compare to the string directly \"< 'D'\" instead of using "
+                      "the magical constant 68. Careful, this may require changing the comparison operator."),
+            lazy_problem().set_code("R6615").set_line(177),
+            lazy_problem().set_code("R6615").set_line(177)
+            .set_text("Remove the call to 'ord' and compare to the string directly \"< '3'\" instead of using "
+                      "the magical constant 51. Careful, this may require changing the comparison operator."),
+            lazy_problem().set_code("R6614").set_line(178),
+        ]),
+    ])
+    def test_ord_files(self, filename: str, expected_output: List[Problem]) -> None:
+        apply_and_lint(
+            filename,
+            [
+                Arg(Option.NO_FLAKE8, "on"),
+                Arg(Option.PYLINT, "--disable=all"),
+                Arg(Option.PYLINT, "--enable=use-ord-letter,use-literal-letter")
+            ],
+            expected_output
+        )
+
+    @pytest.mark.parametrize("filename,expected_output", [
         ("010666-prime.py", [
             lazy_problem().set_code("R6604").set_line(12).set_text("Do not use while loop with else."),
             lazy_problem().set_code("R6609").set_line(15).set_text("Use augmenting assignment: 'i += 1'"),

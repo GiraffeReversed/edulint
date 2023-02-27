@@ -78,6 +78,17 @@ class Short(BaseChecker):
             "or in case of a bool value, use it directly.",
             "no-is",
             "Emitted when the is operator is used with other value than None."
+        ),
+        "R6614": (
+            "Use \"%s\" instead of using the magical constant %i.",
+            "use-ord-letter",
+            "Emitted when the code uses a magical constant instead of a string literal."
+        ),
+        "R6615": (
+            "Remove the call to 'ord' and compare to the string directly \"%s\" instead of using "
+            "the magical constant %i. Careful, this may require changing the comparison operator.",
+            "use-literal-letter",
+            "Emitted when the code uses a magical constant instead of a string literal in a comparison."
         )
     }
 
@@ -310,6 +321,90 @@ class Short(BaseChecker):
             if op in ("is", "is not") and (not isinstance(val, nodes.Const) or val.value is not None):
                 self.add_message("no-is", node=node, args=(val.as_string(),))
 
+    def _is_ord(self, node: nodes.NodeNG) -> bool:
+        return isinstance(node, nodes.Call) and node.func.as_string() == "ord"
+
+    def _contains_ord(self, node: nodes.NodeNG) -> bool:
+        if self._is_ord(node):
+            return True
+        if isinstance(node, nodes.BinOp):
+            return self._is_ord(node.left) or self._is_ord(node.right)
+        return False
+
+    def _is_preffered(self, value: int) -> bool:
+        return chr(value) in 'azAZ09'
+
+    def _in_suggestable_range(self, value: int) -> bool:
+        return ord(' ') <= value < 127  # chr(127) is weird
+
+    def _check_use_ord_letter(self, node: nodes.BinOp) -> None:
+        def add_message(param: nodes.NodeNG, value: int, suggestion: str):
+            self.add_message("use-ord-letter", node=param, args=(suggestion, value))
+
+        if node.op not in ("+", "-"):
+            return
+
+        for ord_param, const_param in ((node.left, node.right), (node.right, node.left)):
+            value = get_const_value(const_param)
+            if value is None or not isinstance(value, int) or not self._in_suggestable_range(value) \
+                    or not self._contains_ord(ord_param):
+                continue
+
+            if self._is_preffered(value + 1):
+                suggestion = f"ord('{chr(value + 1)}') - 1"
+            elif self._is_preffered(value - 1):
+                suggestion = f"ord('{chr(value - 1)}') + 1"
+            elif not isinstance(ord_param, nodes.BinOp) or self._is_preffered(value):
+                suggestion = f"ord('{chr(value)}')"
+
+            if (node.op == "-" and const_param == node.right and suggestion.endswith("+ 1")) \
+                    or (node.op == "+" and const_param == node.left and suggestion.endswith("- 1")):
+                add_message(const_param, value, f"({suggestion})")
+            else:
+                add_message(const_param, value, suggestion)
+
+    def _check_magical_constant_in_ord_compare(self, node: nodes.Compare) -> None:
+        def add_message(param: nodes.NodeNG, value: int, suggestion: str) -> None:
+            self.add_message("use-literal-letter", node=param, args=(suggestion, value))
+
+        def change(op: str):
+            if op == "<":
+                return "<="
+            if op == "<=":
+                return "<"
+            if op == ">":
+                return ">="
+            if op == ">=":
+                return ">"
+            assert False, "unreachable"
+
+        all_ops = [(None, node.left)] + node.ops
+        contains_ord = [self._contains_ord(param) for _, param in all_ops]
+
+        if not any(contains_ord):
+            return
+
+        for i, (op, param) in enumerate([(None, node.left), node.ops[-1]]):
+            value = get_const_value(param)
+            if value is None or not self._in_suggestable_range(value):
+                continue
+
+            if i == 0:
+                op, other = node.ops[0]
+                if self._is_preffered(value + 1) and op in ("<", ">="):
+                    add_message(param, value, f"'{chr(value + 1)}' {change(op)}")
+                elif self._is_preffered(value - 1) and op in (">", "<="):
+                    add_message(param, value, f"'{chr(value - 1)}' {change(op)}")
+                elif not contains_ord[1] or not isinstance(other, nodes.BinOp) or self._is_preffered(value):
+                    add_message(param, value, f"'{chr(value)}' {op}")
+            else:
+                if self._is_preffered(value + 1) and op in (">", "<="):
+                    add_message(param, value, f"{change(op)} '{chr(value + 1)}'")
+                elif self._is_preffered(value - 1) and op in ("<", ">="):
+                    add_message(param, value, f"{change(op)} '{chr(value - 1)}'")
+                elif not contains_ord[-2] or not isinstance(all_ops[-2][1], nodes.BinOp) or self._is_preffered(value):
+                    add_message(param, value, f"{op} '{chr(value)}'")
+
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
@@ -335,11 +430,12 @@ class Short(BaseChecker):
         self._check_else_if(node)
         self._check_redundant_elif(node)
 
-    @only_required_for_messages("no-repeated-op", "redundant-arithmetic", "do-not-multiply-mutable")
+    @only_required_for_messages("no-repeated-op", "redundant-arithmetic", "do-not-multiply-mutable", "use-ord-letter")
     def visit_binop(self, node: nodes.BinOp) -> None:
         self._check_repeated_operation(node)
         self._check_redundant_arithmetic(node)
         self._check_multiplied_list(node)
+        self._check_use_ord_letter(node)
 
     @only_required_for_messages("use-augmenting-assignment")
     def visit_assign(self, node: nodes.Assign) -> None:
@@ -349,9 +445,10 @@ class Short(BaseChecker):
     def visit_annassign(self, node: nodes.AnnAssign) -> None:
         self._check_augmentable(node)
 
-    @only_required_for_messages("no-is")
+    @only_required_for_messages("no-is", "magical-constant-in-ord-compare")
     def visit_compare(self, node: nodes.Compare) -> None:
         self._check_no_is(node)
+        self._check_magical_constant_in_ord_compare(node)
 
 
 def register(linter: "PyLinter") -> None:
