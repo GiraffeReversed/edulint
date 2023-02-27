@@ -1,6 +1,14 @@
 name: Docker build
 
 on:
+  workflow_call:
+    inputs:
+      docker-labels:
+        description: 'Docker image will be pushed to specified DockerHub label(s)'
+        required: false
+        default: 'edulint/edulint-cli:latest'
+        type: string
+
   workflow_dispatch:
     inputs:
       docker-labels:
