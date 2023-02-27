@@ -41,9 +41,9 @@ jobs:
 
       - name: Upload Unit Test Results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: Unit Test Results
+          name: Unit Test Results (Python ${{ matrix.version }})
           path: pytest.xml
 
   publish-test-results:
@@ -51,6 +51,11 @@ jobs:
     needs: pytest
     runs-on: ubuntu-latest
     if: success() || failure()
+    permissions:
+      checks: write
+      pull-requests: write  # only needed unless run with comment_mode: off
+      contents: read  # only needed for private repository
+      issues: read  # only needed for private repository
 
     steps:
       - name: Download Artifacts
@@ -59,7 +64,6 @@ jobs:
           path: artifacts
 
       - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1.18
+        uses: EnricoMi/publish-unit-test-result-action@v2.4.2
         with:
-          check_name: Unit Test Results
-          files: ./**/pytest.xml
+          files: "artifacts/**/pytest.xml"
