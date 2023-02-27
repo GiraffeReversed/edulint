@@ -2,6 +2,7 @@ name: Redeploy web apps
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   deploy:
