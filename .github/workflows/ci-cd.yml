@@ -1,0 +1,20 @@
+name: Test, Publish and Deploy new tagged version
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: .github/workflows/test.yaml
+
+  publish-package:
+    needs: test
+    uses: .github/workflows/python-publish.yaml
+
+  deploy:
+    needs: publish-package
+    uses: .github/workflows/redeploy-web.yaml
+      
