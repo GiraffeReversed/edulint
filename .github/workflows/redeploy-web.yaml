@@ -1,4 +1,4 @@
-name: Redeploy web apps
+name: Redeploy web apps (trigger only, result is always OK)
 
 on:
   workflow_dispatch:
