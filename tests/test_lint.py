@@ -65,6 +65,16 @@ def test_lint_basic(filename: str, config: Config, expected_output: List[Problem
         lazy_problem().set_code("C0123").set_line(172),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPEC, "off")], []),
+    ("hw34406.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.COMPLEXITY, "on")], [
+        lazy_problem().set_line(240).set_code("R0913"),
+        lazy_problem().set_line(266).set_code("R0911"),
+        lazy_problem().set_line(266).set_code("R0912"),
+        lazy_problem().set_line(343).set_code("R0912"),
+        lazy_problem().set_line(343).set_code("R0915"),
+        lazy_problem().set_line(387).set_code("R1702"),
+        lazy_problem().set_line(387).set_code("R1702"),
+        lazy_problem().set_line(387).set_code("R1702"),
+    ])
 ])
 def test_translations(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     apply_and_lint(filename, args, expected_output)

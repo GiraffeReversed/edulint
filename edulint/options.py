@@ -22,6 +22,7 @@ class Option(NumberFromZero):
     FLAKE8 = ()
     ENHANCEMENT = ()
     PYTHON_SPEC = ()
+    COMPLEXITY = ()
     ALLOWED_ONECHAR_NAMES = ()
     IB111_WEEK = ()
     NO_FLAKE8 = ()
@@ -145,6 +146,14 @@ OPTIONS: List[OptionParse] = [
     OptionParse(
         Option.PYTHON_SPEC,
         "enable checking for ways to improve the code with Python-specific constructions",
+        TakesVal.NO,
+        False,
+        Type.BOOL,
+        Combine.REPLACE
+    ),
+    OptionParse(
+        Option.COMPLEXITY,
+        "enable checking for overly complicated pieces of code",
         TakesVal.NO,
         False,
         Type.BOOL,

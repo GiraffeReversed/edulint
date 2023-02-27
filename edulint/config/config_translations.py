@@ -31,6 +31,12 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
          "unnecessary-comprehension,use-a-generator,use-list-literal,"
          "use-dict-literal,consider-using-in,"]
     ),
+    Option.COMPLEXITY: Translation(
+        Linter.PYLINT,
+        ["--enable=too-many-arguments,too-many-branches,too-many-statements,"
+         "too-many-return-statements,too-many-nested-blocks,too-many-locals,"
+         "too-many-boolean-expressions,"]
+    ),
     Option.ALLOWED_ONECHAR_NAMES: Translation(
         Linter.PYLINT,
         ["--bad-names-rgxs=^[a-z]$"]
