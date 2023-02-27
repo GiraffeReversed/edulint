@@ -23,6 +23,11 @@ jobs:
     # We can skip some of the steps.
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: false
+
       # - name: Set up QEMU
       #   uses: docker/setup-qemu-action@v2
 
@@ -38,6 +43,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
+          context: .
           push: true
           tags: ${{ inputs.docker-labels }}
           file: 'Dockerfile.pypi'

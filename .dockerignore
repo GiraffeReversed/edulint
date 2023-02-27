@@ -1,0 +1,7 @@
+tests/data/
+.git/
+.github/
+.pytest_cache/
+.venv/
+build/
+
