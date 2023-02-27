@@ -1,0 +1,35 @@
+name: Docker build
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker-labels:
+        description: 'Docker image will be pushed to specified DockerHub label(s)'
+        required: true
+        default: 'edulint/edulint-cli:latest'
+
+
+jobs:
+  docker-build-and-publish-image:
+    # https://github.com/marketplace/actions/build-and-push-docker-images
+    # We can skip some of the steps.
+    runs-on: ubuntu-latest
+    steps:
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v2
+
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: ${{ inputs.docker-labels }}
+          file: 'Dockerfile.pypi'

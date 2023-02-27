@@ -1,0 +1,7 @@
+FROM python:3.8-slim-buster
+
+WORKDIR /app
+RUN pip install edulint
+
+ENTRYPOINT ["python", "-m", "edulint"]
+CMD ["-h"]

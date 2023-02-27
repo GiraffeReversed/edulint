@@ -21,3 +21,11 @@ jobs:
     uses: ./.github/workflows/redeploy-web.yaml
     secrets: inherit
       
+  publish-docker:
+    needs: publish-package
+    uses: ./.github/workflows/docker-build-and-publish.yaml
+    secrets: inherit
+    with:
+      docker-labels: edulint/edulint-cli:latest,edulint/edulint-cli:${{ github.ref }}
+
+      
