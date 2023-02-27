@@ -356,6 +356,8 @@ class Short(BaseChecker):
                 suggestion = f"ord('{chr(value - 1)}') + 1"
             elif not isinstance(ord_param, nodes.BinOp) or self._is_preffered(value):
                 suggestion = f"ord('{chr(value)}')"
+            else:
+                continue
 
             if (node.op == "-" and const_param == node.right and suggestion.endswith("+ 1")) \
                     or (node.op == "+" and const_param == node.left and suggestion.endswith("- 1")):
