@@ -2,6 +2,7 @@
 
 [![Pypi](https://img.shields.io/pypi/v/edulint)](https://pypi.org/project/edulint/)
 ![Python versions](https://img.shields.io/badge/python-%3E%3D%203.8-blue)
+![Tests](https://img.shields.io/github/actions/workflow/status/GiraffeReversed/edulint/test.yaml)
 [![ReadTheDocs](https://img.shields.io/readthedocs/edulint)](https://edulint.readthedocs.io/)
 
 EduLint is a Python linter aimed at helping beginning programmers improve their coding style. At present moment, it integrates flake8 and pylint, with some tweaks to their default configuration.
