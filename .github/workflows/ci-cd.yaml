@@ -26,6 +26,6 @@ jobs:
     uses: ./.github/workflows/docker-build-and-publish.yaml
     secrets: inherit
     with:
-      docker-labels: edulint/edulint-cli:latest,edulint/edulint-cli:${{ github.ref }}
+      docker-labels: edulint/edulint-cli:latest,edulint/edulint-cli:${{ github.ref_name }}
 
       
