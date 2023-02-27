@@ -171,6 +171,8 @@ class MessageTable(Directive):
             assert translation.for_linter == Linter.PYLINT
             message_names = [c.strip() for v in translation.vals for c in v[len("--enable="):].split(",")]
 
+        message_names = [n for n in message_names if n]
+
         for name in message_names:
             if name in LINKS:
                 tbody.append(prepare_row(
