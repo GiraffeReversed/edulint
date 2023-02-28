@@ -15,9 +15,9 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
         Linter.PYLINT,
         ["--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
          "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
-         "use-augmenting-assignment,simplifiable-if-merge,shadowing-in-comprehension,"
+         "use-augmenting-assignment,shadowing-in-comprehension,"
          "loop-shadows-control-variable,use-append,no-repeated-op,"
-         "forbidden-top-level-code,use-elif"
+         "forbidden-top-level-code,use-elif,simplifiable-if-nested,simplifiable-if-seq"
          ]
     ),
     Option.PYTHON_SPECIFIC: Translation(

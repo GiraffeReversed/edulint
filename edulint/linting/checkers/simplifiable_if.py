@@ -19,11 +19,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "simplifiable-if-return",
             "Emitted when returning a boolean value can be simplified.",
         ),
-        "R6202": (
-            "The if statement can be merged with the next to 'if %s:'",
-            "simplifiable-if-merge",
-            "Emitted when an if statement can be merged with the next using a logical operator"
-        ),
         "R6203": (
             "The conditional assignment can be replace with '%s = %s'",
             "simplifiable-if-assignment",
@@ -43,7 +38,17 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "Both branches should return a value explicitly (one returns implicit None)",
             "no-value-in-one-branch-return",
             "Emitted when one branch returns a value and the other just returns."
-        )
+        ),
+        "R6207": (
+            "The if statement can be merged with the nested one to 'if %s:'",
+            "simplifiable-if-nested",
+            "Emitted when an if statement can be merged with its nested if."
+        ),
+        "R6208": (
+            "The if statement can be merged with the following one to 'if %s:'",
+            "simplifiable-if-seq",
+            "Emitted when an if statement can be merged with the next using a logical operator"
+        ),
     }
 
     def _is_bool(self, node: nodes.NodeNG) -> bool:
@@ -135,7 +140,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _merge_nested(self, node: nodes.If) -> None:
         refactored = self._get_refactored(node.test, "and", node.body[0].test)
-        self.add_message("simplifiable-if-merge", node=node, args=refactored)
+        self.add_message("simplifiable-if-nested", node=node, args=refactored)
 
     def _same_values(self, node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
         return (node1 is None and node2 is None) \
@@ -179,13 +184,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             return
 
         refactored = self._get_refactored(node.test, "or", second_if.test)
-        self.add_message("simplifiable-if-merge", node=node, args=(refactored))
+        self.add_message("simplifiable-if-seq", node=node, args=(refactored))
 
     def _is_just_returning_if(self, node: Optional[nodes.NodeNG]) -> bool:
         return node is not None and isinstance(node, nodes.If) and isinstance(node.body[-1], nodes.Return)
 
-    @only_required_for_messages("simplifiable-if-return", "simplifiable-if-merge", "simplifiable-if-assignment",
-                                "simplifiable-if-pass", "no-value-in-one-branch-return")
+    @only_required_for_messages("simplifiable-if-return", "simplifiable-if-assignment",
+                                "simplifiable-if-pass", "no-value-in-one-branch-return",
+                                "simplifiable-if-nested", "simplifiable-if-seq")
     def visit_if(self, node: nodes.If) -> None:
         if len(node.orelse) == 0:
             if len(node.body) == 1 and isinstance(node.body[0], nodes.If) and len(node.body[0].orelse) == 0:
