@@ -139,7 +139,7 @@ enable=comparison-with-itself,
        reimported,
        invalid-for-target,
        one-iteration,
-       no-is,
+       no-is-bool,
        use-ord-letter,
        use-literal-letter,
 

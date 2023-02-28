@@ -74,10 +74,9 @@ class Short(BaseChecker):
             "Emitted when the else branch is unreachable due to totally exhaustive conditions before."
         ),
         "R6613": (
-            "Do not use 'is' with %s ('is' is usually used only with None). Use == for comparing "
-            "or in case of a bool value, use it directly.",
-            "no-is",
-            "Emitted when the is operator is used with other value than None."
+            "Use '%s' directly rather than as '%s'.",
+            "no-is-bool",
+            "Emitted when the is operator is used with a bool value."
         ),
         "R6614": (
             "Use \"%s\" instead of using the magical constant %i.",
@@ -317,9 +316,13 @@ class Short(BaseChecker):
                 self.add_message("unreachable-else", node=node.orelse[0].orelse[0])
 
     def _check_no_is(self, node: nodes.Compare) -> None:
-        for op, val in node.ops:
-            if op in ("is", "is not") and (not isinstance(val, nodes.Const) or val.value is not None):
-                self.add_message("no-is", node=node, args=(val.as_string(),))
+        for i, (op, val) in enumerate(node.ops):
+            if op in ("is", "is not") and isinstance(val, nodes.Const) and isinstance(val.value, bool):
+                prev_val = node.ops[i - 1][1] if i > 0 else node.left
+                negate = (op == "is") != val.value
+                self.add_message("no-is-bool", node=node,
+                                 args=(f"{'not ' if negate else ''}{prev_val.as_string()}",
+                                       f"{prev_val.as_string()} {op} {val.as_string()}"))
 
     def _is_ord(self, node: nodes.NodeNG) -> bool:
         return isinstance(node, nodes.Call) and node.func.as_string() == "ord"
@@ -447,7 +450,7 @@ class Short(BaseChecker):
     def visit_annassign(self, node: nodes.AnnAssign) -> None:
         self._check_augmentable(node)
 
-    @only_required_for_messages("no-is", "magical-constant-in-ord-compare")
+    @only_required_for_messages("no-is-bool", "magical-constant-in-ord-compare")
     def visit_compare(self, node: nodes.Compare) -> None:
         self._check_no_is(node)
         self._check_magical_constant_in_ord_compare(node)
