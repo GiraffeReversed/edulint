@@ -17,7 +17,7 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
          "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
          "use-augmenting-assignment,shadowing-in-comprehension,"
          "loop-shadows-control-variable,use-append,no-repeated-op,"
-         "forbidden-top-level-code,use-elif,simplifiable-if-nested,simplifiable-if-seq,"
+         "forbidden-top-level-code,simplifiable-if-nested,simplifiable-if-seq,"
          "simplifiable-if-return-conj,simplifiable-if-assignment-conj,simplifiable-if-expr-conj,"]
     ),
     Option.PYTHON_SPECIFIC: Translation(
