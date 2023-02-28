@@ -1,13 +1,13 @@
 [F0001]
-why = "It looks like the error occurred preventing the analysis of a               module (unable to find it for instance)."
+why = "Program analyzer internal error. Used when an error occurred preventing the analysis of a module (unable to find it for instance)."
 examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/fatal.html\">Additional information</a>"
 
 [F0002]
-why = "It looks like the unexpected error occurred while building the Astroid  representation. This is usually accompanied by a traceback. Please report such errors !"
+why = "Program analyzer internal error. Used when an unexpected error occurred while building the Astroid representation. This is usually accompanied by a traceback. Please report such errors !"
 examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/astroid-error.html\">Additional information</a>"
 
 [F0010]
-why = "It looks like the exception occurred while building the Astroid representation which could be handled by astroid."
+why = "Program analyzer internal error. Used when an exception occurred while building the Astroid representation which could be handled by astroid."
 examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/parse-error.html\">Additional information</a>"
 
 [F0011]
@@ -15,7 +15,7 @@ why = "It looks like the exception occurred while parsing a pylint configuration
 examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/config-parse-error.html\">Additional information</a>"
 
 [F0202]
-why = "It looks like Pylint has been unable to check methods signature compatibility for an unexpected reason. Please report this kind if you don't make sense of it."
+why = "Program analyzer internal error. Used when Pylint has been unable to check methods signature compatibility for an unexpected reason. Please report this kind if you don't make sense of it."
 examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/fatal/method-check-failed.html\">Additional information</a>"
 
 [E0001]
@@ -1016,7 +1016,7 @@ class Foo:
 """
 
 [E0211]
-why = "It looks like the method which should have the bound instance as first argument has no argument defined."
+why = "Methods should have \"self\" as first argument."
 examples = """
 **Problematic code**
 
@@ -3244,7 +3244,7 @@ class Student:
 """
 
 [W0211]
-why = "It looks like the static method has \"self\" or a value specified in valid-classmethod-first-arg option or valid-metaclass-classmethod-first-arg option as first argument."
+why = "Static methods should not have \"self\" as first argument."
 examples = """
 **Problematic code**
 
@@ -3868,7 +3868,7 @@ class Fruit:
 """
 
 [W0702]
-why = "It looks like the except clause doesn't specify exceptions type to catch."
+why = "Used when an except clause doesn't specify exceptions type to catch. Did you mean to catch also SystemExit and KeyboardInterrupt? If not then prefer \"except Exception:\"."
 examples = """
 **Problematic code**
 
@@ -3893,7 +3893,7 @@ except ImportError:
 <a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/bare-except.html\">Additional information</a>"""
 
 [W0703]
-why = "It looks like the except catches a too general exception, possibly burying unrelated errors."
+why = "This may silence unrelated errors. Consider using more narrow  type or several types, eg. \"except (ZeroDivisionError, IndexError):\"."
 examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/broad-except.html\">Additional information</a>"
 
 [W0705]
@@ -4081,7 +4081,7 @@ if input():
 <a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/bad-indentation.html\">Additional information</a>"""
 
 [W0401]
-why = "It looks like `from module import *` is detected."
+why = "\"from ____ import *\" is not recommended. It's better to import only required names from the module"
 examples = """
 **Problematic code**
 
@@ -4790,7 +4790,7 @@ def update_tomato():
 """
 
 [W0602]
-why = "It looks like the variable is defined through the \"global\" statement but no assignment to this variable is done."
+why = "You don't need \"global\" statement if you don't want to update the variable."
 examples = """
 **Problematic code**
 
@@ -4897,31 +4897,11 @@ LOGGER = getLogger(__name__)
 """
 
 [W0612]
-why = "It looks like the variable is defined but not used."
-examples = """
-**Problematic code**
-
-```py
-def print_fruits():
-    fruit1 = \"orange\"
-    fruit2 = \"apple\"  # [unused-variable]
-    print(fruit1)
-
-```
-
-**How to fix it**
-
-```py
-def print_fruits():
-    fruit1 = \"orange\"
-    fruit2 = \"apple\"
-    print(fruit1, fruit2)
-
-```
-"""
+why = "Having unused variables in code makes the code unnecessarily complicated."
+examples = "A solution is to remove the variable, if possible, or rename it to `_`, which is a common convention for naming unused variables. A variable named `_` should never be used anywhere later in code."
 
 [W0613]
-why = "It looks like the function or method argument is not used."
+why = "If you want to keep the argument and silence this warning, then add comment \"#pylint: disable=unused-argument\" as first line in your function body."
 examples = """
 **Problematic code**
 
@@ -4965,7 +4945,12 @@ class Animal(ABC): ...
 """
 
 [W0621]
-why = "It looks like the variable's name hides a name defined in an outer scope or except handler."
+why = """
+It looks like the local variable is hiding a global variable with the same name.
+
+Most likely there is nothing wrong with this. I just wanted to remind you that you can't access the global variable like this. If you knew it then please ignore the warning.
+
+If you don't want to see this reminder in the future, then add \"redefined-outer-name\" (without quotes) into \"Tools → Options → Assistant → Disabled checks\"."""
 examples = """
 **Problematic code**
 
@@ -5503,7 +5488,7 @@ why = "It looks like the format string that uses named conversion specifiers is 
 examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/unused-format-string-key.html\">Additional information</a>"
 
 [W1302]
-why = "It looks like the PEP 3101 format string is invalid."
+why = "Used when a PEP 3101 format string is invalid."
 examples = """
 **Problematic code**
 
@@ -5521,7 +5506,7 @@ print('{a[0]} + {a[1]}'.format(a=[0, 1]))
 """
 
 [W1303]
-why = "It looks like the PEP 3101 format string that uses named fields doesn't receive one or more required keywords."
+why = "Used when a PEP 3101 format string that uses named fields doesn't receive one or more required keywords."
 examples = """
 **Problematic code**
 
@@ -5559,7 +5544,7 @@ print(\"{x} {y}\".format(x=1, y=2))
 """
 
 [W1305]
-why = "It looks like the PEP 3101 format string contains both automatic field numbering (e.g. '{}') and manual field specification (e.g. '{0}')."
+why = "Used when a PEP 3101 format string contains both automatic field numbering (e.g. '{}') and manual field specification (e.g. '{0}')."
 examples = """
 **Problematic code**
 
@@ -5579,7 +5564,7 @@ print('{} {}'.format('hello', 'world'))
 """
 
 [W1306]
-why = "It looks like the PEP 3101 format string uses an attribute specifier ({0.length}), but the argument passed for formatting doesn't have that attribute."
+why = "Used when a PEP 3101 format string uses an attribute specifier ({0.length}), but the argument passed for formatting doesn't have that attribute."
 examples = """
 **Problematic code**
 
@@ -5597,7 +5582,7 @@ print(\"{0.real}\".format(1))
 """
 
 [W1307]
-why = "It looks like the PEP 3101 format string uses a lookup specifier ({a[1]}), but the argument passed for formatting doesn't contain or doesn't have that key as an attribute."
+why = "Used when a PEP 3101 format string uses a lookup specifier ({a[1]}), but the argument passed for formatting doesn't contain or doesn't have that key as an attribute."
 examples = """
 **Problematic code**
 
@@ -6639,7 +6624,7 @@ print(f'Home directory is {home}', file=sys.stderr)
 """
 
 [C0414]
-why = "It looks like the import alias is same as original package.e.g using import numpy as numpy instead of import numpy as np"
+why = "Used when an import alias is same as original package. e.g using import numpy as numpy instead of import numpy as np or e.g using import os.path as path instead of from os import path."
 examples = """
 **Problematic code**
 
@@ -7071,7 +7056,7 @@ examples = """
 <a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/useless-option-value.html\">Additional information</a>"""
 
 [R0123]
-why = "It looks like comparing an object to a literal, which is usually what you do not want to do, since you can compare to a different literal than what was expected altogether."
+why = "Are you sure you want to compare with \"is\"/\"is not\" instead of \"==\"/\"!=\" ?"
 examples = """
 **Problematic code**
 
@@ -7446,24 +7431,21 @@ class Person:
 <a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/no-self-use.html\">Additional information</a>"""
 
 [R6201]
-why = "Membership tests are more efficient when performed on a lookup optimized datatype like ``sets``."
+why = "Having unnecessary conditions in code makes the code harder to understand."
 examples = """
-**Problematic code**
+A condition that returns bool in both branches can be simplified even if it contains a logical statement.
 
 ```py
-def fruit_is_dangerous_for_cat(fruit: str) -> bool:
-    \"\"\"This list is only a silly example, don't make decision regarding your cat diet based on it.\"\"\"
-    return fruit in [\"cherry\", \"grapes\"]  # [use-set-for-membership]
-
+def problematic(a: bool, b: bool) -> bool:
+    if a or b:
+        return True
+    else:
+        return False
 ```
 
-**How to fix it**
-
 ```py
-def fruit_is_dangerous_for_cat(fruit: str) -> bool:
-    \"\"\"This list is only a silly example, don't make decision regarding your cat diet based on it.\"\"\"
-    return fruit in {\"cherry\", \"grapes\"}
-
+def good(a: bool, b: bool) -> bool:
+    return a or b
 ```
 """
 
@@ -7518,7 +7500,7 @@ def is_number(value: Any) -> bool:
 """
 
 [R1702]
-why = "It looks like the function or a method has too many nested blocks. This makes the code less understandable and maintainable."
+why = "Consider moving some of the code to helper functions."
 examples = """
 **Problematic code**
 
@@ -7581,7 +7563,7 @@ def is_flying_animal(an_object):
 """
 
 [R1704]
-why = "It looks like the local name is redefining an argument, which might suggest a potential error. This is taken in account only for a handful of name binding operations, such as for iteration, with statement assignment and exception handler assignment."
+why = "Did you notice that an argument gets overwritten here?"
 examples = """
 **Problematic code**
 
@@ -7809,7 +7791,7 @@ def print_python_version():
 """
 
 [R1712]
-why = "You do not have to use a temporary variable in order to swap variables. Using \"tuple unpacking\" to directly swap variables makes the intention more clear."
+why = "You do not have to use a temporary variable in order to swap variables. Using \"tuple unpacking\" to directly swap variables makes the intention more clear. Example: \"a, b = b, a\"."
 examples = """
 **Problematic code**
 
@@ -7859,22 +7841,29 @@ print(\"\".join([\"apple\", \"pear\", \"peach\"]))
 """
 
 [R1714]
-why = "To check if a variable is equal to one of many values,combine the values into a tuple and check if the variable is contained \"in\" it instead of checking for equality against each of the values.This is faster and less verbose."
+why = "Shorter conditions are ussually easier to read."
 examples = """
-**Problematic code**
+Comparison of a variable to two values can be simplified using the `in` operator.
+This is more readable and also safer against copy-paste errors.
 
 ```py
-def fruit_is_round(fruit):
-    return fruit == \"apple\" or fruit == \"orange\" or fruit == \"melon\"  # [consider-using-in]
-
+def problematic(text: str):
+    if text == 'a' or text == 'b':
+        return
 ```
 
-**How to fix it**
+```py
+def good(text: str):
+    if text in ('a', 'b'):
+        return
+```
+
+If you are comparing a single character, you can also do this:
 
 ```py
-def fruit_is_round(fruit):
-    return fruit in {\"apple\", \"orange\", \"melon\"}
-
+def good(char: str):
+    if char in 'ab':
+        return
 ```
 """
 
@@ -8765,7 +8754,7 @@ why = "It looks like the function or method has too many statements. You should 
 examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/too-many-statements.html\">Additional information</a>"
 
 [R0916]
-why = "It looks like the if statement contains too many boolean expressions."
+why = "Consider simplifying the expression with helper variables or functions."
 examples = """
 **Problematic code**
 
@@ -8853,12 +8842,9 @@ examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/inf
 
 [W1613]
 why = "Used when the xrange built-in function is referenced (missing from Python 3). Use range instead."
-examples = ""
 
 [W1620]
 why = "Used for calls to dict.iterkeys(), itervalues() or iteritems(). Python 3 lacks these methods, use dict.keys(), values() or items()."
-examples = ""
 
 [W1621]
 why = "Used for calls to dict.viewkeys(), viewvalues() or viewitems(). Python 3 lacks these methods,  use dict.keys(), values() or items()."
-examples = ""

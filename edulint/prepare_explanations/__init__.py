@@ -31,20 +31,14 @@ def combine_sources():
 
     for data_source in [pylint_data, thonny_data, manual_data]:
         for check_id, check_data in data_source.items():
-            if answer.get(check_id) is None:
-                answer[check_id] = check_data
-                continue
-            
             for check_field_name, check_field_value in check_data.items():
                 if not check_field_value:
                     continue
-
-                if not answer[check_id].get(check_field_name):
-                    answer[check_id][check_field_name] = check_field_value
+                answer[check_id][check_field_name] = check_field_value
 
     with open(OUTPUT_FILE, 'wb') as f:
         tomli_w.dump(answer, f, multiline_strings=True)
-        
+
 
 
 def main():
