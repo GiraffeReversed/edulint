@@ -106,6 +106,8 @@ def get_const_value(node: nodes.NodeNG) -> Any:
             return -node.operand.value
         if node.op == "not":
             return not node.operand.value
+        if node.op == "~":
+            return ~ node.operand.value
         assert False, "unreachable" + node.op
 
     return None
