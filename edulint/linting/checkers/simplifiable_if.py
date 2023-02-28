@@ -19,15 +19,33 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "simplifiable-if-return",
             "Emitted when the condition of an if statement can be returned directly (possibly negated).",
         ),
+        "R6202": (
+            "The if statement can be replaced with 'return %s'",
+            "simplifiable-if-return-conj",
+            "Emitted when the condition of an if statement and the returned values "
+            "can be combined using logical operators."
+        ),
         "R6203": (
             "The conditional assignment can be replace with '%s = %s'",
             "simplifiable-if-assignment",
             "Emitted when the condition of an if statement can be assigned directly (possibly negated)."
         ),
+        "R6210": (
+            "The conditional assignment can be replace with '%s = %s'",
+            "simplifiable-if-assignment-conj",
+            "Emitted when the condition of an if statement and the assigned values "
+            "can be combined using logical operators."
+        ),
         "R6204": (
             "The if expression can be replaced with '%s'",
             "simplifiable-if-expr",
             "Emitted when the condition of an if expression can be returned directly (possibly negated)."
+        ),
+        "R6209": (
+            "The if expression can be replaced with '%s'",
+            "simplifiable-if-expr-conj",
+            "Emitted when the condition of an if expression and the returned values "
+            "can be combined using logical operators."
         ),
         "R6205": (
             "Use 'if %s: <else body>' instead of 'pass'",
@@ -56,13 +74,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def _is_bool(self, node: nodes.NodeNG) -> bool:
         return isinstance(node, nodes.Const) and node.pytype() == "builtins.bool"
 
-    def _simplifiable_if_message(self, node: nodes.If, then: nodes.NodeNG, new_cond: str) -> None:
+    def _simplifiable_if_message(self, node: nodes.If, then: nodes.NodeNG, new_cond: str, only_replaces: bool) -> None:
+        extra = "" if only_replaces else "-conj"
         if isinstance(node, nodes.IfExp):
-            self.add_message("simplifiable-if-expr", node=node, args=(new_cond))
+            self.add_message("simplifiable-if-expr" + extra, node=node, args=(new_cond))
         elif isinstance(then, nodes.Return):
-            self.add_message("simplifiable-if-return", node=node, args=(new_cond))
+            self.add_message("simplifiable-if-return" + extra, node=node, args=(new_cond))
         else:
-            self.add_message("simplifiable-if-assignment", node=node,
+            self.add_message("simplifiable-if-assignment" + extra, node=node,
                              args=(get_name(get_assigned_to(then)[0]), new_cond))
 
     def _get_refactored(self, *args) -> str:
@@ -112,7 +131,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         return then, after_if
 
     def _refactored_cond_from_then_orelse(self, node: nodes.If, then_value: nodes.NodeNG, orelse_value: nodes.NodeNG) \
-            -> Optional[str]:
+            -> Optional[Tuple[str, bool]]:
         then_bool_value = then_value.value if self._is_bool(then_value) else None
         orelse_bool_value = orelse_value.value if self._is_bool(orelse_value) else None
 
@@ -121,22 +140,22 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         if then_bool_value is not None and orelse_bool_value is not None:
             if then_bool_value and not orelse_bool_value:
-                return self._get_refactored(node.test)
+                return self._get_refactored(node.test), True
             if not then_bool_value and orelse_bool_value:
-                return self._get_refactored("not", node.test)
+                return self._get_refactored("not", node.test), True
             return None
 
         if then_bool_value is not None and then_bool_value:
-            return self._get_refactored(node.test, "or", orelse_value)
+            return self._get_refactored(node.test, "or", orelse_value), False
 
         if then_bool_value is not None and not then_bool_value:
-            return self._get_refactored("not", node.test, "and", orelse_value)
+            return self._get_refactored("not", node.test, "and", orelse_value), False
 
         if orelse_bool_value is not None and orelse_bool_value:
-            return self._get_refactored("not", node.test, "or", then_value)
+            return self._get_refactored("not", node.test, "or", then_value), False
 
         if orelse_bool_value is not None and not orelse_bool_value:
-            return self._get_refactored(node.test, "and", then_value)
+            return self._get_refactored(node.test, "and", then_value), False
 
         assert False, "unreachable"
 
@@ -191,7 +210,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def _is_just_returning_if(self, node: Optional[nodes.NodeNG]) -> bool:
         return node is not None and isinstance(node, nodes.If) and isinstance(node.body[-1], nodes.Return)
 
-    @only_required_for_messages("simplifiable-if-return", "simplifiable-if-assignment",
+    @only_required_for_messages("simplifiable-if-return", "simplifiable-if-return-conj",
+                                "simplifiable-if-assignment", "simplifiable-if-assignment-conj",
                                 "simplifiable-if-pass", "no-value-in-one-branch-return",
                                 "simplifiable-if-nested", "simplifiable-if-seq")
     def visit_if(self, node: nodes.If) -> None:
@@ -229,9 +249,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         refactored = self._refactored_cond_from_then_orelse(node, then.value, orelse.value)
 
         if refactored is not None:
-            self._simplifiable_if_message(node, then, refactored)
+            new_cond, only_replaces = refactored
+            self._simplifiable_if_message(node, then, new_cond, only_replaces)
 
-    @only_required_for_messages("simplifiable-if-expr")
+    @only_required_for_messages("simplifiable-if-expr", "simplifiable-if-expr-conj")
     def visit_ifexp(self, node: nodes.IfExp) -> None:
         then, orelse = node.body, node.orelse
         assert then is not None and orelse is not None
@@ -242,7 +263,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         refactored = self._refactored_cond_from_then_orelse(node, then, orelse)
         if refactored is not None:
-            self._simplifiable_if_message(node, then, refactored)
+            new_cond, only_replaces = refactored
+            self._simplifiable_if_message(node, then, new_cond, only_replaces)
 
 
 def register(linter: "PyLinter") -> None:

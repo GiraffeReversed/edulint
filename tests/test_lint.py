@@ -47,7 +47,7 @@ def test_lint_basic(filename: str, config: Config, expected_output: List[Problem
     ("z202817-zkouska.py", [Arg(Option.ENHANCEMENT, "on")], [
         lazy_problem().set_code("R6609").set_line(10),
         lazy_problem().set_code("R6303").set_line(42),
-        lazy_problem().set_code("R6202").set_line(76),
+        lazy_problem().set_code("R6208").set_line(76),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("W0107").set_line(196),
     ]),

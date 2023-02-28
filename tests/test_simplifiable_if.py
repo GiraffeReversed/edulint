@@ -137,7 +137,7 @@ def test_simplify_if_statement_single_var_custom(lines: List[str], expected_outp
     ]),
 ])
 def test_simplify_if_statement_two_vars_custom(lines: List[str], expected_output: List[Problem]) -> None:
-    _test_simplify_if(lines, expected_output, "R6201")
+    _test_simplify_if(lines, expected_output, "R6202")
 
 
 @pytest.mark.parametrize("lines,expected_output", [
@@ -254,7 +254,7 @@ def test_simplify_if_statement_two_vars_custom(lines: List[str], expected_output
     ]),
 ])
 def test_simplify_if_statement_three_vars_custom(lines: List[str], expected_output: List[Problem]) -> None:
-    _test_simplify_if(lines, expected_output, "R6201")
+    _test_simplify_if(lines, expected_output, "R6202")
 
 
 @pytest.mark.parametrize("lines,expected_output", [
@@ -266,8 +266,14 @@ def test_simplify_if_statement_three_vars_custom(lines: List[str], expected_outp
         "    return 1"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The if statement can be merged with the next to 'if x and y:'")
+        .set_text("The if statement can be merged with the nested one to 'if x and y:'")
     ]),
+])
+def test_simplify_if_statement_nested_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    _test_simplify_if(lines, expected_output, "R6207")
+
+
+@pytest.mark.parametrize("lines,expected_output", [
     ([
         "def xxx(x, y):",
         "    if x:",
@@ -277,7 +283,7 @@ def test_simplify_if_statement_three_vars_custom(lines: List[str], expected_outp
         "    return 1"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The if statement can be merged with the next to 'if x or y:'")
+        .set_text("The if statement can be merged with the following one to 'if x or y:'")
     ]),
     ([
         "def xxx(x, y):",
@@ -299,7 +305,7 @@ def test_simplify_if_statement_three_vars_custom(lines: List[str], expected_outp
     ]),
 ])
 def test_simplify_if_statement_multiconds_custom(lines: List[str], expected_output: List[Problem]) -> None:
-    _test_simplify_if(lines, expected_output, "R6202")
+    _test_simplify_if(lines, expected_output, "R6208")
 
 
 @pytest.mark.parametrize("lines,expected_output", [
@@ -316,6 +322,12 @@ def test_simplify_if_statement_multiconds_custom(lines: List[str], expected_outp
         .set_text("The conditional assignment can be replace with 'triangle_is_righ = c**2 == a**2 "
                   "+ b**2 or a**2 == c**2 + b**2 or b**2 == a**2 + c**2'")
     ]),
+])
+def test_simplify_if_assigning_statement_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    _test_simplify_if(lines, expected_output, "R6203")
+
+
+@pytest.mark.parametrize("lines,expected_output", [
     ([
         "def xxx(x, y):",
         "    if x:",
@@ -377,8 +389,8 @@ def test_simplify_if_statement_multiconds_custom(lines: List[str], expected_outp
         .set_text("The conditional assignment can be replace with 'a = <negated x> or y or z'")
     ]),
 ])
-def test_simplify_if_assigning_statement_custom(lines: List[str], expected_output: List[Problem]) -> None:
-    _test_simplify_if(lines, expected_output, "R6203")
+def test_simplify_if_assigning_statement_conj_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    _test_simplify_if(lines, expected_output, "R6210")
 
 
 @pytest.mark.parametrize("lines,expected_output", [
@@ -410,6 +422,12 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         lazy_problem().set_line(4)
         .set_text("The if expression can be replaced with '<negated report[which] <= report[which]>'")
     ]),
+])
+def test_simplify_if_expression_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    _test_simplify_if(lines, expected_output, "R6204")
+
+
+@pytest.mark.parametrize("lines,expected_output", [
     ([
         "def xxx(x, y):",
         "    r = True if x else y"
@@ -439,8 +457,8 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         .set_text("The if expression can be replaced with '<negated x> or y'")
     ]),
 ])
-def test_simplify_if_expression_custom(lines: List[str], expected_output: List[Problem]) -> None:
-    _test_simplify_if(lines, expected_output, "R6204")
+def test_simplify_if_expression_conj_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    _test_simplify_if(lines, expected_output, "R6209")
 
 
 @pytest.mark.parametrize("lines,expected_output", [
@@ -461,8 +479,8 @@ def test_simplify_if_pass_custom(lines: List[str], expected_output: List[Problem
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("015080-p4_geometry.py", [
-        lazy_problem().set_code("R6202").set_line(14)
-        .set_text("The if statement can be merged with the next to 'if len(sides) != len(set(sides))"
+        lazy_problem().set_code("R6207").set_line(14)
+        .set_text("The if statement can be merged with the nested one to 'if len(sides) != len(set(sides))"
                   " and len(set(sides)) <= 3 and sides[1] == sides[2]:'"),
         lazy_problem().set_code("R6201").set_line(21)
         .set_text("The if statement can be replaced with 'return side_c == sides[2]'"),
@@ -472,8 +490,9 @@ def test_simplify_if_pass_custom(lines: List[str], expected_output: List[Problem
         .set_text("The if statement can be replaced with 'return <negated duplicate(sides) < max(sides)>'"),
     ]),
     ("z202817-zkouska.py", [
-        lazy_problem().set_code("R6202").set_line(76)
-        .set_text("The if statement can be merged with the next to 'if word == '' or word[len(word) - 1] == '.':'"),
+        lazy_problem().set_code("R6208").set_line(76)
+        .set_text("The if statement can be merged with the following one to "
+                  "'if word == '' or word[len(word) - 1] == '.':'"),
         lazy_problem().set_code("R6205").set_line(82),
     ]),
     ("014823-p4_geometry.py", [
