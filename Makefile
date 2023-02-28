@@ -39,14 +39,18 @@ run:
 		python3 -m edulint ${ARGS}
 
 lint_data:
-	export DATA_DIR=${DATA_PATH}/${YEAR}; \
-	export LINTINGS_DIR=${LINTINGS_PATH}/${YEAR}/edulint-${VERSION}; \
+	DATA_DIR=${DATA_PATH}/${YEAR}; \
+	LINTINGS_DIR=${LINTINGS_PATH}/${YEAR}/edulint-${VERSION}; \
+	if [ -z "${JSON}" ]; then \
+		EXT=txt; \
+	else \
+		EXT=json; \
+		EXTRA=--json; \
+	fi; \
 	mkdir -p $$LINTINGS_DIR; \
 	for week in `ls $$DATA_DIR`; do \
 		echo $$week; \
 		export PYTHONPATH=${EDULINT_PATH} && \
-			python3 -m edulint $$DATA_DIR/$$week/*.py > $$LINTINGS_DIR/$$week.txt; \
-		export PYTHONPAT=${EDULINT_PATH} && \
-			python3 -m edulint --json $$DATA_DIR/$$week/*.py > $$LINTINGS_DIR/$$week.json; \
+			python3 -m edulint -o "${OPTIONS}" $$EXTRA $$DATA_DIR/$$week/*.py > $$LINTINGS_DIR/$$week.$$EXT; \
 	done;
 
