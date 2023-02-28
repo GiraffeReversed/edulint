@@ -36,7 +36,8 @@ class Short(BaseChecker):
         "R6605": (
             "Use elif.",
             "use-elif",
-            "Emitted when the code contains else: if construction instead of elif."
+            "Emitted when the code contains else: if construction instead of elif. Might return a false positive if "
+            "the code mixes tabs and spaces."
         ),
         "R6606": (
             "Remove the for loop, as it makes %s.",
@@ -127,7 +128,6 @@ class Short(BaseChecker):
         if node.has_elif_block():
             first_body = node.body[0]
             first_orelse = node.orelse[0]
-            assert first_body.col_offset >= first_orelse.col_offset
             if first_body.col_offset == first_orelse.col_offset:
                 self.add_message("use-elif", node=node.orelse[0])
 
