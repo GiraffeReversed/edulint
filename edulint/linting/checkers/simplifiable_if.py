@@ -17,17 +17,17 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "R6201": (
             "The if statement can be replaced with 'return %s'",
             "simplifiable-if-return",
-            "Emitted when returning a boolean value can be simplified.",
+            "Emitted when the condition of an if statement can be returned directly (possibly negated).",
         ),
         "R6203": (
             "The conditional assignment can be replace with '%s = %s'",
             "simplifiable-if-assignment",
-            "Emitted when an assignment in an if statement can be simplified."
+            "Emitted when the condition of an if statement can be assigned directly (possibly negated)."
         ),
         "R6204": (
             "The if expression can be replaced with '%s'",
             "simplifiable-if-expr",
-            "Emitted when an if expression can be omitted."
+            "Emitted when the condition of an if expression can be returned directly (possibly negated)."
         ),
         "R6205": (
             "Use 'if %s: <else body>' instead of 'pass'",
@@ -42,12 +42,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "R6207": (
             "The if statement can be merged with the nested one to 'if %s:'",
             "simplifiable-if-nested",
-            "Emitted when an if statement can be merged with its nested if."
+            "Emitted when the condition of an if statement can be merged "
+            "with its nested if's condition using logical operators."
         ),
         "R6208": (
             "The if statement can be merged with the following one to 'if %s:'",
             "simplifiable-if-seq",
-            "Emitted when an if statement can be merged with the next using a logical operator"
+            "Emitted when the condition of an if statement can be merged "
+            "with the next if's condition using logical operators."
         ),
     }
 
