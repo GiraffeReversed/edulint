@@ -16,6 +16,8 @@ OVERRIDERS = {
     # R6610=do-not-multiply-mutable, R6608=redundant-arithmetic
     "W0107": {"W0101"},
     # W0107=unnecessary-pass, W0101=unreachable
+    "C0201": {"C0206"},
+    # C0201=consider-iterating-dictionary, C0206=consider-using-dict-items
 }
 
 
