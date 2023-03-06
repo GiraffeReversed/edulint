@@ -16,6 +16,23 @@ class TestShort:
         ], [
             lazy_problem().set_line(3).set_code("R6611")
         ]),
+        ([
+            "if x > y:",
+            "    print('foo')",
+            "if x <= y:",
+            "    print('bar')"
+        ], [
+            lazy_problem().set_line(3).set_code("R6611")
+        ]),
+        ([
+            "if x > y:",
+            "    print('foo')",
+            "if x <= y:",
+            "    print('bar')",
+            "else:",
+            "    print('foobar')"
+        ], [
+        ]),
     ])
     def test_short_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(

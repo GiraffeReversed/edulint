@@ -304,15 +304,17 @@ class Short(BaseChecker):
 
             return negated_rt and lt.as_string() == rt.as_string()
 
-        if not node.has_elif_block():
+        if_test = node.test
+        if node.has_elif_block():
+            next_if = node.orelse[0]
+        elif isinstance(node.next_sibling(), nodes.If) and len(node.next_sibling().orelse) == 0:
+            next_if = node.next_sibling()
+        else:
             return
 
-        if_test = node.test
-        elif_test = node.orelse[0].test
-
-        if is_negation(if_test, elif_test, negated_rt=False):
-            self.add_message("redundant-elif", node=node.orelse[0])
-            if len(node.orelse[0].orelse) > 0:
+        if is_negation(if_test, next_if.test, negated_rt=False):
+            self.add_message("redundant-elif", node=next_if)
+            if node.has_elif_block() and next_if == node.orelse[0] and len(node.orelse[0].orelse) > 0:
                 self.add_message("unreachable-else", node=node.orelse[0].orelse[0])
 
     def _check_no_is(self, node: nodes.Compare) -> None:
