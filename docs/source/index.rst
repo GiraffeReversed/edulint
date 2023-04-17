@@ -35,7 +35,7 @@ To install EduLint locally, open an interactive shell and run:
 Run EduLint locally
 ^^^^^^^^^^^^^^^^^^^
 
-To start using EduLint, open an interactive shell and run: 
+To start using EduLint, open an interactive shell and run:
 
 .. code::
 
@@ -81,7 +81,7 @@ It is also possible to combine multiple options on one line:
 
 .. code::
 
-   # edulint: python-spec allowed-onechar-names=ijk
+   # edulint: python-specific allowed-onechar-names=ijk
 
 One option can be used multiple times, the rules for how its values are combined are listed in the :ref:`Options table <options-table>`. For both of the following snippets, the resulting value for :code:`allowed-onechar-names` would be :code:`ijk`, because with the option, the method of combining result is replacing the old one with the new one.
 
@@ -152,13 +152,13 @@ The flag :link_option:`enhancement` groups those messages, that should be follow
 .. message-table::
    enhancement
 
-Python-spec
-""""""""""""
+Python-specific
+"""""""""""""""
 
-The flag :link_option:`python-spec` enables those messages that improve the code, but are specific to Python:
+The flag :link_option:`python-specific` enables those messages that improve the code, but are specific to Python:
 
 .. message-table::
-   python-spec
+   python-specific
 
 
 Custom checkers
