@@ -1,5 +1,7 @@
 from astroid import nodes, Context  # type: ignore
 from typing import TYPE_CHECKING, Optional, List, Union, Tuple
+from enum import Enum, auto
+from functools import reduce
 
 from pylint.checkers import BaseChecker  # type: ignore
 
@@ -8,6 +10,20 @@ if TYPE_CHECKING:
 
 from edulint.linting.checkers.utils import get_name, is_builtin, get_range_params
 from edulint.linting.checkers.modified_listener import ModifiedListener
+
+
+class UsesIndex(Enum):
+    OUTSIDE_SUBSCRIPT = auto()
+    INSIDE_SUBSCRIPT = auto()
+    NEVER = auto()
+
+    @classmethod
+    def combine(cls, lt: "UsesIndex", rt: "UsesIndex") -> "UsesIndex":
+        if lt == cls.INSIDE_SUBSCRIPT or rt == cls.INSIDE_SUBSCRIPT:
+            return cls.INSIDE_SUBSCRIPT
+        if lt == cls.OUTSIDE_SUBSCRIPT or rt == cls.OUTSIDE_SUBSCRIPT:
+            return cls.OUTSIDE_SUBSCRIPT
+        return cls.NEVER
 
 
 class ImproveForLoop(BaseChecker):  # type: ignore
@@ -61,34 +77,42 @@ class ImproveForLoop(BaseChecker):  # type: ignore
             assert subscript.ctx == Context.Del
             return sub_loaded, sub_stored or used
 
-    class IndexUsedVisitor(ModifiedListener[bool]):
-        default = False
+    class IndexUsedVisitor(ModifiedListener[UsesIndex]):
+        default = UsesIndex.NEVER
 
         @staticmethod
-        def combine(results: List[bool]) -> bool:
-            return any(results)
+        def combine(results: List[UsesIndex]) -> UsesIndex:
+            return reduce(UsesIndex.combine, results, UsesIndex.NEVER)
 
         def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):
             super().__init__([structure, index])
             self.structure = structure
             self.index = index
 
-        def visit_name(self, name: nodes.Name) -> bool:
+        def visit_name(self, name: nodes.Name) -> UsesIndex:
             if name.name != self.index.name:
-                return False
+                return UsesIndex.NEVER
+
+            parent = name.parent
+            if isinstance(parent, nodes.Subscript) and parent.value.as_string() != self.structure.as_string():
+                return UsesIndex.INSIDE_SUBSCRIPT
+
             if not isinstance(name.parent, nodes.Subscript) \
                     or not isinstance(self.structure, type(name.parent.value)) \
                     or self.was_reassigned(name, allow_definition=False):
-                return True
+                return UsesIndex.OUTSIDE_SUBSCRIPT
 
             subscript = name.parent
             if not ((isinstance(subscript.value, nodes.Name)
                     and subscript.value.name == self.structure.name)
                     or (isinstance(subscript.value, nodes.Attribute)
                     and subscript.value.attrname == self.structure.attrname)):
-                return True
+                return UsesIndex.OUTSIDE_SUBSCRIPT
 
-            return isinstance(subscript.parent, nodes.Assign) and subscript in subscript.parent.targets
+            if isinstance(subscript.parent, nodes.Assign) and subscript in subscript.parent.targets:
+                return UsesIndex.OUTSIDE_SUBSCRIPT
+
+            return UsesIndex.NEVER
 
     def visit_for(self, node: nodes.For) -> None:
         range_params = get_range_params(node.iter)
@@ -107,12 +131,19 @@ class ImproveForLoop(BaseChecker):  # type: ignore
             return
 
         loaded, stored = self.StructureIndexedVisitor(structure, node.target).visit_many(node.body)
-        if loaded:
-            structure_name = get_name(structure)
-            if stored or self.IndexUsedVisitor(structure, node.target).visit_many(node.body):
-                self.add_message("use-enumerate", args=(index.name, structure_name), node=node)
-            else:
-                self.add_message("use-foreach", args=structure_name, node=node)
+        if not loaded:
+            return
+
+        structure_name = get_name(structure)
+        uses_index = self.IndexUsedVisitor(structure, node.target).visit_many(node.body)
+
+        if uses_index == UsesIndex.INSIDE_SUBSCRIPT:
+            return
+        elif stored or uses_index == UsesIndex.OUTSIDE_SUBSCRIPT:
+            self.add_message("use-enumerate", args=(index.name, structure_name), node=node)
+        else:
+            assert uses_index == UsesIndex.NEVER
+            self.add_message("use-foreach", args=structure_name, node=node)
 
 
 class NoGlobalVars(BaseChecker):
