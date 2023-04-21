@@ -247,6 +247,10 @@ class TestImproveFor:
             lazy_problem().set_code("R6101").set_line(35)
             .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
         ]),
+        ("045294-p4_vigenere.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], []),
+        ("03-d4_points.py", [Arg(Option.PYLINT, "--enable=improve-for-loop")], [
+            lazy_problem().set_code("R6102").set_line(92)
+        ]),
         ("umime_count_a.py", [Arg(Option.PYLINT, "--enable=improve-for-loop"),
                               Arg(Option.FLAKE8, "--extend-ignore=E225")], [
             lazy_problem().set_code("R6101").set_line(3)

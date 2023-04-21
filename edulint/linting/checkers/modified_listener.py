@@ -152,4 +152,4 @@ class ModifiedListener(BaseVisitor[T]):
 
     def visit_for(self, node: nodes.For) -> T:
         self._visit_assigned_to(node.target)
-        return self.visit_many(node.body)
+        return self.visit_many(node.get_children())

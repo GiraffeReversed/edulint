@@ -1,5 +1,5 @@
-from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, List, Union
+from astroid import nodes, Context  # type: ignore
+from typing import TYPE_CHECKING, Optional, List, Union, Tuple
 
 from pylint.checkers import BaseChecker  # type: ignore
 
@@ -29,36 +29,37 @@ class ImproveForLoop(BaseChecker):  # type: ignore
     def __init__(self, linter: Optional["PyLinter"] = None) -> None:
         super().__init__(linter)
 
-    class StructureIndexedVisitor(ModifiedListener[bool]):
-        default = False
+    class StructureIndexedVisitor(ModifiedListener[Tuple[bool, bool]]):
+        default = (False, False)
 
         @staticmethod
-        def combine(results: List[bool]) -> bool:
-            return any(results)
+        def combine(results: List[Tuple[bool, bool]]) -> Tuple[bool, bool]:
+            return any(loaded for loaded, _stored in results), any(stored for _loaded, stored in results)
 
         def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):
+            super().__init__([structure, index])
             self.structure = structure
             self.index = index
-            super().__init__([structure, index])
 
-        def visit_subscript(self, subscript: nodes.Subscript) -> bool:
-            sub_result = self.visit_many(subscript.get_children())
-            if sub_result:
-                return sub_result
+        def visit_subscript(self, subscript: nodes.Subscript) -> Tuple[bool, bool]:
+            sub_loaded, sub_stored = self.visit_many(subscript.get_children())
 
-            parent = subscript.parent
             if self.was_reassigned(self.structure, allow_definition=False) \
                     or self.was_reassigned(self.index, allow_definition=False):
-                return False
-            if not isinstance(subscript.value, type(self.structure)) \
-                    or (isinstance(parent, nodes.Assign) and subscript in parent.targets) \
-                    or not isinstance(subscript.slice, nodes.Name):
-                return sub_result
+                return False, False
 
-            return subscript.slice.name == self.index.name and (
-                (isinstance(self.structure, nodes.Name) and self.structure.name == subscript.value.name)
-                or (isinstance(self.structure, nodes.Attribute) and self.structure.attrname == subscript.value.attrname)
-            )
+            used = subscript.value.as_string() == self.structure.as_string() \
+                and isinstance(subscript.slice, nodes.Name) \
+                and subscript.slice.as_string() == self.index.as_string()
+
+            if subscript.ctx == Context.Store:
+                return sub_loaded, sub_stored or used
+
+            if subscript.ctx == Context.Load:
+                return sub_loaded or used, sub_stored
+
+            assert subscript.ctx == Context.Del
+            return sub_loaded, sub_stored or used
 
     class IndexUsedVisitor(ModifiedListener[bool]):
         default = False
@@ -68,12 +69,11 @@ class ImproveForLoop(BaseChecker):  # type: ignore
             return any(results)
 
         def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):
+            super().__init__([structure, index])
             self.structure = structure
             self.index = index
-            super().__init__([structure, index])
 
         def visit_name(self, name: nodes.Name) -> bool:
-            super().visit_name(name)
             if name.name != self.index.name:
                 return False
             if not isinstance(name.parent, nodes.Subscript) \
@@ -106,9 +106,10 @@ class ImproveForLoop(BaseChecker):  # type: ignore
         if not isinstance(structure, nodes.Name) and not isinstance(structure, nodes.Attribute):
             return
 
-        if self.StructureIndexedVisitor(structure, node.target).visit_many(node.body):
+        loaded, stored = self.StructureIndexedVisitor(structure, node.target).visit_many(node.body)
+        if loaded:
             structure_name = get_name(structure)
-            if self.IndexUsedVisitor(structure, node.target).visit_many(node.body):
+            if stored or self.IndexUsedVisitor(structure, node.target).visit_many(node.body):
                 self.add_message("use-enumerate", args=(index.name, structure_name), node=node)
             else:
                 self.add_message("use-foreach", args=structure_name, node=node)
