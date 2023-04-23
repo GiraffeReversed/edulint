@@ -141,6 +141,9 @@ enable=comparison-with-itself,
        no-is-bool,
        use-ord-letter,
        use-literal-letter,
+       use-foreach,
+       use-append,
+       use-augmenting-assignment,
 
 
 [REPORTS]

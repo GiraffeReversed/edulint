@@ -12,22 +12,27 @@ from typing import List
 @pytest.mark.parametrize("filename,config,expected_output", [
     ("hello_world.py", Config(), []),
     ("z202817-zkouska.py", Config(), [
+        lazy_problem().set_code("R6609").set_line(10),
         lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6205").set_line(82),
+        lazy_problem().set_code("R6101").set_line(171),
         lazy_problem().set_code("W0107").set_line(196)
     ]),
     ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115"])]), [
+        lazy_problem().set_code("R6609").set_line(10),
         lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128),
+        lazy_problem().set_code("R6101").set_line(171),
         lazy_problem().set_code("W0107").set_line(196)
     ]),
-    ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115", "--disable=W0107"])]), [
+    ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115", "--disable=W0107,R6609"])]), [
         lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("C0115").set_line(122),
-        lazy_problem().set_code("C0115").set_line(128)
+        lazy_problem().set_code("C0115").set_line(128),
+        lazy_problem().set_code("R6101").set_line(171),
     ]),
     ("z202817-zkouska.py",
      Config([Arg(Option.PYLINT, ["--disable=all"])]), []),
@@ -49,9 +54,11 @@ def test_lint_basic(filename: str, config: Config, expected_output: List[Problem
         lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6208").set_line(76),
         lazy_problem().set_code("R6205").set_line(82),
+        lazy_problem().set_code("R6101").set_line(171),
         lazy_problem().set_code("W0107").set_line(196),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYTHON_SPECIFIC, "on")], [
+        lazy_problem().set_code("R6609").set_line(10),
         lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6102").set_line(80),
         lazy_problem().set_code("R6205").set_line(82),
@@ -61,7 +68,6 @@ def test_lint_basic(filename: str, config: Config, expected_output: List[Problem
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPECIFIC, "on")], [
         lazy_problem().set_code("R6102").set_line(80),
-        lazy_problem().set_code("R6101").set_line(171),
         lazy_problem().set_code("C0123").set_line(172),
     ]),
     ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYTHON_SPECIFIC, "off")], []),
@@ -154,7 +160,11 @@ def test_invalid_name(filename: str, args: List[Arg], expected_output: List[Prob
     ])
 ])
 def test_allowed_onechar_names(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output)
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=disallowed-name")] + args,
+        expected_output
+    )
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
@@ -236,18 +246,18 @@ class TestImproveFor:
         )
 
     @pytest.mark.parametrize("filename,args,expected_output", [
-        ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], [
+        ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=use-foreach")], [
         ]),
-        ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--enable=iterate-directly"),
+        ("015080-p4_geometry.py", [Arg(Option.PYLINT, "--enable=use-foreach"),
                                    Arg(Option.PYLINT, "--disable=W0622,R1705,R1703,R6201,R6202")], [
         ]),
-        ("014771-p2_nested.py", [Arg(Option.PYTHON_SPECIFIC, "on")], [
+        ("014771-p2_nested.py", [Arg(Option.PYLINT, "--enable=use-foreach")], [
             lazy_problem().set_code("R6101").set_line(25)
             .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
             lazy_problem().set_code("R6101").set_line(35)
             .set_text("Iterate directly: \"for var in A\" (with appropriate name for \"var\")"),
         ]),
-        ("045294-p4_vigenere.py", [Arg(Option.PYLINT, "--enable=iterate-directly")], []),
+        ("045294-p4_vigenere.py", [Arg(Option.PYLINT, "--enable=use-foreach")], []),
         ("03-d4_points.py", [Arg(Option.PYLINT, "--enable=improve-for-loop")], [
             lazy_problem().set_code("R6102").set_line(92)
         ]),

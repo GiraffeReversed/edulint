@@ -15,16 +15,14 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
         Linter.PYLINT,
         ["--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
          "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
-         "use-augmenting-assignment,shadowing-in-comprehension,"
-         "loop-shadows-control-variable,use-append,no-repeated-op,"
+         "shadowing-in-comprehension,loop-shadows-control-variable,no-repeated-op,"
          "forbidden-top-level-code,simplifiable-if-nested,simplifiable-if-seq,"
          "simplifiable-if-return-conj,simplifiable-if-assignment-conj,simplifiable-if-expr-conj,"]
     ),
     Option.PYTHON_SPECIFIC: Translation(
         Linter.PYLINT,
         ["--enable=unidiomatic-typecheck,misplaced-format-function,"
-         "unnecessary-lambda,multiple-imports,"
-         "improve-for-loop,consider-iterating-dictionary,"
+         "unnecessary-lambda,multiple-imports,use-enumerate,consider-iterating-dictionary,"
          "consider-using-dict-items,consider-using-f-string,"
          "inconsistent-return-statements,consider-swap-variables,"
          "consider-using-join,consider-using-set-comprehension,"
