@@ -208,11 +208,26 @@ class Short(BaseChecker):
             self.add_message("redundant-arithmetic", node=node, args=(node.as_string(),))
 
     def _check_augmentable(self, node: Union[nodes.Assign, nodes.AnnAssign]) -> None:
+        IMMUTABLE_OPS = ("-", "*", "/", "//", "%", "**", "<<", ">>")
+
         def add_message(target: str, param: nodes.BinOp) -> None:
             self.add_message("use-augmenting-assignment", node=node, args=(target, node.value.op, param.as_string()))
 
-        def is_mutable(node: nodes.NodeNG):
-            return type(node) in (nodes.List, nodes.Dict, nodes.Set, nodes.ListComp, nodes.DictComp)
+        def is_immutable(node: nodes.NodeNG):
+            if isinstance(node, (nodes.Const)) and isinstance(node.value, (int, float, bool, str, bytes, tuple)):
+                return True
+            if isinstance(node, nodes.BinOp):
+                return node.op in IMMUTABLE_OPS \
+                    or is_immutable(node.left) or is_immutable(node.right)
+            if isinstance(node, nodes.Call):
+                return any(node.func.as_string().endswith(n) for n in (
+                    "int", "float", "bool", "str", "bytes", "tuple",
+                    "len", "sum", "chr", "ord",
+                    "trunc", "round", "sqrt", "cos", "sin", "radians", "degrees",
+                ))
+            if isinstance(node, nodes.IfExp):
+                return is_immutable(node.body) or is_immutable(node.orelse)
+            return False
 
         if not isinstance(node.value, nodes.BinOp):
             return
@@ -228,14 +243,12 @@ class Short(BaseChecker):
         left_value = infer_to_value(bin_op.left)
         right_value = infer_to_value(bin_op.right)
 
-        if is_mutable(left_value) or is_mutable(right_value):
-            return
-
-        if target == bin_op.left.as_string():
-            add_message(target, bin_op.right)
-        if bin_op.op in "+*|&" and target == bin_op.right.as_string():
-            if not isinstance(left_value, nodes.Const) or not isinstance(left_value.value, (str, bytes)):
-                add_message(target, bin_op.left)
+        if node.value.op in IMMUTABLE_OPS or is_immutable(left_value) or is_immutable(right_value):
+            if target == bin_op.left.as_string():
+                add_message(target, bin_op.right)
+            elif bin_op.op in "+*|&" and target == bin_op.right.as_string():
+                if not isinstance(left_value, nodes.Const) or not isinstance(left_value.value, (str, bytes, tuple)):
+                    add_message(target, bin_op.left)
 
     def _check_multiplied_list(self, node: nodes.BinOp) -> None:
         def is_mutable(elem: nodes.NodeNG) -> bool:

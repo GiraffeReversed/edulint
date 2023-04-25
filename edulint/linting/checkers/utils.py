@@ -118,7 +118,7 @@ def infer_to_value(node: nodes.NodeNG) -> Optional[nodes.NodeNG]:
         inferred = utils.safe_infer(node)
         return None if inferred is Uninferable else inferred
 
-    if type(node) in (nodes.Const, nodes.List, nodes.Set, nodes.Dict, nodes.ListComp, nodes.DictComp):
+    if isinstance(node, (nodes.Const, nodes.List, nodes.Set, nodes.Dict, nodes.ListComp, nodes.DictComp, nodes.Call)):
         return node
 
     return None
