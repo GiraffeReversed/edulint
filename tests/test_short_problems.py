@@ -241,6 +241,7 @@ class TestShort:
         ("104174-ipv4_restore.py", [
             lazy_problem().set_code("R6610").set_line(38).set_text("Do not multiply list with mutable content.")
         ]),
+        ("104584-p4_digits.py", []),
         ("hw14358.py", [
             lazy_problem().set_code("R6609").set_line(29).set_text("Use augmenting assignment: 'result -= element'"),
             lazy_problem().set_code("R6609").set_line(31).set_text("Use augmenting assignment: 'b += 1'"),
