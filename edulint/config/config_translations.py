@@ -15,7 +15,7 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
         Linter.PYLINT,
         ["--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
          "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
-         "shadowing-in-comprehension,loop-shadows-control-variable,no-repeated-op,"
+         "loop-shadows-control-variable,no-repeated-op,"
          "forbidden-top-level-code,simplifiable-if-nested,simplifiable-if-seq,"
          "simplifiable-if-return-conj,simplifiable-if-assignment-conj,simplifiable-if-expr-conj,"]
     ),
