@@ -69,7 +69,7 @@ def lint_any(
         result_getter: Callable[[Any], Any],
         out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
     command = [sys.executable, "-m", str(linter)] + linter_args + list(config_arg) + filenames  # type: ignore
-    return_code, outs, errs = ProcessHandler.run(command, timeout=10)
+    return_code, outs, errs = ProcessHandler.run(command, timeout=1000)
 
     if ProcessHandler.is_status_code_by_timeout(return_code):
         print(f"edulint: {linter} was likely killed by timeout", file=sys.stderr)
