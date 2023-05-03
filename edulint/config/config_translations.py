@@ -22,7 +22,7 @@ CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
     Option.PYTHON_SPECIFIC: Translation(
         Linter.PYLINT,
         ["--enable=unidiomatic-typecheck,misplaced-format-function,"
-         "unnecessary-lambda,multiple-imports,use-enumerate,consider-iterating-dictionary,"
+         "unnecessary-lambda,use-enumerate,consider-iterating-dictionary,"
          "consider-using-dict-items,consider-using-f-string,"
          "inconsistent-return-statements,consider-swap-variables,"
          "consider-using-join,consider-using-set-comprehension,"
