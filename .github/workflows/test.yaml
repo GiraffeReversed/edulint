@@ -1,9 +1,26 @@
-name: Run tests
+name: Tests compatiblity for several versions
 
+env:
+  DEFAULT_PYTHON_VERSION: "3.8"
+  DEFAULT_PYLINT_VERSION: "2.14.5"
+  DEFAULT_FLAKE8_VERSION: "4.0.1"
 
 on:
-  push:
   workflow_call:
+    inputs:
+      python_matrix:
+        type: string
+        default: '["3.8"]'
+      pylint_matrix:
+        type: string
+        default: '["2.14.5"]'
+      flake8_matrix:
+        type: string
+        default: '["4.0.1"]'
+    secrets:
+      PAT_PRIVATE_TESTS:
+        required: true
+
 
 jobs:
   pytest:
@@ -13,7 +30,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [3.8, 3.9, "3.10", 3.11]
+        python: ${{ fromJSON(inputs.python_matrix) }}
+
+        # https://github.com/actions/runner/issues/1660#issuecomment-1359707506
+        pylint: ${{ fromJSON(inputs.pylint_matrix) }}
+        # pylint: ${{ fromJSON('["2.16.4", "2.17.4", "3.0.0a6"]') }}
+
+        flake8: ${{ fromJSON(inputs.flake8_matrix) }}
 
     steps:
       - name: Check out repository code
@@ -25,8 +48,18 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.version }}
+          python-version: ${{ matrix.python }}
           cache: 'pip'
+
+      - name: Mock pylint version in requirements.txt and setup.cfg
+        run: |
+          sed -i "s/pylint==$DEFAULT_PYLINT_VERSION/pylint==${{ matrix.pylint }}/" requirements.txt
+          sed -i "s/pylint ==$DEFAULT_PYLINT_VERSION/pylint ==${{ matrix.pylint }}/" setup.cfg
+
+      - name: Mock flake8 version in requirements.txt and setup.cfg
+        run: |
+          sed -i "s/flake8==$DEFAULT_FLAKE8_VERSION/flake8==${{ matrix.flake8 }}/" requirements.txt
+          sed -i "s/flake8 ==$DEFAULT_FLAKE8_VERSION/flake8 ==${{ matrix.flake8 }}/" setup.cfg
 
       - name: Install dependencies
         run: |
@@ -36,7 +69,7 @@ jobs:
           if [ -f tests/requirements.txt ]; then pip install -r tests/requirements.txt; fi
 
       - name: Install Edulint
-        run: pip install --upgrade .
+        run: pip install .
 
       - name: Test with pytest
         run: pytest --junit-xml pytest.xml tests/
@@ -45,7 +78,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: Unit Test Results (Python ${{ matrix.version }})
+          name: Unit Test Results (Python ${{ matrix.python }})
           path: pytest.xml
 
   publish-test-results:
