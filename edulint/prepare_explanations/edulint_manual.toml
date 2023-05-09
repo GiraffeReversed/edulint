@@ -3,7 +3,7 @@ why = "Having unused variables in code makes the code unnecessarily complicated.
 examples = """A solution is to remove the variable, if possible, or rename it to `_`, which is a common convention for naming unused variables. A variable named `_` should never be used anywhere later in code."""
 
 [R6201]
-why = "Having unnecessary conditions in code makes the code harder to understand."
+why = "Having unnecessary conditions in code makes the code more cluttered and therefore harder to understand."
 examples = """
 A condition that returns bool in both branches can be simplified even if it contains a logical statement.
 
@@ -22,7 +22,7 @@ def good(a: bool, b: bool) -> bool:
 """
 
 [R1714]
-why = "Shorter conditions are ussually easier to read."
+why = "Shorter conditions are usually easier to read."
 examples = """
 Comparison of a variable to two values can be simplified using the `in` operator.
 This is more readable and also safer against copy-paste errors.
@@ -47,3 +47,356 @@ def good(char: str):
         return
 ```
 """
+
+[R6609] # use-augmenting-assignment
+why = "Using augmented assign is not only shorter, but also clearer and less prone to errors."
+examples = "For example, instead of writing `x = x + 1`, you can write `x += 1`. Works for almost any operator."
+
+[R6102] # use-enumerate
+why = "You should use enumerate instead of iterating through indices because it's more concise. It prevents you from introducing off-by-one errors and allows you to name the items"
+examples = """
+```py
+fruits = ['apple', 'banana', 'cherry']
+
+def problematic(fruits):
+    for i in range(len(fruits)):
+        print(i, fruits[i])
+
+def good(fruits):
+    for i, fruit in enumerate(fruits):
+        print(i, fruit)
+```
+"""
+
+[R6101] # use-foreach
+why = "You should use Python foreach-style loop instead of iterating through indices because it's easier to read, and less prone to off-by-one errors. Also, you do not have to index the list, since you can use the value directly."
+examples = """
+```py
+fruits = ['apple', 'banana', 'cherry']
+
+def problematic(fruits):
+    for i in range(len(fruits)):
+        print(fruits[i])
+
+def good(fruits):
+    for fruit in fruits:
+        print(fruit)
+```
+"""
+
+[R6207] # simplifiable-if-nested
+why = "You should use single `if` statement with conditions joined by `and` instead of nested `if` statements because code with nested `if`s is harder to trace: the reader has to check there is no `else` or other code after the inner `if`."
+examples = """
+```py
+def problematic(x, y):
+    if x > 0:
+        if y > 0:
+            print("both values are positive")
+
+def good(x, y):
+    if x > 0 and y > 0:
+        print("both values are positive")
+```
+"""
+
+[R6605] # use-elif
+why = "You should use `elif` over `else: if`. Otherwise it is harder to see what the possible branches do, as they are not on the same indentation level."
+examples = """
+```py
+def problematic(x):
+    if x < 0:
+        print("x is negative")
+    else:
+        if x == 0:
+            print("x is zero")
+        else:
+            print("x is positive")
+
+def good(x):
+    if x < 0:
+        print("x is negative")
+    elif x == 0:
+        print("x is zero")
+    else:
+        print("x is positive")
+```
+"""
+
+[R6305] # use-for-loop
+why = "Use `for` loop when you know the number of iterations in advance (e.g. the number of iterations is constant or stored in a variable). Using a `while` loop is more verbose and can lead to errors if you forget to increment the iteration counter."
+examples = """
+```py
+def problematic(n):
+    i = 0
+    while i < n:
+        print(i)
+        i += 1
+
+def good(n):
+    for i in range(n):
+        print(i)
+```
+"""
+
+[R6208] # simplifiable-if-seq
+why = "You should use single `if` statement with conditions joined by `or` instead of consecutive `if` statements returning the same value. Otherwise the code is unnecessarily long."
+examples = """
+from math import sqrt
+
+def problematic(x, y):
+    if x < 0:
+        return None
+    if y < 0:
+        return None
+    return sqrt(x * y)
+
+def good(x, y):
+    if x < 0 or y < 0:
+        return None
+    return sqrt(x * y)
+"""
+
+[R6202] # simplifiable-if-return-conj
+why = "In some cases, using logical operator can simplify an `if` statement even if one of the branches does not return a bool value. Using `and`, `or` and negation can make the code more concise."
+examples = """
+```py
+# a function checking if a word starts with A
+
+def problematic(word):
+    if word == "":
+        return False
+    return word[0] == "A"
+
+def good(word):
+    return word != "" and word[0] == "A"
+```
+"""
+
+[R6603] # use-isdecimal
+why = """Use `isdecimal`, because it is more strict and only allows real decimal digits that can be converted to number using `int`. `isnumeric` and `isdigit` also return `True` for other numeric characters like these \"¹₂③¼Ⅴ\". However, if a string contains these characters, it can pass through `isnumeric` or `isdigit`, but converting the number using `int` fails.
+
+Do not rely on function's name, check its documentation :)"""
+
+[R6613] # no-is-bool
+why = """Do not use `is` with bool. It is unnecessary, you can use the value directly.
+
+Advanced note: If you are going for three-valued logic (`True`, `False`, `None`), try restructuring your code to first compare to None. This is not the best practice but there is no way to differentiate legitimate use of `is bool` from illegitimate."""
+
+examples = "Use `cond` instead of `cond is True` and `not cond` instead of `cond is False`."
+
+[R6611] # redundant-elif
+why = "Having a duplicate condition in your code can easily introduce a bug. Use `else` instead of `elif` with negated condition, or change the conditions if they are not supposed to be negations of each other."
+examples = """
+```py
+def problematic(x):
+    if x > 0:
+        print("greater than zero")
+    elif x <= 0:
+        print("lesser than zero or equal to it")
+
+def good1(x):
+    if x > 0:
+        print("greater than zero")
+    else:
+        print("lesser than zero or equal to it")
+
+def good2(x):
+    if x > 0:
+        print("greater than zero")
+    elif x < 0:
+        print("lesser than zero")
+```
+"""
+
+[R6608] # redundant-arithmetic
+why = "Replace operations whose result does not depend on the variables with their result. Unnecessary operations in code are unnecessary :) But maybe you made a mistake in the priority of an operator?"
+examples = """Use `x` instead of `x + 0`, `x * 1`, `x + \"\"`, or `x + []`, `1` instead of `x / x` and so on.
+
+If you want to make a copy of a list, use its `copy` method.
+
+In Python, strings are immutable, so adding an empty string to "create a copy" is unnecesary. Any modification to a list creates a copy.
+"""
+
+[R6607] # no-repeated-op
+why = "You should prefer multiplication/exponeniation over repeating addition/multiplication. Using the appropriate operator makes the code more readable, as you make your intention more explicit."
+examples = "Use `x * 2` instead of `x + x` and `x ** 2` instead of `x * x`."
+
+[R6601] # use-append
+why = "Avoid creating temporary structure. It is inefficient and code that uses the correct tools is more readable."
+examples = "Use `lst.append(val)` instead of `lst += [val]` and `lst.extend(val)`."
+
+[R6602] # use-integral-division
+why = "Decimal numbers cannot be represented precisely on a computer, contrary to integers. By introducing float division, your code starts to behave incorrectly when operating with very large numbers."
+examples = "Use integer division: `x // y` instead of `int(x / y)."
+
+[R6401] # no-global-vars
+why = "Use of global variables makes the code much less readable and traceable, as it is hard to anticipate all possible execution paths when there is global state involved."
+examples = "Restructure your code not to need the global variable. You can do this by passing the value as a function parameter and returning the altered variation instead."
+
+[R6614] # use-ord-letter
+why = "Your code uses a magic number. A magic number is a number that comes out of nowhere and at first glance, the reader has no idea what it means. Using magic numbers makes the code unreadable and can also read to bugs, as soon as the code's writer also forgets what the magic value means."
+examples = "You can use `ord` to convert a character to its numeric value, using that instead of the number itself. That means, use `ord('A')` instead of `65`."
+
+[R6205] # simplifiable-if-pass
+why = "Empty if condition makes the code cluttered and also harder to read (the reader must negate the condition themself to see when the `else` branch executes)."
+examples = """
+```py
+def problematic(x):
+    if x <= 0:
+        pass
+    else:
+        print("greater than zero")
+
+def good(x):
+    if x > 0:
+        print("greater than zero")
+```
+"""
+
+[R6615] # use-literal-letter
+why = "Your code uses a magic number. A magic number is a number that comes out of nowhere and at first glance, the reader has no idea what it means. Using magic numbers makes the code unreadable and can also read to bugs, as soon as the code's writer also forgets what the magic value means."
+examples = """In Python, you can compare characters directly. Therefore, you can drop the call to `ord` and compare the letters directly: use `letter > 'A'` instead of `ord(letter) > 65`.
+
+If you do not like the idea of comparing letters, you can use `ord(letter) > ord('A')`. Both are better than using magic numbers.
+"""
+
+[R6204] # simplifiable-if-expr
+why = "Having unnecessary conditions in code makes the code more cluttered and therefore harder to understand."
+examples = "Use `x > 0` instead of `True if x > 0 else False`."
+
+[R6604] # no-loop-else
+why = "Loops with `else` branch are harder to trace, so using them is prone to an error. Or maybe you did not realize that a loop does not have to have an `else` branch?"
+examples = """
+Does your code make use of the `else` branch? Maybe you can just drop it and continue the code after unindented?
+
+```py
+def problematic(numbers):
+    for num in numbers:
+        if num > 100:
+            print("Found number greater than 100.")
+            break
+    else:
+        print("All numbers are lesser or equal to 100.")
+
+
+def contains_above(numbers, limit):
+    for num in numbers:
+        if num > limit:
+            return True
+    return False
+
+def good(numbers):
+    if contains_above(numbers, 100):
+        print("Found number greater than 100.")
+    else:
+        print("All numbers are lesser or equal to 100.")
+```
+"""
+
+[R6303] # modifying-iterated-structure
+why = "Adding elements to a structure you iterate over or removing elements from it can lead to unexpected behavior and to bugs."
+examples = """
+```py
+# function which removes even numbers from a list
+
+def problematic(numbers):
+    for num in numbers:
+        if num % 2 == 0:
+            numbers.remove(num)
+    return numbers
+
+def good(numbers):
+    # now the code iterates over a copy, but modifies the original value
+    for num in numbers.copy():
+        if num % 2 == 0:
+            numbers.remove(num)
+    return numbers
+
+def good_and_efficient(numbers):
+    odd_numbers = []
+    for num in numbers:
+        if num % 2 == 1:
+            odd_numbers.append(num)
+    return odd_numbers
+```
+"""
+
+[R6301] # no-while-true
+why = "The condition of a `while` loop says a lot about what the loop does. It is also easier to verify that the loop will end."
+examples = """
+```py
+def problematic(n):
+    while True:
+        if n == 1:
+            break
+        # some code
+
+def good(n):
+    while n != 1:
+        # some code
+```
+"""
+
+[R6306] # loop-shadows-control-variable
+why = "Shadowing variable names is error-prone."
+examples = """
+```py
+# function that prints a rectangle from # that has n rows and m columns
+
+def problematic(n, m):
+    for i in range(n):
+        for i in range(m):
+            print("#", end="")
+        print()
+
+def good(n, m):
+    for i in range(n):
+        for j in range(m):
+            print("#", end="")
+        print()
+```
+In the problematic code, both `for` loops have `i` as their target. It is better to give nested loops different variable names, even if you do not use them.
+"""
+
+# [R6203] # simplifiable-if-assignment
+
+[R6304] # changing-control-variable
+why = "Modifying the control variable at the end of a `for` loop has no effect. In Python, the `for` loop itself takes care of assigning new value in each iteration."
+examples = "You can just remove the line which modifies the variable."
+
+[R6302] # use-tighter-boundaries
+examples = """
+```py
+def problematic(n):
+    for i in range(n):
+        if i == 0:
+            continue
+        # some code
+
+def good(n):
+    for i in range(1, n):
+        # some code
+```
+"""
+
+# [R6606] # remove-for
+
+# [R6206] # no-value-in-one-branch-return
+
+# [R6210] # simplifiable-if-assignment-conj
+
+# [R6612] # unreachable-else
+
+# [R6209] # simplifiable-if-expr-conj
+
+[R6610] # do-not-multiply-mutable
+why = """In Python, multiplying a list creates a list of references _to the same instance_ of the object the list contains. See the following code:
+
+```
+lst = [[]] * 3
+lst[0].append(42)
+```
+
+`lst` now equals `[[42], [42], [42]] (try it!).
+"""
+examples = "Instead of `[[]] * 3` use for example `[[] for i in range(3)]`."
