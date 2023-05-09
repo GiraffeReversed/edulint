@@ -27,7 +27,7 @@ To install EduLint locally, open an interactive shell and run:
 
 .. code::
 
-    python<version> -m pip install edulint
+    python3 -m pip install --user edulint
 
 .. note::
    EduLint needs Python version at least 3.8 to work.
@@ -39,7 +39,7 @@ To start using EduLint, open an interactive shell and run:
 
 .. code::
 
-   python<version> -m edulint path/to/code/to/check.py
+   python3 -m edulint path/to/code/to/check.py
 
 Multiple filenames can be passed and linted at once.
 
@@ -101,13 +101,13 @@ When configuring through CLI, pass the configuration through the option ``--opti
 
 .. code::
 
-   python<version> -m edulint --option enhancement -o pylint=--enable=no-self-use code/to/check.py
+   python3 -m edulint --option enhancement -o pylint=--enable=no-self-use code/to/check.py
 
 It is also possible to pass multiple options in one ``--option`` argument.
 
 .. code::
 
-   python<version> -m edulint --option "enhancement pylint=--enable=no-self-use" code/to/check.py
+   python3 -m edulint --option "enhancement pylint=--enable=no-self-use" code/to/check.py
 
 Options
 ^^^^^^^
