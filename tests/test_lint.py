@@ -127,6 +127,102 @@ class TestIB111Week:
         create_apply_and_lint(lines, args, expected_output)
 
 
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "class A:",
+        "    pass"
+    ], []),
+    ([
+        "class _:",
+        "    pass"
+    ], []),
+    ([
+        "class a:",
+        "    pass"
+    ], [lazy_problem().set_line(1)]),
+    ([
+        "class class_name:",
+        "    pass"
+    ], [lazy_problem().set_line(1)]),
+    ([
+        "class CLASS_NAME:",
+        "    pass"
+    ], [lazy_problem().set_line(1)]),
+    ([
+        "def fun():",
+        "    a = 5"
+    ], []),
+    ([
+        "def fun():",
+        "    local_variable = 5"
+    ], []),
+    ([
+        "def fun():",
+        "    _ = 5"
+    ], []),
+    ([
+        "def fun():",
+        "    A = 5"
+    ], [lazy_problem().set_line(2)]),
+    ([
+        "def fun():",
+        "    LOCAL_VARIABLE = 5"
+    ], [lazy_problem().set_line(2)]),
+    ([
+        "def fun():",
+        "    localVariable = 5"
+    ], [lazy_problem().set_line(2)]),
+    ([
+        "def f():",
+        "    pass"
+    ], []),
+    ([
+        "def just_fun():",
+        "    pass"
+    ], []),
+    ([
+        "def _():",
+        "    pass"
+    ], []),
+    ([
+        "def F():",
+        "    pass"
+    ], [lazy_problem().set_line(1)]),
+    ([
+        "def JUST_FUN():",
+        "    pass"
+    ], [lazy_problem().set_line(1)]),
+    ([
+        "def JustFun():",
+        "    pass"
+    ], [lazy_problem().set_line(1)]),
+    ([
+        "A = 5"
+    ], []),
+    ([
+        "GLOBAL_VARIABLE = 1"
+    ], []),
+    ([
+        "TypeAlias = int"
+    ], []),
+    ([
+        "_ = int"
+    ], []),
+    ([
+        "a = 1"
+    ], [lazy_problem().set_line(1)]),
+    ([
+        "global_variable = 1"
+    ], [lazy_problem().set_line(1)]),
+])
+def test_invalid_name_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=invalid-name"), Arg(Option.NO_FLAKE8, "on")],
+        expected_output
+    )
+
+
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("014186-p2_nested.py", [Arg(Option.PYTHON_SPECIFIC, "on")], [
         lazy_problem().set_code("C0103").set_line(20),

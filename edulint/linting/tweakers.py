@@ -37,8 +37,14 @@ def invalid_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg])
 
     name = match.group(2)
     style = match.group(3)
-    return style != "snake_case naming style" \
-        or any(ch1.islower() and ch2.isupper() for ch1, ch2 in zip(name, name[1:]))
+
+    if style == "snake_case naming style":
+        return name[0].isupper() or any(ch1.islower() and ch2.isupper() for ch1, ch2 in zip(name, name[1:]))
+
+    if style == "PascalCase naming style":
+        return name[0].islower() or "_" in name
+
+    return True
 
 
 def disallowed_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
