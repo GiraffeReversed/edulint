@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'EduLint'
-copyright = '2022, Anna Rechtackova'
+copyright = '2023, Anna Rechtackova'
 author = 'Anna Rechtackova'
 
 # The full version, including alpha/beta/rc tags
