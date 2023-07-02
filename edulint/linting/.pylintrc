@@ -50,6 +50,7 @@ load-plugins=edulint.linting.checkers.basic_checker,
              edulint.linting.checkers.improper_loop,
              edulint.linting.checkers.simplifiable_if,
              edulint.linting.checkers.python_ta_checkers,
+             edulint.linting.checkers.duplication_checker,
 
 # Pickle collected data for later comparisons.
 persistent=yes

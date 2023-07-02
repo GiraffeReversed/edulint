@@ -77,7 +77,7 @@ def get_name(node: Named) -> str:
 
 
 def get_range_params(node: nodes.NodeNG) -> Optional[Tuple[nodes.NodeNG, nodes.NodeNG, nodes.NodeNG]]:
-    if not isinstance(node, nodes.Call) or node.func.as_string() != "range":
+    if not isinstance(node, nodes.Call) or node.func.as_string() != "range" or len(node.args) < 1 or len(node.args) > 3:
         return None
 
     default_start = nodes.Const(0)
@@ -122,3 +122,8 @@ def infer_to_value(node: nodes.NodeNG) -> Optional[nodes.NodeNG]:
         return node
 
     return None
+
+
+def is_parents_elif(node: nodes.If) -> bool:
+    parent = node.parent
+    return isinstance(parent, nodes.If) and parent.has_elif_block() and parent.orelse[0] == node
