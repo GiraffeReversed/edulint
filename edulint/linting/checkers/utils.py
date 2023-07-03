@@ -152,3 +152,37 @@ def is_main_block(statement: nodes.If) -> bool:
         and isinstance(statement.test.ops[0][1], nodes.Const)
         and statement.test.ops[0][1].value == "__main__"
     )
+
+
+def get_statements_count(node: Union[nodes.NodeNG, List[nodes.NodeNG]], include_defs: bool, include_name_main: bool) -> int:
+
+    def count(nodes: List[nodes.NodeNG]) -> int:
+        return sum(get_statements_count(node, include_defs, include_name_main) for node in nodes)
+
+    if isinstance(node, list):
+        return count(node)
+
+    if isinstance(node, (nodes.ClassDef, nodes.FunctionDef)):
+        return 1 + count(node.body) if include_defs else 0
+
+    if isinstance(node, (nodes.Import, nodes.ImportFrom)):
+        return 1 if include_defs else 0
+
+    if isinstance(node, (nodes.For, nodes.While, nodes.If)):
+        if is_main_block(node) and not include_name_main:
+            return 0
+        return 1 + count(node.body) + count(node.orelse)
+
+    if isinstance(node, nodes.Module):
+        return count(node.body)
+
+    if isinstance(node, nodes.TryExcept):
+        return 2 + count(node.body) + sum(count(h.body) for h in node.handlers) + count(node.orelse)
+
+    if isinstance(node, nodes.TryFinally):
+        return 2 + count(node.body) + count(node.finalbody)
+
+    if isinstance(node, nodes.With):
+        return 1 + count(node.body)
+
+    return 1

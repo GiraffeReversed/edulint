@@ -478,6 +478,20 @@ class TestNoGlobals:
         )
 
 
+class TestLongCode:
+    @pytest.mark.parametrize("filename,expected_output", [
+        ("hw48505.py", [
+            lazy_problem().set_line(80),
+            lazy_problem().set_line(196),
+        ]),
+    ])
+    def test_long_function_files(self, filename: str, expected_output: List[Problem]) -> None:
+        apply_and_lint(
+            filename,
+            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=long-function")],
+            expected_output
+        )
+
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("umime_count_a.py", [
         Arg(Option.PYTHON_SPECIFIC, "on"),

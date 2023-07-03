@@ -4,11 +4,12 @@ from enum import Enum, auto
 from functools import reduce
 
 from pylint.checkers import BaseChecker  # type: ignore
+from pylint.checkers.utils import only_required_for_messages
 
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import get_name, is_builtin, get_range_params
+from edulint.linting.checkers.utils import get_name, is_builtin, get_range_params, get_statements_count
 from edulint.linting.checkers.modified_listener import ModifiedListener
 
 
@@ -184,9 +185,43 @@ class NoGlobalVars(BaseChecker):
                         self.add_message("no-global-vars", node=node, args=(node.name, nonglobal_modifiers[0].lineno))
 
 
+class LongCodeChecker(BaseChecker):
+    name = "long-code"
+    msgs = {
+        "R6701": (
+            "Too much code outside of functions or classes (%d which is over %d statements).",
+            "long-script",
+            "Emitted when there are too many lines of code on the top level that are not import or function or class "
+            "definition."
+        ),
+        "R6702": (
+            "Function '%s' is too long (%d which is over %d statements).",
+            "long-function",
+            "Emitted when there are too many statements inside a function definition."
+        )
+    }
+
+    @only_required_for_messages("long-script")
+    def visit_module(self, node: nodes.Module):
+        MAX_SCRIPT = 20
+
+        count = get_statements_count(node, include_defs=False, include_name_main=False)
+        if count > MAX_SCRIPT:
+            self.add_message("long-script", node=node, args=(count, MAX_SCRIPT))
+
+    @only_required_for_messages("long-function")
+    def visit_functiondef(self, node: nodes.FunctionDef):
+        MAX_FUNC = 20
+
+        count = get_statements_count(node.body, include_defs=False, include_name_main=False)
+        if count > MAX_FUNC:
+            self.add_message("long-function", node=node, args=(node.name, count, MAX_FUNC))
+
+
 def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
     :param linter: The linter to register the checker to.
     """
     linter.register_checker(ImproveForLoop(linter))
     linter.register_checker(NoGlobalVars(linter))
+    linter.register_checker(LongCodeChecker(linter))
