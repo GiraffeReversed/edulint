@@ -127,3 +127,12 @@ def infer_to_value(node: nodes.NodeNG) -> Optional[nodes.NodeNG]:
 def is_parents_elif(node: nodes.If) -> bool:
     parent = node.parent
     return isinstance(parent, nodes.If) and parent.has_elif_block() and parent.orelse[0] == node
+
+
+def get_lines_between(first: nodes.NodeNG, last: nodes.NodeNG, including_last: bool) -> int:
+    assert first.fromlineno <= last.fromlineno
+
+    if including_last:
+        return last.tolineno - first.fromlineno + 1
+    return last.fromlineno - first.fromlineno
+

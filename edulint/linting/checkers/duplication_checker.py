@@ -7,7 +7,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import is_parents_elif, BaseVisitor, is_any_assign
+from edulint.linting.checkers.utils import is_parents_elif, BaseVisitor, is_any_assign, get_lines_between
 
 class InvalidExpression(Exception):
     pass
@@ -178,13 +178,6 @@ class NoDuplicateCode(BaseChecker): # type: ignore
                     if reference[index].as_string() != branch[index].as_string():
                         return i
             return i + 1
-
-        def get_lines_between(first: nodes.NodeNG, last: nodes.NodeNG, including_last: bool) -> int:
-            assert first.fromlineno <= last.fromlineno
-
-            if including_last:
-                return last.tolineno - first.fromlineno + 1
-            return last.fromlineno - first.fromlineno
 
         def get_line_difference(branches, forward=True) -> int:
             stmts_difference = get_stmts_difference(branches, forward)
