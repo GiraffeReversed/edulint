@@ -136,3 +136,19 @@ def get_lines_between(first: nodes.NodeNG, last: nodes.NodeNG, including_last: b
         return last.tolineno - first.fromlineno + 1
     return last.fromlineno - first.fromlineno
 
+
+def is_main_block(statement: nodes.If) -> bool:
+    """
+    Return whether or not <statement> is the main block.
+    """
+    return (
+        isinstance(statement, nodes.If)
+        and isinstance(statement.test, nodes.Compare)
+        and isinstance(statement.test.left, nodes.Name)
+        and isinstance(statement.test.left, nodes.Name)
+        and statement.test.left.name == "__name__"
+        and len(statement.test.ops) == 1
+        and statement.test.ops[0][0] == "=="
+        and isinstance(statement.test.ops[0][1], nodes.Const)
+        and statement.test.ops[0][1].value == "__main__"
+    )

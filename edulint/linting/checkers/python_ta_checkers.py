@@ -14,6 +14,8 @@ from pylint.checkers import BaseChecker
 from pylint.checkers.base import UpperCaseStyle
 from pylint.checkers.utils import only_required_for_messages
 
+from edulint.linting.checkers.utils import is_main_block
+
 
 class InvalidForTargetChecker(BaseChecker):
     # name is the same as file name but without _checker part
@@ -149,7 +151,7 @@ class TopLevelCodeChecker(BaseChecker):
                 _is_import(statement)
                 or _is_definition(statement)
                 or _is_assignment(statement)
-                or _is_main_block(statement)
+                or is_main_block(statement)
             ):
                 self.add_message("forbidden-top-level-code", node=statement, args=statement.lineno)
 
@@ -185,23 +187,6 @@ def _is_constant_assignment(statement) -> bool:
 
 def _is_assignment(statement) -> bool:
     return isinstance(statement, nodes.Assign)
-
-
-def _is_main_block(statement) -> bool:
-    """
-    Return whether or not <statement> is the main block.
-    """
-    return (
-        isinstance(statement, nodes.If)
-        and isinstance(statement.test, nodes.Compare)
-        and isinstance(statement.test.left, nodes.Name)
-        and isinstance(statement.test.left, nodes.Name)
-        and statement.test.left.name == "__name__"
-        and len(statement.test.ops) == 1
-        and statement.test.ops[0][0] == "=="
-        and isinstance(statement.test.ops[0][1], nodes.Const)
-        and statement.test.ops[0][1].value == "__main__"
-    )
 
 
 def register(linter):
