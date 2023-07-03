@@ -77,3 +77,36 @@ def test_duplicate_if_branches(filename: str, expected_output: List[Problem]) ->
         [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-if-branches")],
         expected_output
     )
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("012889-geometry.py", [
+        lazy_problem().set_line(28)
+        .set_text("Identical code inside 3 consecutive ifs, join their conditions using 'or'.")
+    ]),
+    ("012889-pythagorean.py", [
+        lazy_problem().set_line(26)
+        .set_text("Identical code inside 2 consecutive ifs, join their conditions using 'or'.")
+    ]),
+    ("014341-geometry.py", [
+        lazy_problem().set_line(9)
+    ]),
+    ("014613-next.py", [
+        lazy_problem().set_line(35)
+    ]),
+    ("034440-cellular.py", [
+        lazy_problem().set_line(56),
+        lazy_problem().set_line(62)
+    ]),
+    ("046586-person_id.py", [
+        lazy_problem().set_line(40)
+        .set_text("Identical code inside 7 consecutive ifs, join their conditions using 'or'.")
+    ]),
+    ("052975-parse_time.py", []),
+])
+def test_duplicate_seq_ifs(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-seq-ifs")],
+        expected_output
+    )
+

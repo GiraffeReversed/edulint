@@ -18,10 +18,20 @@ class NoDuplicateCode(BaseChecker): # type: ignore
             "duplicate-if-branches",
             "Emitted when identical code starts or ends all branches of an if statement."
         ),
+        "R6503": (
+            "Identical code inside %d consecutive ifs, join their conditions using 'or'.",
+            "duplicate-seq-ifs",
+            "Emitted when several consecutive if statements have identical bodies and thus can be "
+            "joined by or in their conditions."
+        ),
     }
 
-    @only_required_for_messages("duplicate-if-branches")
+    @only_required_for_messages("duplicate-if-branches", "duplicate-seq-ifs")
     def visit_if(self, node: nodes.If) -> None:
+        self.duplicate_if_branches(node)
+        self.duplicate_seq_ifs(node)
+
+    def duplicate_if_branches(self, node: nodes.If) -> None:
 
         def extract_branch_bodies(node: nodes.If) -> Optional[List[nodes.NodeNG]]:
             branches = [node.body]
@@ -98,6 +108,70 @@ class NoDuplicateCode(BaseChecker): # type: ignore
 
             self.add_message("duplicate-if-branches", node=defect_node, args=(same_suffix_len, "after"))
 
+    def duplicate_seq_ifs(self, node: nodes.If) -> None:
+
+        """
+        returns False iff elifs end with else
+        """
+        def extract_from_elif(node: nodes.If, seq_ifs: List[List[nodes.NodeNG]]) -> bool:
+            if len(node.orelse) > 0 and not node.has_elif_block():
+                return False
+
+            current = node
+            while current.has_elif_block():
+                elif_ = current.orelse[0]
+                seq_ifs.append(elif_)
+                if len(elif_.orelse) > 0 and not elif_.has_elif_block():
+                    return False
+                current = elif_
+            return True
+
+        def extract_from_siblings(node: nodes.If, seq_ifs: List[List[nodes.NodeNG]]) -> List[List[nodes.NodeNG]]:
+            sibling = node.next_sibling()
+            while sibling is not None and isinstance(sibling, nodes.If):
+                new = []
+                if not extract_from_elif(sibling, new):
+                    return
+                seq_ifs.append(sibling)
+                seq_ifs.extend(new)
+                sibling = sibling.next_sibling()
+            return seq_ifs
+
+        def same_ifs_count(seq_ifs: List[List[nodes.NodeNG]], start: int) -> int:
+            reference = seq_ifs[start].body
+            for i in range(start + 1, len(seq_ifs)):
+                # do not suggest join of elif and sibling
+                if seq_ifs[start].parent not in seq_ifs[i].node_ancestors():
+                    return i - start
+
+                compared = seq_ifs[i].body
+                if len(reference) != len(compared):
+                    return i - start
+                for j in range(len(reference)):
+                    if reference[j].as_string() != compared[j].as_string():
+                        return i - start
+            return len(seq_ifs) - start
+
+
+        prev_sibling = node.previous_sibling()
+        if is_parents_elif(node) or (isinstance(prev_sibling, nodes.If) and extract_from_elif(prev_sibling, [])):
+            return
+
+        seq_ifs = [node]
+
+        if not extract_from_elif(node, seq_ifs):
+            return
+        extract_from_siblings(node, seq_ifs)
+
+        if len(seq_ifs) == 1:
+            return
+
+        i = 0
+        while i < len(seq_ifs) - 1:
+            count = same_ifs_count(seq_ifs, i)
+            if count > 1:
+                self.add_message("duplicate-seq-ifs", node=seq_ifs[i], args=(count,))
+            i += count
 
 def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
