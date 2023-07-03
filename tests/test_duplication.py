@@ -110,3 +110,28 @@ def test_duplicate_seq_ifs(filename: str, expected_output: List[Problem]) -> Non
         expected_output
     )
 
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("012853-geometry.py", [ # TODO detect this
+        lazy_problem().set_line(8)
+        .set_text("A complex expression 'not (a + b > c and b + c > a and c + a > b)' used repeatedly "
+                  "(on lines 8, 18, 27). Extract it to a local variable or create a helper function.")
+    ]),
+    ("014024-pythagorean.py", [
+        lazy_problem().set_line(19)
+        .set_text("A complex expression 'sqrt(a**2 + b**2)' used repeatedly (on lines 19, 20). Extract it to a "
+                  "local variable or create a helper function."),
+        lazy_problem().set_line(21)
+        .set_text("A complex expression 'a + b + c > result' used repeatedly (on lines 21, 27, 33). Extract it to a "
+        "local variable or create a helper function."),
+        lazy_problem().set_line(25),
+        lazy_problem().set_line(31),
+    ]),
+    ("042643-edge_detection.py", [])
+])
+def test_duplicate_exprs(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-exprs")],
+        expected_output
+    )
