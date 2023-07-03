@@ -127,6 +127,56 @@ class DuplicateExprVisitor(BaseVisitor):
         self._process_expr(node)
 
 
+class CollectBlocksVisitor(BaseVisitor):
+    def __init__(self):
+        self.blocks = []
+
+    def visit_if(self, node: nodes.If) -> None:
+        self.blocks.append(node.body)
+
+        if len(node.orelse) > 0 and not node.has_elif_block():
+            self.blocks.append(node.orelse)
+
+        self.visit_many(node.body)
+        self.visit_many(node.orelse)
+
+    def visit_loop(self, node: Union[nodes.For, nodes.While]) -> None:
+        self.blocks.append(node.body)
+
+        if len(node.orelse) > 0:
+            self.blocks.append(node.orelse)
+
+        self.visit_many(node.body)
+        self.visit_many(node.orelse)
+
+    def visit_for(self, node: nodes.For) -> None:
+        self.visit_loop(node)
+
+    def visit_while(self, node: nodes.While) -> None:
+        self.visit_loop(node)
+
+    def visit_with(self, node: nodes.With) -> None:
+        self.blocks.append(node.body)
+        self.visit_many(node.body)
+
+    def visit_tryexcept(self, node: nodes.TryExcept) -> None:
+        self.blocks.append(node.body)
+
+        if len(node.handlers) > 0:
+            self.blocks.extend(h.body for h in node.handlers)
+
+        if len(node.orelse) > 0:
+            self.blocks.append(node.orelse)
+
+        self.visit_many(node.body)
+        self.visit_many([stmt for h in node.handlers for stmt in h.body])
+        self.visit_many(node.orelse)
+
+    def visit_functiondef(self, node: nodes.FunctionDef) -> None:
+        self.blocks.append(node.body)
+
+        self.visit_many(node.body)
+
 class NoDuplicateCode(BaseChecker): # type: ignore
     name = "no-duplicate-code"
     msgs = {
@@ -146,6 +196,12 @@ class NoDuplicateCode(BaseChecker): # type: ignore
             "create a helper function.",
             "duplicate-exprs",
             "Emitted when an overly complex expression is used multiple times."
+        ),
+        "R6505": (
+            "Duplicate blocks starting on lines %s. Extract the code to a helper function.",
+            "duplicate-blocks",
+            "Emitted when there are duplicate blocks of code as a body of an if/elif/else/for/while/with/try-except "
+            "block."
         )
     }
 
@@ -308,9 +364,84 @@ class NoDuplicateCode(BaseChecker): # type: ignore
                     )
                 emitted.update(exprs)
 
-    @only_required_for_messages("duplicate-exprs")
+    def duplicate_blocks(self, node: nodes.Module) -> None:
+        def update_diffs(stmt1: nodes.NodeNG, stmt2: nodes.NodeNG, current_diffs: Set[Tuple[str, str]]) -> bool:
+            if isinstance(stmt1, nodes.Compare):
+                for (op1, _), (op2, _) in zip(stmt1.ops, stmt2.ops):
+                    if op1 != op2:
+                        current_diffs.add((op1, op2))
+            elif isinstance(stmt1, nodes.BinOp) and stmt1.op != stmt2.op:
+                current_diffs.add((stmt1.op, stmt2.op))
+            elif isinstance(stmt1, nodes.BoolOp) and stmt1.op != stmt2.op:
+                return False
+            elif isinstance(stmt1, nodes.Name) and stmt1.name != stmt2.name:
+                current_diffs.add((stmt1.name, stmt2.name))
+            elif isinstance(stmt1, nodes.Const) and stmt1.value != stmt2.value:
+                current_diffs.add((str(stmt1.value), str(stmt2.value)))
+            elif isinstance(stmt1, nodes.Attribute) and stmt1.attrname != stmt2.attrname:
+                current_diffs.add((stmt1.attrname, stmt2.attrname))
+            elif isinstance(stmt1, nodes.UnaryOp) and stmt1.op != stmt2.op:
+                current_diffs.add((stmt1.op, stmt2.op))
+            return True
+
+        def duplicate_blocks(block1: List[nodes.NodeNG], block2: List[nodes.NodeNG], max_diff: int, current_diffs: Set[Tuple[str, str]]) -> bool:
+            if len(block1) != len(block2):
+                return False
+            for stmt1, stmt2 in zip(block1, block2):
+                if not isinstance(stmt1, type(stmt2)):
+                    return False
+
+                children1 = list(stmt1.get_children())
+                children2 = list(stmt2.get_children())
+
+                if len(children1) != len(children2):
+                    return False
+
+                if not update_diffs(stmt1, stmt2, current_diffs) or len(current_diffs) > max_diff:
+                    return False
+
+                if not duplicate_blocks(children1, children2, max_diff, current_diffs):
+                    return False
+            return True
+
+        MIN_LINES = 3
+        MAX_DIFF = 3
+
+        visitor = CollectBlocksVisitor()
+        visitor.visit(node)
+
+        blocks = [
+            block for block in visitor.blocks
+            if len(block) > 0 and get_lines_between(block[0], block[-1], including_last=True) >= MIN_LINES
+        ]
+
+        if len(blocks) < 2:
+            return
+
+        blocks.sort(key=lambda block: (block[0].fromlineno, block[-1].tolineno))
+        max_closed_line = 0
+
+        for i in range(len(blocks)):
+            for j in range(i + 1, len(blocks)):
+                block1 = blocks[i]
+                block2 = blocks[j]
+
+                if not isinstance(block1[0].parent, type(block2[0].parent)) or block1[-1].tolineno <= max_closed_line:
+                    continue
+
+                if duplicate_blocks(block1, block2, MAX_DIFF, set()):
+                    self.add_message(
+                        "duplicate-blocks",
+                        node=block1[0],
+                        args=(f"{block1[0].fromlineno} and {block2[0].fromlineno}",)
+                    )
+                    max_closed_line = block1[-1].tolineno
+                    break
+
+    @only_required_for_messages("duplicate-exprs", "duplicate-blocks")
     def visit_module(self, node: nodes.Module) -> None:
         self.duplicate_exprs(node)
+        self.duplicate_blocks(node)
 
 
 def register(linter: "PyLinter") -> None:

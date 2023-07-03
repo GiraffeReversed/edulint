@@ -135,3 +135,23 @@ def test_duplicate_exprs(filename: str, expected_output: List[Problem]) -> None:
         [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-exprs")],
         expected_output
     )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("013145-coins.py", [
+        lazy_problem().set_line(5)
+        .set_text("Duplicate blocks starting on lines 5 and 10. Extract the code to a helper function."),
+        lazy_problem().set_line(10),
+        lazy_problem().set_line(15),
+        lazy_problem().set_line(20),
+    ]),
+    ("024508-cards.py", [
+        lazy_problem().set_line(61)
+    ])
+])
+def test_duplicate_blocks(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-blocks")],
+        expected_output
+    )
