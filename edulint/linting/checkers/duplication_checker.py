@@ -46,6 +46,13 @@ class NoDuplicateCode(BaseChecker): # type: ignore
                         return i
             return i + 1
 
+        def get_lines_between(first: nodes.NodeNG, last: nodes.NodeNG, including_last: bool) -> int:
+            assert first.fromlineno <= last.fromlineno
+
+            if including_last:
+                return last.tolineno - first.fromlineno + 1
+            return last.fromlineno - first.fromlineno
+
         def get_line_difference(branches, forward=True) -> int:
             stmts_difference = get_stmts_difference(branches, forward)
             reference = branches[0]
@@ -55,11 +62,10 @@ class NoDuplicateCode(BaseChecker): # type: ignore
 
             first = reference[0 if forward else -stmts_difference]
             last = reference[stmts_difference - 1 if forward else -1]
-            assert first.fromlineno <= last.fromlineno
 
-            return last.tolineno - first.fromlineno + 1
+            return get_lines_between(first, last, including_last=True)
 
-        if not node.orelse or is_parents_elif(node):
+        if not node.orelse or (is_parents_elif(node)):
             return
 
         branches = extract_branch_bodies(node)
@@ -74,7 +80,23 @@ class NoDuplicateCode(BaseChecker): # type: ignore
 
         same_suffix_len = get_line_difference(branches, forward=False)
         if same_suffix_len >= 1:
-            self.add_message("duplicate-if-branches", node=node, args=(same_suffix_len, "after"))
+            # allow early returns
+            if same_suffix_len == 1 and isinstance(branches[0][-1], nodes.Return):
+                i = 0
+                while len(branches[i]) == 1:
+                    i += 1
+                branches = branches[i:]
+                if len(branches) < 2:
+                    return
+            defect_node = branches[0][-1].parent
+
+            # disallow breaking up coherent segments
+            if same_suffix_len / (min(
+                map(lambda branch: get_lines_between(branch[0], branch[-1], including_last=True), branches)
+            ) - same_prefix_len) < 1/2: # TODO extract into parameter
+                return
+
+            self.add_message("duplicate-if-branches", node=defect_node, args=(same_suffix_len, "after"))
 
 
 def register(linter: "PyLinter") -> None:
