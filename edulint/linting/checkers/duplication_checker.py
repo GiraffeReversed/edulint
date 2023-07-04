@@ -1,5 +1,5 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Set
+from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Set, Any
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -7,7 +7,8 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import is_parents_elif, BaseVisitor, is_any_assign, get_lines_between
+from edulint.linting.checkers.utils import is_parents_elif, BaseVisitor, is_any_assign, get_lines_between, \
+                                           is_main_block, is_block_comment
 
 class InvalidExpression(Exception):
     pass
@@ -177,6 +178,15 @@ class CollectBlocksVisitor(BaseVisitor):
 
         self.visit_many(node.body)
 
+    def visit_module(self, node: nodes.Module) -> None:
+        self.blocks.append([
+            b for b in node.body
+            if b and not isinstance(b, (nodes.FunctionDef, nodes.ClassDef)) and not is_main_block(b)
+        ])
+
+        self.visit_many(node.body)
+
+
 class NoDuplicateCode(BaseChecker): # type: ignore
     name = "no-duplicate-code"
     msgs = {
@@ -202,7 +212,12 @@ class NoDuplicateCode(BaseChecker): # type: ignore
             "duplicate-blocks",
             "Emitted when there are duplicate blocks of code as a body of an if/elif/else/for/while/with/try-except "
             "block."
-        )
+        ),
+        "R6506": (
+            "Duplicate sequence of %d repetitions of %d lines of code. Use a loop to avoid this.",
+            "duplicate-sequence",
+            "Emitted when there is a sequence of similar sub-blocks inside a block that can be replaced by a loop."
+        ),
     }
 
     @only_required_for_messages("duplicate-if-branches", "duplicate-seq-ifs")
@@ -438,10 +453,135 @@ class NoDuplicateCode(BaseChecker): # type: ignore
                     max_closed_line = block1[-1].tolineno
                     break
 
-    @only_required_for_messages("duplicate-exprs", "duplicate-blocks")
+    def duplicate_sequence(self, node: nodes.Module) -> None:
+        def can_use_range(diffs: List[Any]):
+            if all(e is None for e in diffs):
+                return True
+            if not all(isinstance(e, int) for e in diffs):
+                return False
+
+            assert len(diffs) >= 2
+            step = diffs[1] - diffs[0]
+            return all(e1 + step == e2 for e1, e2 in zip(diffs, diffs[1:]))
+
+        def get_single_diff_list(stmts1: List[nodes.NodeNG], stmts2: List[nodes.NodeNG]) -> Optional[Tuple[Tuple[Any, Any], List[int]]]:
+            if len(stmts1) != len(stmts2):
+                return None
+
+            result = None
+            for i, (stmt1, stmt2) in enumerate(zip(stmts1, stmts2)):
+                subresult = get_single_diff(stmt1, stmt2)
+                if subresult is None or (result is not None and result[0] != subresult[0]):
+                    return None
+
+                diff, path = subresult
+                if diff != (None, None):
+                    path.append(i)
+                    result = diff, path
+
+            if result is None:
+                return (None, None), []
+            return result
+
+        def get_single_diff(stmt1: nodes.NodeNG, stmt2: nodes.NodeNG) -> Optional[Tuple[Tuple[Any, Any], List[int]]]:
+            if not isinstance(stmt1, type(stmt2)):
+                return None
+            if isinstance(stmt1, nodes.Const):
+                if not isinstance(stmt1.value, type(stmt2.value)):
+                    return None
+                if stmt1.value == stmt2.value:
+                    return (None, None), []
+                return (stmt1.value, stmt2.value), []
+            if isinstance(stmt1, nodes.Name) and stmt1.name != stmt2.name:
+                return None
+            if isinstance(stmt1, nodes.Attribute) and stmt1.attrname != stmt2.attrname:
+                return None
+            if isinstance(stmt1, (nodes.BinOp, nodes.BoolOp, nodes.UnaryOp)) and stmt1.op != stmt2.op:
+                return None
+            if isinstance(stmt1, nodes.Compare) and any(o1 != o2 for (o1, _), (o2, _) in zip(stmt1.ops, stmt2.ops)):
+                return None
+            if isinstance(stmt1, nodes.Assign) and any(t1.as_string() != t2.as_string() for t1, t2 in zip(stmt1.targets, stmt2.targets)):
+                return None
+            if isinstance(stmt1, (nodes.AugAssign, nodes.AnnAssign)) and stmt1.target.as_string() != stmt2.target.as_string():
+                return None
+            if is_block_comment(stmt1):
+                return None
+            if isinstance(stmt1, (nodes.Assert, nodes.Import, nodes.ImportFrom)):
+                return None
+            if isinstance(stmt1, nodes.Call) and isinstance(stmt1.func, nodes.Name) and stmt1.func.name == "print":
+                return None
+
+            return get_single_diff_list(list(stmt1.get_children()), list(stmt2.get_children()))
+
+        def get_seq_diffs(block: List[nodes.NodeNG], subblock_len: int, start: int) -> List[Any]:
+            path = None
+            diffs = []
+            for i in range(start, len(block) - subblock_len, subblock_len):
+                subblock1 = block[i:i+subblock_len]
+                subblock2 = block[i+subblock_len:i+2*subblock_len]
+
+                subresult = get_single_diff_list(subblock1, subblock2)
+                if subresult is None:
+                    return diffs
+
+                diff, subpath = subresult
+                if path is not None and len(path) > 0 and len(subpath) > 0 and path != subpath:
+                    return diffs
+                if path is not None and len(path) == 0 and len(subpath) > 0 and len(diffs) >= DUPL_SEQ_LEN:
+                    return diffs
+                if path is None or (len(path) == 0 and len(subpath) > 0):
+                    path = subpath
+
+                if len(diffs) == 0:
+                    diffs.extend(diff)
+                else:
+                    diffs.append(diff[1])
+
+            return diffs
+
+        def process_block(self, block: List[nodes.NodeNG]) -> None:
+            max_subblock_len = len(block) // DUPL_SEQ_LEN
+
+            if max_subblock_len == 0:
+                return
+
+            start = 0
+            while start < len(block) - 1:
+                for subblock_len in range(1, max_subblock_len + 1):
+                    diffs = get_seq_diffs(block, subblock_len, start)
+                    if (len(diffs) >= DUPL_SEQ_LEN and can_use_range(diffs)) or len(diffs) >= DUPL_SEQ_LEN_NO_RANGE:
+                        first_subblock = block[start:start+subblock_len]
+                        self.add_message(
+                            "duplicate-sequence",
+                            node=first_subblock[0],
+                            args=(
+                                len(diffs),
+                                get_lines_between(first_subblock[0], first_subblock[-1], including_last=True)
+                            )
+                        )
+                        start += len(diffs) * subblock_len
+                        break
+                else:
+                    start += 1
+
+        DUPL_SEQ_LEN = 4
+        DUPL_SEQ_LEN_NO_RANGE = 5
+
+        visitor = CollectBlocksVisitor()
+        visitor.visit(node)
+
+        blocks = [block for block in visitor.blocks if len(block) > 0]
+        blocks.sort(key=lambda block: (block[0].fromlineno, block[-1].tolineno))
+
+        for block in blocks:
+            if len(block) >= 2:
+                process_block(self, block)
+
+    @only_required_for_messages("duplicate-exprs", "duplicate-blocks", "duplicate-sequence")
     def visit_module(self, node: nodes.Module) -> None:
         self.duplicate_exprs(node)
         self.duplicate_blocks(node)
+        self.duplicate_sequence(node)
 
 
 def register(linter: "PyLinter") -> None:

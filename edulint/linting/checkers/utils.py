@@ -154,6 +154,10 @@ def is_main_block(statement: nodes.If) -> bool:
     )
 
 
+def is_block_comment(stmt: nodes.NodeNG) -> bool:
+    return isinstance(stmt, nodes.Expr) and isinstance(stmt.value, nodes.Const) and isinstance(stmt.value.value, str)
+
+
 def get_statements_count(node: Union[nodes.NodeNG, List[nodes.NodeNG]], include_defs: bool, include_name_main: bool) -> int:
 
     def count(nodes: List[nodes.NodeNG]) -> int:

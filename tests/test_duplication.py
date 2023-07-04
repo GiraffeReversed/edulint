@@ -155,3 +155,30 @@ def test_duplicate_blocks(filename: str, expected_output: List[Problem]) -> None
         [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-blocks")],
         expected_output
     )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("010666-coins.py", [
+        lazy_problem().set_line(13)
+        .set_text("Duplicate sequence of 5 repetitions of 3 lines of code. Use a loop to avoid this."),
+    ]),
+    ("014212-coins.py", [
+        lazy_problem().set_line(8)
+        .set_text("Duplicate sequence of 6 repetitions of 2 lines of code. Use a loop to avoid this."),
+    ]),
+    ("051796-gps.py", []),
+    ("hw36211.py", []),
+    ("ut156_9802_29_10.py", [
+        lazy_problem().set_line(7)
+        .set_text("Duplicate sequence of 4 repetitions of 2 lines of code. Use a loop to avoid this."),
+        lazy_problem().set_line(15),
+        lazy_problem().set_line(25),
+        lazy_problem().set_line(37),
+    ]),
+])
+def test_duplicate_sequence(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.NO_FLAKE8, "on"), Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-sequence")],
+        expected_output
+    )
