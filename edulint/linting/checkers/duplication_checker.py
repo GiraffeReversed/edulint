@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 from edulint.linting.checkers.utils import is_parents_elif, BaseVisitor, is_any_assign, get_lines_between, \
                                            is_main_block, is_block_comment, get_statements_count
+from edulint.linting.checkers.utils import eprint
 
 class InvalidExpression(Exception):
     pass
@@ -456,7 +457,8 @@ class NoDuplicateCode(BaseChecker): # type: ignore
                 if duplicate_blocks(block1, block2, MAX_DIFF, set()):
                     self.add_message(
                         "duplicate-blocks",
-                        node=block1[0],
+                        line=block1[0].fromlineno, col_offset=block1[0].col_offset,
+                        end_lineno=block1[-1].tolineno, end_col_offset=block1[-1].end_col_offset,
                         args=(f"{block1[0].fromlineno} and {block2[0].fromlineno}",)
                     )
                     max_closed_line = block1[-1].tolineno

@@ -139,14 +139,14 @@ def test_duplicate_exprs(filename: str, expected_output: List[Problem]) -> None:
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("013145-coins.py", [
-        lazy_problem().set_line(5)
+        lazy_problem().set_line(5).set_end_line(7)
         .set_text("Duplicate blocks starting on lines 5 and 10. Extract the code to a helper function."),
-        lazy_problem().set_line(10),
-        lazy_problem().set_line(15),
-        lazy_problem().set_line(20),
+        lazy_problem().set_line(10).set_end_line(12),
+        lazy_problem().set_line(15).set_end_line(17),
+        lazy_problem().set_line(20).set_end_line(22),
     ]),
     ("024508-cards.py", [
-        lazy_problem().set_line(61)
+        lazy_problem().set_line(61).set_end_line(66),
     ])
 ])
 def test_duplicate_blocks(filename: str, expected_output: List[Problem]) -> None:
