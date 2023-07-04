@@ -357,7 +357,16 @@ class NoDuplicateCode(BaseChecker): # type: ignore
         while i < len(seq_ifs) - 1:
             count = same_ifs_count(seq_ifs, i)
             if count > 1:
-                self.add_message("duplicate-seq-ifs", node=seq_ifs[i], args=(count,))
+                first = seq_ifs[i]
+                assert isinstance(seq_ifs[i + count - 1], nodes.If)
+                last = seq_ifs[i + count - 1].body[-1]
+
+                self.add_message(
+                    "duplicate-seq-ifs",
+                    line=first.fromlineno, col_offset=first.col_offset,
+                    end_lineno=last.tolineno, end_col_offset=last.end_col_offset,
+                    args=(count,)
+                )
             i += count
 
     def duplicate_exprs(self, node: nodes.Module) -> None:

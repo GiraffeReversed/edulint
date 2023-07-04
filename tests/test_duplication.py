@@ -80,25 +80,25 @@ def test_duplicate_if_branches(filename: str, expected_output: List[Problem]) ->
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("012889-geometry.py", [
-        lazy_problem().set_line(28)
+        lazy_problem().set_line(28).set_end_line(33)
         .set_text("Identical code inside 3 consecutive ifs, join their conditions using 'or'.")
     ]),
     ("012889-pythagorean.py", [
-        lazy_problem().set_line(26)
+        lazy_problem().set_line(26).set_end_line(29)
         .set_text("Identical code inside 2 consecutive ifs, join their conditions using 'or'.")
     ]),
     ("014341-geometry.py", [
-        lazy_problem().set_line(9)
+        lazy_problem().set_line(9).set_end_line(14)
     ]),
     ("014613-next.py", [
-        lazy_problem().set_line(35)
+        lazy_problem().set_line(35).set_end_line(40)
     ]),
     ("034440-cellular.py", [
-        lazy_problem().set_line(56),
-        lazy_problem().set_line(62)
+        lazy_problem().set_line(56).set_end_line(61),
+        lazy_problem().set_line(62).set_end_line(65)
     ]),
     ("046586-person_id.py", [
-        lazy_problem().set_line(40)
+        lazy_problem().set_line(40).set_end_line(56)
         .set_text("Identical code inside 7 consecutive ifs, join their conditions using 'or'.")
     ]),
     ("052975-parse_time.py", []),
