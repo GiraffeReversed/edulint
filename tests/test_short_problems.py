@@ -301,6 +301,7 @@ class TestShort:
             lazy_problem().set_code("R6608").set_line(53).set_text("Redundant arithmetic: valid += 0"),
             lazy_problem().set_code("R6608").set_line(64).set_text("Redundant arithmetic: valid += 0"),
         ]),
+        ("ut_157_0762_16_47.py", []),
     ])
     def test_short_files(self, filename: str, expected_output: List[Problem]) -> None:
         apply_and_lint(
