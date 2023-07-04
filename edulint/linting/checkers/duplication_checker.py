@@ -562,9 +562,11 @@ class NoDuplicateCode(BaseChecker): # type: ignore
                     diffs = get_seq_diffs(block, subblock_len, start)
                     if (len(diffs) >= DUPL_SEQ_LEN and can_use_range(diffs)) or len(diffs) >= DUPL_SEQ_LEN_NO_RANGE:
                         first_subblock = block[start:start+subblock_len]
+                        last_subblock = block[start + (len(diffs) - 1) * subblock_len : start + len(diffs) * subblock_len]
                         self.add_message(
                             "duplicate-sequence",
-                            node=first_subblock[0],
+                            line=first_subblock[0].fromlineno, col_offset=first_subblock[0].col_offset,
+                            end_lineno=last_subblock[-1].tolineno, end_col_offset=last_subblock[-1].end_col_offset,
                             args=(
                                 len(diffs),
                                 get_lines_between(first_subblock[0], first_subblock[-1], including_last=True)
