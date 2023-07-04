@@ -492,6 +492,20 @@ class TestLongCode:
             expected_output
         )
 
+    @pytest.mark.parametrize("filename,expected_output", [
+        ("014422-next.py", [
+            lazy_problem().set_line(19)
+        ]),
+        ("023240-cards.py", []),
+    ])
+    def test_use_early_return(self, filename: str, expected_output: List[Problem]) -> None:
+        apply_and_lint(
+            filename,
+            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=use-early-return")],
+            expected_output
+        )
+
+
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("umime_count_a.py", [
         Arg(Option.PYTHON_SPECIFIC, "on"),
