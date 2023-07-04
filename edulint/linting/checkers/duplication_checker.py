@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
 from edulint.linting.checkers.utils import is_parents_elif, BaseVisitor, is_any_assign, get_lines_between, \
-                                           is_main_block, is_block_comment
+                                           is_main_block, is_block_comment, get_statements_count
 
 class InvalidExpression(Exception):
     pass
@@ -250,32 +250,31 @@ class NoDuplicateCode(BaseChecker): # type: ignore
                         return i
             return i + 1
 
-        def get_line_difference(branches, forward=True) -> int:
-            stmts_difference = get_stmts_difference(branches, forward)
+        def add_message(branches, stmts_difference, defect_node, forward=True) -> None:
             reference = branches[0]
-
-            if stmts_difference == 0:
-                return 0
-
             first = reference[0 if forward else -stmts_difference]
             last = reference[stmts_difference - 1 if forward else -1]
+            lines_difference = get_lines_between(first, last, including_last=True)
 
-            return get_lines_between(first, last, including_last=True)
+            self.add_message("duplicate-if-branches",
+                             node=defect_node,
+                             args=(lines_difference, "before" if forward else "after")
+            )
 
-        if not node.orelse or (is_parents_elif(node)):
+        if not node.orelse or is_parents_elif(node):
             return
 
         branches = extract_branch_bodies(node)
         if branches is None:
             return
 
-        same_prefix_len = get_line_difference(branches, forward=True)
+        same_prefix_len = get_stmts_difference(branches, forward=True)
         if same_prefix_len >= 1:
-            self.add_message("duplicate-if-branches", node=node, args=(same_prefix_len, "before"))
-            if same_prefix_len == branches[0][-1].tolineno - branches[0][0].fromlineno + 1:
+            add_message(branches, same_prefix_len, node, forward=True)
+            if any(same_prefix_len == len(b) for b in branches):
                 return
 
-        same_suffix_len = get_line_difference(branches, forward=False)
+        same_suffix_len = get_stmts_difference(branches, forward=False)
         if same_suffix_len >= 1:
             # allow early returns
             if same_suffix_len == 1 and isinstance(branches[0][-1], nodes.Return):
@@ -288,12 +287,13 @@ class NoDuplicateCode(BaseChecker): # type: ignore
             defect_node = branches[0][-1].parent
 
             # disallow breaking up coherent segments
-            if same_suffix_len / (min(
-                map(lambda branch: get_lines_between(branch[0], branch[-1], including_last=True), branches)
+            same_part = branches[0][-same_suffix_len:]
+            if get_statements_count(same_part, include_defs=True, include_name_main=True) / (min(
+                get_statements_count(branch, include_defs=True, include_name_main=True) for branch in branches
             ) - same_prefix_len) < 1/2: # TODO extract into parameter
                 return
 
-            self.add_message("duplicate-if-branches", node=defect_node, args=(same_suffix_len, "after"))
+            add_message(branches, same_suffix_len, defect_node, forward=False)
 
     def duplicate_seq_ifs(self, node: nodes.If) -> None:
 
