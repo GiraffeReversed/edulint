@@ -52,7 +52,7 @@ def main() -> int:
     try:
         result = sort(files, lint_many(partition(files, configs)))
     except TimeoutError as e:
-        print(e, file=sys.stderr)
+        print(f"edulint: {e}", file=sys.stderr)
         sys.exit(1)
 
     if args.json:
