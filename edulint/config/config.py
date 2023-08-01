@@ -208,17 +208,57 @@ def combine_and_translate(
     return Config([ProcessedArg(o, v) for o, v in zip(Option, option_vals) if v is not None])
 
 
-def get_config(
+def get_config_one(
         filename: str, cmd_args: List[str],
         option_parses: Dict[Option, OptionParse] = get_option_parses(),
         config_translations: Dict[Option, Translation] = get_config_translations(),
         ib111_translation: List[Translation] = get_ib111_translations()) -> Optional[Config]:
-    extracted = extract_args(filename) + cmd_args
-    config_path, parsed_args = parse_args(extracted, option_parses)
-    parsed_config = parse_config_file(config_path, option_parses)
-    if parsed_config is None:
+    configs = get_config_many([filename], cmd_args, option_parses, config_translations, ib111_translation)
+    if len(configs) == 0:
         return None
-    return combine_and_translate(parsed_config + parsed_args, option_parses, config_translations, ib111_translation)
+    return configs[0][1]
+
+
+def get_config_many(
+        filenames: List[str], cmd_args: List[str],
+        option_parses: Dict[Option, OptionParse] = get_option_parses(),
+        config_translations: Dict[Option, Translation] = get_config_translations(),
+        ib111_translation: List[Translation] = get_ib111_translations()) -> List[Tuple[List[str], Config]]:
+
+    def partition(
+        configs: List[Tuple[str, List[UnprocessedArg]]]
+    ) -> List[Tuple[List[str], Tuple[str, List[UnprocessedArg]]]]:
+        configs = [(f, tuple(c)) for f, c in configs]
+
+        dedup_configs = list(set(configs))
+        indices = [dedup_configs.index(config) for config in configs]
+        partitioned: List[List[str]] = [[] for _ in dedup_configs]
+
+        for i, filename in enumerate(filenames):
+            partitioned[indices[i]].append(filename)
+
+        return list(zip(partitioned, dedup_configs))
+
+    cmd_config_path, cmd_args = parse_args(cmd_args, option_parses)
+    cmd_sets_config = any(arg.option == Option.CONFIG for arg in cmd_args)
+
+    config_from_files = [parse_args(extract_args(filename), option_parses) for filename in filenames]
+
+    config_paths = {cmd_config_path} if cmd_sets_config else {c for c, _ in config_from_files}
+    config_files_args = {config_path: parse_config_file(config_path, option_parses) for config_path in config_paths}
+
+    result: List[Tuple[List[str], Config]] = []
+    for files, (linted_config_path, linted_file_args) in partition(config_from_files):
+        config_path = cmd_config_path if cmd_sets_config else linted_config_path
+        config_file_args = config_files_args[config_path]
+        if config_file_args is None:
+            continue
+        config = combine_and_translate(
+            config_file_args + list(linted_file_args) + cmd_args,
+            option_parses, config_translations, ib111_translation
+        )
+        result.append((files, config))
+    return result
 
 
 def get_cmd_args(args: Namespace) -> List[str]:

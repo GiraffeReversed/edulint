@@ -1,7 +1,7 @@
-from edulint.config.config import Config, get_config, get_cmd_args
+from edulint.config.config import get_config_many, get_cmd_args
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort
-from typing import List, Tuple, Optional
+from typing import List, Optional
 import argparse
 import os
 import sys
@@ -31,29 +31,15 @@ def extract_files(files_or_dirs: List[str], result: List[str] = None) -> List[st
     return extract_files_rec(None, files_or_dirs, [])
 
 
-def partition(files: List[str], configs: List[Config]) -> List[Tuple[List[str], Config]]:
-    dedup_configs = list(set(configs))
-    indices = [dedup_configs.index(config) for config in configs]
-    partitioned: List[List[str]] = [[] for _ in dedup_configs]
-
-    for i, filename in enumerate(files):
-        partitioned[indices[i]].append(filename)
-
-    if None in dedup_configs:
-        partitioned.pop(dedup_configs.index(None))
-
-    return list(zip(partitioned, dedup_configs))
-
-
 def main() -> int:
     args = setup_argparse()
     cmd_args = get_cmd_args(args)
 
     files = extract_files(args.files_or_dirs)
-    configs = [get_config(filename, cmd_args=cmd_args) for filename in files]
+    file_configs = get_config_many(files, cmd_args)
 
     try:
-        result = sort(files, lint_many(partition(files, configs)))
+        result = sort(files, lint_many(file_configs))
     except TimeoutError as e:
         print(f"edulint: {e}", file=sys.stderr)
         sys.exit(1)
