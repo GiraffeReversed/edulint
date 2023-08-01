@@ -18,6 +18,7 @@ ImmutableT = Union[bool, Tuple[str, ...], Optional[str], Optional[int]]
 
 class Option(NumberFromZero):
 
+    CONFIG = ()
     PYLINT = ()
     FLAKE8 = ()
     ENHANCEMENT = ()
@@ -118,7 +119,18 @@ class OptionParse:
     combine: Combine
 
 
+DEFAULT_CONFIG = "default"
+BASE_CONFIG = "empty"
+
 OPTIONS: List[OptionParse] = [
+    OptionParse(
+        Option.CONFIG,
+        "config file to use for the linting",
+        TakesVal.YES,
+        DEFAULT_CONFIG,
+        Type.STR,
+        Combine.REPLACE
+    ),
     OptionParse(
         Option.PYLINT,
         "arguments to be passed to pylint",

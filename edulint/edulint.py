@@ -39,6 +39,9 @@ def partition(files: List[str], configs: List[Config]) -> List[Tuple[List[str], 
     for i, filename in enumerate(files):
         partitioned[indices[i]].append(filename)
 
+    if None in dedup_configs:
+        partitioned.pop(dedup_configs.index(None))
+
     return list(zip(partitioned, dedup_configs))
 
 

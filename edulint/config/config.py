@@ -1,7 +1,10 @@
 from edulint.config.arg import ProcessedArg, UnprocessedArg, ImmutableArg
-from edulint.options import UnionT, ImmutableT, Option, TakesVal, OptionParse, get_option_parses, get_name_to_option
+from edulint.linters import Linter
+from edulint.options import (UnionT, ImmutableT, Option, DEFAULT_CONFIG, BASE_CONFIG, TakesVal, OptionParse,
+                             get_option_parses, get_name_to_option)
+from edulint.config.file_config import load_toml_file
 from edulint.config.config_translations import get_config_translations, get_ib111_translations, Translation
-from typing import Dict, List, Optional, Tuple, Iterator
+from typing import Dict, List, Optional, Tuple, Iterator, Any
 from dataclasses import dataclass
 from argparse import Namespace
 import re
@@ -64,7 +67,26 @@ def extract_args(filename: str) -> List[str]:
     return result
 
 
-def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> List[UnprocessedArg]:
+def parse_option(
+        option_parses: Dict[Option, OptionParse], name_to_option: Dict[str, Option],
+        name: str, val: Optional[str]
+) -> Optional[Option]:
+    option = name_to_option.get(name)
+
+    if option is None:
+        print(f"edulint: unrecognized option {name}", file=sys.stderr)
+    else:
+        option_parse = option_parses[option]
+        if option_parse.takes_val == TakesVal.YES and val is None:
+            print(f"edulint: option {name} takes an argument but none was supplied", file=sys.stderr)
+        elif option_parse.takes_val == TakesVal.NO and val is not None:
+            print(f"edulint: option {name} takes no argument but {val} was supplied", file=sys.stderr)
+        else:
+            return option
+    return None
+
+
+def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Tuple[str, List[UnprocessedArg]]:
     name_to_option = get_name_to_option(option_parses)
 
     def get_name_val(arg: str) -> Tuple[str, Optional[str]]:
@@ -74,20 +96,66 @@ def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Lis
         return arg, None
 
     result: List[UnprocessedArg] = []
+    config_path = DEFAULT_CONFIG
     for arg in args:
         name, val = get_name_val(arg)
-        option = name_to_option.get(name)
+        option = parse_option(option_parses, name_to_option, name, val)
+        if option is not None:
+            result.append(UnprocessedArg(option, val))
+        if option == Option.CONFIG and val is not None:
+            config_path = val
 
-        if option is None:
-            print(f"edulint: unrecognized option {name}", file=sys.stderr)
+    return config_path, result
+
+
+def parse_config_file(path: str, option_parses: Dict[Option, OptionParse]) -> Optional[List[UnprocessedArg]]:
+
+    def print_invalid_type_message(option: Option, val: Any) -> None:
+        print(f"edulint: invalid value type {type(val)} of value {val} for option {Option.CONFIG}")
+
+    def parse_base_config(config_dict: Dict[str, Any]) -> List[UnprocessedArg]:
+        rec_config = config_dict.get(Option.CONFIG.to_name(), BASE_CONFIG)
+        if not isinstance(rec_config, str):
+            print_invalid_type_message(Option.CONFIG, rec_config)
+            rec_config = BASE_CONFIG
+        return parse_config_file(rec_config, option_parses)
+
+    def val_to_str(option: Option, val: Any) -> Optional[str]:
+        if isinstance(val, str):
+            return val
+        if isinstance(val, list):
+            return ",".join(val)
+        if isinstance(val, tuple):
+            key, value = val
+            value = val_to_str(option, value)
+            return f"--{key}={value}" if value is not None else None
+        print_invalid_type_message(option, val)
+        return None
+
+    config_dict = load_toml_file(path)
+    if config_dict is None:
+        return None
+
+    result = parse_base_config(config_dict) if path != BASE_CONFIG else []
+
+    name_to_option = get_name_to_option(option_parses)
+    for name, val in config_dict.items():
+        option = parse_option(option_parses, name_to_option, name, val)
+        if option is None or option == Option.CONFIG:  # config is handled as the first option
+            continue
+
+        if not isinstance(val, dict):
+            to_process = [val]
+        elif option.to_name() not in {linter.to_name() for linter in Linter}:
+            print_invalid_type_message(val, option)
+            continue
         else:
-            option_parse = option_parses[option]
-            if option_parse.takes_val == TakesVal.YES and val is None:
-                print(f"edulint: option {name} takes an argument but none was supplied", file=sys.stderr)
-            elif option_parse.takes_val == TakesVal.NO and val is not None:
-                print(f"edulint: option {name} takes no argument but {val} was supplied", file=sys.stderr)
-            else:
-                result.append(UnprocessedArg(option, val))
+            to_process = val.items()
+
+        for val in to_process:
+            str_val = val_to_str(option, val)
+            if str_val is not None:
+                result.append(UnprocessedArg(option, str_val))
 
     return result
 
@@ -144,10 +212,13 @@ def get_config(
         filename: str, cmd_args: List[str],
         option_parses: Dict[Option, OptionParse] = get_option_parses(),
         config_translations: Dict[Option, Translation] = get_config_translations(),
-        ib111_translation: List[Translation] = get_ib111_translations()) -> Config:
+        ib111_translation: List[Translation] = get_ib111_translations()) -> Optional[Config]:
     extracted = extract_args(filename) + cmd_args
-    parsed = parse_args(extracted, option_parses)
-    return combine_and_translate(parsed, option_parses, config_translations, ib111_translation)
+    config_path, parsed_args = parse_args(extracted, option_parses)
+    parsed_config = parse_config_file(config_path, option_parses)
+    if parsed_config is None:
+        return None
+    return combine_and_translate(parsed_config + parsed_args, option_parses, config_translations, ib111_translation)
 
 
 def get_cmd_args(args: Namespace) -> List[str]:

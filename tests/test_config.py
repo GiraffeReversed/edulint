@@ -1,7 +1,7 @@
 import pytest
 from edulint.linters import Linter
 from edulint.config.arg import UnprocessedArg, ProcessedArg
-from edulint.options import Option, TakesVal, Type, Combine, OptionParse, get_option_parses
+from edulint.options import Option, TakesVal, Type, Combine, OptionParse, get_option_parses, DEFAULT_CONFIG
 from edulint.config.config import Config, extract_args, parse_args, combine_and_translate
 from edulint.config.config_translations import get_config_translations, Translation
 from edulint.linting.tweakers import get_tweakers
@@ -20,7 +20,7 @@ def advertised_options(all_advertised_options: List[Option]) -> Set[Option]:
 
 @pytest.fixture
 def always_managed_options() -> Set[Option]:
-    return set((Option.PYLINT, Option.FLAKE8, Option.IB111_WEEK, Option.NO_FLAKE8))
+    return set((Option.CONFIG, Option.PYLINT, Option.FLAKE8, Option.IB111_WEEK, Option.NO_FLAKE8))
 
 
 @pytest.fixture
@@ -103,23 +103,25 @@ def options() -> Dict[Option, OptionParse]:
     return {
         Option.PYTHON_SPECIFIC: OptionParse(Option.PYTHON_SPECIFIC, "", TakesVal.NO, False, Type.BOOL, Combine.REPLACE),
         Option.FLAKE8: OptionParse(Option.FLAKE8, "", TakesVal.YES, [], Type.STR, Combine.APPEND),
-        Option.IB111_WEEK: OptionParse(Option.IB111_WEEK, "", TakesVal.YES, None, Type.INT, Combine.REPLACE)
+        Option.IB111_WEEK: OptionParse(Option.IB111_WEEK, "", TakesVal.YES, None, Type.INT, Combine.REPLACE),
+        Option.CONFIG: OptionParse(Option.CONFIG, "", TakesVal.YES, DEFAULT_CONFIG, Type.STR, Combine.REPLACE)
     }
 
 
 @pytest.mark.parametrize("raw,parsed", [
-    (["python-specific"], [UnprocessedArg(Option.PYTHON_SPECIFIC, None)]),
-    (["python-spec"], [UnprocessedArg(Option.PYTHON_SPECIFIC, None)]),
-    (["flake8=foo"], [UnprocessedArg(Option.FLAKE8, "foo")]),
-    (["flake8="], [UnprocessedArg(Option.FLAKE8, "")]),
-    (["python-specific", "flake8=foo"], [
-        UnprocessedArg(Option.PYTHON_SPECIFIC, None), UnprocessedArg(Option.FLAKE8, "foo")
-    ]),
-    (["flake8=--enable=xxx"], [UnprocessedArg(Option.FLAKE8, "--enable=xxx")]),
-    (["ib111-week=02"], [UnprocessedArg(Option.IB111_WEEK, "02")]),
-    (["ib111-week=12", "ib111-week=02"], [
-        UnprocessedArg(Option.IB111_WEEK, "12"), UnprocessedArg(Option.IB111_WEEK, "02")
-    ]),
+    (["python-specific"], ("default", [UnprocessedArg(Option.PYTHON_SPECIFIC, None)])),
+    (["python-spec"], ("default", [UnprocessedArg(Option.PYTHON_SPECIFIC, None)])),
+    (["flake8=foo"], ("default", [UnprocessedArg(Option.FLAKE8, "foo")])),
+    (["flake8="], ("default", [UnprocessedArg(Option.FLAKE8, "")])),
+    (["python-specific", "flake8=foo"], ("default", [
+       UnprocessedArg(Option.PYTHON_SPECIFIC, None), UnprocessedArg(Option.FLAKE8, "foo")
+    ])),
+    (["flake8=--enable=xxx"], ("default", [UnprocessedArg(Option.FLAKE8, "--enable=xxx")])),
+    (["ib111-week=02"], ("default", [UnprocessedArg(Option.IB111_WEEK, "02")])),
+    (["ib111-week=12", "ib111-week=02"], ("default", [
+       UnprocessedArg(Option.IB111_WEEK, "12"), UnprocessedArg(Option.IB111_WEEK, "02")
+    ])),
+    (["config=empty"], ("empty", [UnprocessedArg(Option.CONFIG, "empty")]))
 ])
 def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: List[UnprocessedArg]) -> None:
     assert parse_args(raw, options) == parsed
