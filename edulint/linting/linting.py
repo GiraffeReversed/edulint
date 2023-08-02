@@ -9,7 +9,6 @@ from edulint.linters import Linter
 from functools import partial
 import sys
 import json
-import pathlib
 import os
 
 
@@ -111,8 +110,7 @@ def lint_flake8(filenames: List[str], config: Config) -> List[Problem]:
 
 
 def lint_pylint(filenames: List[str], config: Config) -> List[Problem]:
-    pylintrc = (pathlib.Path(__file__).parent / ".pylintrc").resolve()
-    pylint_args = [f"--rcfile={pylintrc}", "--output-format=json"]
+    pylint_args = ["--output-format=json"]
     return lint_any(
         Linter.PYLINT,
         filenames,

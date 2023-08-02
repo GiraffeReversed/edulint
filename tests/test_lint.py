@@ -2,23 +2,21 @@ import pytest
 from edulint.linters import Linter
 from edulint.options import Option
 from edulint.config.arg import Arg
-from edulint.config.config import Config
 from edulint.linting.problem import Problem
-from edulint.linting.linting import lint_one
-from utils import lazy_problem, lazy_equal, get_tests_path, apply_and_lint, create_apply_and_lint
+from utils import lazy_problem, apply_and_lint, create_apply_and_lint
 from typing import List
 
 
-@pytest.mark.parametrize("filename,config,expected_output", [
-    ("hello_world.py", Config(), []),
-    ("z202817-zkouska.py", Config(), [
+@pytest.mark.parametrize("filename,args,expected_output", [
+    ("hello_world.py", [], []),
+    ("z202817-zkouska.py", [], [
         lazy_problem().set_code("R6609").set_line(10),
         lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("R6101").set_line(171),
         lazy_problem().set_code("W0107").set_line(196)
     ]),
-    ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115"])]), [
+    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--enable=C0115")], [
         lazy_problem().set_code("R6609").set_line(10),
         lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6205").set_line(82),
@@ -27,16 +25,15 @@ from typing import List
         lazy_problem().set_code("R6101").set_line(171),
         lazy_problem().set_code("W0107").set_line(196)
     ]),
-    ("z202817-zkouska.py", Config([Arg(Option.PYLINT, ["--enable=C0115", "--disable=W0107,R6609"])]), [
+    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--enable=C0115"), Arg(Option.PYLINT, "--disable=W0107,R6609")], [
         lazy_problem().set_code("R6303").set_line(42),
         lazy_problem().set_code("R6205").set_line(82),
         lazy_problem().set_code("C0115").set_line(122),
         lazy_problem().set_code("C0115").set_line(128),
         lazy_problem().set_code("R6101").set_line(171),
     ]),
-    ("z202817-zkouska.py",
-     Config([Arg(Option.PYLINT, ["--disable=all"])]), []),
-    ("002814-p1_trapezoid.py", Config(), [
+    ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all")], []),
+    ("002814-p1_trapezoid.py", [], [
         lazy_problem().set_code("F401").set_line(1),
         lazy_problem().set_code("F401").set_line(1),
         lazy_problem().set_code("E501").set_line(1),
@@ -44,8 +41,8 @@ from typing import List
         lazy_problem().set_code("E303").set_line(22),
     ])
 ])
-def test_lint_basic(filename: str, config: Config, expected_output: List[Problem]) -> None:
-    lazy_equal(lint_one(get_tests_path(filename), config), expected_output)
+def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    apply_and_lint(filename, args, expected_output)
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [

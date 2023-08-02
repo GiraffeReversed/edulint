@@ -8,6 +8,7 @@ load-plugins = [
     "edulint.linting.checkers.duplication_checker",
 ]
 disable = "all"
+good-names = "_"
 
 [flake8]
 ignore = "F,E,W,C"
