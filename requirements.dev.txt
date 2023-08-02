@@ -1,4 +1,4 @@
-requests==2.28.2
+requests>=2.31.0
 tomli-w==1.0.0
 tqdm==4.64.1
 build
