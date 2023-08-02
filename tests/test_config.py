@@ -2,10 +2,11 @@ import pytest
 from edulint.linters import Linter
 from edulint.config.arg import UnprocessedArg, ProcessedArg
 from edulint.options import Option, TakesVal, Type, Combine, OptionParse, get_option_parses, DEFAULT_CONFIG
-from edulint.config.config import Config, extract_args, parse_args, combine_and_translate
+from edulint.config.config import Config, extract_args, parse_args, parse_config_file, combine_and_translate
 from edulint.config.config_translations import get_config_translations, Translation
 from edulint.linting.tweakers import get_tweakers
 from typing import List, Set, Dict
+from pathlib import Path
 
 
 @pytest.fixture
@@ -125,6 +126,18 @@ def options() -> Dict[Option, OptionParse]:
 ])
 def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: List[UnprocessedArg]) -> None:
     assert parse_args(raw, options) == parsed
+
+
+def packaged_config_files():
+    packaged_config_dir = Path(__file__).parent / ".." / "edulint" / "config" / "files"
+    return [c.stem for c in packaged_config_dir.iterdir() if c.suffix == ".toml"]
+
+
+@pytest.mark.parametrize("config_name", packaged_config_files())
+def test_packaged_configs_parse(config_name: str):
+    option_parses = get_option_parses()
+    print(config_name)
+    assert parse_config_file(config_name, option_parses) is not None
 
 
 @pytest.fixture
