@@ -22,7 +22,7 @@ def setup_argparse() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def extract_files(files_or_dirs: List[str], result: List[str] = None) -> List[str]:
+def extract_files(files_or_dirs: List[str]) -> List[str]:
     def extract_files_rec(
         prefix: Optional[str], files_or_dirs: List[str], result: List[str]
     ) -> List[str]:

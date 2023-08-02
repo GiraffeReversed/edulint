@@ -1,7 +1,7 @@
 from pathlib import Path
 import string
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import sys
 
 import tomli
@@ -25,7 +25,7 @@ class InvalidConfigFile(EduLintConfigFileException):
     pass
 
 
-def load_toml_file(filename_or_url: str) -> Dict[str, Any]:
+def load_toml_file(filename_or_url: str) -> Optional[Dict[str, Any]]:
     try:
         file_content = _load_file_from_uri(filename_or_url)
     except Exception as e:

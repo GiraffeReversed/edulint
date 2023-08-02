@@ -5,7 +5,7 @@
 # https://github.com/pyta-uoft/pyta/blob/683505e2a910c2a252739094593406e4e0f29a85/python_ta/checkers/top_level_code_checker.py
 
 
-from typing import Union
+from typing import TYPE_CHECKING, Union, List
 
 import re
 
@@ -13,6 +13,9 @@ from astroid import nodes
 from pylint.checkers import BaseChecker
 from pylint.checkers.base import UpperCaseStyle
 from pylint.checkers.utils import only_required_for_messages
+
+if TYPE_CHECKING:
+    from pylint.lint import PyLinter
 
 from edulint.linting.checkers.utils import is_main_block
 
@@ -65,12 +68,12 @@ class OneIterationChecker(BaseChecker):
 
     # pass in message symbol as a parameter of only_required_for_messages
     @only_required_for_messages("one-iteration")
-    def visit_for(self, node):
+    def visit_for(self, node: nodes.For) -> None:
         if self._check_one_iteration(node):
             self.add_message("one-iteration", node=node)
 
     @only_required_for_messages("one-iteration")
-    def visit_while(self, node):
+    def visit_while(self, node: nodes.While) -> None:
         if self._check_one_iteration(node):
             self.add_message("one-iteration", node=node)
 
@@ -116,7 +119,7 @@ class ShadowingInComprehensionChecker(BaseChecker):
     priority = -1
 
     @only_required_for_messages("shadowing-in-comprehension")
-    def visit_comprehension(self, node: nodes.Comprehension):
+    def visit_comprehension(self, node: nodes.Comprehension) -> None:
         if isinstance(node.target, nodes.Tuple):
             for target in node.target.elts:
                 if (
@@ -147,7 +150,7 @@ class TopLevelCodeChecker(BaseChecker):
     priority = -1
 
     @only_required_for_messages("forbidden-top-level-code")
-    def visit_module(self, node):
+    def visit_module(self, node: nodes.Module) -> None:
         for statement in node.body:
             if not (
                 _is_import(statement)
@@ -159,39 +162,39 @@ class TopLevelCodeChecker(BaseChecker):
 
 
 # Helper functions
-def _is_import(statement) -> bool:
+def _is_import(statement: nodes.NodeNG) -> bool:
     """
     Return whether or not <statement> is an Import or an ImportFrom.
     """
     return isinstance(statement, (nodes.Import, nodes.ImportFrom))
 
 
-def _is_definition(statement) -> bool:
+def _is_definition(statement: nodes.NodeNG) -> bool:
     """
     Return whether or not <statement> is a function definition or a class definition.
     """
     return isinstance(statement, (nodes.FunctionDef, nodes.ClassDef))
 
 
-def _is_constant_assignment(statement) -> bool:
+def _is_constant_assignment(statement: nodes.NodeNG) -> bool:
     """
     Return whether or not <statement> is a constant assignment.
     """
     if not isinstance(statement, nodes.Assign):
         return False
 
-    names = []
+    names: List[str] = []
     for target in statement.targets:
         names.extend(node.name for node in target.nodes_of_class(nodes.AssignName, nodes.Name))
 
     return all(re.match(UpperCaseStyle.CONST_NAME_RGX, name) for name in names)
 
 
-def _is_assignment(statement) -> bool:
+def _is_assignment(statement: nodes.NodeNG) -> bool:
     return isinstance(statement, nodes.Assign)
 
 
-def register(linter):
+def register(linter: "PyLinter") -> None:
     linter.register_checker(InvalidForTargetChecker(linter))
     linter.register_checker(OneIterationChecker(linter))
     linter.register_checker(ShadowingInComprehensionChecker(linter))

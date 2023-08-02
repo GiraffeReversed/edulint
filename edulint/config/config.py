@@ -149,7 +149,7 @@ def parse_config_file(
     def print_invalid_type_message(option: Option, val: Any) -> None:
         print(f"edulint: invalid value type {type(val)} of value {val} for option {Option.CONFIG}")
 
-    def parse_base_config(config_dict: Dict[str, Any]) -> List[UnprocessedArg]:
+    def parse_base_config(config_dict: Dict[str, Any]) -> Optional[List[UnprocessedArg]]:
         rec_config = config_dict.get(Option.CONFIG.to_name(), BASE_CONFIG)
         if not isinstance(rec_config, str):
             print_invalid_type_message(Option.CONFIG, rec_config)
@@ -173,6 +173,8 @@ def parse_config_file(
         return None
 
     result = parse_base_config(config_dict) if path != BASE_CONFIG else []
+    if result is None:
+        return None
 
     name_to_option = get_name_to_option(option_parses)
     for name, val in config_dict.items():
@@ -183,10 +185,10 @@ def parse_config_file(
         if not isinstance(val, dict):
             to_process = [val]
         elif option.to_name() not in {linter.to_name() for linter in Linter}:
-            print_invalid_type_message(val, option)
+            print_invalid_type_message(option, val)
             continue
         else:
-            to_process = val.items()
+            to_process = list(val.items())
 
         for val in to_process:
             str_val = val_to_str(option, val)
@@ -264,7 +266,7 @@ def get_config_one(
 
 def get_config_many(
     filenames: List[str],
-    cmd_args: List[str],
+    cmd_args_raw: List[str],
     option_parses: Dict[Option, OptionParse] = get_option_parses(),
     config_translations: Dict[Option, Translation] = get_config_translations(),
     ib111_translation: List[Translation] = get_ib111_translations(),
@@ -272,18 +274,18 @@ def get_config_many(
     def partition(
         configs: List[Tuple[str, List[UnprocessedArg]]]
     ) -> List[Tuple[List[str], Tuple[str, List[UnprocessedArg]]]]:
-        configs = [(f, tuple(c)) for f, c in configs]
+        immutable_configs = [(f, tuple(c)) for f, c in configs]
 
-        dedup_configs = list(set(configs))
-        indices = [dedup_configs.index(config) for config in configs]
+        dedup_configs = list(set(immutable_configs))
+        indices = [dedup_configs.index(config) for config in immutable_configs]
         partitioned: List[List[str]] = [[] for _ in dedup_configs]
 
         for i, filename in enumerate(filenames):
             partitioned[indices[i]].append(filename)
 
-        return list(zip(partitioned, dedup_configs))
+        return list(zip(partitioned, [(f, list(c)) for f, c in dedup_configs]))
 
-    cmd_config_path, cmd_args = parse_args(cmd_args, option_parses)
+    cmd_config_path, cmd_args = parse_args(cmd_args_raw, option_parses)
     cmd_sets_config = any(arg.option == Option.CONFIG for arg in cmd_args)
 
     config_from_files = [
@@ -302,7 +304,7 @@ def get_config_many(
         if config_file_args is None:
             continue
         config = combine_and_translate(
-            config_file_args + list(linted_file_args) + cmd_args,
+            config_file_args + linted_file_args + cmd_args,
             option_parses,
             config_translations,
             ib111_translation,

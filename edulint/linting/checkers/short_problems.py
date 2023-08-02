@@ -1,11 +1,11 @@
 from astroid import nodes  # type: ignore
 from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Callable
 
-from pylint.checkers import BaseChecker  # type: ignore
+from pylint.checkers import BaseChecker
 from pylint.checkers.utils import only_required_for_messages
 
 if TYPE_CHECKING:
-    from pylint.lint import PyLinter  # type: ignore
+    from pylint.lint import PyLinter
 
 from edulint.linting.checkers.utils import get_range_params, get_const_value, infer_to_value
 
@@ -246,7 +246,7 @@ class Short(BaseChecker):
                 args=(target, node.value.op, param.as_string()),
             )
 
-        def is_immutable(node: nodes.NodeNG):
+        def is_immutable(node: nodes.NodeNG) -> bool:
             if isinstance(node, (nodes.Const)) and isinstance(
                 node.value, (int, float, bool, str, bytes, tuple)
             ):
@@ -442,7 +442,7 @@ class Short(BaseChecker):
         return ord(" ") <= value < 127  # chr(127) is weird
 
     def _check_use_ord_letter(self, node: nodes.BinOp) -> None:
-        def add_message(param: nodes.NodeNG, value: int, suggestion: str):
+        def add_message(param: nodes.NodeNG, value: int, suggestion: str) -> None:
             self.add_message("use-ord-letter", node=param, args=(suggestion, value))
 
         if node.op not in ("+", "-"):
@@ -478,7 +478,7 @@ class Short(BaseChecker):
         def add_message(param: nodes.NodeNG, value: int, suggestion: str) -> None:
             self.add_message("use-literal-letter", node=param, args=(suggestion, value))
 
-        def change(op: str):
+        def change(op: str) -> str:
             if op == "<":
                 return "<="
             if op == "<=":

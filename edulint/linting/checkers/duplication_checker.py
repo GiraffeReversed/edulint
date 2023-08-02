@@ -1,5 +1,5 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Set, Any
+from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Set, Any, Dict
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -22,7 +22,7 @@ class InvalidExpression(Exception):
     pass
 
 
-class DuplicateExprVisitor(BaseVisitor):
+class DuplicateExprVisitor(BaseVisitor[None]):
     EXPR_FUNCTIONS = {
         "abs",
         "max",
@@ -43,12 +43,12 @@ class DuplicateExprVisitor(BaseVisitor):
         "chr",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.long_expressions = {}
+        self.long_expressions: Dict[str, List[nodes.NodeNG]] = {}
 
     @classmethod
-    def _compute_complexity(cls, node: nodes.NodeNG) -> Optional[int]:
+    def _compute_complexity(cls, node: nodes.NodeNG) -> int:
         fun = cls._compute_complexity
 
         if isinstance(node, (nodes.Attribute, nodes.Subscript)) and is_any_assign(node.parent):
@@ -152,9 +152,9 @@ class DuplicateExprVisitor(BaseVisitor):
         self._process_expr(node)
 
 
-class CollectBlocksVisitor(BaseVisitor):
-    def __init__(self):
-        self.blocks = []
+class CollectBlocksVisitor(BaseVisitor[None]):
+    def __init__(self) -> None:
+        self.blocks: List[List[nodes.NodeNG]] = []
 
     def visit_if(self, node: nodes.If) -> None:
         self.blocks.append(node.body)
@@ -268,7 +268,7 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             branches.append(current.orelse)
             return branches
 
-        def get_stmts_difference(branches, forward) -> int:
+        def get_stmts_difference(branches: List[nodes.NodeNG], forward: bool) -> int:
             reference = branches[0]
             compare = branches[1:]
             for i in range(min(map(len, branches))):
@@ -278,7 +278,12 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
                         return i
             return i + 1
 
-        def add_message(branches, stmts_difference, defect_node, forward=True) -> None:
+        def add_message(
+            branches: List[nodes.NodeNG],
+            stmts_difference: int,
+            defect_node: nodes.NodeNG,
+            forward: bool = True,
+        ) -> None:
             reference = branches[0]
             first = reference[0 if forward else -stmts_difference]
             last = reference[stmts_difference - 1 if forward else -1]
@@ -337,7 +342,7 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
         returns False iff elifs end with else
         """
 
-        def extract_from_elif(node: nodes.If, seq_ifs: List[List[nodes.NodeNG]]) -> bool:
+        def extract_from_elif(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> bool:
             if len(node.orelse) > 0 and not node.has_elif_block():
                 return False
 
@@ -350,20 +355,17 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
                 current = elif_
             return True
 
-        def extract_from_siblings(
-            node: nodes.If, seq_ifs: List[List[nodes.NodeNG]]
-        ) -> List[List[nodes.NodeNG]]:
+        def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
             sibling = node.next_sibling()
             while sibling is not None and isinstance(sibling, nodes.If):
-                new = []
+                new: List[nodes.NodeNG] = []
                 if not extract_from_elif(sibling, new):
                     return
                 seq_ifs.append(sibling)
                 seq_ifs.extend(new)
                 sibling = sibling.next_sibling()
-            return seq_ifs
 
-        def same_ifs_count(seq_ifs: List[List[nodes.NodeNG]], start: int) -> int:
+        def same_ifs_count(seq_ifs: List[nodes.NodeNG], start: int) -> int:
             reference = seq_ifs[start].body
             for i in range(start + 1, len(seq_ifs)):
                 # do not suggest join of elif and sibling
@@ -521,7 +523,7 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
                     break
 
     def duplicate_sequence(self, node: nodes.Module) -> None:
-        def can_use_range(diffs: List[Any]):
+        def can_use_range(diffs: List[Any]) -> bool:
             if all(e is None for e in diffs):
                 return True
             if not all(isinstance(e, int) for e in diffs):
@@ -600,7 +602,7 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
 
         def get_seq_diffs(block: List[nodes.NodeNG], subblock_len: int, start: int) -> List[Any]:
             path = None
-            diffs = []
+            diffs: List[Any] = []
             for i in range(start, len(block) - subblock_len, subblock_len):
                 subblock1 = block[i : i + subblock_len]
                 subblock2 = block[i + subblock_len : i + 2 * subblock_len]
@@ -629,7 +631,7 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
 
             return diffs
 
-        def process_block(self, block: List[nodes.NodeNG]) -> None:
+        def process_block(self: "NoDuplicateCode", block: List[nodes.NodeNG]) -> None:
             max_subblock_len = len(block) // DUPL_SEQ_LEN
 
             if max_subblock_len == 0:

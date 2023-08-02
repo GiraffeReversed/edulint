@@ -1,5 +1,5 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple, Union, List
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -88,14 +88,16 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 args=(get_name(get_assigned_to(then)[0]), new_cond),
             )
 
-    def _get_refactored(self, *args) -> str:
+    def _get_refactored(self, *args: Union[str, nodes.NodeNG]) -> str:
         result = []
         i = 0
         while i < len(args):
             arg = args[i]
             if isinstance(arg, str) and arg == "not":
-                refactored = args[i + 1].as_string()
-                if isinstance(args[i + 1], nodes.BoolOp):
+                v = args[i + 1]
+                assert isinstance(v, nodes.NodeNG)
+                refactored = v.as_string()
+                if isinstance(v, nodes.BoolOp):
                     result.append(f"<negated ({refactored})>")
                 else:
                     result.append(f"<negated {refactored}>")
@@ -120,7 +122,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return " ".join(result)
 
-    def _names_assigned_to(self, node: nodes.NodeNG):
+    def _names_assigned_to(self, node: nodes.NodeNG) -> List[str]:
         return sorted([get_name(t) for t in get_assigned_to(node)])
 
     def _get_then_orelse(self, node: nodes.If) -> Optional[Tuple[nodes.NodeNG, nodes.NodeNG]]:

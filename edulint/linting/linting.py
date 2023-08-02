@@ -1,11 +1,10 @@
 from typing import List, Callable, Tuple, Dict, Set, Any
-from edulint.config.arg import ImmutableArg
 from edulint.linting.problem import ProblemJson, Problem
 from edulint.linting.process_handler import ProcessHandler
 from edulint.linting.overrides import get_overriders
 from edulint.linting.tweakers import get_tweakers, Tweakers
 from edulint.config.config import Config
-from edulint.options import Option
+from edulint.options import Option, ImmutableT
 from edulint.linters import Linter
 from functools import partial
 import sys
@@ -74,7 +73,7 @@ def lint_any(
     linter: Linter,
     filenames: List[str],
     linter_args: List[str],
-    config_arg: ImmutableArg,
+    config_arg: ImmutableT,
     result_getter: Callable[[Any], Any],
     out_to_problem: Callable[[ProblemJson], Problem],
 ) -> List[Problem]:

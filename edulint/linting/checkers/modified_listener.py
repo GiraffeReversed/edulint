@@ -15,11 +15,11 @@ class ModifiedListener(BaseVisitor[T]):
 
     def __init__(self, watched: List[Named]):
         self.watched = watched
-        self.modified = {get_name(var): [] for var in watched}
+        self.modified: Dict[str, List[nodes.NodeNG]] = {get_name(var): [] for var in watched}
         self.stack = [{get_name(var): var.scope() for var in watched}]
         super().__init__()
 
-    def _init_var_in_scope(self, node: nodes.NodeNG) -> T:
+    def _init_var_in_scope(self, node: nodes.NodeNG) -> None:
         self.stack[-1][get_name(node)] = node.scope()
 
     def visit_functiondef(self, node: nodes.FunctionDef) -> T:
@@ -87,7 +87,8 @@ class ModifiedListener(BaseVisitor[T]):
 
     def _is_same_var(self, var: Named, node: Named) -> bool:
         varname = get_name(var)
-        return varname == get_name(node) and self._get_var_scope(varname)[varname] == var.scope()
+        scope = self._get_var_scope(varname)
+        return varname == get_name(node) and scope is not None and scope[varname] == var.scope()
 
     def _visit_assigned_to(self, node: nodes.NodeNG) -> None:
         stripped = self._strip(node)

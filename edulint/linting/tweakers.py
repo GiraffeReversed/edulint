@@ -103,7 +103,7 @@ def no_repeated_op_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg
 
     match = self.match(problem)
     expr = match.group(1)
-    return args[0].val or expr.count("*") > 1
+    return bool(args[0].val) or expr.count("*") > 1
 
 
 Tweakers = Dict[Tuple[Linter, str], Tweaker]

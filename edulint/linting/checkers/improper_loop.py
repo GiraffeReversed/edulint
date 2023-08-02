@@ -1,5 +1,5 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, List, Tuple, Iterator, Set
+from typing import TYPE_CHECKING, List, Tuple, Iterator, Set, Optional
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -56,7 +56,7 @@ class ImproperLoop(BaseChecker):
 
     def _check_use_for_loop(self, node: nodes.While) -> None:
         def get_relevant_vals(
-            node: nodes.NodeNG, result: Set[nodes.NodeNG] = None
+            node: nodes.NodeNG, result: Optional[Set[nodes.NodeNG]] = None
         ) -> Tuple[bool, Set[nodes.NodeNG]]:
             result = result if result is not None else set()
 
@@ -114,7 +114,7 @@ class ImproperLoop(BaseChecker):
             return
 
         all_vals = lt_vals | rt_vals
-        listener = ModifiedListener(all_vals)
+        listener: ModifiedListener[None] = ModifiedListener(list(all_vals))
         listener.visit_many(node.body)
 
         all_modifiers = [(val in lt_vals, listener.get_all_modifiers(val)) for val in all_vals]
@@ -218,13 +218,13 @@ class ImproperLoop(BaseChecker):
             #                    allow longer bodies
 
     @staticmethod
-    def _get_block_line(node: nodes.NodeNG):
+    def _get_block_line(node: nodes.NodeNG) -> nodes.NodeNG:
         while not isinstance(node, nodes.Statement):
             node = node.parent
         return node
 
     @staticmethod
-    def _get_last_block_line(node: nodes.NodeNG):
+    def _get_last_block_line(node: nodes.NodeNG) -> nodes.NodeNG:
         node = ImproperLoop._get_block_line(node)
 
         while node.next_sibling() is not None:
@@ -236,7 +236,7 @@ class ImproperLoop(BaseChecker):
         if type(iterated) not in (nodes.Name, nodes.Attribute):  # TODO allow any node type
             return
 
-        listener = ModifiedListener({iterated})
+        listener: ModifiedListener[None] = ModifiedListener([iterated])
         listener.visit_many(node.body)
 
         for modifier in listener.get_sure_modifiers(iterated):
@@ -272,7 +272,7 @@ class ImproperLoop(BaseChecker):
         if control_var.as_string().startswith("_"):
             return
 
-        listener = ModifiedListener({control_var})
+        listener: ModifiedListener[None] = ModifiedListener([control_var])
         listener.visit_many(node.body)
 
         for modifier in listener.get_all_modifiers(control_var):
