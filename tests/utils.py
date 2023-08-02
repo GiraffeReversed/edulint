@@ -23,8 +23,6 @@ def lazy_equals(received: Problem, expected: Problem) -> None:
         if not expected.has_value(field.name):
             setattr(copy, field.name, getattr(expected, field.name))
 
-    print(copy)
-    print(expected)
     assert copy == expected
 
 

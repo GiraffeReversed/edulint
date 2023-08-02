@@ -86,7 +86,6 @@ for x in range(10):
 ])
 def test_split_n_lines(program: str, init_lines: int, before_types: List[type], after_types: List[type]):
     module = astroid.parse(program)
-    print(module)
     before, after = split_n_lines(module.body, init_lines)
 
     def compare(nodes: List[astns.NodeNG], node_types: List[type]):
