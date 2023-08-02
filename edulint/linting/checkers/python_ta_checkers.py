@@ -119,7 +119,11 @@ class ShadowingInComprehensionChecker(BaseChecker):
     def visit_comprehension(self, node: nodes.Comprehension):
         if isinstance(node.target, nodes.Tuple):
             for target in node.target.elts:
-                if target.name in node.parent.frame().locals and target.name != "_":
+                if (
+                    isinstance(target, nodes.Name)
+                    and target.name in node.parent.frame().locals
+                    and target.name != "_"
+                ):
                     args = target.name
                     self.add_message("shadowing-in-comprehension", node=target, args=args)
         elif isinstance(node.target, nodes.AssignName):
