@@ -21,7 +21,7 @@ def extract_msgs_from_thonny(reload_from_source: bool = False) -> Dict[str, Dict
         checks = thonny_messages.checks_by_id
         for check in checks.values():
             if check.get("tho_xpln"):
-                check['customized_by_thonny'] = True
+                check["customized_by_thonny"] = True
 
         with open(FILENAME_TOML, "wb") as f:
             tomli_w.dump(checks, f, multiline_strings=True)
@@ -29,20 +29,20 @@ def extract_msgs_from_thonny(reload_from_source: bool = False) -> Dict[str, Dict
     with open(FILENAME_TOML, "rb") as f:
         checks = tomli.load(f)
 
-    return checks    
+    return checks
 
 
 def convert_to_edulint():
     with open(FILENAME_TOML, "rb") as f:
         checks = tomli.load(f)
 
-    checks = dict(filter(lambda x: x[1].get('customized_by_thonny'), checks.items()))
+    checks = dict(filter(lambda x: x[1].get("customized_by_thonny"), checks.items()))
 
     answer = {}
     for key, data in checks.items():
         answer[key] = {
-            'why': data['tho_xpln'],
-            'examples': '',
+            "why": data["tho_xpln"],
+            "examples": "",
         }
 
     with open(EDULINT_TOML, "wb") as f:
@@ -56,4 +56,3 @@ def process_from_stored_data():
 
 if __name__ == "__main__":
     process_from_stored_data()
-

@@ -39,7 +39,9 @@ def invalid_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg])
     style = match.group(3)
 
     if style == "snake_case naming style":
-        return name[0].isupper() or any(ch1.islower() and ch2.isupper() for ch1, ch2 in zip(name, name[1:]))
+        return name[0].isupper() or any(
+            ch1.islower() and ch2.isupper() for ch1, ch2 in zip(name, name[1:])
+        )
 
     if style == "PascalCase naming style":
         return name[0].islower() or "_" in name
@@ -48,7 +50,11 @@ def invalid_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg])
 
 
 def disallowed_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
-    if len(args) == 1 and args[0].option == Option.ALLOWED_ONECHAR_NAMES and args[0].val is not None:
+    if (
+        len(args) == 1
+        and args[0].option == Option.ALLOWED_ONECHAR_NAMES
+        and args[0].val is not None
+    ):
         assert isinstance(args[0].val, str)
         allowed_onechar_names = args[0].val
     else:
@@ -63,7 +69,7 @@ def disallowed_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableAr
 def disallowed_name_reword(self: Tweaker, problem: Problem) -> str:
     name = self.match(problem).group(1)
     if len(name) == 1:
-        return f"Disallowed single-character variable name \"{name}\", choose a more descriptive name"
+        return f'Disallowed single-character variable name "{name}", choose a more descriptive name'
     return problem.text
 
 
@@ -76,10 +82,13 @@ def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
     vals = groups[5].split(", ")
     assert vals
 
-    if all(val.count("(") == val.count(")") for val in vals) \
-            and all(v and v[0] == v[-1] and v[0] in "\"\'" and len(v) == 3 for v in vals):
+    if all(val.count("(") == val.count(")") for val in vals) and all(
+        v and v[0] == v[-1] and v[0] in "\"'" and len(v) == 3 for v in vals
+    ):
         inner_quote = vals[0][0]
-        return start + inner_quote + "".join(v.strip("\"\'") for v in vals) + inner_quote + outer_quote
+        return (
+            start + inner_quote + "".join(v.strip("\"'") for v in vals) + inner_quote + outer_quote
+        )
 
     return problem.text
 
@@ -101,15 +110,13 @@ Tweakers = Dict[Tuple[Linter, str], Tweaker]
 
 TWEAKERS = {
     (Linter.PYLINT, "C0103"): Tweaker(  # invalid-name
-        set(),
-        re.compile(r"^(.*) name \"(.*)\" doesn't conform to (.*)$"),
-        invalid_name_keep
+        set(), re.compile(r"^(.*) name \"(.*)\" doesn't conform to (.*)$"), invalid_name_keep
     ),
     (Linter.PYLINT, "C0104"): Tweaker(  # disallowed-name
         set([Option.ALLOWED_ONECHAR_NAMES]),
         re.compile(r"Disallowed name \"(.*)\""),
         disallowed_name_keep,
-        disallowed_name_reword
+        disallowed_name_reword,
     ),
     (Linter.PYLINT, "R1714"): Tweaker(  # consider-using-in
         set(),
@@ -117,18 +124,16 @@ TWEAKERS = {
             r"^(Consider merging these comparisons with ['\"]in['\"] (to|by using) "
             r"(\"|\')([^\s]*)( not)? in )\((.+)\)(\"|\')"
         ),
-        reword=consider_using_in_reword
+        reword=consider_using_in_reword,
     ),
     (Linter.FLAKE8, "F401"): Tweaker(  # module imported but unused
-        set(),
-        re.compile("'(.*)' imported but unused"),
-        unused_import_keep
+        set(), re.compile("'(.*)' imported but unused"), unused_import_keep
     ),
     (Linter.PYLINT, "R6607"): Tweaker(  # no-repeated-op
         set([Option.ENHANCEMENT]),
         re.compile(r"^Use [^ ]* instead of repeated [^ ]* in ([^\.]*)."),
-        no_repeated_op_keep
-    )
+        no_repeated_op_keep,
+    ),
 }
 
 

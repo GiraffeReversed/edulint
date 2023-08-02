@@ -21,7 +21,9 @@ def get_proper_path(path: str) -> str:
 def flake8_to_problem(raw: ProblemJson) -> Problem:
     assert isinstance(raw["filename"], str), f'got {type(raw["filename"])} for filename'
     assert isinstance(raw["line_number"], int), f'got {type(raw["line_number"])} for line_number'
-    assert isinstance(raw["column_number"], int), f'got {type(raw["column_number"])} for column_number'
+    assert isinstance(
+        raw["column_number"], int
+    ), f'got {type(raw["column_number"])} for column_number'
     assert isinstance(raw["code"], str), f'got {type(raw["code"])} for code'
     assert isinstance(raw["text"], str), f'got {type(raw["text"])} for text'
 
@@ -31,7 +33,7 @@ def flake8_to_problem(raw: ProblemJson) -> Problem:
         raw["line_number"],
         raw["column_number"],
         raw["code"],
-        raw["text"]
+        raw["text"],
     )
 
 
@@ -41,8 +43,12 @@ def pylint_to_problem(filenames: List[str], raw: ProblemJson) -> Problem:
     assert isinstance(raw["column"], int), f'got {type(raw["column"])} for column'
     assert isinstance(raw["message-id"], str), f'got {type(raw["message-id"])} for message-id'
     assert isinstance(raw["message"], str), f'got {type(raw["message"])} for message'
-    assert isinstance(raw["endLine"], int) or raw["endLine"] is None, f'got {type(raw["endLine"])} for endLine'
-    assert isinstance(raw["endColumn"], int) or raw["endColumn"] is None, f'got {type(raw["endColumn"])} for endColumn'
+    assert (
+        isinstance(raw["endLine"], int) or raw["endLine"] is None
+    ), f'got {type(raw["endLine"])} for endLine'
+    assert (
+        isinstance(raw["endColumn"], int) or raw["endColumn"] is None
+    ), f'got {type(raw["endColumn"])} for endColumn'
     assert isinstance(raw["symbol"], str), f'get {type(raw["symbol"])} for symbol'
 
     def get_used_filename(path: str) -> str:
@@ -60,14 +66,18 @@ def pylint_to_problem(filenames: List[str], raw: ProblemJson) -> Problem:
         raw["message"],
         raw["endLine"],
         raw["endColumn"],
-        raw["symbol"]
+        raw["symbol"],
     )
 
 
 def lint_any(
-        linter: Linter, filenames: List[str], linter_args: List[str], config_arg: ImmutableArg,
-        result_getter: Callable[[Any], Any],
-        out_to_problem: Callable[[ProblemJson], Problem]) -> List[Problem]:
+    linter: Linter,
+    filenames: List[str],
+    linter_args: List[str],
+    config_arg: ImmutableArg,
+    result_getter: Callable[[Any], Any],
+    out_to_problem: Callable[[ProblemJson], Problem],
+) -> List[Problem]:
     command = [sys.executable, "-m", str(linter)] + linter_args + list(config_arg) + filenames  # type: ignore
     return_code, outs, errs = ProcessHandler.run(command, timeout=1000)
 
@@ -76,7 +86,9 @@ def lint_any(
         raise TimeoutError(f"Timeout from {linter}")
 
     print(errs, file=sys.stderr, end="")
-    if (linter == Linter.FLAKE8 and return_code not in (0, 1)) or (linter == Linter.PYLINT and return_code == 32):
+    if (linter == Linter.FLAKE8 and return_code not in (0, 1)) or (
+        linter == Linter.PYLINT and return_code == 32
+    ):
         print(f"edulint: {linter} exited with {return_code}", file=sys.stderr)
         exit(return_code)
 
@@ -90,21 +102,32 @@ def lint_any(
 def lint_flake8(filenames: List[str], config: Config) -> List[Problem]:
     flake8_args = ["--format=json"]
     return lint_any(
-        Linter.FLAKE8, filenames, flake8_args, config[Option.FLAKE8],
+        Linter.FLAKE8,
+        filenames,
+        flake8_args,
+        config[Option.FLAKE8],
         lambda r: [problem for problems in r.values() for problem in problems],
-        flake8_to_problem)
+        flake8_to_problem,
+    )
 
 
 def lint_pylint(filenames: List[str], config: Config) -> List[Problem]:
     pylintrc = (pathlib.Path(__file__).parent / ".pylintrc").resolve()
-    pylint_args = [f'--rcfile={pylintrc}', "--output-format=json"]
+    pylint_args = [f"--rcfile={pylintrc}", "--output-format=json"]
     return lint_any(
-        Linter.PYLINT, filenames, pylint_args, config[Option.PYLINT],
-        lambda r: r, partial(pylint_to_problem, filenames))
+        Linter.PYLINT,
+        filenames,
+        pylint_args,
+        config[Option.PYLINT],
+        lambda r: r,
+        partial(pylint_to_problem, filenames),
+    )
 
 
 def apply_overrides(problems: List[Problem], overriders: Dict[str, Set[str]]) -> List[Problem]:
-    codes_on_lines: Dict[int, Set[str]] = {line: set() for line in set([problem.line for problem in problems])}
+    codes_on_lines: Dict[int, Set[str]] = {
+        line: set() for line in set([problem.line for problem in problems])
+    }
 
     for problem in problems:
         codes_on_lines[problem.line].add(problem.code)
@@ -123,7 +146,9 @@ def apply_tweaks(problems: List[Problem], tweakers: Tweakers, config: Config) ->
     for problem in problems:
         tweaker = tweakers.get((problem.source, problem.code))
         if tweaker:
-            if tweaker.should_keep(problem, [arg for arg in config if arg.option in tweaker.used_options]):
+            if tweaker.should_keep(
+                problem, [arg for arg in config if arg.option in tweaker.used_options]
+            ):
                 problem.text = tweaker.get_reword(problem)
                 result.append(problem)
         else:
@@ -142,7 +167,9 @@ def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
 
 
 def lint(filenames: List[str], config: Config) -> List[Problem]:
-    result = ([] if config[Option.NO_FLAKE8] else lint_flake8(filenames, config)) + lint_pylint(filenames, config)
+    result = ([] if config[Option.NO_FLAKE8] else lint_flake8(filenames, config)) + lint_pylint(
+        filenames, config
+    )
     result = apply_overrides(result, get_overriders())
     result = apply_tweaks(result, get_tweakers(), config)
     return sort(filenames, result)

@@ -76,8 +76,15 @@ def get_name(node: Named) -> str:
     return node.as_string()
 
 
-def get_range_params(node: nodes.NodeNG) -> Optional[Tuple[nodes.NodeNG, nodes.NodeNG, nodes.NodeNG]]:
-    if not isinstance(node, nodes.Call) or node.func.as_string() != "range" or len(node.args) < 1 or len(node.args) > 3:
+def get_range_params(
+    node: nodes.NodeNG,
+) -> Optional[Tuple[nodes.NodeNG, nodes.NodeNG, nodes.NodeNG]]:
+    if (
+        not isinstance(node, nodes.Call)
+        or node.func.as_string() != "range"
+        or len(node.args) < 1
+        or len(node.args) > 3
+    ):
         return None
 
     default_start = nodes.Const(0)
@@ -107,7 +114,7 @@ def get_const_value(node: nodes.NodeNG) -> Any:
         if node.op == "not":
             return not node.operand.value
         if node.op == "~":
-            return ~ node.operand.value
+            return ~node.operand.value
         assert False, "unreachable" + node.op
 
     return None
@@ -118,7 +125,18 @@ def infer_to_value(node: nodes.NodeNG) -> Optional[nodes.NodeNG]:
         inferred = utils.safe_infer(node)
         return None if inferred is Uninferable else inferred
 
-    if isinstance(node, (nodes.Const, nodes.List, nodes.Set, nodes.Dict, nodes.ListComp, nodes.DictComp, nodes.Call)):
+    if isinstance(
+        node,
+        (
+            nodes.Const,
+            nodes.List,
+            nodes.Set,
+            nodes.Dict,
+            nodes.ListComp,
+            nodes.DictComp,
+            nodes.Call,
+        ),
+    ):
         return node
 
     return None
@@ -155,11 +173,16 @@ def is_main_block(statement: nodes.If) -> bool:
 
 
 def is_block_comment(stmt: nodes.NodeNG) -> bool:
-    return isinstance(stmt, nodes.Expr) and isinstance(stmt.value, nodes.Const) and isinstance(stmt.value.value, str)
+    return (
+        isinstance(stmt, nodes.Expr)
+        and isinstance(stmt.value, nodes.Const)
+        and isinstance(stmt.value.value, str)
+    )
 
 
-def get_statements_count(node: Union[nodes.NodeNG, List[nodes.NodeNG]], include_defs: bool, include_name_main: bool) -> int:
-
+def get_statements_count(
+    node: Union[nodes.NodeNG, List[nodes.NodeNG]], include_defs: bool, include_name_main: bool
+) -> int:
     def count(nodes: List[nodes.NodeNG]) -> int:
         return sum(get_statements_count(node, include_defs, include_name_main) for node in nodes)
 

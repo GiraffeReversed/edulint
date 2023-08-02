@@ -9,7 +9,6 @@ from pylint_data import extract_from_pylint
 from thonny_data import extract_from_edulint
 
 
-
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 PYLINT_FILE = extract_from_pylint.EDULINT_TOML
 THONNY_FILE = extract_from_edulint.EDULINT_TOML
@@ -18,7 +17,7 @@ OUTPUT_FILE = os.path.join(SCRIPT_PATH, "../explanations.toml")
 
 
 def load_toml_file(filename: str) -> Dict[str, Any]:
-    with open(filename, 'rb') as f:
+    with open(filename, "rb") as f:
         return tomli.load(f)
 
 
@@ -36,9 +35,8 @@ def combine_sources():
                     continue
                 answer[check_id][check_field_name] = check_field_value
 
-    with open(OUTPUT_FILE, 'wb') as f:
+    with open(OUTPUT_FILE, "wb") as f:
         tomli_w.dump(answer, f, multiline_strings=True)
-
 
 
 def main():
@@ -49,4 +47,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

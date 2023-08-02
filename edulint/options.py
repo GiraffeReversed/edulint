@@ -17,7 +17,6 @@ ImmutableT = Union[bool, Tuple[str, ...], Optional[str], Optional[int]]
 
 
 class Option(NumberFromZero):
-
     CONFIG = ()
     PYLINT = ()
     FLAKE8 = ()
@@ -125,27 +124,27 @@ BASE_CONFIG = "empty"
 OPTIONS: List[OptionParse] = [
     OptionParse(
         Option.CONFIG,
-        "config file to use for the linting",
+        "config file to use for the linting (packaged name, local path or remote)",
         TakesVal.YES,
         DEFAULT_CONFIG,
         Type.STR,
-        Combine.REPLACE
+        Combine.REPLACE,
     ),
     OptionParse(
         Option.PYLINT,
-        "arguments to be passed to pylint",
+        "arguments to be passed to pylint (formatted to be passed through command line)",
         TakesVal.YES,
         [],
         Type.LIST,
-        Combine.EXTEND
+        Combine.EXTEND,
     ),
     OptionParse(
         Option.FLAKE8,
-        "arguments to be passed to flake8",
+        "arguments to be passed to flake8 (formatted to be passed through command line)",
         TakesVal.YES,
         [],
         Type.LIST,
-        Combine.EXTEND
+        Combine.EXTEND,
     ),
     OptionParse(
         Option.ENHANCEMENT,
@@ -153,7 +152,7 @@ OPTIONS: List[OptionParse] = [
         TakesVal.NO,
         False,
         Type.BOOL,
-        Combine.REPLACE
+        Combine.REPLACE,
     ),
     OptionParse(
         Option.PYTHON_SPECIFIC,
@@ -161,7 +160,7 @@ OPTIONS: List[OptionParse] = [
         TakesVal.NO,
         False,
         Type.BOOL,
-        Combine.REPLACE
+        Combine.REPLACE,
     ),
     OptionParse(
         Option.COMPLEXITY,
@@ -169,7 +168,7 @@ OPTIONS: List[OptionParse] = [
         TakesVal.NO,
         False,
         Type.BOOL,
-        Combine.REPLACE
+        Combine.REPLACE,
     ),
     OptionParse(
         Option.ALLOWED_ONECHAR_NAMES,
@@ -177,7 +176,7 @@ OPTIONS: List[OptionParse] = [
         TakesVal.YES,
         None,
         Type.STR,
-        Combine.REPLACE
+        Combine.REPLACE,
     ),
     OptionParse(
         Option.IB111_WEEK,
@@ -185,16 +184,11 @@ OPTIONS: List[OptionParse] = [
         TakesVal.YES,
         None,
         Type.INT,
-        Combine.REPLACE
+        Combine.REPLACE,
     ),
     OptionParse(
-        Option.NO_FLAKE8,
-        "turn off flake8",
-        TakesVal.NO,
-        False,
-        Type.BOOL,
-        Combine.REPLACE
-    )
+        Option.NO_FLAKE8, "turn off flake8", TakesVal.NO, False, Type.BOOL, Combine.REPLACE
+    ),
 ]
 
 OLD_NAMES = {"python-spec": Option.PYTHON_SPECIFIC}

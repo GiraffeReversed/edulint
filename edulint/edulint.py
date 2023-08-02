@@ -9,17 +9,23 @@ import sys
 
 def setup_argparse() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Lints provided code.")
-    parser.add_argument("-o", "--option", dest="options", default=[], action="append", help="possible option")
     parser.add_argument(
-        "files_or_dirs", metavar="FILE-OR-DIRECTORY", nargs="+", help="the file(s) or directory(ies) to lint"
+        "-o", "--option", dest="options", default=[], action="append", help="possible option"
     )
-    parser.add_argument("--json", action="store_true",
-                        help="should output problems in json format")
+    parser.add_argument(
+        "files_or_dirs",
+        metavar="FILE-OR-DIRECTORY",
+        nargs="+",
+        help="the file(s) or directory(ies) to lint",
+    )
+    parser.add_argument("--json", action="store_true", help="should output problems in json format")
     return parser.parse_args()
 
 
 def extract_files(files_or_dirs: List[str], result: List[str] = None) -> List[str]:
-    def extract_files_rec(prefix: Optional[str], files_or_dirs: List[str], result: List[str]) -> List[str]:
+    def extract_files_rec(
+        prefix: Optional[str], files_or_dirs: List[str], result: List[str]
+    ) -> List[str]:
         for file_or_dir in files_or_dirs:
             full_path = os.path.join(prefix, file_or_dir) if prefix is not None else file_or_dir
             if os.path.isdir(full_path):

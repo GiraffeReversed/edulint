@@ -9,7 +9,13 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import get_name, is_builtin, get_range_params, get_statements_count, is_parents_elif
+from edulint.linting.checkers.utils import (
+    get_name,
+    is_builtin,
+    get_range_params,
+    get_statements_count,
+    is_parents_elif,
+)
 from edulint.linting.checkers.modified_listener import ModifiedListener
 
 
@@ -28,16 +34,15 @@ class UsesIndex(Enum):
 
 
 class ImproveForLoop(BaseChecker):  # type: ignore
-
     name = "improve-for-loop"
     msgs = {
         "R6101": (
-            "Iterate directly: \"for var in %s\" (with appropriate name for \"var\")",
+            'Iterate directly: "for var in %s" (with appropriate name for "var")',
             "use-foreach",
             "Emitted when a for-range loop is used while a for-each loop would suffice.",
         ),
         "R6102": (
-            "Iterate using enumerate: \"for %s, var in enumerate(%s)\" (with appropriate name for \"var\")",
+            'Iterate using enumerate: "for %s, var in enumerate(%s)" (with appropriate name for "var")',
             "use-enumerate",
             "Emitted when a for-range loop is used with the element at each index is accessed as well.",
         ),
@@ -51,7 +56,9 @@ class ImproveForLoop(BaseChecker):  # type: ignore
 
         @staticmethod
         def combine(results: List[Tuple[bool, bool]]) -> Tuple[bool, bool]:
-            return any(loaded for loaded, _stored in results), any(stored for _loaded, stored in results)
+            return any(loaded for loaded, _stored in results), any(
+                stored for _loaded, stored in results
+            )
 
         def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):
             super().__init__([structure, index])
@@ -61,13 +68,16 @@ class ImproveForLoop(BaseChecker):  # type: ignore
         def visit_subscript(self, subscript: nodes.Subscript) -> Tuple[bool, bool]:
             sub_loaded, sub_stored = self.visit_many(subscript.get_children())
 
-            if self.was_reassigned(self.structure, allow_definition=False) \
-                    or self.was_reassigned(self.index, allow_definition=False):
+            if self.was_reassigned(self.structure, allow_definition=False) or self.was_reassigned(
+                self.index, allow_definition=False
+            ):
                 return False, False
 
-            used = subscript.value.as_string() == self.structure.as_string() \
-                and isinstance(subscript.slice, nodes.Name) \
+            used = (
+                subscript.value.as_string() == self.structure.as_string()
+                and isinstance(subscript.slice, nodes.Name)
                 and subscript.slice.as_string() == self.index.as_string()
+            )
 
             if subscript.ctx == Context.Store:
                 return sub_loaded, sub_stored or used
@@ -95,19 +105,30 @@ class ImproveForLoop(BaseChecker):  # type: ignore
                 return UsesIndex.NEVER
 
             parent = name.parent
-            if isinstance(parent, nodes.Subscript) and parent.value.as_string() != self.structure.as_string():
+            if (
+                isinstance(parent, nodes.Subscript)
+                and parent.value.as_string() != self.structure.as_string()
+            ):
                 return UsesIndex.INSIDE_SUBSCRIPT
 
-            if not isinstance(name.parent, nodes.Subscript) \
-                    or not isinstance(self.structure, type(name.parent.value)) \
-                    or self.was_reassigned(name, allow_definition=False):
+            if (
+                not isinstance(name.parent, nodes.Subscript)
+                or not isinstance(self.structure, type(name.parent.value))
+                or self.was_reassigned(name, allow_definition=False)
+            ):
                 return UsesIndex.OUTSIDE_SUBSCRIPT
 
             subscript = name.parent
-            if not ((isinstance(subscript.value, nodes.Name)
-                    and subscript.value.name == self.structure.name)
-                    or (isinstance(subscript.value, nodes.Attribute)
-                    and subscript.value.attrname == self.structure.attrname)):
+            if not (
+                (
+                    isinstance(subscript.value, nodes.Name)
+                    and subscript.value.name == self.structure.name
+                )
+                or (
+                    isinstance(subscript.value, nodes.Attribute)
+                    and subscript.value.attrname == self.structure.attrname
+                )
+            ):
                 return UsesIndex.OUTSIDE_SUBSCRIPT
 
             if isinstance(subscript.parent, nodes.Assign) and subscript in subscript.parent.targets:
@@ -121,9 +142,15 @@ class ImproveForLoop(BaseChecker):  # type: ignore
             return
 
         start, stop, step = range_params
-        if not isinstance(start, nodes.Const) or start.value != 0 \
-                or not isinstance(stop, nodes.Call) or not is_builtin(stop.func, "len") or len(stop.args) != 1 \
-                or not isinstance(step, nodes.Const) or step.value != 1:
+        if (
+            not isinstance(start, nodes.Const)
+            or start.value != 0
+            or not isinstance(stop, nodes.Call)
+            or not is_builtin(stop.func, "len")
+            or len(stop.args) != 1
+            or not isinstance(step, nodes.Const)
+            or step.value != 1
+        ):
             return
 
         structure = stop.args[0]
@@ -153,7 +180,7 @@ class NoGlobalVars(BaseChecker):
         "R6401": (
             "Do not use global variables; you use %s, modifying it for example at line %i.",
             "no-global-vars",
-            "Emitted when the code uses global variables."
+            "Emitted when the code uses global variables.",
         ),
     }
 
@@ -180,9 +207,15 @@ class NoGlobalVars(BaseChecker):
             listener.visit(frame)
             for node in vars_.values():
                 if listener.was_modified(node, allow_definition=True):
-                    nonglobal_modifiers = [n for n in listener.get_all_modifiers(node) if n.scope() != node.scope()]
+                    nonglobal_modifiers = [
+                        n for n in listener.get_all_modifiers(node) if n.scope() != node.scope()
+                    ]
                     if nonglobal_modifiers:
-                        self.add_message("no-global-vars", node=node, args=(node.name, nonglobal_modifiers[0].lineno))
+                        self.add_message(
+                            "no-global-vars",
+                            node=node,
+                            args=(node.name, nonglobal_modifiers[0].lineno),
+                        )
 
 
 class LongCodeChecker(BaseChecker):
@@ -192,18 +225,18 @@ class LongCodeChecker(BaseChecker):
             "Too much code outside of functions or classes (%d which is over %d statements).",
             "long-script",
             "Emitted when there are too many lines of code on the top level that are not import or function or class "
-            "definition."
+            "definition.",
         ),
         "R6702": (
             "Function '%s' is too long (%d which is over %d statements).",
             "long-function",
-            "Emitted when there are too many statements inside a function definition."
+            "Emitted when there are too many statements inside a function definition.",
         ),
         "R6703": (
             "Use early return.",
             "use-early-return",
-            "Emitted when a long block of code is followed by an else that just returns, breaks or continues."
-        )
+            "Emitted when a long block of code is followed by an else that just returns, breaks or continues.",
+        ),
     }
 
     @only_required_for_messages("long-script")
@@ -226,7 +259,11 @@ class LongCodeChecker(BaseChecker):
     def visit_if(self, node: nodes.If):
         def ends_block(node: nodes.NodeNG) -> bool:
             if isinstance(node, nodes.If):
-                return ends_block(node.body[-1]) and len(node.orelse) > 0 and ends_block(node.orelse[-1])
+                return (
+                    ends_block(node.body[-1])
+                    and len(node.orelse) > 0
+                    and ends_block(node.orelse[-1])
+                )
             return isinstance(node, (nodes.Return, nodes.Break, nodes.Continue))
 
         if is_parents_elif(node):
@@ -241,9 +278,11 @@ class LongCodeChecker(BaseChecker):
         else:
             return
 
-        if ends_block(last) and get_statements_count(node.body, include_defs=True, include_name_main=True) > 3:
+        if (
+            ends_block(last)
+            and get_statements_count(node.body, include_defs=True, include_name_main=True) > 3
+        ):
             self.add_message("use-early-return", node=node)
-
 
 
 def register(linter: "PyLinter") -> None:

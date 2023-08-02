@@ -1,7 +1,6 @@
 # https://raw.githubusercontent.com/thonny/thonny/master/thonny/plugins/pylint/__init__.py
 
 
-import ast
 import subprocess
 from logging import getLogger
 

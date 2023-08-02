@@ -7,16 +7,16 @@ from typing import Optional, Tuple, List
 
 """ Author: Ondrej Borysek, License: MIT, Last update: 2021-04-19"""
 
-SIGKILL_STATUS_CODE = 137-128  # -9
-SIGTERM_STATUS_CODE = 143-128  # -15
+SIGKILL_STATUS_CODE = 137 - 128  # -9
+SIGTERM_STATUS_CODE = 143 - 128  # -15
 
 
 class ProcessHandler:
     """
-       This simple wrapper for subprocess library enables easier Input/Output testing of other programs.
-       No pip packages or additional linux packages are required.
-       Should work on Linux, Windows, and hopefully also on MacOS.
-       """
+    This simple wrapper for subprocess library enables easier Input/Output testing of other programs.
+    No pip packages or additional linux packages are required.
+    Should work on Linux, Windows, and hopefully also on MacOS.
+    """
 
     def __init__(self, timeout: float) -> None:
         self.last_child: Optional[Popen[bytes]] = None
@@ -27,7 +27,7 @@ class ProcessHandler:
         # Using prctl would be safer, but less portable: https://pythonhosted.org/python-prctl/#prctl.set_pdeathsig
 
     def __try_to_be_nice(self) -> None:
-        if getattr(os, 'nice', None):
+        if getattr(os, "nice", None):
             os.nice(10)
 
     def __kill_children(self) -> None:
@@ -47,14 +47,19 @@ class ProcessHandler:
 
         if self.last_child.poll():
             try:
-                _, _ = self.last_child.communicate(timeout=0.2)  # this can garbage collect the process
+                _, _ = self.last_child.communicate(
+                    timeout=0.2
+                )  # this can garbage collect the process
             except TimeoutExpired:
-                print("[Warning] The process refused to die. You might need to kill the zombie manually.",
-                      file=sys.stderr)
+                print(
+                    "[Warning] The process refused to die. You might need to kill the zombie manually.",
+                    file=sys.stderr,
+                )
                 ProcessHandler.linux_print_processes()
 
-    def __start_process(self, user_command: List[str], input_str: Optional[str] = None) -> Tuple[int, str, str]:
-
+    def __start_process(
+        self, user_command: List[str], input_str: Optional[str] = None
+    ) -> Tuple[int, str, str]:
         # Subprocess will be with the same niceness as the main program.
         # Warning: Do NOT use shell=True. That would only kill the shell, not the C program.
         proc = subprocess.Popen(user_command, shell=False, stdin=PIPE, stdout=PIPE, stderr=PIPE)
@@ -63,7 +68,9 @@ class ProcessHandler:
         return_code = SIGKILL_STATUS_CODE
 
         try:
-            outb, errb = proc.communicate(input=input_str.encode("utf8") if input_str else None, timeout=self.timeout)
+            outb, errb = proc.communicate(
+                input=input_str.encode("utf8") if input_str else None, timeout=self.timeout
+            )
             return_code = proc.returncode
         except TimeoutExpired:
             print("Timeout, trying to kill.", file=sys.stderr)
@@ -75,11 +82,12 @@ class ProcessHandler:
         return return_code, outb.decode(), errb.decode()
 
     @staticmethod
-    def run(command: List[str],
-            input_str: Optional[str] = None,
-            print_output: bool = False,
-            timeout: float = 5  # seconds
-            ) -> Tuple[int, str, str]:
+    def run(
+        command: List[str],
+        input_str: Optional[str] = None,
+        print_output: bool = False,
+        timeout: float = 5,  # seconds
+    ) -> Tuple[int, str, str]:
         if command is None:
             return -1, "", "No command provided"
 
@@ -99,10 +107,13 @@ class ProcessHandler:
 
     @staticmethod
     def linux_print_processes() -> None:
-        if not sys.platform.startswith('linux'):
+        if not sys.platform.startswith("linux"):
             return
-        print("""Please check that you don't see any zombie processes from the process of testing. They would have nice
-              value of 19. You can use command "ps a -o pid,ni,time,cmd" """, file=sys.stderr)
+        print(
+            """Please check that you don't see any zombie processes from the process of testing. They would have nice
+              value of 19. You can use command "ps a -o pid,ni,time,cmd" """,
+            file=sys.stderr,
+        )
 
     @staticmethod
     def is_status_code_by_timeout(status_code: int) -> bool:
@@ -110,16 +121,18 @@ class ProcessHandler:
 
 
 def usage_example() -> None:
-    command_to_execute = ['/bin/sh', '-c', 'echo Lorem Ipsum']
+    command_to_execute = ["/bin/sh", "-c", "echo Lorem Ipsum"]
     input_str = "Echo doesn't use input from stdin, but we can give it one anyway."
-    return_code, outs, errs = ProcessHandler.run(command_to_execute, input_str=input_str, print_output=True)
+    return_code, outs, errs = ProcessHandler.run(
+        command_to_execute, input_str=input_str, print_output=True
+    )
     assert return_code == 0
     assert "Lorem Ipsum" in outs  # beware different newlines based on system
     assert len(errs) == 0
 
 
 def usage_example_different_timeout() -> None:
-    command_to_execute = ['/bin/sh', '-c', 'while true; do sleep 1; done;']
+    command_to_execute = ["/bin/sh", "-c", "while true; do sleep 1; done;"]
     return_code, outs, errs = ProcessHandler.run(command_to_execute, print_output=True, timeout=0.5)
     assert return_code == -9  # SIGKILL
 

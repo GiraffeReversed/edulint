@@ -11,7 +11,6 @@ from edulint.linting.checkers.utils import get_name, get_assigned_to, is_any_ass
 
 
 class SimplifiableIf(BaseChecker):  # type: ignore
-
     name = "simplifiable-if"
     msgs = {
         "R6201": (
@@ -23,66 +22,71 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "The if statement can be replaced with 'return %s'",
             "simplifiable-if-return-conj",
             "Emitted when the condition of an if statement and the returned values "
-            "can be combined using logical operators."
+            "can be combined using logical operators.",
         ),
         "R6203": (
             "The conditional assignment can be replace with '%s = %s'",
             "simplifiable-if-assignment",
-            "Emitted when the condition of an if statement can be assigned directly (possibly negated)."
+            "Emitted when the condition of an if statement can be assigned directly (possibly negated).",
         ),
         "R6210": (
             "The conditional assignment can be replace with '%s = %s'",
             "simplifiable-if-assignment-conj",
             "Emitted when the condition of an if statement and the assigned values "
-            "can be combined using logical operators."
+            "can be combined using logical operators.",
         ),
         "R6204": (
             "The if expression can be replaced with '%s'",
             "simplifiable-if-expr",
-            "Emitted when the condition of an if expression can be returned directly (possibly negated)."
+            "Emitted when the condition of an if expression can be returned directly (possibly negated).",
         ),
         "R6209": (
             "The if expression can be replaced with '%s'",
             "simplifiable-if-expr-conj",
             "Emitted when the condition of an if expression and the returned values "
-            "can be combined using logical operators."
+            "can be combined using logical operators.",
         ),
         "R6205": (
             "Use 'if %s: <else body>' instead of 'pass'",
             "simplifiable-if-pass",
-            "Emitted when there is an if condition with a pass in the positive branch."
+            "Emitted when there is an if condition with a pass in the positive branch.",
         ),
         "R6206": (
             "Both branches should return a value explicitly (one returns implicit None)",
             "no-value-in-one-branch-return",
-            "Emitted when one branch returns a value and the other just returns."
+            "Emitted when one branch returns a value and the other just returns.",
         ),
         "R6207": (
             "The if statement can be merged with the nested one to 'if %s:'",
             "simplifiable-if-nested",
             "Emitted when the condition of an if statement can be merged "
-            "with its nested if's condition using logical operators."
+            "with its nested if's condition using logical operators.",
         ),
         "R6208": (
             "The if statement can be merged with the following one to 'if %s:'",
             "simplifiable-if-seq",
             "Emitted when the condition of an if statement can be merged "
-            "with the next if's condition using logical operators."
+            "with the next if's condition using logical operators.",
         ),
     }
 
     def _is_bool(self, node: nodes.NodeNG) -> bool:
         return isinstance(node, nodes.Const) and node.pytype() == "builtins.bool"
 
-    def _simplifiable_if_message(self, node: nodes.If, then: nodes.NodeNG, new_cond: str, only_replaces: bool) -> None:
+    def _simplifiable_if_message(
+        self, node: nodes.If, then: nodes.NodeNG, new_cond: str, only_replaces: bool
+    ) -> None:
         extra = "" if only_replaces else "-conj"
         if isinstance(node, nodes.IfExp):
             self.add_message("simplifiable-if-expr" + extra, node=node, args=(new_cond))
         elif isinstance(then, nodes.Return):
             self.add_message("simplifiable-if-return" + extra, node=node, args=(new_cond))
         else:
-            self.add_message("simplifiable-if-assignment" + extra, node=node,
-                             args=(get_name(get_assigned_to(then)[0]), new_cond))
+            self.add_message(
+                "simplifiable-if-assignment" + extra,
+                node=node,
+                args=(get_name(get_assigned_to(then)[0]), new_cond),
+            )
 
     def _get_refactored(self, *args) -> str:
         result = []
@@ -91,7 +95,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             arg = args[i]
             if isinstance(arg, str) and arg == "not":
                 refactored = args[i + 1].as_string()
-                if isinstance(args[i+1], nodes.BoolOp):
+                if isinstance(args[i + 1], nodes.BoolOp):
                     result.append(f"<negated ({refactored})>")
                 else:
                     result.append(f"<negated {refactored}>")
@@ -99,7 +103,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             elif isinstance(arg, str) and arg in ("and", "or"):
                 prev = args[i - 1]
                 next_ = args[i + 1]
-                if isinstance(prev, nodes.BoolOp) and prev.op != arg and (i - 2 < 0 or args[i - 2] != "not"):
+                if (
+                    isinstance(prev, nodes.BoolOp)
+                    and prev.op != arg
+                    and (i - 2 < 0 or args[i - 2] != "not")
+                ):
                     result[-1] = f"({result[-1]})"
                 result.append(arg)
                 i += 1
@@ -130,8 +138,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return then, after_if
 
-    def _refactored_cond_from_then_orelse(self, node: nodes.If, then_value: nodes.NodeNG, orelse_value: nodes.NodeNG) \
-            -> Optional[Tuple[str, bool]]:
+    def _refactored_cond_from_then_orelse(
+        self, node: nodes.If, then_value: nodes.NodeNG, orelse_value: nodes.NodeNG
+    ) -> Optional[Tuple[str, bool]]:
         then_bool_value = then_value.value if self._is_bool(then_value) else None
         orelse_bool_value = orelse_value.value if self._is_bool(orelse_value) else None
 
@@ -164,8 +173,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         self.add_message("simplifiable-if-nested", node=node, args=refactored)
 
     def _same_values(self, node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
-        return (node1 is None and node2 is None) \
-             or (node1 is not None and node2 is not None and node1.as_string() == node2.as_string())
+        return (node1 is None and node2 is None) or (
+            node1 is not None and node2 is not None and node1.as_string() == node2.as_string()
+        )
 
     def _mergeable(self, node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
         if not isinstance(node1, type(node2)):
@@ -177,46 +187,76 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if is_any_assign(node1) and not isinstance(node1, nodes.For):
             assigned_to1 = get_assigned_to(node1)
             assigned_to2 = get_assigned_to(node2)
-            return len(assigned_to1) == 1 and len(assigned_to1) == len(assigned_to2) \
-                and isinstance(assigned_to1[0], type(assigned_to2[0])) \
-                and not isinstance(assigned_to1[0], nodes.Subscript) \
+            return (
+                len(assigned_to1) == 1
+                and len(assigned_to1) == len(assigned_to2)
+                and isinstance(assigned_to1[0], type(assigned_to2[0]))
+                and not isinstance(assigned_to1[0], nodes.Subscript)
                 and self._names_assigned_to(node1) == self._names_assigned_to(node2)
+            )
 
         return False
 
     def _merge_sequential(self, node: nodes.If) -> None:
         second_if = node.next_sibling()
 
-        if isinstance(node.test, nodes.BoolOp) or isinstance(second_if.test, nodes.BoolOp) \
-                or len(second_if.orelse) != 0 or len(node.body) != 1 or len(second_if.body) != 1:
+        if (
+            isinstance(node.test, nodes.BoolOp)
+            or isinstance(second_if.test, nodes.BoolOp)
+            or len(second_if.orelse) != 0
+            or len(node.body) != 1
+            or len(second_if.body) != 1
+        ):
             return
 
         body1 = node.body[0]
         body2 = second_if.body[0]
-        if not isinstance(body1, type(body2)) \
-                or not isinstance(body1, nodes.Return) \
-                or not self._same_values(body1.value, body2.value):
+        if (
+            not isinstance(body1, type(body2))
+            or not isinstance(body1, nodes.Return)
+            or not self._same_values(body1.value, body2.value)
+        ):
             return
 
         parent_body = node.parent.body
-        if all(isinstance(n, nodes.If) or isinstance(n, nodes.Return)
-                or (is_any_assign(n) and not isinstance(n, nodes.For)) for n in parent_body) \
-                and sum(1 if isinstance(n, nodes.If) else 0 for n in parent_body) > 2:
+        if (
+            all(
+                isinstance(n, nodes.If)
+                or isinstance(n, nodes.Return)
+                or (is_any_assign(n) and not isinstance(n, nodes.For))
+                for n in parent_body
+            )
+            and sum(1 if isinstance(n, nodes.If) else 0 for n in parent_body) > 2
+        ):
             return
 
         refactored = self._get_refactored(node.test, "or", second_if.test)
         self.add_message("simplifiable-if-seq", node=node, args=(refactored))
 
     def _is_just_returning_if(self, node: Optional[nodes.NodeNG]) -> bool:
-        return node is not None and isinstance(node, nodes.If) and isinstance(node.body[-1], nodes.Return)
+        return (
+            node is not None
+            and isinstance(node, nodes.If)
+            and isinstance(node.body[-1], nodes.Return)
+        )
 
-    @only_required_for_messages("simplifiable-if-return", "simplifiable-if-return-conj",
-                                "simplifiable-if-assignment", "simplifiable-if-assignment-conj",
-                                "simplifiable-if-pass", "no-value-in-one-branch-return",
-                                "simplifiable-if-nested", "simplifiable-if-seq")
+    @only_required_for_messages(
+        "simplifiable-if-return",
+        "simplifiable-if-return-conj",
+        "simplifiable-if-assignment",
+        "simplifiable-if-assignment-conj",
+        "simplifiable-if-pass",
+        "no-value-in-one-branch-return",
+        "simplifiable-if-nested",
+        "simplifiable-if-seq",
+    )
     def visit_if(self, node: nodes.If) -> None:
         if len(node.orelse) == 0:
-            if len(node.body) == 1 and isinstance(node.body[0], nodes.If) and len(node.body[0].orelse) == 0:
+            if (
+                len(node.body) == 1
+                and isinstance(node.body[0], nodes.If)
+                and len(node.body[0].orelse) == 0
+            ):
                 self._merge_nested(node)
                 return
 
@@ -225,7 +265,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 return
 
         if len(node.body) == 1 and isinstance(node.body[0], nodes.Pass) and len(node.orelse) > 0:
-            self.add_message("simplifiable-if-pass", node=node, args=(self._get_refactored("not", node.test)))
+            self.add_message(
+                "simplifiable-if-pass", node=node, args=(self._get_refactored("not", node.test))
+            )
             return
 
         then_orelse = self._get_then_orelse(node)
@@ -235,8 +277,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         then, orelse = then_orelse
 
-        if isinstance(then, nodes.Return) and isinstance(orelse, nodes.Return) \
-                and (then.value is None) != (orelse.value is None):
+        if (
+            isinstance(then, nodes.Return)
+            and isinstance(orelse, nodes.Return)
+            and (then.value is None) != (orelse.value is None)
+        ):
             self.add_message("no-value-in-one-branch-return", node=node)
             return
 
@@ -257,8 +302,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         then, orelse = node.body, node.orelse
         assert then is not None and orelse is not None
 
-        if (not isinstance(then, nodes.Const) and not isinstance(then, nodes.Name)) or \
-                (not isinstance(orelse, nodes.Const) and not isinstance(orelse, nodes.Name)):
+        if (not isinstance(then, nodes.Const) and not isinstance(then, nodes.Name)) or (
+            not isinstance(orelse, nodes.Const) and not isinstance(orelse, nodes.Name)
+        ):
             return
 
         refactored = self._refactored_cond_from_then_orelse(node, then, orelse)

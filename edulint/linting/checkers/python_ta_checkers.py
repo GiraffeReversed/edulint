@@ -48,7 +48,6 @@ class InvalidForTargetChecker(BaseChecker):
 
 
 class OneIterationChecker(BaseChecker):
-
     # name is the same as file name but without _checker part
     name = "one_iteration"
     # use dashes for connecting words in message symbol
@@ -104,7 +103,6 @@ class OneIterationChecker(BaseChecker):
 
 
 class ShadowingInComprehensionChecker(BaseChecker):
-
     name = "shadowing_in_comprehension"
     msgs = {
         "E9988": (

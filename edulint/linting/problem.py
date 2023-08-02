@@ -10,11 +10,9 @@ ProblemJson = Dict[str, Union[str, int]]
 @dataclass_json
 @dataclass
 class Problem:
-    source: Linter = field(metadata=config(
-        encoder=Linter.to_name,
-        decoder=Linter.from_name,
-        mm_field=mm_fields.Str()
-    ))
+    source: Linter = field(
+        metadata=config(encoder=Linter.to_name, decoder=Linter.from_name, mm_field=mm_fields.Str())
+    )
     path: str
     line: int
     column: int
@@ -58,9 +56,11 @@ class Problem:
 
     def has_value(self, attr: str) -> bool:
         val = getattr(self, attr)
-        return val is not None \
-            and (not isinstance(val, str) or val) \
+        return (
+            val is not None
+            and (not isinstance(val, str) or bool(val))
             and (not isinstance(val, int) or val >= 0)
+        )
 
     def __repr__(self) -> str:
         def get_attrvals() -> List[str]:

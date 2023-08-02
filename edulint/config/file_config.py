@@ -67,9 +67,7 @@ def _load_packaged_config_file(filename: str) -> str:
     return _load_local_config_file(relative_path, "packaged", is_path_safe=True)
 
 
-def _load_local_config_file(
-    filepath: str, message: str, is_path_safe: bool = False
-) -> str:
+def _load_local_config_file(filepath: str, message: str, is_path_safe: bool = False) -> str:
     if not is_path_safe and not ALLOW_UNRESTRICTED_LOCAL_PATHS:
         raise ConfigFileAccessMethodNotAllowedException(
             "Arbitrary local filepaths are not enabled."

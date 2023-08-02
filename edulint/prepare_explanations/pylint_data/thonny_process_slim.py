@@ -11,11 +11,11 @@ def make_explanation_more_friedly(explanation: str) -> str:
         "Emitted when an ": "It looks like the ",
         "Emitted when a ": "It looks like the ",
         "Emitted when ": "It looks like ",
-    }    
+    }
 
     for prefix, replacement in replace_prefixes.items():
         if explanation.startswith(prefix):
-            explanation = replacement + explanation[len(prefix):]
+            explanation = replacement + explanation[len(prefix) :]
             break
-    
+
     return explanation

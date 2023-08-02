@@ -9,8 +9,9 @@ T = TypeVar("T")
 
 
 class ModifiedListener(BaseVisitor[T]):
-
-    NON_PURE_METHODS = re.compile(r"append|clear|extend|insert|pop|remove|reverse|sort|add|.*update|write")
+    NON_PURE_METHODS = re.compile(
+        r"append|clear|extend|insert|pop|remove|reverse|sort|add|.*update|write"
+    )
 
     def __init__(self, watched: List[Named]):
         self.watched = watched
@@ -51,7 +52,9 @@ class ModifiedListener(BaseVisitor[T]):
         return type(node) in (nodes.AssignName, nodes.AssignAttr, nodes.DelName, nodes.DelAttr)
 
     def was_reassigned(self, node: nodes.NodeNG, allow_definition: bool) -> bool:
-        return sum(self._reassigns(mod) for mod in self.get_all_modifiers(node)) > (1 if allow_definition else 0)
+        return sum(self._reassigns(mod) for mod in self.get_all_modifiers(node)) > (
+            1 if allow_definition else 0
+        )
 
     def get_all_modifiers(self, node: nodes.NodeNG) -> List[nodes.NodeNG]:
         return self.modified[get_name(node)]
@@ -120,9 +123,9 @@ class ModifiedListener(BaseVisitor[T]):
         return self.visit_many(node.get_children())
 
     def visit_attribute(self, node: nodes.Attribute) -> T:
-        if isinstance(node.parent, nodes.Call) \
-                and ModifiedListener.NON_PURE_METHODS.match(node.attrname):
-
+        if isinstance(node.parent, nodes.Call) and ModifiedListener.NON_PURE_METHODS.match(
+            node.attrname
+        ):
             stripped = self._strip(node)
             if stripped is None:
                 return self.visit_many(node.get_children())

@@ -70,28 +70,18 @@ def _get_message_data(data_path: Path) -> Tuple[str, str, str, str]:
     related_rst_path = data_path / "related.rst"
     if not data_path.exists():
         _create_placeholders(data_path, details_rst_path, good_py_path)
-    good_code = _get_titled_rst(
-        title="Correct code", text=_get_python_code_as_rst(good_py_path)
-    )
-    bad_code = _get_titled_rst(
-        title="Problematic code", text=_get_python_code_as_rst(bad_py_path)
-    )
-    details = _get_titled_rst(
-        title="Additional details", text=_get_rst_as_str(details_rst_path)
-    )
-    related = _get_titled_rst(
-        title="Related links", text=_get_rst_as_str(related_rst_path)
-    )
+    good_code = _get_titled_rst(title="Correct code", text=_get_python_code_as_rst(good_py_path))
+    bad_code = _get_titled_rst(title="Problematic code", text=_get_python_code_as_rst(bad_py_path))
+    details = _get_titled_rst(title="Additional details", text=_get_rst_as_str(details_rst_path))
+    related = _get_titled_rst(title="Related links", text=_get_rst_as_str(related_rst_path))
     _check_placeholders(bad_code, details, good_py_path, related)
     return good_code, bad_code, details, related
 
 
-def _check_placeholders(
-    bad_code: str, details: str, good_py_path: Path, related: str
-) -> None:
+def _check_placeholders(bad_code: str, details: str, good_py_path: Path, related: str) -> None:
     if bad_code or related:
         placeholder_details = "help us make the doc better" in details
-        with open(good_py_path, encoding='utf8') as f:
+        with open(good_py_path, encoding="utf8") as f:
             placeholder_good = "placeholder" in f.read()
         assert_msg = (
             f"Please remove placeholders in '{good_py_path.parent}' "
@@ -127,9 +117,7 @@ def _get_python_code_as_rst(code_path: Path) -> str:
 """
 
 
-def _create_placeholders(
-    data_path: Path, details_rst_path: Path, good_py_path: Path
-) -> None:
+def _create_placeholders(data_path: Path, details_rst_path: Path, good_py_path: Path) -> None:
     data_path.mkdir(parents=True)
     with open(good_py_path, "w", encoding="utf-8") as file:
         file.write(
@@ -170,14 +158,11 @@ def _get_all_messages(
         "information": defaultdict(list),
     }
     checker_message_mapping = chain.from_iterable(
-        ((checker, msg) for msg in checker.messages)
-        for checker in linter.get_checkers()
+        ((checker, msg) for msg in checker.messages) for checker in linter.get_checkers()
     )
 
     for checker, message in checker_message_mapping:
-        good_code, bad_code, details, related = _get_message_data(
-            _get_message_data_path(message)
-        )
+        good_code, bad_code, details, related = _get_message_data(_get_message_data_path(message))
 
         checker_module = getmodule(checker)
 
@@ -252,9 +237,7 @@ def _write_message_page(messages_dict: MessagesDict) -> None:
                 continue
             _write_single_message_page(category_dir, message)
         for _, shared_messages in groupby(
-            sorted(
-                (message for message in messages if message.shared), key=lambda m: m.id
-            ),
+            sorted((message for message in messages if message.shared), key=lambda m: m.id),
             key=lambda m: m.id,
         ):
             shared_messages_list = list(shared_messages)
@@ -300,23 +283,16 @@ def _generate_single_message_body(message: MessageData) -> str:
 
 
 def _generate_checker_url(message: MessageData) -> str:
-    checker_module_rel_path = os.path.relpath(
-        message.checker_module_path, PYLINT_BASE_PATH
-    )
+    checker_module_rel_path = os.path.relpath(message.checker_module_path, PYLINT_BASE_PATH)
     return f"https://github.com/PyCQA/pylint/blob/main/{checker_module_rel_path}"
 
 
-def _write_single_shared_message_page(
-    category_dir: Path, messages: List[MessageData]
-) -> None:
+def _write_single_shared_message_page(category_dir: Path, messages: List[MessageData]) -> None:
     message = messages[0]
     with open(category_dir / f"{message.name}.rst", "w", encoding="utf-8") as stream:
         stream.write(_generate_single_message_body(message))
         checker_urls = ", ".join(
-            [
-                f"`{message.checker} <{_generate_checker_url(message)}>`__"
-                for message in messages
-            ]
+            [f"`{message.checker} <{_generate_checker_url(message)}>`__" for message in messages]
         )
         stream.write(f"Created by the {checker_urls} checkers.")
 
@@ -365,9 +341,7 @@ Pylint can emit the following messages:
                 key=lambda item: item.name,
             )
             old_messages = sorted(old_messages_dict[category], key=lambda item: item[0])
-            messages_string = "".join(
-                f"   {category}/{message.name}\n" for message in messages
-            )
+            messages_string = "".join(f"   {category}/{message.name}\n" for message in messages)
             old_messages_string = "".join(
                 f"   {category}/{old_message[0]}\n" for old_message in old_messages
             )
@@ -411,9 +385,7 @@ def _write_redirect_old_page(
     new_names: List[Tuple[str, str]],
 ) -> None:
     old_name_file = os.path.join(category_dir, f"{old_name[0]}.rst")
-    new_names_string = "".join(
-        f"   ../{new_name[1]}/{new_name[0]}.rst\n" for new_name in new_names
-    )
+    new_names_string = "".join(f"   ../{new_name[1]}/{new_name[0]}.rst\n" for new_name in new_names)
     content = f""".. _{old_name[0]}:
 
 {get_rst_title("/".join(old_name), "=")}

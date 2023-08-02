@@ -13,32 +13,35 @@ class Translation:
 CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
     Option.ENHANCEMENT: Translation(
         Linter.PYLINT,
-        ["--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
-         "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
-         "loop-shadows-control-variable,no-repeated-op,"
-         "forbidden-top-level-code,simplifiable-if-nested,simplifiable-if-seq,"
-         "simplifiable-if-return-conj,simplifiable-if-assignment-conj,simplifiable-if-expr-conj,"]
+        [
+            "--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
+            "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
+            "loop-shadows-control-variable,no-repeated-op,"
+            "forbidden-top-level-code,simplifiable-if-nested,simplifiable-if-seq,"
+            "simplifiable-if-return-conj,simplifiable-if-assignment-conj,simplifiable-if-expr-conj,"
+        ],
     ),
     Option.PYTHON_SPECIFIC: Translation(
         Linter.PYLINT,
-        ["--enable=unidiomatic-typecheck,misplaced-format-function,"
-         "use-enumerate,consider-iterating-dictionary,"
-         "consider-using-dict-items,consider-using-f-string,"
-         "inconsistent-return-statements,consider-swap-variables,"
-         "consider-using-join,consider-using-set-comprehension,"
-         "unnecessary-comprehension,use-a-generator,use-list-literal,"
-         "use-dict-literal,consider-using-in,"]
+        [
+            "--enable=unidiomatic-typecheck,misplaced-format-function,"
+            "use-enumerate,consider-iterating-dictionary,"
+            "consider-using-dict-items,consider-using-f-string,"
+            "inconsistent-return-statements,consider-swap-variables,"
+            "consider-using-join,consider-using-set-comprehension,"
+            "unnecessary-comprehension,use-a-generator,use-list-literal,"
+            "use-dict-literal,consider-using-in,"
+        ],
     ),
     Option.COMPLEXITY: Translation(
         Linter.PYLINT,
-        ["--enable=too-many-arguments,too-many-branches,too-many-statements,"
-         "too-many-return-statements,too-many-nested-blocks,too-many-locals,"
-         "too-many-boolean-expressions,"]
+        [
+            "--enable=too-many-arguments,too-many-branches,too-many-statements,"
+            "too-many-return-statements,too-many-nested-blocks,too-many-locals,"
+            "too-many-boolean-expressions,"
+        ],
     ),
-    Option.ALLOWED_ONECHAR_NAMES: Translation(
-        Linter.PYLINT,
-        ["--bad-names-rgxs=^[a-z]$"]
-    )
+    Option.ALLOWED_ONECHAR_NAMES: Translation(Linter.PYLINT, ["--bad-names-rgxs=^[a-z]$"]),
 }
 
 
