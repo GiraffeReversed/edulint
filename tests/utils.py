@@ -50,12 +50,12 @@ def get_tests_path(filename: str) -> str:
     return str((pathlib.Path(__file__).parent / "data" / filename).resolve())
 
 
-def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem], from_empty: bool = True) -> None:
     def get_config_path(args: List[Arg]) -> str:
         for arg in reversed(args):
             if arg.option == Option.CONFIG:
-                return arg.value
-        return DEFAULT_CONFIG
+                return arg.val
+        return DEFAULT_CONFIG if not from_empty else "empty"
 
     def get_config(args: List[Arg]) -> List[Arg]:
         config_path = get_config_path(args)
@@ -75,11 +75,13 @@ def apply_and_lint(filename: str, args: List[Arg], expected_output: List[Problem
     )
 
 
-def create_apply_and_lint(lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
+def create_apply_and_lint(
+    lines: List[str], args: List[Arg], expected_output: List[Problem], from_empty: bool = True
+) -> None:
     tf = tempfile.NamedTemporaryFile("w+", delete=False)
     try:
         tf.writelines([line + "\n" for line in lines])
         tf.close()
-        apply_and_lint(tf.name, args, expected_output)
+        apply_and_lint(tf.name, args, expected_output, from_empty)
     finally:
         os.remove(tf.name)

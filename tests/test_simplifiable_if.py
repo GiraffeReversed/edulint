@@ -9,7 +9,7 @@ from typing import List
 def _test_simplify_if(lines: List[str], expected_output: List[Problem], code: str) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, f"--enable={code}"), Arg(Option.NO_FLAKE8, "on")],
+        [Arg(Option.PYLINT, f"--enable={code}")],
         [p.set_code(code) for p in expected_output]
     )
 
@@ -509,6 +509,6 @@ def test_simplify_if_pass_custom(lines: List[str], expected_output: List[Problem
 def test_simplify_if_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=simplifiable-if")],
+        [Arg(Option.PYLINT, "--enable=simplifiable-if")],
         expected_output
     )

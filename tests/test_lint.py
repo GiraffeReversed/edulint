@@ -42,7 +42,7 @@ from typing import List
     ])
 ])
 def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output)
+    apply_and_lint(filename, args, expected_output, from_empty=False)
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
@@ -80,7 +80,7 @@ def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Proble
     ])
 ])
 def test_translations(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output)
+    apply_and_lint(filename, args, expected_output, from_empty=False)
 
 
 class TestIB111Week:
@@ -121,7 +121,7 @@ class TestIB111Week:
         ])
     ])
     def test_ib111_week_custom(self, lines: List[str], args: List[Arg], expected_output: List[Problem]) -> None:
-        create_apply_and_lint(lines, args, expected_output)
+        create_apply_and_lint(lines, args, expected_output, from_empty=False)
 
 
 @pytest.mark.parametrize("lines,expected_output", [
@@ -215,7 +215,7 @@ class TestIB111Week:
 def test_invalid_name_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=invalid-name"), Arg(Option.NO_FLAKE8, "on")],
+        [Arg(Option.PYLINT, "--enable=invalid-name")],
         expected_output
     )
 
@@ -235,7 +235,7 @@ def test_invalid_name_custom(lines: List[str], expected_output: List[Problem]) -
     ])
 ])
 def test_invalid_name(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output)
+    apply_and_lint(filename, args, expected_output, from_empty=False)
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
@@ -255,13 +255,13 @@ def test_invalid_name(filename: str, args: List[Arg], expected_output: List[Prob
 def test_allowed_onechar_names(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=disallowed-name")] + args,
+        [Arg(Option.PYLINT, "--enable=disallowed-name")] + args,
         expected_output
     )
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
-    ("105119-p5_template.py", [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=R1714")], [
+    ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=R1714")], [
         lazy_problem().set_code("R1714").set_line(22)
         .set_text("Consider merging these comparisons with \"in\" to \"i not in '[]'\""),
         lazy_problem().set_code("R1714").set_line(35)
@@ -334,7 +334,7 @@ class TestImproveFor:
     def test_improve_for_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=improve-for-loop")],
+            [Arg(Option.PYLINT, "--enable=improve-for-loop")],
             expected_output
         )
 
@@ -361,7 +361,7 @@ class TestImproveFor:
         ]),
     ])
     def test_improve_for(self, filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-        apply_and_lint(filename, [Arg(Option.PYLINT, "--disable=all")] + args, expected_output)
+        apply_and_lint(filename, args, expected_output)
 
 
 class TestPyTA:
@@ -382,9 +382,7 @@ class TestPyTA:
     def test_forbidden_toplevel_code_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.PYLINT, "--disable=all"),
-             Arg(Option.PYLINT, "--enable=forbidden-top-level-code"),
-             Arg(Option.NO_FLAKE8, "on")],
+            [Arg(Option.PYLINT, "--enable=forbidden-top-level-code")],
             [p.set_code("E9992") for p in expected_output]
         )
 
@@ -444,9 +442,7 @@ class TestNoGlobals:
     def test_no_globals_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.PYLINT, "--disable=all"),
-             Arg(Option.PYLINT, "--enable=no-global-variables"),
-             Arg(Option.NO_FLAKE8, "on")],
+            [Arg(Option.PYLINT, "--enable=no-global-variables")],
             [p.set_code("R6401") for p in expected_output]
         )
 
@@ -470,7 +466,7 @@ class TestNoGlobals:
     def test_no_globals_files(self, filename: str, expected_output: List[Problem]) -> None:
         apply_and_lint(
             filename,
-            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=no-global-variables")],
+            [Arg(Option.PYLINT, "--enable=no-global-variables")],
             expected_output
         )
 
@@ -485,7 +481,7 @@ class TestLongCode:
     def test_long_function_files(self, filename: str, expected_output: List[Problem]) -> None:
         apply_and_lint(
             filename,
-            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=long-function")],
+            [Arg(Option.PYLINT, "--enable=long-function")],
             expected_output
         )
 
@@ -498,7 +494,7 @@ class TestLongCode:
     def test_use_early_return(self, filename: str, expected_output: List[Problem]) -> None:
         apply_and_lint(
             filename,
-            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=use-early-return")],
+            [Arg(Option.PYLINT, "--enable=use-early-return")],
             expected_output
         )
 
@@ -537,7 +533,7 @@ class TestLongCode:
     ])
 ])
 def test_umime_count_a(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output)
+    apply_and_lint(filename, args, expected_output, from_empty=False)
 
 
 @pytest.mark.parametrize("lines,expected_output", [
@@ -553,7 +549,8 @@ def test_overrides_custom(lines: List[str], expected_output: List[Problem]) -> N
     create_apply_and_lint(
         lines,
         [Arg(Option.NO_FLAKE8, "on")],
-        expected_output
+        expected_output,
+        from_empty=False
     )
 
 

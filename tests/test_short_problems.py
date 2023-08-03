@@ -37,9 +37,7 @@ class TestShort:
     def test_short_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.PYLINT, "--disable=all"),
-             Arg(Option.PYLINT, "--enable=short-problems"),
-             Arg(Option.NO_FLAKE8, "on")],
+            [Arg(Option.PYLINT, "--enable=short-problems")],
             expected_output
         )
 
@@ -76,9 +74,7 @@ class TestShort:
     def test_augassign_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.PYLINT, "--disable=all"),
-             Arg(Option.PYLINT, "--enable=use-augmenting-assignment"),
-             Arg(Option.NO_FLAKE8, "on")],
+            [Arg(Option.PYLINT, "--enable=use-augmenting-assignment")],
             [problem.set_code("R6609") for problem in expected_output]
         )
 
@@ -91,9 +87,7 @@ class TestShort:
     def test_no_is_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.PYLINT, "--disable=all"),
-             Arg(Option.PYLINT, "--enable=no-is-bool"),
-             Arg(Option.NO_FLAKE8, "on")],
+            [Arg(Option.PYLINT, "--enable=no-is-bool")],
             [problem.set_code("R6613") for problem in expected_output]
         )
 
@@ -146,8 +140,6 @@ class TestShort:
         apply_and_lint(
             filename,
             [
-                Arg(Option.NO_FLAKE8, "on"),
-                Arg(Option.PYLINT, "--disable=all"),
                 Arg(Option.PYLINT, "--enable=use-ord-letter,use-literal-letter")
             ],
             expected_output
@@ -306,10 +298,6 @@ class TestShort:
     def test_short_files(self, filename: str, expected_output: List[Problem]) -> None:
         apply_and_lint(
             filename,
-            [
-                Arg(Option.NO_FLAKE8, "on"),
-                Arg(Option.PYLINT, "--disable=all"),
-                Arg(Option.PYLINT, "--enable=short-problems")
-            ],
+            [Arg(Option.PYLINT, "--enable=short-problems")],
             expected_output
         )

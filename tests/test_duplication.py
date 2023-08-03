@@ -2,7 +2,7 @@ import pytest
 from edulint.options import Option
 from edulint.config.arg import Arg
 from edulint.linting.problem import Problem
-from utils import lazy_problem, apply_and_lint, create_apply_and_lint
+from utils import lazy_problem, apply_and_lint
 from typing import List
 
 
@@ -26,7 +26,7 @@ from typing import List
     ("024056-cards.py", [
         lazy_problem().set_line(7)
     ]),
-    ("024329-workdays.py", [ # TODO improve
+    ("024329-workdays.py", [  # TODO improve
         # lazy_problem().set_line(56)
     ]),
     ("024535-credit.py", [
@@ -74,9 +74,10 @@ from typing import List
 def test_duplicate_if_branches(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-if-branches")],
+        [Arg(Option.PYLINT, "--enable=duplicate-if-branches")],
         expected_output
     )
+
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("012889-geometry.py", [
@@ -106,13 +107,13 @@ def test_duplicate_if_branches(filename: str, expected_output: List[Problem]) ->
 def test_duplicate_seq_ifs(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-seq-ifs")],
+        [Arg(Option.PYLINT, "--enable=duplicate-seq-ifs")],
         expected_output
     )
 
 
 @pytest.mark.parametrize("filename,expected_output", [
-    ("012853-geometry.py", [ # TODO detect this
+    ("012853-geometry.py", [  # TODO detect this
         lazy_problem().set_line(8)
         .set_text("A complex expression 'not (a + b > c and b + c > a and c + a > b)' used repeatedly "
                   "(on lines 8, 18, 27). Extract it to a local variable or create a helper function.")
@@ -123,7 +124,7 @@ def test_duplicate_seq_ifs(filename: str, expected_output: List[Problem]) -> Non
                   "local variable or create a helper function."),
         lazy_problem().set_line(21)
         .set_text("A complex expression 'a + b + c > result' used repeatedly (on lines 21, 27, 33). Extract it to a "
-        "local variable or create a helper function."),
+                  "local variable or create a helper function."),
         lazy_problem().set_line(25),
         lazy_problem().set_line(31),
     ]),
@@ -132,7 +133,7 @@ def test_duplicate_seq_ifs(filename: str, expected_output: List[Problem]) -> Non
 def test_duplicate_exprs(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-exprs")],
+        [Arg(Option.PYLINT, "--enable=duplicate-exprs")],
         expected_output
     )
 
@@ -152,7 +153,7 @@ def test_duplicate_exprs(filename: str, expected_output: List[Problem]) -> None:
 def test_duplicate_blocks(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-blocks")],
+        [Arg(Option.PYLINT, "--enable=duplicate-blocks")],
         expected_output
     )
 
@@ -179,6 +180,6 @@ def test_duplicate_blocks(filename: str, expected_output: List[Problem]) -> None
 def test_duplicate_sequence(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.NO_FLAKE8, "on"), Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=duplicate-sequence")],
+        [Arg(Option.PYLINT, "--enable=duplicate-sequence")],
         expected_output
     )

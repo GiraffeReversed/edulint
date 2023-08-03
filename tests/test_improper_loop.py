@@ -20,8 +20,7 @@ from typing import List
 def test_while_true_break(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--disable=R1705"),
-            Arg(Option.FLAKE8, "--extend-ignore=E501,F841")],
+        [Arg(Option.PYLINT, "--enable=no-while-true")],
         [p.set_code("R6301") for p in expected_output]
     )
 
@@ -41,9 +40,7 @@ def test_while_true_break(lines: List[str], expected_output: List[Problem]) -> N
 def test_use_for_loop_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--disable=all"),
-            Arg(Option.PYLINT, "--enable=use-for-loop"),
-            Arg(Option.NO_FLAKE8, "on")],
+        [Arg(Option.PYLINT, "--enable=use-for-loop")],
         [p.set_code("R6305") for p in expected_output]
     )
 
@@ -76,9 +73,7 @@ def test_use_for_loop_custom(lines: List[str], expected_output: List[Problem]) -
 def test_changing_control_variable_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--disable=all"),
-            Arg(Option.PYLINT, "--enable=changing-control-variable"),
-            Arg(Option.NO_FLAKE8, "on")],
+        [Arg(Option.PYLINT, "--enable=changing-control-variable")],
         [p.set_code("R6304") for p in expected_output]
     )
 
@@ -100,7 +95,7 @@ def test_changing_control_variable_custom(lines: List[str], expected_output: Lis
 def test_tighter_bounds_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=use-tighter-boundaries")],
+        [Arg(Option.PYLINT, "--enable=use-tighter-boundaries")],
         expected_output
     )
 
@@ -122,7 +117,7 @@ def test_tighter_bounds_files(filename: str, expected_output: List[Problem]) -> 
 def test_use_for_loop_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=use-for-loop")],
+        [Arg(Option.PYLINT, "--enable=use-for-loop")],
         [problem.set_code("R6305") for problem in expected_output]
     )
 
@@ -155,7 +150,7 @@ def test_use_for_loop_files(filename: str, expected_output: List[Problem]) -> No
 def test_modifying_iterated_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=modifying-iterated-structure")],
+        [Arg(Option.PYLINT, "--enable=modifying-iterated-structure")],
         [problem.set_code("R6303") for problem in expected_output]
     )
 
@@ -169,8 +164,7 @@ def test_modifying_iterated_files(filename: str, expected_output: List[Problem])
 def test_shadowed_control_var_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=loop-shadows-control-variable"),
-            Arg(Option.NO_FLAKE8, "on")],
+        [Arg(Option.PYLINT, "--enable=loop-shadows-control-variable")],
         expected_output
     )
 
@@ -202,6 +196,6 @@ def test_shadowed_control_var_files(filename: str, expected_output: List[Problem
 def test_changing_control_var_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--disable=all"), Arg(Option.PYLINT, "--enable=changing-control-variable")],
+        [Arg(Option.PYLINT, "--enable=changing-control-variable")],
         [problem.set_code("R6304") for problem in expected_output]
     )
