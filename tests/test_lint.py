@@ -42,7 +42,7 @@ from typing import List
     ])
 ])
 def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output, from_empty=False)
+    apply_and_lint(filename, args + [Arg(Option.FLAKE8, "--extend-ignore=E721")], expected_output, from_empty=False)
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
@@ -80,7 +80,7 @@ def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Proble
     ])
 ])
 def test_translations(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
-    apply_and_lint(filename, args, expected_output, from_empty=False)
+    apply_and_lint(filename, args + [Arg(Option.FLAKE8, "--extend-ignore=E721")], expected_output, from_empty=False)
 
 
 class TestIB111Week:
@@ -263,9 +263,9 @@ def test_allowed_onechar_names(filename: str, args: List[Arg], expected_output: 
 @pytest.mark.parametrize("filename,args,expected_output", [
     ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=R1714")], [
         lazy_problem().set_code("R1714").set_line(22)
-        .set_text("Consider merging these comparisons with \"in\" to \"i not in '[]'\""),
+        .set_text("Consider merging these comparisons with 'in' by using 'i not in '[]''"),
         lazy_problem().set_code("R1714").set_line(35)
-        .set_text("Consider merging these comparisons with \"in\" to 'i in (1, 2, 3)'"),
+        .set_text("Consider merging these comparisons with 'in' by using 'i in (1, 2, 3)'"),
     ]),
 ])
 def test_consider_using_in(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
@@ -523,7 +523,7 @@ class TestLongCode:
         lazy_problem().set_code("R6201").set_line(2)
         .set_text("The if statement can be replaced with 'return ch == 'a' or ch == 'A''"),
         lazy_problem().set_code("R1714").set_line(2)
-        .set_text("Consider merging these comparisons with \"in\" to \"ch in 'aA'\""),
+        .set_text("Consider merging these comparisons with 'in' by using 'ch in 'aA''"),
         lazy_problem().set_code("C0104").set_line(9)
         .set_text("Disallowed single-character variable name \"a\", choose a more descriptive name"),
         lazy_problem().set_code("R6101").set_line(10)

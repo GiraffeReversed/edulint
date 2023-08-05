@@ -90,7 +90,7 @@ def consider_using_in_reword(self: Tweaker, problem: Problem) -> str:
             start + inner_quote + "".join(v.strip("\"'") for v in vals) + inner_quote + outer_quote
         )
 
-    return problem.text
+    return start + f"({', '.join(vals)})" + outer_quote
 
 
 def unused_import_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
