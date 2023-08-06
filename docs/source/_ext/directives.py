@@ -1,4 +1,5 @@
-from edulint.options import Option, get_option_parses
+from edulint.options import Option
+from edulint.option_parses import get_option_parses
 from edulint.linters import Linter
 from edulint.config.config_translations import get_config_translations
 import edulint.linting.checkers as custom_checkers

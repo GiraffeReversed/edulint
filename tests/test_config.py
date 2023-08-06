@@ -1,7 +1,8 @@
 import pytest
 from edulint.linters import Linter
 from edulint.config.arg import UnprocessedArg, ProcessedArg
-from edulint.options import Option, TakesVal, Type, Combine, OptionParse, get_option_parses, DEFAULT_CONFIG
+from edulint.options import Option, DEFAULT_CONFIG
+from edulint.option_parses import OptionParse, get_option_parses, TakesVal, Type, Combine
 from edulint.config.config import Config, extract_args, parse_args, parse_config_file, combine_and_translate
 from edulint.config.config_translations import get_config_translations, Translation
 from edulint.linting.tweakers import get_tweakers

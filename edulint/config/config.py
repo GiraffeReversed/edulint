@@ -6,11 +6,8 @@ from edulint.options import (
     Option,
     DEFAULT_CONFIG,
     BASE_CONFIG,
-    TakesVal,
-    OptionParse,
-    get_option_parses,
-    get_name_to_option,
 )
+from edulint.option_parses import OptionParse, get_option_parses, get_name_to_option, TakesVal
 from edulint.config.file_config import load_toml_file
 from edulint.config.config_translations import (
     get_config_translations,

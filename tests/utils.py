@@ -1,4 +1,5 @@
-from edulint.options import get_option_parses, Option, DEFAULT_CONFIG
+from edulint.options import Option, DEFAULT_CONFIG
+from edulint.option_parses import get_option_parses
 from edulint.config.arg import Arg
 from edulint.config.config import parse_config_file, combine_and_translate
 from edulint.config.config_translations import get_config_translations, get_ib111_translations
