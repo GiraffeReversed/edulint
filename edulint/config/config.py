@@ -37,7 +37,12 @@ class Config:
             for arg in args
         ]
 
-    def _translate(self, args: List[Optional[ProcessedArg]]) -> List[Optional[ProcessedArg]]:
+    def _translate(
+        self,
+        args: List[Optional[ProcessedArg]],
+        config_translations: Dict[Option, Translation],
+        ib111_translations: List[Translation],
+    ) -> List[Optional[ProcessedArg]]:
         def apply_translation(
             result: List[Optional[ProcessedArg]], translated: Translation
         ) -> None:
@@ -52,19 +57,19 @@ class Config:
                 continue
             result.append(arg)
 
-            translated = self.config_translations.get(arg.option)
+            translated = config_translations.get(arg.option)
             if translated is not None and arg.val not in (False, None):
                 apply_translation(result, translated)
 
             if arg.option == Option.IB111_WEEK and arg.val is not None:
                 ib111_week = arg.val
                 assert isinstance(ib111_week, int)
-                if 0 <= ib111_week < len(self.ib111_translations):
-                    apply_translation(result, self.ib111_translations[ib111_week])
+                if 0 <= ib111_week < len(ib111_translations):
+                    apply_translation(result, ib111_translations[ib111_week])
                 else:
                     print(
                         f"edulint: option {Option.IB111_WEEK.to_name()} has value {ib111_week} which is invalid;"
-                        f"allowed values are 0 to {len(self.ib111_translations)}",
+                        f"allowed values are 0 to {len(ib111_translations)}",
                         file=sys.stderr,
                     )
 
@@ -98,13 +103,9 @@ class Config:
         self,
         config: Optional[List[UnprocessedArg]] = None,
         option_parses: Dict[Option, OptionParse] = get_option_parses(),
-        config_translations: Dict[Option, Translation] = get_config_translations(),
-        ib111_translations: List[Translation] = get_ib111_translations(),
     ) -> None:
         config = config if config is not None else []
         self.option_parses = option_parses
-        self.config_translations = config_translations
-        self.ib111_translations = ib111_translations
 
         converted = self._convert(config)
         self.config = self._combine(converted, allowed_combines=(Combine.REPLACE,))  # type: ignore
@@ -112,13 +113,7 @@ class Config:
     @staticmethod
     def combine(lt: "Config", rt: "Config") -> "Config":
         assert lt.option_parses == rt.option_parses
-        assert lt.config_translations == rt.config_translations
-        assert lt.ib111_translations == rt.ib111_translations
-        new = Config(
-            option_parses=lt.option_parses,
-            config_translations=lt.config_translations,
-            ib111_translations=lt.ib111_translations,
-        )
+        new = Config(option_parses=lt.option_parses)
         new.config = new._combine(lt.config + rt.config, allowed_combines=(Combine.REPLACE,))
         return new
 
@@ -136,8 +131,12 @@ class Config:
     def _to_immutable(val: UnionT) -> ImmutableT:
         return val if not isinstance(val, list) else tuple(val)
 
-    def to_immutable(self) -> "ImmutableConfig":
-        translated = self._translate(self.config)
+    def to_immutable(
+        self,
+        config_translations: Dict[Option, Translation] = get_config_translations(),
+        ib111_translations: List[Translation] = get_ib111_translations(),
+    ) -> "ImmutableConfig":
+        translated = self._translate(self.config, config_translations, ib111_translations)
         combined = self._combine(translated, allowed_combines=(Combine.REPLACE, Combine.EXTEND))
 
         ordered_args = [ProcessedArg(o, self.option_parses[o].default) for o in Option]
@@ -251,33 +250,18 @@ def fill_in_val(arg: UnprocessedArg, translation: List[str]) -> List[str]:
 # %% partial parsers
 
 
-def parse_cmd_config(
-    args: List[str],
-    option_parses: Dict[Option, OptionParse],
-    config_translations: Dict[Option, Translation],
-    ib111_translations: List[Translation],
-) -> Config:
+def parse_cmd_config(args: List[str], option_parses: Dict[Option, OptionParse]) -> Config:
     parsed = parse_args(args, option_parses)
-    return Config(parsed, option_parses, config_translations, ib111_translations)
+    return Config(parsed, option_parses)
 
 
-def parse_infile_config(
-    filename: str,
-    option_parses: Dict[Option, OptionParse],
-    config_translations: Dict[Option, Translation],
-    ib111_translations: List[Translation],
-) -> Config:
+def parse_infile_config(filename: str, option_parses: Dict[Option, OptionParse]) -> Config:
     extracted = extract_args(filename)
     parsed = parse_args(extracted, option_parses)
-    return Config(parsed, option_parses, config_translations, ib111_translations)
+    return Config(parsed, option_parses)
 
 
-def parse_config_file(
-    path: str,
-    option_parses: Dict[Option, OptionParse],
-    config_translations: Dict[Option, Translation],
-    ib111_translations: List[Translation],
-) -> Optional[Config]:
+def parse_config_file(path: str, option_parses: Dict[Option, OptionParse]) -> Optional[Config]:
     def print_invalid_type_message(option: Option, val: Any) -> None:
         print(f"edulint: invalid value type {type(val)} of value {val} for option {Option.CONFIG}")
 
@@ -286,7 +270,7 @@ def parse_config_file(
         if not isinstance(rec_config, str):
             print_invalid_type_message(Option.CONFIG, rec_config)
             rec_config = BASE_CONFIG
-        return parse_config_file(rec_config, option_parses, config_translations, ib111_translations)
+        return parse_config_file(rec_config, option_parses)
 
     def val_to_str(option: Option, val: Any) -> Optional[str]:
         if isinstance(val, str):
@@ -307,7 +291,7 @@ def parse_config_file(
     base = (
         parse_base_config(config_dict)
         if path != BASE_CONFIG
-        else _get_default_config(option_parses, config_translations, ib111_translations)
+        else _get_default_config(option_parses)
     )
     if base is None:
         return None
@@ -332,7 +316,7 @@ def parse_config_file(
             if str_val is not None:
                 result.append(UnprocessedArg(option, str_val))
 
-    this_file_config = Config(result, option_parses, config_translations, ib111_translations)
+    this_file_config = Config(result, option_parses)
     return Config.combine(base, this_file_config)
 
 
@@ -372,16 +356,8 @@ def _partition(filenames: List[str], configs: List[Config]) -> List[Tuple[List[s
     return partition
 
 
-def _get_default_config(
-    option_parses: Dict[Option, OptionParse],
-    config_translations: Dict[Option, Translation],
-    ib111_translations: List[Translation],
-) -> Config:
-    return Config(
-        option_parses=option_parses,
-        config_translations=config_translations,
-        ib111_translations=ib111_translations,
-    )
+def _get_default_config(option_parses: Dict[Option, OptionParse]) -> Config:
+    return Config(option_parses=option_parses)
 
 
 def _ignore_infile(config: Config) -> bool:
@@ -390,23 +366,14 @@ def _ignore_infile(config: Config) -> bool:
 
 
 def _parse_infile_configs(
-    filenames: List[str],
-    cmd_config: Config,
-    option_parses: Dict[Option, OptionParse],
-    config_translations: Dict[Option, Translation],
-    ib111_translations: List[Translation],
+    filenames: List[str], cmd_config: Config, option_parses: Dict[Option, OptionParse]
 ) -> List[Config]:
     if _ignore_infile(cmd_config):
-        return [
-            _get_default_config(option_parses, config_translations, ib111_translations)
-            for filename in filenames
-        ]
+        return [_get_default_config(option_parses) for filename in filenames]
 
     infile_configs = []
     for filename in filenames:
-        infile_config = parse_infile_config(
-            filename, option_parses, config_translations, ib111_translations
-        )
+        infile_config = parse_infile_config(filename, option_parses)
         if _ignore_infile(infile_config):
             ignore_infile_val = infile_config.get_last_value(
                 Option.IGNORE_INFILE_CONFIG_FOR, use_default=False
@@ -414,10 +381,7 @@ def _parse_infile_configs(
             assert ignore_infile_val is not None
             ignore_infile_str = ",".join(ignore_infile_val)
             infile_config = Config(
-                [UnprocessedArg(Option.IGNORE_INFILE_CONFIG_FOR, ignore_infile_str)],
-                option_parses,
-                config_translations,
-                ib111_translations,
+                [UnprocessedArg(Option.IGNORE_INFILE_CONFIG_FOR, ignore_infile_str)], option_parses
             )
 
         infile_configs.append(infile_config)
@@ -431,12 +395,8 @@ def get_config_many(
     config_translations: Dict[Option, Translation] = get_config_translations(),
     ib111_translations: List[Translation] = get_ib111_translations(),
 ) -> List[Tuple[List[str], ImmutableConfig]]:
-    cmd_config = parse_cmd_config(
-        cmd_args_raw, option_parses, config_translations, ib111_translations
-    )
-    infile_configs = _parse_infile_configs(
-        filenames, cmd_config, option_parses, config_translations, ib111_translations
-    )
+    cmd_config = parse_cmd_config(cmd_args_raw, option_parses)
+    infile_configs = _parse_infile_configs(filenames, cmd_config, option_parses)
 
     cmd_config_path = cmd_config.get_last_value(Option.CONFIG, use_default=False)
     config_paths = (
@@ -448,10 +408,7 @@ def get_config_many(
         }
     )
     file_configs = {
-        config_path: parse_config_file(
-            config_path, option_parses, config_translations, ib111_translations
-        )
-        for config_path in config_paths
+        config_path: parse_config_file(config_path, option_parses) for config_path in config_paths
     }
 
     result: List[Tuple[List[str], ImmutableConfig]] = []
@@ -467,7 +424,7 @@ def get_config_many(
             config = Config.combine(file_config, cmd_config)
         else:
             config = Config.combine(file_config, combined)
-        result.append((files, config.to_immutable()))
+        result.append((files, config.to_immutable(config_translations, ib111_translations)))
     return result
 
 

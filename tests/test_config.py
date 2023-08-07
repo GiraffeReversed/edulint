@@ -147,10 +147,7 @@ def packaged_config_files():
 
 @pytest.mark.parametrize("config_name", packaged_config_files())
 def test_packaged_configs_parse(config_name: str):
-    option_parses = get_option_parses()
-    config_translations = get_config_translations()
-    ib111_translations = get_ib111_translations()
-    assert parse_config_file(config_name, option_parses, config_translations, ib111_translations) is not None
+    assert parse_config_file(config_name, get_option_parses()) is not None
 
 
 @pytest.fixture
@@ -239,19 +236,20 @@ def test_combine_and_translate_translates(
         return tuple(result)
 
     option_parses = get_option_parses()
-    result = Config(args, option_parses, config_translations, ib111_translations).to_immutable()
+    result = Config(args, option_parses).to_immutable(config_translations, ib111_translations)
     reference = fill_in_defaults(config, option_parses)
     assert result.config == reference
 
 
 def _fill_in_file_config(config: Config) -> Config:
+    config_translations = get_config_translations()
+    ib111_translations = get_ib111_translations()
+
     file_config = parse_config_file(
         config.get_last_value(Option.CONFIG, use_default=True),
-        get_option_parses(),
-        get_config_translations(),
-        get_ib111_translations(),
+        get_option_parses()
     )
-    return Config.combine(file_config, config).to_immutable()
+    return Config.combine(file_config, config).to_immutable(config_translations, ib111_translations)
 
 
 def _arg_to_str(option: Option, val: Optional[str]) -> str:

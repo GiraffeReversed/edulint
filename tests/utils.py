@@ -56,10 +56,8 @@ def prepare_config(args: List[UnprocessedArg], from_empty: bool) -> Config:
     config_path = (
         config_args.get_last_value(Option.CONFIG, use_default=True) if not from_empty else "empty"
     )
-    config_file = parse_config_file(
-        config_path, get_option_parses(), get_config_translations(), get_ib111_translations()
-    )
-    return Config.combine(config_file, config_args).to_immutable()
+    config_file = parse_config_file(config_path, get_option_parses())
+    return Config.combine(config_file, config_args).to_immutable(get_config_translations(), get_ib111_translations())
 
 
 def apply_and_lint(
