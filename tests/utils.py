@@ -1,7 +1,7 @@
 from edulint.options import Option
 from edulint.option_parses import get_option_parses
 from edulint.config.arg import UnprocessedArg
-from edulint.config.config import parse_config_file, Config, ImmutableConfig
+from edulint.config.config import parse_config_file, Config
 from edulint.config.config_translations import get_config_translations, get_ib111_translations
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_one
@@ -53,11 +53,13 @@ def get_tests_path(filename: str) -> str:
 
 def prepare_config(args: List[UnprocessedArg], from_empty: bool) -> Config:
     config_args = Config(args)
-    config_path = config_args[Option.CONFIG] if not from_empty else "empty"
+    config_path = (
+        config_args.get_last_value(Option.CONFIG, use_default=True) if not from_empty else "empty"
+    )
     config_file = parse_config_file(
         config_path, get_option_parses(), get_config_translations(), get_ib111_translations()
     )
-    return ImmutableConfig(Config.combine(config_file, config_args))
+    return Config.combine(config_file, config_args).to_immutable()
 
 
 def apply_and_lint(

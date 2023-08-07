@@ -6,7 +6,13 @@ from edulint.options import (
     Option,
     BASE_CONFIG,
 )
-from edulint.option_parses import OptionParse, get_option_parses, get_name_to_option, TakesVal
+from edulint.option_parses import (
+    OptionParse,
+    get_option_parses,
+    get_name_to_option,
+    TakesVal,
+    Combine,
+)
 from edulint.config.file_config import load_toml_file
 from edulint.config.config_translations import (
     get_config_translations,
@@ -23,7 +29,7 @@ import shlex
 
 
 class Config:
-    config: List[ProcessedArg]
+    config: List[Optional[ProcessedArg]]
 
     def _convert(self, args: List[UnprocessedArg]) -> List[ProcessedArg]:
         return [
@@ -31,40 +37,63 @@ class Config:
             for arg in args
         ]
 
-    def _combine_and_translate(self, args: List[ProcessedArg]) -> List[ProcessedArg]:
-        def combine(option_vals: List[UnionT], option: Option, val: UnionT) -> None:
-            parse = self.option_parses[option]
-            old_val = option_vals[int(option)]
-            option_vals[int(option)] = parse.combine(old_val, val)
-
-        def apply_translation(option_vals: List[UnionT], translated: Translation) -> None:
+    def _translate(self, args: List[Optional[ProcessedArg]]) -> List[Optional[ProcessedArg]]:
+        def apply_translation(
+            result: List[Optional[ProcessedArg]], translated: Translation
+        ) -> None:
             translated_option = translated.for_linter.to_option()
             parse = self.option_parses[translated_option]
             for val in translated.vals:
-                combine(option_vals, translated_option, parse.convert(val))
+                result.append(ProcessedArg(translated_option, parse.convert(val)))
 
-        option_vals = [self.option_parses[o].default for o in Option]
-
+        result: List[Optional[ProcessedArg]] = []
         for arg in args:
-            combine(option_vals, arg.option, arg.val)
+            if arg is None:
+                continue
+            result.append(arg)
 
             translated = self.config_translations.get(arg.option)
-            if translated is not None and option_vals[int(arg.option)] not in (False, None):
-                apply_translation(option_vals, translated)
+            if translated is not None and arg.val not in (False, None):
+                apply_translation(result, translated)
 
-        ib111_week = option_vals[int(Option.IB111_WEEK)]
-        if ib111_week is not None:
-            assert isinstance(ib111_week, int)
-            if 0 <= ib111_week < len(self.ib111_translations):
-                apply_translation(option_vals, self.ib111_translations[ib111_week])
-            else:
-                print(
-                    f"edulint: option {Option.IB111_WEEK.to_name()} has value {ib111_week} which is invalid;"
-                    f"allowed values are 0 to {len(self.ib111_translations)}",
-                    file=sys.stderr,
+        for arg in args:
+            if arg is not None and arg.option == Option.IB111_WEEK and arg.val is not None:
+                ib111_week = arg.val
+                assert isinstance(ib111_week, int)
+                if 0 <= ib111_week < len(self.ib111_translations):
+                    apply_translation(result, self.ib111_translations[ib111_week])
+                else:
+                    print(
+                        f"edulint: option {Option.IB111_WEEK.to_name()} has value {ib111_week} which is invalid;"
+                        f"allowed values are 0 to {len(self.ib111_translations)}",
+                        file=sys.stderr,
+                    )
+
+        return result
+
+    def _combine(
+        self, args: List[Optional[ProcessedArg]], allowed_combines: Tuple[Combine, ...] = ()
+    ) -> List[Optional[ProcessedArg]]:
+        indices: Dict[Option, int] = {}
+        results: List[Optional[ProcessedArg]] = []
+        for new_arg in args:
+            if new_arg is None:
+                continue
+            parse = self.option_parses[new_arg.option]
+            if parse.combine in allowed_combines and new_arg.option in indices:
+                old_index = indices[new_arg.option]
+                old_arg = results[old_index]
+                assert old_arg is not None
+
+                results.append(
+                    ProcessedArg(new_arg.option, parse.combine(old_arg.val, new_arg.val))
                 )
+                results[old_index] = None
+            else:
+                results.append(new_arg)
+            indices[new_arg.option] = len(results) - 1
 
-        return [ProcessedArg(o, v) for o, v in zip(Option, option_vals)]
+        return results
 
     def __init__(
         self,
@@ -79,7 +108,7 @@ class Config:
         self.ib111_translations = ib111_translations
 
         converted = self._convert(config)
-        self.config = self._combine_and_translate(converted)
+        self.config = self._combine(converted, allowed_combines=(Combine.REPLACE,))  # type: ignore
 
     @staticmethod
     def combine(lt: "Config", rt: "Config") -> "Config":
@@ -91,30 +120,41 @@ class Config:
             config_translations=lt.config_translations,
             ib111_translations=lt.ib111_translations,
         )
-        new.config = new._combine_and_translate(lt.config + rt.config)
+        new.config = new._combine(lt.config + rt.config, allowed_combines=(Combine.REPLACE,))
         return new
 
     def __str__(self) -> str:
-        return f"Config({', '.join(arg.option.name + '=' + str(arg.val) for arg in self.config)})"
+        return f"Config({', '.join(arg.option.name + '=' + str(arg.val) for arg in self.config if arg is not None)})"
 
-    def __getitem__(self, option: Option) -> UnionT:
-        return self.config[int(option)].val
+    def get_last_value(self, option: Option, use_default: bool) -> Optional[UnionT]:
+        assert self.option_parses[option].combine == Combine.REPLACE
+        for arg in reversed(self.config):
+            if arg is not None and arg.option == option:
+                return arg.val
+        return None if not use_default else self.option_parses[option].default
+
+    @staticmethod
+    def _to_immutable(val: UnionT) -> ImmutableT:
+        return val if not isinstance(val, list) else tuple(val)
+
+    def to_immutable(self) -> "ImmutableConfig":
+        translated = self._translate(self.config)
+        combined = self._combine(translated, allowed_combines=(Combine.REPLACE, Combine.EXTEND))
+
+        ordered_args = [ProcessedArg(o, self.option_parses[o].default) for o in Option]
+        for arg in combined:
+            if arg is None:
+                continue
+            ordered_args[int(arg.option)] = arg
+
+        return ImmutableConfig(
+            tuple(ImmutableArg(o, self._to_immutable(ordered_args[int(o)].val)) for o in Option)
+        )
 
 
 @dataclass(frozen=True)
 class ImmutableConfig:
-    config: Tuple[ImmutableArg]
-
-    @staticmethod
-    def to_immutable(v: UnionT) -> ImmutableT:
-        return v if not isinstance(v, list) else tuple(v)
-
-    def __init__(self, config: Config):
-        object.__setattr__(
-            self,
-            "config",
-            tuple(ImmutableArg(arg.option, self.to_immutable(arg.val)) for arg in config.config),
-        )
+    config: Tuple[ImmutableArg, ...]
 
     def __str__(self) -> str:
         return f"ImmutableConfig({', '.join(arg.option.name + '=' + str(arg.val) for arg in self.config)})"
@@ -317,7 +357,7 @@ def get_config_one(
 
 
 def _partition(filenames: List[str], configs: List[Config]) -> List[Tuple[List[str], Config]]:
-    immutable_configs = [ImmutableConfig(c) for c in configs]
+    immutable_configs = [c.to_immutable() for c in configs]
 
     indices: Dict[ImmutableConfig, int] = {}
     partition: List[Tuple[List[str], Config]] = []
@@ -371,16 +411,18 @@ def get_config_many(
     cmd_config = parse_cmd_config(
         cmd_args_raw, option_parses, config_translations, ib111_translations
     )
-    cmd_sets_config = any(arg.startswith(Option.CONFIG.to_name()) for arg in cmd_args_raw)
     infile_configs = _parse_infile_configs(
         filenames, cmd_config, option_parses, config_translations, ib111_translations
     )
 
-    cmd_config_path = cmd_config[Option.CONFIG]
+    cmd_config_path = cmd_config.get_last_value(Option.CONFIG, use_default=False)
     config_paths = (
         {cast(str, cmd_config_path)}
-        if cmd_sets_config
-        else {cast(str, infile_args[Option.CONFIG]) for infile_args in infile_configs}
+        if cmd_config_path is not None
+        else {
+            cast(str, infile_args.get_last_value(Option.CONFIG, use_default=True))
+            for infile_args in infile_configs
+        }
     )
     file_configs = {
         config_path: parse_config_file(
@@ -392,12 +434,14 @@ def get_config_many(
     result: List[Tuple[List[str], ImmutableConfig]] = []
     for files, infile_config in _partition(filenames, infile_configs):
         combined = Config.combine(infile_config, cmd_config)
-        file_config = file_configs[cast(str, combined[Option.CONFIG])]
+        file_config = file_configs[
+            cast(str, combined.get_last_value(Option.CONFIG, use_default=True))
+        ]
         if file_config is None:
             continue
 
         config = Config.combine(file_config, combined)
-        result.append((files, ImmutableConfig(config)))
+        result.append((files, config.to_immutable()))
     return result
 
 

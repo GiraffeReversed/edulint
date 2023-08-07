@@ -67,7 +67,6 @@ class Combine(MultivaluedEnum):
         return self.combine(lt, rt)
 
     REPLACE = (auto(), _keep_right_combine)
-    APPEND = (auto(), _append_combine)
     EXTEND = (auto(), _extend_combine)
 
 

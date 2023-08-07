@@ -4,9 +4,10 @@ from edulint.config.arg import UnprocessedArg, ProcessedArg
 from edulint.options import Option, DEFAULT_CONFIG
 from edulint.option_parses import OptionParse, get_option_parses, TakesVal, Type, Combine
 from edulint.config.arg import Arg
-from edulint.config.config import Config, ImmutableConfig, extract_args, parse_args, parse_config_file, get_config_many
+from edulint.config.config import Config, extract_args, parse_args, parse_config_file, get_config_many, get_config_one
 from edulint.config.config_translations import get_config_translations, get_ib111_translations, Translation
 from edulint.linting.tweakers import get_tweakers
+from utils import get_tests_path
 from typing import List, Set, Dict, Tuple
 from pathlib import Path
 
@@ -105,7 +106,7 @@ def test_extract_args(mocker, contents, args):
 def options() -> Dict[Option, OptionParse]:
     return {
         Option.PYTHON_SPECIFIC: OptionParse(Option.PYTHON_SPECIFIC, "", TakesVal.NO, False, Type.BOOL, Combine.REPLACE),
-        Option.FLAKE8: OptionParse(Option.FLAKE8, "", TakesVal.YES, [], Type.STR, Combine.APPEND),
+        Option.FLAKE8: OptionParse(Option.FLAKE8, "", TakesVal.YES, [], Type.STR, Combine.EXTEND),
         Option.IB111_WEEK: OptionParse(Option.IB111_WEEK, "", TakesVal.YES, None, Type.INT, Combine.REPLACE),
         Option.CONFIG: OptionParse(Option.CONFIG, "", TakesVal.YES, DEFAULT_CONFIG, Type.STR, Combine.REPLACE)
     }
@@ -223,18 +224,47 @@ def test_combine_and_translate_translates(
         config: List[ProcessedArg]) -> None:
 
     def fill_in_defaults(config: List[ProcessedArg], option_parses: Dict[Option, OptionParse]) -> List[ProcessedArg]:
-        result = [None for _ in Option]
+        result = [ProcessedArg(o, Config._to_immutable(option_parses[o].default)) for o in Option]
         for arg in config:
-            result[int(arg.option)] = arg
-        for o in Option:
-            if result[int(o)] is None:
-                result[int(o)] = ProcessedArg(o, option_parses[o].default)
-        return result
+            result[int(arg.option)] = ProcessedArg(arg.option, Config._to_immutable(arg.val))
+        return tuple(result)
 
     option_parses = get_option_parses()
-    result = Config(args, option_parses, config_translations, ib111_translations)
+    result = Config(args, option_parses, config_translations, ib111_translations).to_immutable()
     reference = fill_in_defaults(config, option_parses)
     assert result.config == reference
+
+
+def _fill_in_file_config(config: Config) -> Config:
+    file_config = parse_config_file(
+        config.get_last_value(Option.CONFIG, use_default=True),
+        get_option_parses(),
+        get_config_translations(),
+        get_ib111_translations(),
+    )
+    return Config.combine(file_config, config).to_immutable()
+
+
+@pytest.mark.parametrize(
+    "filename,cmd,config",
+    [
+        ("custom_set_empty_config.py", [], Config([Arg(Option.CONFIG, "empty")])),
+        (
+            "custom_set_empty_config.py",
+            [f"{Option.CONFIG.to_name()}=default"],
+            Config([Arg(Option.CONFIG, "default")]),
+        ),
+        ("custom_set_replace_option.py", [], Config([Arg(Option.IB111_WEEK, "1")])),
+        (
+            "custom_set_replace_option.py",
+            [f"{Option.IB111_WEEK.to_name()}=5"],
+            Config([Arg(Option.IB111_WEEK, "5")]),
+        ),
+    ],
+)
+def test_get_config_one(filename: str, cmd: List[UnprocessedArg], config: Config):
+    iconfig = _fill_in_file_config(config)
+    assert get_config_one(get_tests_path(filename), cmd).config == iconfig.config
 
 
 @pytest.mark.parametrize("filenames,partition", [
@@ -252,7 +282,7 @@ def test_combine_and_translate_translates(
         ]
     )
 ])
-def test_get_config_many(filenames: List[str], partition: List[Tuple[List[str], ImmutableConfig]]):
+def test_get_config_many(filenames: List[str], partition: List[Tuple[List[str], Config]]):
     configs = get_config_many(filenames, [])
     assert len(configs) == len(partition)
 
@@ -262,7 +292,5 @@ def test_get_config_many(filenames: List[str], partition: List[Tuple[List[str], 
 
         assert fns1 == fns2
 
-        file_config = parse_config_file(
-            config2[Option.CONFIG], get_option_parses(), get_config_translations(), get_ib111_translations()
-        )
-        assert iconfig1.config == ImmutableConfig(Config.combine(file_config, config2)).config
+        iconfig2 = _fill_in_file_config(config2)
+        assert iconfig1.config == iconfig2.config
