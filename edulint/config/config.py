@@ -4,7 +4,6 @@ from edulint.options import (
     UnionT,
     ImmutableT,
     Option,
-    DEFAULT_CONFIG,
     BASE_CONFIG,
 )
 from edulint.option_parses import OptionParse, get_option_parses, get_name_to_option, TakesVal
@@ -68,6 +67,9 @@ class Config:
         return filter(lambda x: x is not None, self.config.__iter__())
 
 
+# %% components
+
+
 def extract_args(filename: str) -> List[str]:
     edulint_re = re.compile(r"\s*#[\s#]*edulint:\s*", re.IGNORECASE)
     ib111_re = re.compile(r"\s*from\s+ib111\s+import\s+week_(\d+)", re.IGNORECASE)
@@ -116,9 +118,7 @@ def parse_option(
     return None
 
 
-def parse_args(
-    args: List[str], option_parses: Dict[Option, OptionParse]
-) -> Tuple[str, List[UnprocessedArg]]:
+def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> List[UnprocessedArg]:
     name_to_option = get_name_to_option(option_parses)
 
     def get_name_val(arg: str) -> Tuple[str, Optional[str]]:
@@ -128,71 +128,18 @@ def parse_args(
         return arg, None
 
     result: List[UnprocessedArg] = []
-    config_path = DEFAULT_CONFIG
     for arg in args:
         name, val = get_name_val(arg)
         option = parse_option(option_parses, name_to_option, name, val)
         if option is not None:
             result.append(UnprocessedArg(option, val))
-        if option == Option.CONFIG and val is not None:
-            config_path = val
-
-    return config_path, result
-
-
-def parse_config_file(
-    path: str, option_parses: Dict[Option, OptionParse]
-) -> Optional[List[UnprocessedArg]]:
-    def print_invalid_type_message(option: Option, val: Any) -> None:
-        print(f"edulint: invalid value type {type(val)} of value {val} for option {Option.CONFIG}")
-
-    def parse_base_config(config_dict: Dict[str, Any]) -> Optional[List[UnprocessedArg]]:
-        rec_config = config_dict.get(Option.CONFIG.to_name(), BASE_CONFIG)
-        if not isinstance(rec_config, str):
-            print_invalid_type_message(Option.CONFIG, rec_config)
-            rec_config = BASE_CONFIG
-        return parse_config_file(rec_config, option_parses)
-
-    def val_to_str(option: Option, val: Any) -> Optional[str]:
-        if isinstance(val, str):
-            return val
-        if isinstance(val, list):
-            return ",".join(val)
-        if isinstance(val, tuple):
-            key, value = val
-            value = val_to_str(option, value)
-            return f"--{key}={value}" if value is not None else None
-        print_invalid_type_message(option, val)
-        return None
-
-    config_dict = load_toml_file(path)
-    if config_dict is None:
-        return None
-
-    result = parse_base_config(config_dict) if path != BASE_CONFIG else []
-    if result is None:
-        return None
-
-    name_to_option = get_name_to_option(option_parses)
-    for name, val in config_dict.items():
-        option = parse_option(option_parses, name_to_option, name, val)
-        if option is None or option == Option.CONFIG:  # config is handled as the first option
-            continue
-
-        if not isinstance(val, dict):
-            to_process = [val]
-        elif option.to_name() not in {linter.to_name() for linter in Linter}:
-            print_invalid_type_message(option, val)
-            continue
-        else:
-            to_process = list(val.items())
-
-        for val in to_process:
-            str_val = val_to_str(option, val)
-            if str_val is not None:
-                result.append(UnprocessedArg(option, str_val))
-
     return result
+
+
+def convert(
+    args: List[UnprocessedArg], option_parses: Dict[Option, OptionParse]
+) -> List[ProcessedArg]:
+    return [ProcessedArg(arg.option, option_parses[arg.option].convert(arg.val)) for arg in args]
 
 
 def fill_in_val(arg: UnprocessedArg, translation: List[str]) -> List[str]:
@@ -207,20 +154,21 @@ def fill_in_val(arg: UnprocessedArg, translation: List[str]) -> List[str]:
 
 
 def combine_and_translate(
-    args: List[UnprocessedArg],
+    args: List[ProcessedArg],
     option_parses: Dict[Option, OptionParse],
     config_translations: Dict[Option, Translation],
     ib111_translations: List[Translation],
-) -> Config:
-    def combine(option_vals: List[UnionT], option: Option, val: Optional[str]) -> None:
+) -> List[ProcessedArg]:
+    def combine(option_vals: List[UnionT], option: Option, val: UnionT) -> None:
         parse = option_parses[option]
         old_val = option_vals[int(option)]
-        option_vals[int(option)] = parse.combine(old_val, parse.convert(val))
+        option_vals[int(option)] = parse.combine(old_val, val)
 
     def apply_translation(option_vals: List[UnionT], translated: Translation) -> None:
         translated_option = translated.for_linter.to_option()
+        parse = option_parses[translated_option]
         for val in translated.vals:
-            combine(option_vals, translated_option, val)
+            combine(option_vals, translated_option, parse.convert(val))
 
     option_vals = [option_parses[o].default for o in Option]
 
@@ -243,7 +191,99 @@ def combine_and_translate(
                 file=sys.stderr,
             )
 
-    return Config([ProcessedArg(o, v) for o, v in zip(Option, option_vals) if v is not None])
+    return [ProcessedArg(o, v) for o, v in zip(Option, option_vals)]
+
+
+# %% partial parsers
+
+
+def parse_cmd_config(
+    args: List[str],
+    option_parses: Dict[Option, OptionParse],
+    config_translations: Dict[Option, Translation],
+    ib111_translations: List[Translation],
+) -> List[ProcessedArg]:
+    parsed = parse_args(args, option_parses)
+    converted = convert(parsed, option_parses)
+    return combine_and_translate(converted, option_parses, config_translations, ib111_translations)
+
+
+def parse_infile_config(
+    filename: str,
+    option_parses: Dict[Option, OptionParse],
+    config_translations: Dict[Option, Translation],
+    ib111_translations: List[Translation],
+) -> List[ProcessedArg]:
+    extracted = extract_args(filename)
+    parsed = parse_args(extracted, option_parses)
+    converted = convert(parsed, option_parses)
+    return combine_and_translate(converted, option_parses, config_translations, ib111_translations)
+
+
+def parse_config_file(
+    path: str,
+    option_parses: Dict[Option, OptionParse],
+    config_translations: Dict[Option, Translation],
+    ib111_translations: List[Translation],
+) -> Optional[List[ProcessedArg]]:
+    def print_invalid_type_message(option: Option, val: Any) -> None:
+        print(f"edulint: invalid value type {type(val)} of value {val} for option {Option.CONFIG}")
+
+    def parse_base_config(config_dict: Dict[str, Any]) -> Optional[List[UnprocessedArg]]:
+        rec_config = config_dict.get(Option.CONFIG.to_name(), BASE_CONFIG)
+        if not isinstance(rec_config, str):
+            print_invalid_type_message(Option.CONFIG, rec_config)
+            rec_config = BASE_CONFIG
+        return parse_config_file(rec_config, option_parses, config_translations, ib111_translations)
+
+    def val_to_str(option: Option, val: Any) -> Optional[str]:
+        if isinstance(val, str):
+            return val
+        if isinstance(val, list):
+            return ",".join(val)
+        if isinstance(val, tuple):
+            key, value = val
+            value = val_to_str(option, value)
+            return f"--{key}={value}" if value is not None else None
+        print_invalid_type_message(option, val)
+        return None
+
+    config_dict = load_toml_file(path)
+    if config_dict is None:
+        return None
+
+    base = parse_base_config(config_dict) if path != BASE_CONFIG else []
+    if base is None:
+        return None
+
+    result = []
+    name_to_option = get_name_to_option(option_parses)
+    for name, val in config_dict.items():
+        option = parse_option(option_parses, name_to_option, name, val)
+        if option is None or option == Option.CONFIG:  # config is handled as the first option
+            continue
+
+        if not isinstance(val, dict):
+            to_process = [val]
+        elif option.to_name() not in {linter.to_name() for linter in Linter}:
+            print_invalid_type_message(option, val)
+            continue
+        else:
+            to_process = list(val.items())
+
+        for val in to_process:
+            str_val = val_to_str(option, val)
+            if str_val is not None:
+                result.append(UnprocessedArg(option, str_val))
+
+    converted = convert(result, option_parses)
+    combined = combine_and_translate(
+        base + converted, option_parses, config_translations, ib111_translations
+    )
+    return combined
+
+
+# %% complete parsers
 
 
 def get_config_one(
@@ -258,7 +298,45 @@ def get_config_one(
     )
     if len(configs) == 0:
         return None
-    return configs[0][1]
+    _filenames, config = configs[0]
+    return config
+
+
+def _partition(
+    filenames: List[str], configs: List[List[ProcessedArg]]
+) -> List[Tuple[List[str], List[ProcessedArg]]]:
+    immutable_configs = [Config(c) for c in configs]
+
+    dedup_configs = list(set(immutable_configs))
+    indices = [dedup_configs.index(config) for config in immutable_configs]
+    partitioned: List[List[str]] = [[] for _ in dedup_configs]
+
+    for i, filename in enumerate(filenames):
+        partitioned[indices[i]].append(filename)
+
+    return list(
+        zip(partitioned, [configs[immutable_configs.index(dedup)] for dedup in dedup_configs])
+    )
+
+
+def _get_default_config(option_parses: Dict[Option, OptionParse]) -> List[ProcessedArg]:
+    return [ProcessedArg(o, option_parses[o].default) for o in Option]
+
+
+def _parse_infile_configs(
+    filenames: List[str],
+    cmd_config: List[ProcessedArg],
+    option_parses: Dict[Option, OptionParse] = get_option_parses(),
+    config_translations: Dict[Option, Translation] = get_config_translations(),
+    ib111_translation: List[Translation] = get_ib111_translations(),
+) -> List[List[ProcessedArg]]:
+    infile_configs = []
+    for filename in filenames:
+        infile_config = parse_infile_config(
+            filename, option_parses, config_translations, ib111_translation
+        )
+        infile_configs.append(infile_config)
+    return infile_configs
 
 
 def get_config_many(
@@ -268,45 +346,41 @@ def get_config_many(
     config_translations: Dict[Option, Translation] = get_config_translations(),
     ib111_translation: List[Translation] = get_ib111_translations(),
 ) -> List[Tuple[List[str], Config]]:
-    def partition(
-        configs: List[Tuple[str, List[UnprocessedArg]]]
-    ) -> List[Tuple[List[str], Tuple[str, List[UnprocessedArg]]]]:
-        immutable_configs = [(f, tuple(c)) for f, c in configs]
+    cmd_config = parse_cmd_config(
+        cmd_args_raw, option_parses, config_translations, ib111_translation
+    )
+    infile_configs = _parse_infile_configs(
+        filenames, cmd_config, option_parses, config_translations, ib111_translation
+    )
 
-        dedup_configs = list(set(immutable_configs))
-        indices = [dedup_configs.index(config) for config in immutable_configs]
-        partitioned: List[List[str]] = [[] for _ in dedup_configs]
-
-        for i, filename in enumerate(filenames):
-            partitioned[indices[i]].append(filename)
-
-        return list(zip(partitioned, [(f, list(c)) for f, c in dedup_configs]))
-
-    cmd_config_path, cmd_args = parse_args(cmd_args_raw, option_parses)
-    cmd_sets_config = any(arg.option == Option.CONFIG for arg in cmd_args)
-
-    config_from_files = [
-        parse_args(extract_args(filename), option_parses) for filename in filenames
-    ]
-
-    config_paths = {cmd_config_path} if cmd_sets_config else {c for c, _ in config_from_files}
-    config_files_args = {
-        config_path: parse_config_file(config_path, option_parses) for config_path in config_paths
+    cmd_config_path = cmd_config[int(Option.CONFIG)].val
+    config_paths = (
+        {cmd_config_path}
+        if cmd_config_path is not None
+        else {infile_args[int(Option.CONFIG)].val for infile_args in infile_configs}
+    )
+    file_configs = {
+        config_path: parse_config_file(
+            config_path, option_parses, config_translations, ib111_translation
+        )
+        for config_path in config_paths
     }
 
     result: List[Tuple[List[str], Config]] = []
-    for files, (linted_config_path, linted_file_args) in partition(config_from_files):
-        config_path = cmd_config_path if cmd_sets_config else linted_config_path
-        config_file_args = config_files_args[config_path]
-        if config_file_args is None:
+    for files, infile_config in _partition(filenames, infile_configs):
+        combined = combine_and_translate(
+            infile_config + cmd_config, option_parses, config_translations, ib111_translation
+        )
+        file_config = file_configs[combined[int(Option.CONFIG)].val]
+        if file_config is None:
             continue
         config = combine_and_translate(
-            config_file_args + linted_file_args + cmd_args,
+            file_config + combined,
             option_parses,
             config_translations,
             ib111_translation,
         )
-        result.append((files, config))
+        result.append((files, Config(config)))
     return result
 
 
