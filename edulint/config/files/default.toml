@@ -44,7 +44,6 @@ enable = [
     "unreachable-else",
     "invalid-name",
     "consider-using-from-import",
-    "wildcard-import",
     "reimported",
     "invalid-for-target",
     "one-iteration",
