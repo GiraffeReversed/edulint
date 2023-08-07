@@ -174,7 +174,7 @@ class ImmutableConfig:
 
 def extract_args(filename: str) -> List[str]:
     edulint_re = re.compile(r"\s*#[\s#]*edulint:\s*", re.IGNORECASE)
-    ib111_re = re.compile(r"\s*from\s+ib111\s+import\s+week_(\d+)", re.IGNORECASE)
+    ib111_re = re.compile(r".*from\s+ib111\s+import.+week_(\d+)", re.IGNORECASE)
 
     result: List[str] = []
     with open(filename, encoding="utf-8") as f:
