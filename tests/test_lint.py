@@ -500,6 +500,37 @@ class TestLongCode:
 
 
 @pytest.mark.parametrize("filename,args,expected_output", [
+    ("s2b8861_warehouse.py", [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "flake8")], [
+        lazy_problem().set_line(2).set_text("Forbidden magic comment 'noqa'"),
+        lazy_problem().set_line(3).set_text("Forbidden magic comment 'noqa'"),
+    ]),
+    ("s2b8861_warehouse.py", [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "all")], [
+        lazy_problem().set_line(2).set_text("Forbidden magic comment 'noqa'"),
+        lazy_problem().set_line(3).set_text("Forbidden magic comment 'noqa'"),
+    ]),
+    ("s2b8861_warehouse.py", [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "pylint")], []),
+    ("014422-next-early-return-disabled.py", [Arg(Option.PYLINT, "--enable=use-early-return")], []),
+    (
+        "014422-next-early-return-disabled.py",
+        [Arg(Option.PYLINT, "--enable=use-early-return"), Arg(Option.IGNORE_INFILE_CONFIG_FOR, "pylint")],
+        [lazy_problem().set_line(19).set_text("Forbidden magic comment 'pylint: disable'")]
+    ),
+    (
+        "014422-next-early-return-disabled.py",
+        [Arg(Option.PYLINT, "--enable=use-early-return"), Arg(Option.IGNORE_INFILE_CONFIG_FOR, "flake8")],
+        []
+    ),
+    (
+        "014422-next-early-return-disabled.py",
+        [Arg(Option.PYLINT, "--enable=use-early-return"), Arg(Option.IGNORE_INFILE_CONFIG_FOR, "all")],
+        [lazy_problem().set_line(19).set_text("Forbidden magic comment 'pylint: disable'")]
+    ),
+])
+def test_ignore_infile_config(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+    apply_and_lint(filename, args, expected_output)
+
+
+@pytest.mark.parametrize("filename,args,expected_output", [
     ("umime_count_a.py", [
         Arg(Option.PYTHON_SPECIFIC, "on"),
         Arg(Option.ALLOWED_ONECHAR_NAMES, ""),

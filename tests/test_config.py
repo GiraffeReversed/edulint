@@ -8,7 +8,7 @@ from edulint.config.config import Config, extract_args, parse_args, parse_config
 from edulint.config.config_translations import get_config_translations, get_ib111_translations, Translation
 from edulint.linting.tweakers import get_tweakers
 from utils import get_tests_path
-from typing import List, Set, Dict, Tuple
+from typing import List, Set, Dict, Tuple, Optional
 from pathlib import Path
 
 
@@ -24,7 +24,16 @@ def advertised_options(all_advertised_options: List[Option]) -> Set[Option]:
 
 @pytest.fixture
 def always_managed_options() -> Set[Option]:
-    return set((Option.CONFIG, Option.PYLINT, Option.FLAKE8, Option.IB111_WEEK, Option.NO_FLAKE8))
+    return set(
+        (
+            Option.CONFIG,
+            Option.PYLINT,
+            Option.FLAKE8,
+            Option.IB111_WEEK,
+            Option.NO_FLAKE8,
+            Option.IGNORE_INFILE_CONFIG_FOR,
+        )
+    )
 
 
 @pytest.fixture
@@ -245,25 +254,42 @@ def _fill_in_file_config(config: Config) -> Config:
     return Config.combine(file_config, config).to_immutable()
 
 
+def _arg_to_str(option: Option, val: Optional[str]) -> str:
+    if val is None:
+        return option.to_name()
+    return f"{option.to_name()}={val}"
+
+
 @pytest.mark.parametrize(
-    "filename,cmd,config",
+    "filename,cmd,args",
     [
-        ("custom_set_empty_config.py", [], Config([Arg(Option.CONFIG, "empty")])),
+        ("custom_set_empty_config.py", [], [Arg(Option.CONFIG, "empty")]),
         (
             "custom_set_empty_config.py",
-            [f"{Option.CONFIG.to_name()}=default"],
-            Config([Arg(Option.CONFIG, "default")]),
+            [_arg_to_str(Option.CONFIG, "default")],
+            [Arg(Option.CONFIG, "default")],
         ),
-        ("custom_set_replace_option.py", [], Config([Arg(Option.IB111_WEEK, "1")])),
+        (
+            "custom_set_empty_config.py",
+            [_arg_to_str(Option.IGNORE_INFILE_CONFIG_FOR, Linter.EDULINT.to_name())],
+            [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "edulint"), Arg(Option.CONFIG, "default")]
+        ),
+        (
+            "custom_set_empty_config.py",
+            [_arg_to_str(Option.IGNORE_INFILE_CONFIG_FOR, "all")],
+            [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "all"), Arg(Option.CONFIG, "default")]
+        ),
+        ("custom_set_ignore_infile_and_some.py", [], [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "all")]),
+        ("custom_set_replace_option.py", [], [Arg(Option.IB111_WEEK, "1")]),
         (
             "custom_set_replace_option.py",
-            [f"{Option.IB111_WEEK.to_name()}=5"],
-            Config([Arg(Option.IB111_WEEK, "5")]),
+            [_arg_to_str(Option.IB111_WEEK, "5")],
+            [Arg(Option.IB111_WEEK, "5")],
         ),
     ],
 )
-def test_get_config_one(filename: str, cmd: List[UnprocessedArg], config: Config):
-    iconfig = _fill_in_file_config(config)
+def test_get_config_one(filename: str, cmd: List[UnprocessedArg], args: List[UnprocessedArg]):
+    iconfig = _fill_in_file_config(Config(args))
     assert get_config_one(get_tests_path(filename), cmd).config == iconfig.config
 
 

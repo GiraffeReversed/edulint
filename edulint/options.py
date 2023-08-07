@@ -25,6 +25,7 @@ class Option(NumberFromZero):
     ALLOWED_ONECHAR_NAMES = ()
     IB111_WEEK = ()
     NO_FLAKE8 = ()
+    IGNORE_INFILE_CONFIG_FOR = ()
 
     def to_name(self) -> str:
         return self.name.lower().replace("_", "-")

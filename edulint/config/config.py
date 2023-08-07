@@ -385,6 +385,11 @@ def _get_default_config(
     )
 
 
+def _ignore_infile(config: Config) -> bool:
+    ignored_infile = config.get_last_value(Option.IGNORE_INFILE_CONFIG_FOR, use_default=True)
+    return Linter.EDULINT.to_name() in ignored_infile or "all" in ignored_infile
+
+
 def _parse_infile_configs(
     filenames: List[str],
     cmd_config: Config,
@@ -392,11 +397,30 @@ def _parse_infile_configs(
     config_translations: Dict[Option, Translation],
     ib111_translations: List[Translation],
 ) -> List[Config]:
+    if _ignore_infile(cmd_config):
+        return [
+            _get_default_config(option_parses, config_translations, ib111_translations)
+            for filename in filenames
+        ]
+
     infile_configs = []
     for filename in filenames:
         infile_config = parse_infile_config(
             filename, option_parses, config_translations, ib111_translations
         )
+        if _ignore_infile(infile_config):
+            ignore_infile_val = infile_config.get_last_value(
+                Option.IGNORE_INFILE_CONFIG_FOR, use_default=False
+            )
+            assert ignore_infile_val is not None
+            ignore_infile_str = ",".join(ignore_infile_val)
+            infile_config = Config(
+                [UnprocessedArg(Option.IGNORE_INFILE_CONFIG_FOR, ignore_infile_str)],
+                option_parses,
+                config_translations,
+                ib111_translations,
+            )
+
         infile_configs.append(infile_config)
     return infile_configs
 
@@ -440,7 +464,10 @@ def get_config_many(
         if file_config is None:
             continue
 
-        config = Config.combine(file_config, combined)
+        if cmd_config_path is not None and _ignore_infile(file_config):
+            config = Config.combine(file_config, cmd_config)
+        else:
+            config = Config.combine(file_config, combined)
         result.append((files, config.to_immutable()))
     return result
 

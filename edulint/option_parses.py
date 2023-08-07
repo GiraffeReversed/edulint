@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Any, Optional, Callable
 from enum import Enum, auto
 from edulint.options import Option, UnionT, T, DEFAULT_CONFIG
+from edulint.linters import Linter
 
 
 class TakesVal(Enum):
@@ -147,6 +148,16 @@ OPTIONS: List[OptionParse] = [
     ),
     OptionParse(
         Option.NO_FLAKE8, "turn off flake8", TakesVal.NO, False, Type.BOOL, Combine.REPLACE
+    ),
+    OptionParse(
+        Option.IGNORE_INFILE_CONFIG_FOR,
+        "warns about infile supressions (like # noqa) for given linters, "
+        f"valid values are {', '.join(linter.to_name() for linter in Linter)} and all, "
+        f"if values {Linter.EDULINT} or all are set in-file, all other in-file configuration is ignored",
+        TakesVal.YES,
+        [],
+        Type.LIST,
+        Combine.REPLACE,
     ),
 ]
 

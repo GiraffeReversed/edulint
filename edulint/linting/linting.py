@@ -1,5 +1,6 @@
 from typing import List, Callable, Tuple, Dict, Set, Any
 from edulint.linting.problem import ProblemJson, Problem
+from edulint.linting.nonparsing_checkers import report_infile_config
 from edulint.linting.process_handler import ProcessHandler
 from edulint.linting.overrides import get_overriders
 from edulint.linting.tweakers import get_tweakers, Tweakers
@@ -97,6 +98,13 @@ def lint_any(
     return list(map(out_to_problem, result))
 
 
+def lint_edulint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
+    ignored_infile = set(config[Option.IGNORE_INFILE_CONFIG_FOR])
+    if len(ignored_infile) > 0:
+        return report_infile_config(filenames, ignored_infile)
+    return []
+
+
 def lint_flake8(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
     flake8_args = ["--format=json"]
     return lint_any(
@@ -166,10 +174,10 @@ def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
 
 
 def lint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
-    result = ([] if config[Option.NO_FLAKE8] else lint_flake8(filenames, config)) + lint_pylint(
-        filenames, config
-    )
-    result = apply_overrides(result, get_overriders())
+    edulint_result = lint_edulint(filenames, config)
+    flake8_result = [] if config[Option.NO_FLAKE8] else lint_flake8(filenames, config)
+    pylint_result = lint_pylint(filenames, config)
+    result = apply_overrides(edulint_result + flake8_result + pylint_result, get_overriders())
     result = apply_tweaks(result, get_tweakers(), config)
     return sort(filenames, result)
 

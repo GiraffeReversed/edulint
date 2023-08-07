@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from typing import Optional
 from edulint.options import Option
 
 
@@ -11,10 +12,17 @@ class Linter(Enum):
         return self.name.lower()
 
     @staticmethod
-    def from_name(linter_str: str) -> "Linter":
+    def safe_from_name(linter_str: str) -> Optional["Linter"]:
         for linter in Linter:
             if str(linter) == linter_str.lower():
                 return linter
+        return None
+
+    @staticmethod
+    def from_name(linter_str: str) -> "Linter":
+        result = Linter.safe_from_name(linter_str)
+        if result is not None:
+            return result
         assert False, "no such linter: " + linter_str
 
     def to_name(self) -> str:
