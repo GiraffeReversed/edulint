@@ -56,8 +56,7 @@ class Config:
             if translated is not None and arg.val not in (False, None):
                 apply_translation(result, translated)
 
-        for arg in args:
-            if arg is not None and arg.option == Option.IB111_WEEK and arg.val is not None:
+            if arg.option == Option.IB111_WEEK and arg.val is not None:
                 ib111_week = arg.val
                 assert isinstance(ib111_week, int)
                 if 0 <= ib111_week < len(self.ib111_translations):

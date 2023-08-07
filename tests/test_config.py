@@ -215,14 +215,14 @@ def ib111_translations() -> List[Translation]:
     ),
     (
         [UnprocessedArg(Option.IB111_WEEK, "02"), UnprocessedArg(Option.PYLINT, "aaa")],
-        [ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["aaa", "kkk"])]
+        [ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["kkk", "aaa"])]
     ),
     (
         [UnprocessedArg(Option.IB111_WEEK, "02"), UnprocessedArg(Option.ENHANCEMENT, None)],
         [
             ProcessedArg(Option.IB111_WEEK, 2),
             ProcessedArg(Option.ENHANCEMENT, True),
-            ProcessedArg(Option.PYLINT, ["aaa", "kkk"])
+            ProcessedArg(Option.PYLINT, ["kkk", "aaa"])
         ]
     ),
 ])
