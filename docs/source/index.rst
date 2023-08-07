@@ -30,7 +30,7 @@ To install EduLint locally, open an interactive shell and run:
     python3 -m pip install --user edulint
 
 .. note::
-   EduLint needs Python version at least 3.8 to work.
+   EduLint needs Python version at least 3.7 to work.
 
 Run EduLint locally
 ^^^^^^^^^^^^^^^^^^^
@@ -41,17 +41,19 @@ To start using EduLint, open an interactive shell and run:
 
    python3 -m edulint path/to/code/to/check.py
 
-Multiple filenames can be passed and linted at once.
+.. note::
+   Multiple filenames can be passed and linted at once. If a directory is passed, it is traversed and all :code:`.py` files it contains are linted.
 
 Overview
 --------
 
 EduLint wraps around `Pylint <https://pylint.pycqa.org/>`_ and `Flake8 <https://flake8.pycqa.org/>`_, allowing for separate configuration of each of the tools. It provides a reasonable default and convenience "bulk names" for groups of checks that make sense to be enabled together. It transforms some messages to make them clearer to a beginner, or drops some messages entirely. It also provides extra checks for situations not covered by either of the linters.
 
-As of now, it is possible to configure the tool in two ways:
+As of now, it is possible to configure the tool in three ways:
 
 -  by augmenting the checked source with lines beginning with :python:`# edulint`, with the configuration applying to that file only
 - by passing arguments through the CLI, applying to all files linted by that command
+- by setting a config file, specified by one of the two means above
 
 Configuration
 -------------
@@ -65,7 +67,11 @@ Edulint takes arguments in one of the following forms: ``<option-name>`` for opt
    CLI configuration always applies to all files linted with that command, even if some files are specified before an option.
 
 .. note::
-   CLI configuration takes precedence over in-file configuration. If a check is disabled in-file and enabled in CLI, it ends up enabled.
+   CLI configuration takes precedence over in-file configuration, which takes precedence over configuration from a config file.
+
+   For example, if a check is disabled in-file and enabled in CLI, it ends up enabled.
+
+   The options are evaluated in the order in which they are written.
 
 Configuration through comments in the code
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -75,7 +81,7 @@ When configuring in the linted file directly, the lines must start with :python:
 .. code::
 
    # edulint: enhancement
-   # edulint: pylint=--enable=no-self-use
+   # edulint: flake8=--max-line-length=20
 
 It is also possible to combine multiple options on one line:
 
@@ -108,6 +114,15 @@ It is also possible to pass multiple options in one ``--option`` argument.
 .. code::
 
    python3 -m edulint --option "enhancement pylint=--enable=no-self-use" code/to/check.py
+
+Configuration files
+^^^^^^^^^^^^^^^^^^^
+
+It is possible to specify a config file, either in linted file (:python:`# edulint: config=default`) or through command line (:code:`-o config=default`). It is possible to choose a prepared config file (:code:`empty` for no checks, :code:`default` for default configuration), or specify one's own.
+
+Apart from prepared configuration files, the :link_option:`config` also accepts a local path (:code:`config=/path/to/local/toml/file`) or URL (:code:`config=https://web.tld/path/to/remote/toml`).
+
+The required format is currently undocumented.
 
 Options
 ^^^^^^^

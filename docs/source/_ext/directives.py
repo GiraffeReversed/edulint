@@ -1,15 +1,14 @@
-from edulint.options import Option
+from edulint.options import Option, DEFAULT_CONFIG
 from edulint.option_parses import get_option_parses
 from edulint.linters import Linter
+from edulint.config.config import parse_config_file
 from edulint.config.config_translations import get_config_translations
 import edulint.linting.checkers as custom_checkers
 from pylint.checkers import BaseChecker
 from docutils.parsers.rst import Directive
 from docutils import nodes
-from configparser import ConfigParser
 import requests
 from bs4 import BeautifulSoup
-from pathlib import Path
 from pkgutil import iter_modules
 import os
 import sys
@@ -179,9 +178,23 @@ class MessageTable(Directive):
 
         arg = self.arguments[0]
         if arg == "default":
-            config = ConfigParser()
-            config.read(Path(__file__).parent.parent.parent.parent / "edulint/linting/.pylintrc")
-            message_names = [c.strip() for c in config["MESSAGES CONTROL"]["enable"].split(",")]
+            option_parses = get_option_parses()
+            config = parse_config_file(DEFAULT_CONFIG, option_parses)
+            assert config is not None
+            iconfig = config.to_immutable()
+
+            # message_names = []
+            # for arg in iconfig[Option.PYLINT]:
+            #     if arg.startswith("--enable"):
+            #         arg = arg[len("--enable") :]
+            #         message_names.extend(c.strip() for c in arg.split(","))
+
+            message_names = [
+                c.strip()
+                for arg in iconfig[Option.PYLINT]
+                if arg.startswith("--enable=")
+                for c in arg[len("--enable=") :].split(",")
+            ]
         else:
             translations = get_config_translations()
             opt_arg = Option.from_name(arg)
@@ -191,7 +204,7 @@ class MessageTable(Directive):
                 c.strip() for v in translation.vals for c in v[len("--enable=") :].split(",")
             ]
 
-        message_names = [n for n in message_names if n]
+        message_names = sorted([n for n in message_names if n])
 
         for name in message_names:
             if name in LINKS:
