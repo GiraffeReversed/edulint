@@ -3,7 +3,7 @@ from edulint.linting.problem import ProblemJson, Problem
 from edulint.linting.process_handler import ProcessHandler
 from edulint.linting.overrides import get_overriders
 from edulint.linting.tweakers import get_tweakers, Tweakers
-from edulint.config.config import Config
+from edulint.config.config import ImmutableConfig
 from edulint.options import Option, ImmutableT
 from edulint.linters import Linter
 from functools import partial
@@ -97,7 +97,7 @@ def lint_any(
     return list(map(out_to_problem, result))
 
 
-def lint_flake8(filenames: List[str], config: Config) -> List[Problem]:
+def lint_flake8(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
     flake8_args = ["--format=json"]
     return lint_any(
         Linter.FLAKE8,
@@ -109,7 +109,7 @@ def lint_flake8(filenames: List[str], config: Config) -> List[Problem]:
     )
 
 
-def lint_pylint(filenames: List[str], config: Config) -> List[Problem]:
+def lint_pylint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
     pylint_args = ["--output-format=json"]
     return lint_any(
         Linter.PYLINT,
@@ -138,7 +138,9 @@ def apply_overrides(problems: List[Problem], overriders: Dict[str, Set[str]]) ->
     return result
 
 
-def apply_tweaks(problems: List[Problem], tweakers: Tweakers, config: Config) -> List[Problem]:
+def apply_tweaks(
+    problems: List[Problem], tweakers: Tweakers, config: ImmutableConfig
+) -> List[Problem]:
     result = []
     for problem in problems:
         tweaker = tweakers.get((problem.source, problem.code))
@@ -153,7 +155,7 @@ def apply_tweaks(problems: List[Problem], tweakers: Tweakers, config: Config) ->
     return result
 
 
-def lint_one(filename: str, config: Config) -> List[Problem]:
+def lint_one(filename: str, config: ImmutableConfig) -> List[Problem]:
     return lint([filename], config)
 
 
@@ -163,7 +165,7 @@ def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
     return problems
 
 
-def lint(filenames: List[str], config: Config) -> List[Problem]:
+def lint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
     result = ([] if config[Option.NO_FLAKE8] else lint_flake8(filenames, config)) + lint_pylint(
         filenames, config
     )
@@ -172,5 +174,5 @@ def lint(filenames: List[str], config: Config) -> List[Problem]:
     return sort(filenames, result)
 
 
-def lint_many(partition: List[Tuple[List[str], Config]]) -> List[Problem]:
+def lint_many(partition: List[Tuple[List[str], ImmutableConfig]]) -> List[Problem]:
     return [problem for filenames, config in partition for problem in lint(filenames, config)]

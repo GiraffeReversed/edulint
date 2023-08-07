@@ -3,10 +3,11 @@ from edulint.linters import Linter
 from edulint.config.arg import UnprocessedArg, ProcessedArg
 from edulint.options import Option, DEFAULT_CONFIG
 from edulint.option_parses import OptionParse, get_option_parses, TakesVal, Type, Combine
-from edulint.config.config import Config, extract_args, parse_args, parse_config_file, combine_and_translate
-from edulint.config.config_translations import get_config_translations, Translation
+from edulint.config.arg import Arg
+from edulint.config.config import Config, ImmutableConfig, extract_args, parse_args, parse_config_file, get_config_many
+from edulint.config.config_translations import get_config_translations, get_ib111_translations, Translation
 from edulint.linting.tweakers import get_tweakers
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Tuple
 from pathlib import Path
 
 
@@ -111,19 +112,19 @@ def options() -> Dict[Option, OptionParse]:
 
 
 @pytest.mark.parametrize("raw,parsed", [
-    (["python-specific"], ("default", [UnprocessedArg(Option.PYTHON_SPECIFIC, None)])),
-    (["python-spec"], ("default", [UnprocessedArg(Option.PYTHON_SPECIFIC, None)])),
-    (["flake8=foo"], ("default", [UnprocessedArg(Option.FLAKE8, "foo")])),
-    (["flake8="], ("default", [UnprocessedArg(Option.FLAKE8, "")])),
-    (["python-specific", "flake8=foo"], ("default", [
+    (["python-specific"], [UnprocessedArg(Option.PYTHON_SPECIFIC, None)]),
+    (["python-spec"], [UnprocessedArg(Option.PYTHON_SPECIFIC, None)]),
+    (["flake8=foo"], [UnprocessedArg(Option.FLAKE8, "foo")]),
+    (["flake8="], [UnprocessedArg(Option.FLAKE8, "")]),
+    (["python-specific", "flake8=foo"], [
        UnprocessedArg(Option.PYTHON_SPECIFIC, None), UnprocessedArg(Option.FLAKE8, "foo")
-    ])),
-    (["flake8=--enable=xxx"], ("default", [UnprocessedArg(Option.FLAKE8, "--enable=xxx")])),
-    (["ib111-week=02"], ("default", [UnprocessedArg(Option.IB111_WEEK, "02")])),
-    (["ib111-week=12", "ib111-week=02"], ("default", [
+    ]),
+    (["flake8=--enable=xxx"], [UnprocessedArg(Option.FLAKE8, "--enable=xxx")]),
+    (["ib111-week=02"], [UnprocessedArg(Option.IB111_WEEK, "02")]),
+    (["ib111-week=12", "ib111-week=02"], [
        UnprocessedArg(Option.IB111_WEEK, "12"), UnprocessedArg(Option.IB111_WEEK, "02")
-    ])),
-    (["config=empty"], ("empty", [UnprocessedArg(Option.CONFIG, "empty")]))
+    ]),
+    (["config=empty"], [UnprocessedArg(Option.CONFIG, "empty")])
 ])
 def test_parse_args(raw: List[str], options: Dict[Option, OptionParse], parsed: List[UnprocessedArg]) -> None:
     assert parse_args(raw, options) == parsed
@@ -137,8 +138,9 @@ def packaged_config_files():
 @pytest.mark.parametrize("config_name", packaged_config_files())
 def test_packaged_configs_parse(config_name: str):
     option_parses = get_option_parses()
-    print(config_name)
-    assert parse_config_file(config_name, option_parses) is not None
+    config_translations = get_config_translations()
+    ib111_translations = get_ib111_translations()
+    assert parse_config_file(config_name, option_parses, config_translations, ib111_translations) is not None
 
 
 @pytest.fixture
@@ -171,54 +173,96 @@ def ib111_translations() -> List[Translation]:
 @pytest.mark.parametrize("args,config", [
     (
         [UnprocessedArg(Option.ENHANCEMENT, None)],
-        Config([ProcessedArg(Option.ENHANCEMENT, True), ProcessedArg(Option.PYLINT, ["aaa"])])
+        [ProcessedArg(Option.ENHANCEMENT, True), ProcessedArg(Option.PYLINT, ["aaa"])]
     ),
     (
         [UnprocessedArg(Option.ENHANCEMENT, None), UnprocessedArg(Option.PYLINT, "zzz")],
-        Config([ProcessedArg(Option.ENHANCEMENT, True), ProcessedArg(Option.PYLINT, ["aaa", "zzz"])])
+        [ProcessedArg(Option.ENHANCEMENT, True), ProcessedArg(Option.PYLINT, ["aaa", "zzz"])]
     ),
     (
         [UnprocessedArg(Option.PYLINT, "zzz"), UnprocessedArg(Option.ENHANCEMENT, None)],
-        Config([ProcessedArg(Option.PYLINT, ["zzz", "aaa"]), ProcessedArg(Option.ENHANCEMENT, True)])
+        [ProcessedArg(Option.PYLINT, ["zzz", "aaa"]), ProcessedArg(Option.ENHANCEMENT, True)]
     ),
     (
         [UnprocessedArg(Option.FLAKE8, "zzz"), UnprocessedArg(Option.ENHANCEMENT, None)],
-        Config([
+        [
             ProcessedArg(Option.FLAKE8, ["zzz"]),
             ProcessedArg(Option.ENHANCEMENT, True),
             ProcessedArg(Option.PYLINT, ["aaa"])
-        ])
+        ]
     ),
     (
         [UnprocessedArg(Option.ALLOWED_ONECHAR_NAMES, "n")],
-        Config([ProcessedArg(Option.ALLOWED_ONECHAR_NAMES, "n"), ProcessedArg(Option.PYLINT, ["ccc"])])
+        [ProcessedArg(Option.ALLOWED_ONECHAR_NAMES, "n"), ProcessedArg(Option.PYLINT, ["ccc"])]
     ),
     (
         [UnprocessedArg(Option.IB111_WEEK, "02")],
-        Config([ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["kkk"])])
+        [ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["kkk"])]
     ),
     (
         [UnprocessedArg(Option.IB111_WEEK, "12"), UnprocessedArg(Option.IB111_WEEK, "02")],
-        Config([ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["kkk"])])
+        [ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["kkk"])]
     ),
     (
         [UnprocessedArg(Option.IB111_WEEK, "02"), UnprocessedArg(Option.PYLINT, "aaa")],
-        Config([ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["aaa", "kkk"])])
+        [ProcessedArg(Option.IB111_WEEK, 2), ProcessedArg(Option.PYLINT, ["aaa", "kkk"])]
     ),
     (
         [UnprocessedArg(Option.IB111_WEEK, "02"), UnprocessedArg(Option.ENHANCEMENT, None)],
-        Config([
+        [
             ProcessedArg(Option.IB111_WEEK, 2),
             ProcessedArg(Option.ENHANCEMENT, True),
             ProcessedArg(Option.PYLINT, ["aaa", "kkk"])
-        ])
+        ]
     ),
 ])
 def test_combine_and_translate_translates(
         args: List[UnprocessedArg],
         config_translations: Dict[Option, Translation],
         ib111_translations: List[Translation],
-        config: Config) -> None:
+        config: List[ProcessedArg]) -> None:
 
-    result = combine_and_translate(args, get_option_parses(), config_translations, ib111_translations)
-    assert result.config == config.config
+    def fill_in_defaults(config: List[ProcessedArg], option_parses: Dict[Option, OptionParse]) -> List[ProcessedArg]:
+        result = [None for _ in Option]
+        for arg in config:
+            result[int(arg.option)] = arg
+        for o in Option:
+            if result[int(o)] is None:
+                result[int(o)] = ProcessedArg(o, option_parses[o].default)
+        return result
+
+    option_parses = get_option_parses()
+    result = Config(args, option_parses, config_translations, ib111_translations)
+    reference = fill_in_defaults(config, option_parses)
+    assert result.config == reference
+
+
+@pytest.mark.parametrize("filenames,partition", [
+    (
+        [
+            Path("tests/data/custom_nonpep_assign.py"),
+            Path("tests/data/custom_flake8_pylint_config.py")
+        ],
+        [
+            ([Path("tests/data/custom_nonpep_assign.py")], Config()),
+            (
+                [Path("tests/data/custom_flake8_pylint_config.py")],
+                Config([Arg(Option.PYLINT, "--enable=missing-module-docstring")])
+            ),
+        ]
+    )
+])
+def test_get_config_many(filenames: List[str], partition: List[Tuple[List[str], ImmutableConfig]]):
+    configs = get_config_many(filenames, [])
+    assert len(configs) == len(partition)
+
+    for i in range(len(configs)):
+        fns1, iconfig1 = configs[i]
+        fns2, config2 = partition[i]
+
+        assert fns1 == fns2
+
+        file_config = parse_config_file(
+            config2[Option.CONFIG], get_option_parses(), get_config_translations(), get_ib111_translations()
+        )
+        assert iconfig1.config == ImmutableConfig(Config.combine(file_config, config2)).config

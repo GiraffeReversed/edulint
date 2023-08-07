@@ -1,7 +1,7 @@
-from edulint.options import Option, DEFAULT_CONFIG
+from edulint.options import Option
 from edulint.option_parses import get_option_parses
-from edulint.config.arg import Arg
-from edulint.config.config import parse_config_file, convert, combine_and_translate, Config
+from edulint.config.arg import UnprocessedArg
+from edulint.config.config import parse_config_file, Config, ImmutableConfig
 from edulint.config.config_translations import get_config_translations, get_ib111_translations
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_one
@@ -51,33 +51,22 @@ def get_tests_path(filename: str) -> str:
     return str((pathlib.Path(__file__).parent / "data" / filename).resolve())
 
 
-def apply_and_lint(
-    filename: str, args: List[Arg], expected_output: List[Problem], from_empty: bool = True
-) -> None:
-    def get_config_path(args: List[Arg]) -> str:
-        for arg in reversed(args):
-            if arg.option == Option.CONFIG:
-                return arg.val
-        return DEFAULT_CONFIG if not from_empty else "empty"
-
-    def get_config_file(args: List[Arg]) -> List[Arg]:
-        config_path = get_config_path(args)
-        config = parse_config_file(
-            config_path, get_option_parses(), get_config_translations(), get_ib111_translations()
-        )
-        assert config is not None
-        return config
-
-    config_file = get_config_file(args)
-    converted_args = convert(args, get_option_parses())
-    config = Config(
-        combine_and_translate(
-            config_file + converted_args,
-            get_option_parses(),
-            get_config_translations(),
-            get_ib111_translations(),
-        )
+def prepare_config(args: List[UnprocessedArg], from_empty: bool) -> Config:
+    config_args = Config(args)
+    config_path = config_args[Option.CONFIG] if not from_empty else "empty"
+    config_file = parse_config_file(
+        config_path, get_option_parses(), get_config_translations(), get_ib111_translations()
     )
+    return ImmutableConfig(Config.combine(config_file, config_args))
+
+
+def apply_and_lint(
+    filename: str,
+    args: List[UnprocessedArg],
+    expected_output: List[Problem],
+    from_empty: bool = True,
+) -> None:
+    config = prepare_config(args, from_empty)
     lazy_equal(
         lint_one(get_tests_path(filename), config),
         expected_output,
@@ -85,7 +74,10 @@ def apply_and_lint(
 
 
 def create_apply_and_lint(
-    lines: List[str], args: List[Arg], expected_output: List[Problem], from_empty: bool = True
+    lines: List[str],
+    args: List[UnprocessedArg],
+    expected_output: List[Problem],
+    from_empty: bool = True,
 ) -> None:
     tf = tempfile.NamedTemporaryFile("w+", delete=False)
     try:
