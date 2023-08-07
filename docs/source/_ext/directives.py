@@ -23,7 +23,9 @@ def html_to_nodes(siblings):
         if sibling.name is None:
             para.append(nodes.inline(text=sibling.string))
         elif sibling.name == "a":
-            para.append(nodes.reference(internal=False, refuri=sibling["href"], text=sibling.string))
+            para.append(
+                nodes.reference(internal=False, refuri=sibling["href"], text=sibling.string)
+            )
         elif sibling.name == "cite":
             para.append(nodes.literal(text=sibling.string))
         elif sibling.name == "code":
@@ -60,15 +62,21 @@ def get_description_from(url, heading):
 
 
 def get_descriptions():
-    features = get_description_from("https://pylint.readthedocs.io/en/v2.14.5/user_guide/checkers/features.html", "h4")
-    extensions = get_description_from("https://pylint.readthedocs.io/en/v2.14.5/user_guide/checkers/extensions.html", "h3")
+    features = get_description_from(
+        "https://pylint.readthedocs.io/en/v2.14.5/user_guide/checkers/features.html", "h4"
+    )
+    extensions = get_description_from(
+        "https://pylint.readthedocs.io/en/v2.14.5/user_guide/checkers/extensions.html", "h3"
+    )
 
     extensions.update(features)
     return extensions
 
 
 def get_links():
-    links_html = requests.get("https://pylint.pycqa.org/en/latest/user_guide/messages/messages_overview.html")
+    links_html = requests.get(
+        "https://pylint.pycqa.org/en/latest/user_guide/messages/messages_overview.html"
+    )
     if links_html.status_code != 200:
         raise RuntimeError("links not available")
     soup = BeautifulSoup(links_html.text, "html.parser")
@@ -103,7 +111,10 @@ def text_to_entry(text):
 def prepare_table(header, colwidths=None):
     colwidths = colwidths if colwidths is not None else []
 
-    colspecs = [nodes.colspec(colwidth=colwidths[i] if i < len(colwidths) else 1) for i in range(len(header))]
+    colspecs = [
+        nodes.colspec(colwidth=colwidths[i] if i < len(colwidths) else 1)
+        for i in range(len(header))
+    ]
 
     entries = [text_to_entry(h) for h in header]
     row = nodes.row()
@@ -130,11 +141,18 @@ def prepare_row(*contents):
 
 
 class OptionsTable(Directive):
-
     def run(self):
         table, tbody = prepare_table(
-            ["Option name", "Takes argument", "Default", "Converts to", "When used multiple types", "Description"],
-            [2, 1, 1, 1, 1, 10])
+            [
+                "Option name",
+                "Takes argument",
+                "Default",
+                "Converts to",
+                "When used multiple types",
+                "Description",
+            ],
+            [2, 1, 1, 1, 1, 10],
+        )
 
         for option, parse in get_option_parses().items():
             id_ = f"option-{option.to_name()}"
@@ -144,7 +162,7 @@ class OptionsTable(Directive):
                 nodes.literal(text=str(parse.default)),
                 parse.convert.name.lower(),
                 parse.combine.name.lower(),
-                parse.help_
+                parse.help_,
             )
             self.options["name"] = id_
             self.add_name(row)
@@ -154,7 +172,6 @@ class OptionsTable(Directive):
 
 
 class MessageTable(Directive):
-
     required_arguments = 1
 
     def run(self):
@@ -170,23 +187,29 @@ class MessageTable(Directive):
             opt_arg = Option.from_name(arg)
             translation = translations[opt_arg]
             assert translation.for_linter == Linter.PYLINT
-            message_names = [c.strip() for v in translation.vals for c in v[len("--enable="):].split(",")]
+            message_names = [
+                c.strip() for v in translation.vals for c in v[len("--enable=") :].split(",")
+            ]
 
         message_names = [n for n in message_names if n]
 
         for name in message_names:
             if name in LINKS:
-                tbody.append(prepare_row(
-                    nodes.reference(internal=False, refuri=LINKS[name][2], text=name),
-                    DESCRIPTIONS[name][3]
-                ))
+                tbody.append(
+                    prepare_row(
+                        nodes.reference(internal=False, refuri=LINKS[name][2], text=name),
+                        DESCRIPTIONS[name][3],
+                    )
+                )
             else:
                 message = nodes.reference(internal=True, refuri="#custom-checkers", text=name)
                 para = nodes.paragraph()
                 para.append(nodes.inline(text="Custom message or checker, see "))
-                para.append(nodes.reference(
-                    internal=True, refuri="#custom-checkers", text="the corresponding section."
-                ))
+                para.append(
+                    nodes.reference(
+                        internal=True, refuri="#custom-checkers", text="the corresponding section."
+                    )
+                )
                 tbody.append(prepare_row(message, para))
 
         return [table]
@@ -197,7 +220,11 @@ def link_pylint(name, rawtext, text, lineno, inliner, options={}, content=[]):
 
 
 def link_option(name, rawtext, text, lineno, inliner, options={}, context=[]):
-    return [nodes.reference(internal=True, refuri=f"#option-{Option.from_name(text).to_name()}", text=text)], []
+    return [
+        nodes.reference(
+            internal=True, refuri=f"#option-{Option.from_name(text).to_name()}", text=text
+        )
+    ], []
 
 
 def prepare_section(name, title):
@@ -205,23 +232,26 @@ def prepare_section(name, title):
     titlenode = nodes.title(text=title)
     section += titlenode
     para = nodes.paragraph()
-    para.extend([
-        nodes.inline(text="This section details messages emmited by the "),
-        nodes.literal(text=name),
-        nodes.inline(text=" checker.")
-    ])
+    para.extend(
+        [
+            nodes.inline(text="This section details messages emmited by the "),
+            nodes.literal(text=name),
+            nodes.inline(text=" checker."),
+        ]
+    )
     section += para
     return section
 
 
 class CheckersBlock(Directive):
-
     @staticmethod
     def _iterate_checkers():
         custom_checkers_dir = os.path.dirname(custom_checkers.__file__)
         for _, name, _ in iter_modules([custom_checkers_dir]):
             module_path = os.path.join(custom_checkers_dir, name) + ".py"
-            spec = importlib.util.spec_from_file_location(f"edulint.linting.checkers.{name}", module_path)
+            spec = importlib.util.spec_from_file_location(
+                f"edulint.linting.checkers.{name}", module_path
+            )
 
             module = importlib.util.module_from_spec(spec)
             sys.modules["module.name"] = module
@@ -243,9 +273,12 @@ class CheckersBlock(Directive):
         table, tbody = prepare_table(["Option", "Default"])
         for name, details in options:
             default = details["default"]
-            tbody.append(prepare_row(
-                name, nodes.literal(text=default if not isinstance(default, str) else f"\"{default}\"")
-            ))
+            tbody.append(
+                prepare_row(
+                    name,
+                    nodes.literal(text=default if not isinstance(default, str) else f'"{default}"'),
+                )
+            )
 
         return [para, table]
 
@@ -276,7 +309,7 @@ def setup(app):
     app.add_directive("checkers-block", CheckersBlock)
 
     return {
-        'version': '0.1',
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
+        "version": "0.1",
+        "parallel_read_safe": True,
+        "parallel_write_safe": True,
     }
