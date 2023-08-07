@@ -1,5 +1,6 @@
 sphinx
 sphinx-rtd-theme
+sphinxcontrib-jquery
 beautifulsoup4
 flake8
 flake8-json
