@@ -103,17 +103,20 @@ class CachedHTTPGet:
 
         try:
             resp = requests.get(url, timeout=5)
-            if resp.status_code != 200:
-                raise FileNotFoundError(f"Request for external config '{url}' failed with status code {resp.status_code}.")
-            content = resp.text
-            cls._write_version_to_disk(url, content)
-            return content
+            if resp.status_code == 200:
+                content = resp.text
+                cls._write_version_to_disk(url, content)
+                return content
 
-        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-            cached_version: str = cls._read_version_from_disk(url, max_age_in_seconds=max_cache_time_when_offline)
-            if cached_version:
-                return cached_version
-            raise FileNotFoundError(f"Request for external config '{url}' failed -- maybe you are offline or the URL is incorrect.")
+            print(f"Request for external config '{url}' failed with status code {resp.status_code}. Trying to fallback to cached version if available.", file=sys.stderr)
+
+        except requests.exceptions.RequestException:
+            pass
+
+        cached_version: str = cls._read_version_from_disk(url, max_age_in_seconds=max_cache_time_when_offline)
+        if cached_version:
+            return cached_version
+        raise FileNotFoundError(f"Request for external config '{url}' failed -- maybe you are offline or the URL is incorrect.")
 
     @staticmethod
     def _get_timestamp() -> int:
