@@ -3,9 +3,13 @@ import string
 import os
 from typing import Dict, Any, Optional
 import sys
+import hashlib
+import json
+import time
 
 import tomli
 import requests
+from platformdirs import PlatformDirs
 
 
 ALLOWED_FILENAME_LETTERS = string.ascii_letters + string.digits + "-_"
@@ -83,14 +87,89 @@ def _load_local_config_file(filepath: str, message: str, is_path_safe: bool = Fa
 
 def _load_external_config_file(url: str) -> str:
     if not ALLOW_HTTP_S_PATHS:
-        raise ConfigFileAccessMethodNotAllowedException(
-            "Loading of external configs using HTTP/HTTPS is disallowed in EduLint's configuration."
-        )
+        raise ConfigFileAccessMethodNotAllowedException("Loading of external configs using HTTP/HTTPS is disallowed in EduLint's configuration.")
 
-    resp = requests.get(url)
-    if resp.status_code != 200:
-        raise FileNotFoundError(
-            f"Request for external config '{url}' failed with status code {resp.status_code}."
-        )
+    return CachedHTTPGet.http_get(url)  # can throw exception FileNotFoundError if remote URL didn't work and file is not cached yet
 
-    return resp.content.decode()
+
+class CachedHTTPGet:
+    @classmethod
+    def http_get(cls, url: str, max_cache_time: int = 5 * 60, max_cache_time_when_offline: int = 500 * 24 * 60) -> str:
+        """
+           Source priority: file cache with max age > HTTP GET from URL > file cache with extended max age
+        """
+
+        cached_version: str = cls._read_version_from_disk(url, max_age_in_seconds=max_cache_time)
+        if cached_version:
+            return cached_version
+
+        try:
+            resp = requests.get(url, timeout=5)
+            if resp.status_code != 200:
+                raise FileNotFoundError(f"Request for external config '{url}' failed with status code {resp.status_code}.")
+            content = resp.text
+            cls._write_version_to_disk(url, content)
+            return content
+
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+            cached_version: str = cls._read_version_from_disk(url, max_age_in_seconds=max_cache_time_when_offline)
+            if cached_version:
+                return cached_version
+            raise FileNotFoundError(f"Request for external config '{url}' failed -- maybe you are offline or the URL is incorrect.")
+
+    @staticmethod
+    def _get_timestamp() -> int:
+        return int(time.time())
+
+    @staticmethod
+    def _get_edulint_cache_folder_location() -> Path:
+        path_str = PlatformDirs(appname="edulint").user_data_dir
+        path = Path(path_str)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @staticmethod
+    def _convert_source_to_safe_filename(source: str) -> str:
+        return hashlib.sha256(source.encode(errors="replace")).hexdigest() + ".toml"
+
+    @classmethod
+    def _get_filepath_from_source(cls, source: str) -> str:
+        folder_path = cls._get_edulint_cache_folder_location()
+        source_filename = cls._convert_source_to_safe_filename(source)
+        # future: saving everything into same folder can become problem if there are too many filder in the folder
+        return folder_path / source_filename
+
+    @classmethod
+    def _get_metadata_filepath(cls, source: str) -> str:
+        base_filepath = cls._get_filepath_from_source(source)
+        return base_filepath.with_suffix(base_filepath.suffix + ".metadata") 
+
+    @classmethod
+    def _write_version_to_disk(cls, source: str, content: str):
+        try:
+            with open(cls._get_filepath_from_source(source), "w", encoding="utf8") as f:
+                f.write(content)  # security: writing arbitrary content from web is not great, but at least it's written as text
+            with open(cls._get_metadata_filepath(source), "w", encoding="utf8") as f:
+                json.dump({
+                        "timestamp": cls._get_timestamp(),
+                        "source": source,
+                    }, f, indent=4)
+        except Exception as e:
+            print(f"[!] Saving cache file for configuration failed. {e}", file=sys.stderr)
+
+    @classmethod
+    def _read_version_from_disk(cls, source: str, max_age_in_seconds: int = 5 * 60) -> Optional[str]:
+        try:
+            with open(cls._get_metadata_filepath(source), "r", encoding="utf8") as f:
+                metadata = json.load(f)
+            if metadata["timestamp"] + max_age_in_seconds <= cls._get_timestamp():  # todo: int
+                return None
+
+            with open(cls._get_filepath_from_source(source), "r", encoding="utf8") as f:
+                return f.read()
+        except FileNotFoundError:
+            return None
+        except Exception as e:
+            print(f"[!] Reading or parsing cache file for configuration failed. {e}", file=sys.stderr)
+
+        return None
