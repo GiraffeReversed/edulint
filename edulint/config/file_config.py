@@ -73,9 +73,7 @@ def _load_packaged_config_file(filename: str) -> str:
 
 def _load_local_config_file(filepath: str, message: str, is_path_safe: bool = False) -> str:
     if not is_path_safe and not ALLOW_UNRESTRICTED_LOCAL_PATHS:
-        raise ConfigFileAccessMethodNotAllowedException(
-            "Arbitrary local filepaths are not enabled."
-        )
+        raise ConfigFileAccessMethodNotAllowedException("Arbitrary local filepaths are not enabled.")
 
     # Doing the test in two steps should prevent possible exception during the if test.
     if not (Path(filepath).exists() and Path(filepath).is_file()):
@@ -96,7 +94,7 @@ class CachedHTTPGet:
     @classmethod
     def http_get(cls, url: str, max_cache_time: int = 5 * 60, max_cache_time_when_offline: int = 500 * 24 * 60) -> str:
         """
-           Source priority: file cache with max age > HTTP GET from URL > file cache with extended max age
+        Source priority: file cache with max age > HTTP GET from URL > file cache with extended max age
         """
 
         cached_version: str = cls._read_version_from_disk(url, max_age_in_seconds=max_cache_time)
@@ -142,7 +140,7 @@ class CachedHTTPGet:
     @classmethod
     def _get_metadata_filepath(cls, source: str) -> str:
         base_filepath = cls._get_filepath_from_source(source)
-        return base_filepath.with_suffix(base_filepath.suffix + ".metadata") 
+        return base_filepath.with_suffix(base_filepath.suffix + ".metadata")
 
     @classmethod
     def _write_version_to_disk(cls, source: str, content: str):
