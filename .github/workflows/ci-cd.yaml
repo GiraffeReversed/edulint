@@ -17,7 +17,7 @@ jobs:
     secrets: inherit
 
   github-release:
-    name: GH Release
+    needs: publish-package
     uses: ./.github/workflows/github-release.yaml
     secrets: inherit
 
