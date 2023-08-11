@@ -16,7 +16,12 @@ jobs:
     uses: ./.github/workflows/python-publish.yaml
     secrets: inherit
 
-  deploy:
+  github-release:
+    name: GH Release
+    uses: ./.github/workflows/github-release.yaml
+    secrets: inherit
+
+  deploy-web:
     needs: publish-package
     uses: ./.github/workflows/redeploy-web.yaml
     secrets: inherit
