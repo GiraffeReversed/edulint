@@ -7,6 +7,8 @@ jobs:
   test-current-version:
     uses: ./.github/workflows/test.yaml
     secrets: inherit
+    with:
+      os_matrix: '["ubuntu-latest", "windows-latest", "macos-latest"]'
 
 # either set permissive default permissions in repositories Actions settings or set them explicitly here
 permissions:
