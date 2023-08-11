@@ -55,11 +55,9 @@ jobs:
 
 
 
-    # either set permissive default permissions in repositories Actions settings or set them explicitly here
-    # permissions:
-    #   checks: write
-    #   issues: read
-    #   pull-requests: write
-    #   contents: read
-
-
+# either set permissive default permissions in repositories Actions settings or set them explicitly here
+permissions:
+  checks: write
+  issues: read
+  pull-requests: write
+  contents: read
