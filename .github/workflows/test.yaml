@@ -64,6 +64,9 @@ jobs:
       - name: Install Edulint
         run: pip install .
 
+      - name: Log versions of python packages
+        run: pip freeze
+
       - name: Test with pytest
         run: pytest --junit-xml pytest.xml tests/
 
