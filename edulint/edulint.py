@@ -5,6 +5,7 @@ from typing import List, Optional
 import argparse
 import os
 import sys
+import json
 from loguru import logger
 
 
@@ -60,18 +61,21 @@ def main() -> int:
     file_configs = get_config_many(files, cmd_args)
 
     try:
-        result = sort(files, lint_many(file_configs))
-    except TimeoutError as e:
-        sys.exit(1)
+        results = lint_many(file_configs)
+    except (TimeoutError, json.decoder.JSONDecodeError):
+        return 2
+
+    sorted_results = sort(files, results)
 
     if args.json:
-        print(Problem.schema().dumps(result, indent=2, many=True))  # type: ignore
+        print(Problem.schema().dumps(sorted_results, indent=2, many=True))  # type: ignore
     else:
         prev_problem = None
-        for problem in result:
+        for problem in sorted_results:
             if len(files) > 1 and (prev_problem is None or prev_problem.path != problem.path):
                 print(f"****************** {os.path.basename(problem.path)}")
                 prev_problem = problem
 
             print(problem)
-    return 0
+
+    return 0 if len(sorted_results) == 0 else 1
