@@ -15,5 +15,5 @@ __all__ = [
     "get_explanations",
 ]
 
-__version__ = "2.9.2"
+__version__ = "2.10.0"
 __version_info__ = tuple(map(int, __version__.split(".")))
