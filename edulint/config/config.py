@@ -426,8 +426,11 @@ def get_config_many(
         if file_config is None:
             continue
 
-        if cmd_config_path is not None and _ignore_infile(file_config):
-            config = Config.combine(file_config, cmd_config)
+        if _ignore_infile(file_config):
+            if cmd_config_path is not None:
+                config = Config.combine(file_config, cmd_config)
+            else:
+                config = cmd_config
         else:
             config = Config.combine(file_config, combined)
         result.append((files, config.to_immutable(config_translations, ib111_translations)))

@@ -153,7 +153,10 @@ OPTIONS: List[OptionParse] = [
         Option.IGNORE_INFILE_CONFIG_FOR,
         "warns about infile supressions (like # noqa) for given linters, "
         f"valid values are {', '.join(linter.to_name() for linter in Linter)} and all, "
-        f"if values {Linter.EDULINT} or all are set in-file, all other in-file configuration is ignored",
+        f"using values {Linter.EDULINT} and all is recommended only from the command line, "
+        f"if values {Linter.EDULINT} or all are set in-file or in the config file specified "
+        "in-file, all other in-file configuration (possibly including the config from the "
+        "config file) is ignored",
         TakesVal.YES,
         [],
         Type.LIST,
