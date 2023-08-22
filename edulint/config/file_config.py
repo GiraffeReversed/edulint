@@ -51,7 +51,7 @@ def _load_file_from_uri(path_or_url: str) -> str:
     if _only_acceptable_chars(path_or_url):
         return _load_packaged_config_file(path_or_url)
 
-    return _load_local_config_file(path_or_url, "found locally")
+    return _load_local_config_file(path_or_url, path_or_url, "found locally")
 
 
 def _only_acceptable_chars(filepath: str) -> bool:
@@ -62,18 +62,20 @@ def _load_packaged_config_file(filename: str) -> str:
     assert _only_acceptable_chars(filename)
 
     relative_path = os.path.join(os.path.dirname(__file__), "files", filename + ".toml")
-    return _load_local_config_file(relative_path, "packaged", is_path_safe=True)
+    return _load_local_config_file(relative_path, filename, "packaged", is_path_safe=True)
 
 
-def _load_local_config_file(filepath: str, message: str, is_path_safe: bool = False) -> str:
+def _load_local_config_file(
+    filepath: str, passed_name: str, message: str, is_path_safe: bool = False
+) -> str:
     if not is_path_safe and not ALLOW_UNRESTRICTED_LOCAL_PATHS:
         raise ConfigFileAccessMethodNotAllowedException(
-            "Arbitrary local filepaths are not enabled."
+            "arbitrary local filepaths are not enabled."
         )
 
     # Doing the test in two steps should prevent possible exception during the if test.
     if not (Path(filepath).exists() and Path(filepath).is_file()):
-        raise FileNotFoundError(f"Configuration file '{filepath}' not {message}.")
+        raise FileNotFoundError(f"configuration file '{passed_name}' not {message}.")
 
     with open(filepath, encoding="utf8") as f:
         return f.read()
@@ -82,7 +84,7 @@ def _load_local_config_file(filepath: str, message: str, is_path_safe: bool = Fa
 def _load_external_config_file(url: str) -> str:
     if not ALLOW_HTTP_S_PATHS:
         raise ConfigFileAccessMethodNotAllowedException(
-            "Loading of external configs using HTTP/HTTPS is disallowed in EduLint's configuration."
+            "loading of external configs using HTTP/HTTPS is disallowed in EduLint's configuration."
         )
 
     # can throw exception FileNotFoundError if remote URL didn't work and file is not cached yet
@@ -128,7 +130,7 @@ class CachedHTTPGet:
         if cached_version:
             return cached_version
         raise FileNotFoundError(
-            f"Request for external config '{url}' failed -- maybe you are offline or the URL is incorrect."
+            f"request for external config '{url}' failed -- maybe you are offline or the URL is incorrect."
         )
 
     @staticmethod
