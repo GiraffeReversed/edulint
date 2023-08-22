@@ -1,6 +1,5 @@
-requests>=2.31.0
-tomli-w==1.0.0
-tqdm==4.64.1
+tomli-w~=1.0.0  # 1.0.0 is tested to be compatible
+tqdm~=4.64.1  # 4.64.1 is tested to be compatible
 build
 mypy
 packaging
