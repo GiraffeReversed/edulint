@@ -50,12 +50,10 @@ jobs:
       - name: Mock pylint version in requirements.txt and setup.cfg
         run: |
           sed -i "s/pylint *[~<>=][^\"]*/pylint==${{ matrix.pylint }}/" requirements.txt
-          sed -i "s/pylint *[~<>=][^\"]*/pylint ==${{ matrix.pylint }}/" setup.cfg
 
       - name: Mock flake8 version in requirements.txt and setup.cfg
         run: |
           sed -i "s/flake8 *[~<>=][^\"]*/flake8==${{ matrix.flake8 }}/" requirements.txt
-          sed -i "s/flake8 *[~<>=][^\"]*/flake8 ==${{ matrix.flake8 }}/" setup.cfg
 
       - name: Install dependencies
         run: |
