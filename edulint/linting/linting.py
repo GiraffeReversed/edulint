@@ -103,7 +103,8 @@ def lint_any(
     try:
         parsed = json.loads(outs)
     except json.decoder.JSONDecodeError as e:
-        logger.critical("could not parse results:\n{outs}\n{e}", outs=outs.split("\n\n", 1)[0], e=e)
+        logger.critical("could not parse results:\n{e}", e=e)
+        logger.debug(outs)
         raise e
 
     return list(map(out_to_problem, result_getter(parsed)))
