@@ -186,6 +186,8 @@ def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
 
 
 def lint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
+    logger.info("linting files: {filenames}", filenames=filenames)
+    logger.info("using config: {config}", config=config)
     edulint_result = lint_edulint(filenames, config)
     flake8_result = [] if config[Option.NO_FLAKE8] else lint_flake8(filenames, config)
     pylint_result = lint_pylint(filenames, config)

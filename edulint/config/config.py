@@ -156,7 +156,11 @@ class ImmutableConfig:
     config: Tuple[ImmutableArg, ...]
 
     def __str__(self) -> str:
-        return f"ImmutableConfig({', '.join(arg.option.name + '=' + str(arg.val) for arg in self.config)})"
+        return (
+            "ImmutableConfig(\n"
+            + "".join(f"  {arg.option.name}={str(arg.val)}\n" for arg in self.config)
+            + ")"
+        )
 
     def __getitem__(self, option: Option) -> ImmutableT:
         return self.config[int(option)].val
