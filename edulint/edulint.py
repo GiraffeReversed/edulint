@@ -1,7 +1,9 @@
+from edulint.options import Option
+from edulint.option_parses import OptionParse, get_option_parses
 from edulint.config.config import get_config_many, get_cmd_args
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 import argparse
 import os
 import sys
@@ -21,10 +23,46 @@ def setup_logger() -> None:
     )
 
 
-def setup_argparse() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Lints provided code.")
+def format_options_help(option_parses: Dict[Option, OptionParse]) -> str:
+    def extract_line(words: List[str], max_len: int, start_i: int) -> Tuple[str, int]:
+        result = [words[start_i]]
+        current_len = len(words[start_i])
+        for i in range(start_i + 1, len(words)):
+            next_len = current_len + 1 + len(words[i])
+            if next_len > max_len:
+                return " ".join(result), i
+            result.append(words[i])
+            current_len += 1 + len(words[i])
+        return " ".join(result), len(words)
+
+    result = []
+    for op in option_parses.values():
+        words = (op.help_).split(" ")
+        i = 0
+        while i < len(words):
+            if i == 0:
+                start = op.option.to_name() + "  "
+            else:
+                start = " " * 4
+            line, i = extract_line(words, 80 - 25 - len(start), i)
+            result.append(start + line)
+    return "\n".join(result) + "\n"
+
+
+def setup_argparse(option_parses: Dict[Option, OptionParse]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="edulint",
+        description="Lints provided code.",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.add_argument(
-        "-o", "--option", dest="options", default=[], action="append", help="possible option"
+        "-o",
+        "--option",
+        metavar="OPTION",
+        dest="options",
+        default=[],
+        action="append",
+        help=format_options_help(option_parses),
     )
     parser.add_argument(
         "files_or_dirs",
@@ -54,11 +92,12 @@ def extract_files(files_or_dirs: List[str]) -> List[str]:
 @logger.catch
 def main() -> int:
     setup_logger()
-    args = setup_argparse()
+    option_parses = get_option_parses()
+    args = setup_argparse(option_parses)
     cmd_args = get_cmd_args(args)
 
     files = extract_files(args.files_or_dirs)
-    file_configs = get_config_many(files, cmd_args)
+    file_configs = get_config_many(files, cmd_args, option_parses=option_parses)
 
     try:
         results = lint_many(file_configs)
