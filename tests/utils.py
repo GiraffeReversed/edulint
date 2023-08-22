@@ -57,7 +57,14 @@ def prepare_config(args: List[UnprocessedArg], from_empty: bool) -> Config:
         config_args.get_last_value(Option.CONFIG, use_default=True) if not from_empty else "empty"
     )
     config_file = parse_config_file(config_path, get_option_parses())
-    return Config.combine(config_file, config_args).to_immutable(get_config_translations(), get_ib111_translations())
+    return Config.combine(config_file, config_args).to_immutable(
+        get_config_translations(), get_ib111_translations()
+    )
+
+
+def just_lint(filename: str, args: List[UnprocessedArg], from_empty: bool = True) -> List[Problem]:
+    config = prepare_config(args, from_empty)
+    return lint_one(get_tests_path(filename), config)
 
 
 def apply_and_lint(
@@ -66,11 +73,7 @@ def apply_and_lint(
     expected_output: List[Problem],
     from_empty: bool = True,
 ) -> None:
-    config = prepare_config(args, from_empty)
-    lazy_equal(
-        lint_one(get_tests_path(filename), config),
-        expected_output,
-    )
+    lazy_equal(just_lint(filename, args, from_empty), expected_output)
 
 
 def create_apply_and_lint(

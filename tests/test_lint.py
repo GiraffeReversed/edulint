@@ -3,7 +3,7 @@ from edulint.linters import Linter
 from edulint.options import Option
 from edulint.config.arg import Arg
 from edulint.linting.problem import Problem
-from utils import lazy_problem, apply_and_lint, create_apply_and_lint
+from utils import lazy_problem, apply_and_lint, create_apply_and_lint, just_lint
 from typing import List
 
 
@@ -583,6 +583,13 @@ def test_overrides_custom(lines: List[str], expected_output: List[Problem]) -> N
         expected_output,
         from_empty=False
     )
+
+
+@pytest.mark.parametrize("filename", [
+    "hs3013-8548.py"
+])
+def test_lints_without_error(filename: str) -> None:
+    just_lint(filename, [], from_empty=False)
 
 
 @pytest.mark.filterwarnings("ignore:The 'default' argument to fields is deprecated. Use 'dump_default' instead.")
