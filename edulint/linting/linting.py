@@ -14,6 +14,10 @@ import os
 from loguru import logger
 
 
+class EduLintLinterFailedException(Exception):
+    pass
+
+
 def get_proper_path(path: str) -> str:
     return os.path.abspath(path) if os.path.isabs(path) else os.path.relpath(path)
 
@@ -95,7 +99,7 @@ def lint_any(
         logger.critical(
             "{linter} exited with {return_code}", linter=linter, return_code=return_code
         )
-        exit(return_code)
+        raise EduLintLinterFailedException()
 
     if not outs:
         return []

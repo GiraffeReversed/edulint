@@ -2,7 +2,7 @@ from edulint.options import Option
 from edulint.option_parses import OptionParse, get_option_parses
 from edulint.config.config import get_config_many, get_cmd_args
 from edulint.linting.problem import Problem
-from edulint.linting.linting import lint_many, sort
+from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
 from typing import List, Optional, Dict, Tuple
 import argparse
 import os
@@ -101,7 +101,7 @@ def main() -> int:
 
     try:
         results = lint_many(file_configs)
-    except (TimeoutError, json.decoder.JSONDecodeError):
+    except (TimeoutError, json.decoder.JSONDecodeError, EduLintLinterFailedException):
         return 2
 
     sorted_results = sort(files, results)
