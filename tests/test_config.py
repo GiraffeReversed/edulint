@@ -7,7 +7,7 @@ from edulint.config.arg import Arg
 from edulint.config.config import Config, extract_args, parse_args, parse_config_file, get_config_many, get_config_one
 from edulint.config.config_translations import get_config_translations, get_ib111_translations, Translation
 from edulint.linting.tweakers import get_tweakers
-from utils import get_tests_path
+from utils import get_tests_path, remote_empty_config_url
 from typing import List, Set, Dict, Tuple, Optional
 from pathlib import Path
 
@@ -148,6 +148,11 @@ def packaged_config_files():
 @pytest.mark.parametrize("config_name", packaged_config_files())
 def test_packaged_configs_parse(config_name: str):
     assert parse_config_file(config_name, get_option_parses()) is not None
+
+
+def test_remote_config_parses():
+    url = remote_empty_config_url()
+    assert parse_config_file(url, get_option_parses()) is not None
 
 
 @pytest.fixture

@@ -51,6 +51,10 @@ def get_tests_path(filename: str) -> str:
     return str((pathlib.Path(__file__).parent / "data" / filename).resolve())
 
 
+def remote_empty_config_url() -> str:
+    return "https://raw.githubusercontent.com/GiraffeReversed/edulint/v2.9.2/edulint/config/files/empty.toml"
+
+
 def prepare_config(args: List[UnprocessedArg], from_empty: bool) -> Config:
     config_args = Config(args)
     config_path = (
