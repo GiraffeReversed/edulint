@@ -11,6 +11,7 @@ from functools import partial
 import sys
 import json
 import os
+from loguru import logger
 
 
 def get_proper_path(path: str) -> str:
@@ -81,21 +82,31 @@ def lint_any(
     return_code, outs, errs = ProcessHandler.run(command, timeout=1000)
 
     if ProcessHandler.is_status_code_by_timeout(return_code):
-        print(f"edulint: {linter} was likely killed by timeout", file=sys.stderr)
+        logger.critical("{linter} was likely killed by timeout", linter=linter)
         raise TimeoutError(f"Timeout from {linter}")
 
-    print(errs, file=sys.stderr, end="")
+    errs = errs.strip()
+    if errs:
+        logger.error(errs)
+
     if (linter == Linter.FLAKE8 and return_code not in (0, 1)) or (
         linter == Linter.PYLINT and return_code == 32
     ):
-        print(f"edulint: {linter} exited with {return_code}", file=sys.stderr)
+        logger.critical(
+            "{linter} exited with {return_code}", linter=linter, return_code=return_code
+        )
         exit(return_code)
 
     if not outs:
         return []
 
-    result = result_getter(json.loads(outs))
-    return list(map(out_to_problem, result))
+    try:
+        parsed = json.loads(outs)
+    except json.decoder.JSONDecodeError as e:
+        logger.critical("could not parse results:\n{outs}\n{e}", outs=outs.split("\n\n", 1)[0], e=e)
+        raise e
+
+    return list(map(out_to_problem, result_getter(parsed)))
 
 
 def lint_edulint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:

@@ -24,8 +24,8 @@ from typing import Dict, List, Optional, Tuple, Iterator, Any, cast
 from dataclasses import dataclass
 from argparse import Namespace
 import re
-import sys
 import shlex
+from loguru import logger
 
 
 class Config:
@@ -67,10 +67,11 @@ class Config:
                 if 0 <= ib111_week < len(ib111_translations):
                     apply_translation(result, ib111_translations[ib111_week])
                 else:
-                    print(
-                        f"edulint: option {Option.IB111_WEEK.to_name()} has value {ib111_week} which is invalid;"
-                        f"allowed values are 0 to {len(ib111_translations)}",
-                        file=sys.stderr,
+                    logger.warning(
+                        "option {option} has value {val} which is invalid; allowed values are 0 to {max}",
+                        option=Option.IB111_WEEK.to_name(),
+                        val=ib111_week,
+                        max=len(ib111_translations),
                     )
 
         return result
@@ -200,18 +201,14 @@ def parse_option(
     option = name_to_option.get(name)
 
     if option is None:
-        print(f"edulint: unrecognized option {name}", file=sys.stderr)
+        logger.warning("unrecognized option {name}", name=name)
     else:
         option_parse = option_parses[option]
         if option_parse.takes_val == TakesVal.YES and val is None:
-            print(
-                f"edulint: option {name} takes an argument but none was supplied",
-                file=sys.stderr,
-            )
+            logger.warning("option {name} takes an argument but none was supplied", name=name)
         elif option_parse.takes_val == TakesVal.NO and val is not None:
-            print(
-                f"edulint: option {name} takes no argument but {val} was supplied",
-                file=sys.stderr,
+            logger.warning(
+                "option {name} takes no argument but {val} was supplied", name=name, val=val
             )
         else:
             return option
@@ -263,7 +260,12 @@ def parse_infile_config(filename: str, option_parses: Dict[Option, OptionParse])
 
 def parse_config_file(path: str, option_parses: Dict[Option, OptionParse]) -> Optional[Config]:
     def print_invalid_type_message(option: Option, val: Any) -> None:
-        print(f"edulint: invalid value type {type(val)} of value {val} for option {Option.CONFIG}")
+        logger.warning(
+            "invalid value type {type} of value {val} for option {option}",
+            type=type(val),
+            val=val,
+            option=Option.CONFIG.to_name(),
+        )
 
     def parse_base_config(config_dict: Dict[str, Any]) -> Optional[Config]:
         rec_config = config_dict.get(Option.CONFIG.to_name(), BASE_CONFIG)

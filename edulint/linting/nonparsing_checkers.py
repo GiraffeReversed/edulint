@@ -1,6 +1,6 @@
 from typing import List, Set
 import re
-import sys
+from loguru import logger
 
 from edulint.linters import Linter
 from edulint.options import Option
@@ -28,10 +28,10 @@ def report_infile_config(filenames: List[str], ignore_infile: Set[str]) -> List[
     for ignore_infile_linter in ignore_infile:
         linter = Linter.safe_from_name(ignore_infile_linter)
         if linter is None:
-            print(
-                f"edulint: invalid value '{ignore_infile_linter}' "
-                f"for option {Option.IGNORE_INFILE_CONFIG_FOR.to_name()}",
-                file=sys.stderr,
+            logger.warning(
+                "invalid value '{val}' for option {option}",
+                val=ignore_infile_linter,
+                option=Option.IGNORE_INFILE_CONFIG_FOR.to_name(),
             )
             continue
         patterns.extend(CONFIG_PATTERNS[linter])

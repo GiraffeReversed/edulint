@@ -4,6 +4,7 @@ import os
 import sys
 from subprocess import PIPE, TimeoutExpired, Popen
 from typing import Optional, Tuple, List
+from loguru import logger
 
 """ Author: Ondrej Borysek, License: MIT, Last update: 2021-04-19"""
 
@@ -34,13 +35,13 @@ class ProcessHandler:
         if self.last_child is None or self.last_child.poll() is not None:
             return
 
-        print("Trying to terminate.", file=sys.stderr)
+        logger.info("trying to terminate")
         self.last_child.terminate()  # Ask the child to exit peacefully.
 
         try:
             self.last_child.wait(timeout=self.sigterm_grace_period)
         except TimeoutExpired:
-            print("Child refused to terminate. Trying SIGKILL if available.", file=sys.stderr)
+            logger.info("child refused to terminate; trying SIGKILL if available")
             self.last_child.kill()  # Kill anyone still standing, just like Anakin did.
             # self.last_child.wait()  # Waiting would be safe on Linux, but on Windows .kill from Python
             # is just .terminate
@@ -51,9 +52,8 @@ class ProcessHandler:
                     timeout=0.2
                 )  # this can garbage collect the process
             except TimeoutExpired:
-                print(
-                    "[Warning] The process refused to die. You might need to kill the zombie manually.",
-                    file=sys.stderr,
+                logger.warning(
+                    "the process refused to die, you might need to kill the zombi manually"
                 )
                 ProcessHandler.linux_print_processes()
 
@@ -73,7 +73,7 @@ class ProcessHandler:
             )
             return_code = proc.returncode
         except TimeoutExpired:
-            print("Timeout, trying to kill.", file=sys.stderr)
+            logger.warning("timeout, trying to kill")
             proc.kill()
             outb, errb = proc.communicate()
             # proc.returncode will be ignored
@@ -85,7 +85,6 @@ class ProcessHandler:
     def run(
         command: List[str],
         input_str: Optional[str] = None,
-        print_output: bool = False,
         timeout: float = 5,  # seconds
     ) -> Tuple[int, str, str]:
         if command is None:
@@ -93,12 +92,18 @@ class ProcessHandler:
 
         ph = ProcessHandler(timeout=timeout)
         return_code, outs, errs = ph.__start_process(command, input_str=input_str)
-        if print_output:
-            print("Command:", command)
-            print("Input:\n---\n", input_str, sep="", end="---\n")
-            print("Return code:", return_code)
-            print("Output:\n---\n", ProcessHandler.prettyfi_the_output(outs), sep="", end="---\n")
-            print("Error:\n---\n", ProcessHandler.prettyfi_the_output(errs), sep="", end="---\n\n")
+        logger.trace(
+            "Command: {command}\n"
+            "Input:\n---\n{input_str}\n---\n"
+            "Return code: {return_code}\n"
+            "Output:\n---\n{output_str}\n---\n"
+            "Error:\n---\n{error_str}\n---\n",
+            command=command,
+            input_str=input_str,
+            return_code=return_code,
+            output_str=ProcessHandler.prettyfi_the_output(outs),
+            error_str=ProcessHandler.prettyfi_the_output(errs),
+        )
         return return_code, outs, errs
 
     @staticmethod
@@ -109,36 +114,11 @@ class ProcessHandler:
     def linux_print_processes() -> None:
         if not sys.platform.startswith("linux"):
             return
-        print(
-            """Please check that you don't see any zombie processes from the process of testing. They would have nice
-              value of 19. You can use command "ps a -o pid,ni,time,cmd" """,
-            file=sys.stderr,
+        logger.warning(
+            "please check that you do not see any zombie processes from running this script, "
+            "they would have nice value of 19. You can use command 'ps a -o pid,ni,time,cmd'"
         )
 
     @staticmethod
     def is_status_code_by_timeout(status_code: int) -> bool:
         return status_code in [SIGTERM_STATUS_CODE, SIGKILL_STATUS_CODE]
-
-
-def usage_example() -> None:
-    command_to_execute = ["/bin/sh", "-c", "echo Lorem Ipsum"]
-    input_str = "Echo doesn't use input from stdin, but we can give it one anyway."
-    return_code, outs, errs = ProcessHandler.run(
-        command_to_execute, input_str=input_str, print_output=True
-    )
-    assert return_code == 0
-    assert "Lorem Ipsum" in outs  # beware different newlines based on system
-    assert len(errs) == 0
-
-
-def usage_example_different_timeout() -> None:
-    command_to_execute = ["/bin/sh", "-c", "while true; do sleep 1; done;"]
-    return_code, outs, errs = ProcessHandler.run(command_to_execute, print_output=True, timeout=0.5)
-    assert return_code == -9  # SIGKILL
-
-
-if __name__ == "__main__":
-    # Examples are presuming you're running Linux. If that's not the case, just edit the commands and arguments for
-    # their Windows/other OS alternatives.
-    usage_example()
-    usage_example_different_timeout()

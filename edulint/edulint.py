@@ -5,6 +5,19 @@ from typing import List, Optional
 import argparse
 import os
 import sys
+from loguru import logger
+
+
+def setup_logger() -> None:
+    logger.remove()
+    logger.add(
+        sys.stderr,
+        level="WARNING",
+        format="<level>{name}</level>: {message}",
+        diagnose=False,
+        backtrace=False,
+        catch=False,
+    )
 
 
 def setup_argparse() -> argparse.Namespace:
@@ -37,7 +50,9 @@ def extract_files(files_or_dirs: List[str]) -> List[str]:
     return extract_files_rec(None, files_or_dirs, [])
 
 
+@logger.catch
 def main() -> int:
+    setup_logger()
     args = setup_argparse()
     cmd_args = get_cmd_args(args)
 
@@ -47,7 +62,6 @@ def main() -> int:
     try:
         result = sort(files, lint_many(file_configs))
     except TimeoutError as e:
-        print(f"edulint: {e}", file=sys.stderr)
         sys.exit(1)
 
     if args.json:
