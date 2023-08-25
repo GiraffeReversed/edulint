@@ -1,0 +1,17 @@
+name: Time delay
+
+on:
+  workflow_call:
+    inputs:
+      seconds:
+        type: number
+        required: false
+        default: 30
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sleep for ${{ inputs.seconds }} seconds
+        run: sleep ${{ inputs.seconds }}s
+        shell: bash

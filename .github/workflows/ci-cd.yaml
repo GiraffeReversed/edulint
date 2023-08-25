@@ -21,13 +21,25 @@ jobs:
     uses: ./.github/workflows/github-release.yaml
     secrets: inherit
 
-  deploy-web:
+  delay-after-pypi-publish:
     needs: publish-package
+    uses: ./.github/workflows/delay.yaml
+    secrets: inherit
+    with:
+      seconds: 30
+
+  test-published-package:
+    needs: delay-after-pypi-publish
+    uses: ./.github/workflows/test-run-of-published-version.yaml
+    secrets: inherit
+
+  deploy-web:
+    needs: test-published-package
     uses: ./.github/workflows/redeploy-web.yaml
     secrets: inherit
       
   publish-docker:
-    needs: publish-package
+    needs: test-published-package
     uses: ./.github/workflows/docker-build-and-publish.yaml
     secrets: inherit
     with:
