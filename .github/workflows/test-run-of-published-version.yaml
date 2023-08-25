@@ -1,0 +1,37 @@
+name: Run latest published edulint version
+
+on:
+  push:  # This is used for tests using `act`
+  workflow_call:
+  schedule:
+    - cron:  '42 19 * * *'
+
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Edulint
+        run: pip install edulint
+
+      - name: Log python package versions
+        run: pip freeze
+
+      - name: Download a test file
+        run: wget https://raw.githubusercontent.com/GiraffeReversed/edulint/main/setup.py
+        # There is no significance in using setup.py, it's just a file that will always be on that URL.
+
+      - name: Lint a test file
+        run: |
+          python -m edulint setup.py || test $? -eq 1  # TODO: Change this to a special return code for a "defect found" situation.
