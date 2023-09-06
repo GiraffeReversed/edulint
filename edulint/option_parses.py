@@ -154,6 +154,7 @@ OPTIONS: List[OptionParse] = [
 ]
 
 TRANSLATIONS_LABEL = "translations"
+DEFAULT_ENABLER_LABEL = "default-enabler-name"
 
 
 def get_option_parses() -> Dict[Option, OptionParse]:

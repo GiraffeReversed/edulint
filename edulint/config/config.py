@@ -13,6 +13,7 @@ from edulint.option_parses import (
     TakesVal,
     Combine,
     TRANSLATIONS_LABEL,
+    DEFAULT_ENABLER_LABEL,
 )
 from edulint.config.file_config import load_toml_file
 from edulint.config.config_translations import Translations, Translation, parse_translations
@@ -310,6 +311,8 @@ def parse_config_file(
     for name, val in config_dict.items():
         if name == TRANSLATIONS_LABEL:
             this_file_translations = parse_translations(val)
+        elif name == DEFAULT_ENABLER_LABEL:
+            continue
         else:
             option = parse_option(option_parses, name_to_option, name, val)
             if option is None or option == Option.CONFIG:  # config is handled as the first option
@@ -328,7 +331,7 @@ def parse_config_file(
                 if str_val is not None:
                     result.append(UnprocessedArg(option, str_val))
 
-    enabler_name = Path(path).stem
+    enabler_name = config_dict.get(DEFAULT_ENABLER_LABEL, Path(path).stem)
     this_file_config = Config(enabler_name, result, option_parses)
     return (
         Config.combine(base_config, this_file_config),
