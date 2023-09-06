@@ -116,6 +116,16 @@ def superfluous_parens_keep(self: Tweaker, problem: Problem, args: List[Immutabl
     return keyword.lower() != "not"
 
 
+def redefined_builtin_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
+    match = self.match(problem)
+    redefined_builtin = match.group(1).strip("'\"")
+
+    assert len(args) == 1 and args[0].option == Option.DISALLOWED_BUILTIN_NAMES
+    disallowed_builtin_names = args[0].val
+
+    return not disallowed_builtin_names or redefined_builtin in disallowed_builtin_names
+
+
 Tweakers = Dict[Tuple[Linter, str], Tweaker]
 
 TWEAKERS = {
@@ -148,6 +158,11 @@ TWEAKERS = {
         set(),
         re.compile(r"Unnecessary parens after (.*) keyword"),
         superfluous_parens_keep,
+    ),
+    (Linter.PYLINT, "W0622"): Tweaker(  # redefined-builtin
+        set([Option.DISALLOWED_BUILTIN_NAMES]),
+        re.compile(r"^Redefining built-in (.*)"),
+        redefined_builtin_keep,
     ),
 }
 

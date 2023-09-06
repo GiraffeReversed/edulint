@@ -151,6 +151,14 @@ OPTIONS: List[OptionParse] = [
         Type.COMMA_SEPARATED_LIST,
         Combine.REPLACE,
     ),
+    OptionParse(
+        Option.DISALLOWED_BUILTIN_NAMES,
+        "listed built-in names are forbidden (if none are specified, all builtin names are disallowed)",
+        TakesVal.YES,
+        [],
+        Type.COMMA_SEPARATED_LIST,
+        Combine.REPLACE,
+    ),
 ]
 
 TRANSLATIONS_LABEL = "translations"

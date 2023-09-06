@@ -20,6 +20,7 @@ class Option(NumberFromZero):
     PYLINT = ()
     FLAKE8 = ()
     ALLOWED_ONECHAR_NAMES = ()
+    DISALLOWED_BUILTIN_NAMES = ()
     NO_FLAKE8 = ()
     IGNORE_INFILE_CONFIG_FOR = ()
     EXPORT_GROUPS = ()
