@@ -38,7 +38,10 @@ class Config:
         ]
 
     def _translate(
-        self, args: List[Optional[ProcessedArg]], translations: Translations
+        self,
+        args: List[Optional[ProcessedArg]],
+        translations: Translations,
+        log_unknown_groups: bool,
     ) -> List[Optional[ProcessedArg]]:
         def apply_translation(
             result: List[Optional[ProcessedArg]], translation: Translation
@@ -59,11 +62,12 @@ class Config:
                 for group in arg.val:
                     translation = translations.get(group)
                     if translation is None:
-                        logger.warning(
-                            "unknown group {group}, known groups are {groups}",
-                            group=group,
-                            groups=", ".join(translations.keys()),
-                        )
+                        if log_unknown_groups:
+                            logger.warning(
+                                "unknown group {group}, known groups are {groups}",
+                                group=group,
+                                groups=", ".join(translations.keys()),
+                            )
                         continue
                     apply_translation(result, translation)
 
@@ -138,8 +142,10 @@ class Config:
     def _to_immutable(val: UnionT) -> ImmutableT:
         return val if not isinstance(val, list) else tuple(val)
 
-    def to_immutable(self, translations: Translations = {}) -> "ImmutableConfig":
-        translated = self._translate(self.config, translations)
+    def to_immutable(
+        self, translations: Translations = {}, log_unknown_groups: bool = True
+    ) -> "ImmutableConfig":
+        translated = self._translate(self.config, translations, log_unknown_groups)
         combined = self._combine(translated, allowed_combines=(Combine.REPLACE, Combine.EXTEND))
 
         ordered_args = [ProcessedArg(o, self.option_parses[o].default) for o in Option]
@@ -355,7 +361,7 @@ def get_config_one(
 
 
 def _partition(filenames: List[str], configs: List[Config]) -> List[Tuple[List[str], Config]]:
-    immutable_configs = [c.to_immutable() for c in configs]
+    immutable_configs = [c.to_immutable(log_unknown_groups=False) for c in configs]
 
     indices: Dict[ImmutableConfig, int] = {}
     partition: List[Tuple[List[str], Config]] = []
