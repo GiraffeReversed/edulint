@@ -13,6 +13,7 @@ class Problem:
     source: Linter = field(
         metadata=config(encoder=Linter.to_name, decoder=Linter.from_name, mm_field=mm_fields.Str())
     )
+    enabled_by: Optional[str]
     path: str
     line: int
     column: int
@@ -24,6 +25,10 @@ class Problem:
 
     def set_source(self, v: Linter) -> "Problem":
         self.source = v
+        return self
+
+    def set_enabled_by(self, v: Optional[str]) -> "Problem":
+        self.enabled_by = v
         return self
 
     def set_path(self, v: str) -> "Problem":
@@ -76,4 +81,5 @@ class Problem:
         return f"Problem({', '.join(get_attrvals())})"
 
     def __str__(self) -> str:
-        return f"{self.path}:{self.line}:{self.column}: {self.code} {self.text}"
+        enabler_str = f" [{self.enabled_by}]" if self.enabled_by is not None else ""
+        return f"{self.path}:{self.line}:{self.column}: {self.code} {self.text}{enabler_str}"

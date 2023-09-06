@@ -774,6 +774,7 @@ def test_lints_without_error(filename: str) -> None:
 def test_problem_can_be_dumped_to_json() -> None:
     problem = Problem(
         source=Linter.FLAKE8,
+        enabled_by="foo",
         path="path",
         line=5,
         column=1,
@@ -788,6 +789,7 @@ def test_problem_can_be_dumped_to_json() -> None:
         == """{
   "code": "E303",
   "column": 1,
+  "enabled_by": "foo",
   "end_column": null,
   "end_line": null,
   "line": 5,
@@ -805,6 +807,7 @@ def test_problem_can_be_dumped_to_json() -> None:
   {
     "code": "E303",
     "column": 1,
+    "enabled_by": "foo",
     "end_column": null,
     "end_line": null,
     "line": 5,

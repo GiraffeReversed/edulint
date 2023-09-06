@@ -22,7 +22,7 @@ def get_proper_path(path: str) -> str:
     return os.path.abspath(path) if os.path.isabs(path) else os.path.relpath(path)
 
 
-def flake8_to_problem(raw: ProblemJson) -> Problem:
+def flake8_to_problem(enablers: Dict[str, str], raw: ProblemJson) -> Problem:
     assert isinstance(raw["filename"], str), f'got {type(raw["filename"])} for filename'
     assert isinstance(raw["line_number"], int), f'got {type(raw["line_number"])} for line_number'
     assert isinstance(
@@ -33,6 +33,7 @@ def flake8_to_problem(raw: ProblemJson) -> Problem:
 
     return Problem(
         Linter.FLAKE8,
+        enablers.get(raw["code"]),
         get_proper_path(raw["filename"]),
         raw["line_number"],
         raw["column_number"],
@@ -41,7 +42,7 @@ def flake8_to_problem(raw: ProblemJson) -> Problem:
     )
 
 
-def pylint_to_problem(filenames: List[str], raw: ProblemJson) -> Problem:
+def pylint_to_problem(filenames: List[str], enablers: Dict[str, str], raw: ProblemJson) -> Problem:
     assert isinstance(raw["path"], str), f'got {type(raw["path"])} for path'
     assert isinstance(raw["line"], int), f'got {type(raw["line"])} for line'
     assert isinstance(raw["column"], int), f'got {type(raw["column"])} for column'
@@ -61,8 +62,12 @@ def pylint_to_problem(filenames: List[str], raw: ProblemJson) -> Problem:
                 return filename
         assert False, "unreachable"
 
+    code_enabler = enablers.get(raw["message-id"])
+    symbol_enabler = enablers.get(raw["symbol"])
+
     return Problem(
         Linter.PYLINT,
+        code_enabler if code_enabler is not None else symbol_enabler,
         get_proper_path(get_used_filename(raw["path"])),
         raw["line"],
         raw["column"],
@@ -80,7 +85,8 @@ def lint_any(
     linter_args: List[str],
     config_arg: ImmutableT,
     result_getter: Callable[[Any], Any],
-    out_to_problem: Callable[[ProblemJson], Problem],
+    out_to_problem: Callable[[Dict[str, str], ProblemJson], Problem],
+    enablers: Dict[str, str],
 ) -> List[Problem]:
     command = [sys.executable, "-m", str(linter)] + linter_args + list(config_arg) + filenames  # type: ignore
     return_code, outs, errs = ProcessHandler.run(command, timeout=1000)
@@ -111,13 +117,13 @@ def lint_any(
         logger.debug(outs)
         raise e
 
-    return list(map(out_to_problem, result_getter(parsed)))
+    return list(map(partial(out_to_problem, enablers), result_getter(parsed)))
 
 
 def lint_edulint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
     ignored_infile = set(config[Option.IGNORE_INFILE_CONFIG_FOR])
     if len(ignored_infile) > 0:
-        return report_infile_config(filenames, ignored_infile)
+        return report_infile_config(filenames, ignored_infile, config.enablers)
     return []
 
 
@@ -130,6 +136,7 @@ def lint_flake8(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
         config[Option.FLAKE8],
         lambda r: [problem for problems in r.values() for problem in problems],
         flake8_to_problem,
+        config.enablers,
     )
 
 
@@ -142,6 +149,7 @@ def lint_pylint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
         config[Option.PYLINT],
         lambda r: r,
         partial(pylint_to_problem, filenames),
+        config.enablers,
     )
 
 

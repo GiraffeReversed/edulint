@@ -320,7 +320,7 @@ def test_combine_and_translate_translates(
         return tuple(result)
 
     option_parses = get_option_parses()
-    result = Config(args, option_parses).to_immutable(translations)
+    result = Config("test", args, option_parses).to_immutable(translations)
     reference = fill_in_defaults(config, option_parses)
     assert result.config == reference
 
@@ -372,7 +372,7 @@ def _arg_to_str(option: Option, val: Optional[str]) -> str:
     ],
 )
 def test_get_config_one(filename: str, cmd: List[str], args: List[UnprocessedArg]):
-    iconfig = _fill_in_file_config(Config(args))
+    iconfig = _fill_in_file_config(Config("test", args))
     assert get_config_one(get_tests_path(filename), cmd).config == iconfig.config
 
 
@@ -385,10 +385,13 @@ def test_get_config_one(filename: str, cmd: List[str], args: List[UnprocessedArg
                 Path("tests/data/custom_flake8_pylint_config.py"),
             ],
             [
-                ([Path("tests/data/custom_nonpep_assign.py")], Config()),
+                ([Path("tests/data/custom_nonpep_assign.py")], Config(enabler=None)),
                 (
                     [Path("tests/data/custom_flake8_pylint_config.py")],
-                    Config([Arg(Option.PYLINT, "--enable=missing-module-docstring")]),
+                    Config(
+                        enabler=None,
+                        config=[Arg(Option.PYLINT, "--enable=missing-module-docstring")],
+                    ),
                 ),
             ],
         )

@@ -1,4 +1,4 @@
-from typing import List, Set
+from typing import List, Set, Dict
 import re
 from loguru import logger
 
@@ -20,7 +20,9 @@ CONFIG_PATTERNS = {
 }
 
 
-def report_infile_config(filenames: List[str], ignore_infile: Set[str]) -> List[Problem]:
+def report_infile_config(
+    filenames: List[str], ignore_infile: Set[str], enablers: Dict[str, str]
+) -> List[Problem]:
     if "all" in ignore_infile:
         ignore_infile = (ignore_infile - {"all"}) | {linter.to_name() for linter in Linter}
 
@@ -47,6 +49,7 @@ def report_infile_config(filenames: List[str], ignore_infile: Set[str]) -> List[
                         results.append(
                             Problem(
                                 source=Linter.EDULINT,
+                                enabled_by=enablers.get("EDL001"),
                                 path=filename,
                                 line=i,
                                 column=len(match.group(1)),

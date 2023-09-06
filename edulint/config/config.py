@@ -16,11 +16,12 @@ from edulint.option_parses import (
 )
 from edulint.config.file_config import load_toml_file
 from edulint.config.config_translations import Translations, Translation, parse_translations
-from edulint.config.utils import print_invalid_type_message, config_file_val_to_str
+from edulint.config.utils import print_invalid_type_message, config_file_val_to_str, add_enabled
 from typing import Dict, List, Optional, Tuple, Iterator, Any, cast
 
 from dataclasses import dataclass
 from argparse import Namespace
+from pathlib import Path
 import re
 import shlex
 from loguru import logger
@@ -97,6 +98,7 @@ class Config:
 
     def __init__(
         self,
+        enabler: Optional[str],
         config: Optional[List[UnprocessedArg]] = None,
         option_parses: Dict[Option, OptionParse] = get_option_parses(),
     ) -> None:
@@ -106,11 +108,19 @@ class Config:
         converted = self._convert(config)
         self.config = self._combine(converted, allowed_combines=(Combine.REPLACE,))  # type: ignore
 
+        self.enablers = {}
+        if enabler is not None:
+            for arg in self.config:
+                if arg is not None and arg.option in (Option.PYLINT, Option.FLAKE8):
+                    for val in arg.val:
+                        add_enabled(enabler, self.enablers, arg.option, val)
+
     @staticmethod
     def combine(lt: "Config", rt: "Config") -> "Config":
         assert lt.option_parses == rt.option_parses
-        new = Config(option_parses=lt.option_parses)
+        new = Config(enabler=None, option_parses=lt.option_parses)
         new.config = new._combine(lt.config + rt.config, allowed_combines=(Combine.REPLACE,))
+        new.enablers = {**lt.enablers, **rt.enablers}
         return new
 
     def __str__(self) -> str:
@@ -137,14 +147,32 @@ class Config:
                 continue
             ordered_args[int(arg.option)] = arg
 
+        enablers_from_translations = {}
+        for name, translation in translations.items():
+            if name not in ordered_args[int(Option.SET_GROUPS)].val:
+                continue
+
+            for linter, vals in translation.to.items():
+                for val in vals:
+                    add_enabled(
+                        name, enablers_from_translations, Option.from_name(linter.to_name()), val
+                    )
+
         return ImmutableConfig(
-            tuple(ImmutableArg(o, self._to_immutable(ordered_args[int(o)].val)) for o in Option)
+            tuple(ImmutableArg(o, self._to_immutable(ordered_args[int(o)].val)) for o in Option),
+            hashabledict({**enablers_from_translations, **self.enablers}),
         )
+
+
+class hashabledict(dict):
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
 
 
 @dataclass(frozen=True)
 class ImmutableConfig:
     config: Tuple[ImmutableArg, ...]
+    enablers: Dict[str, str]
 
     def __str__(self) -> str:
         return (
@@ -244,13 +272,13 @@ def fill_in_val(arg: UnprocessedArg, translation: List[str]) -> List[str]:
 
 def parse_cmd_config(args: List[str], option_parses: Dict[Option, OptionParse]) -> Config:
     parsed = parse_args(args, option_parses)
-    return Config(parsed, option_parses)
+    return Config("cmd", parsed, option_parses)
 
 
 def parse_infile_config(filename: str, option_parses: Dict[Option, OptionParse]) -> Config:
     extracted = extract_args(filename)
     parsed = parse_args(extracted, option_parses)
-    return Config(parsed, option_parses)
+    return Config("in-file", parsed, option_parses)
 
 
 def parse_config_file(
@@ -300,7 +328,8 @@ def parse_config_file(
                 if str_val is not None:
                     result.append(UnprocessedArg(option, str_val))
 
-    this_file_config = Config(result, option_parses)
+    enabler_name = Path(path).stem
+    this_file_config = Config(enabler_name, result, option_parses)
     return (
         Config.combine(base_config, this_file_config),
         {**base_translations, **this_file_translations},
@@ -340,7 +369,7 @@ def _partition(filenames: List[str], configs: List[Config]) -> List[Tuple[List[s
 
 
 def _get_default_config(option_parses: Dict[Option, OptionParse]) -> Tuple[Config, Translations]:
-    return Config(option_parses=option_parses), {}
+    return Config(enabler=None, option_parses=option_parses), {}
 
 
 def _ignore_infile(config: Config) -> bool:
@@ -364,7 +393,9 @@ def _parse_infile_configs(
             assert ignore_infile_val is not None
             ignore_infile_str = ",".join(ignore_infile_val)
             infile_config = Config(
-                [UnprocessedArg(Option.IGNORE_INFILE_CONFIG_FOR, ignore_infile_str)], option_parses
+                "in-file",
+                [UnprocessedArg(Option.IGNORE_INFILE_CONFIG_FOR, ignore_infile_str)],
+                option_parses,
             )
 
         infile_configs.append(infile_config)
