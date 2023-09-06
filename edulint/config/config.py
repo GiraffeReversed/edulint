@@ -112,7 +112,7 @@ class Config:
         self.enablers = {}
         if enabler is not None:
             for arg in self.config:
-                if arg is not None and arg.option in (Option.PYLINT, Option.FLAKE8):
+                if arg is not None and isinstance(arg.val, list):
                     for val in arg.val:
                         add_enabled(enabler, self.enablers, arg.option, val)
 
