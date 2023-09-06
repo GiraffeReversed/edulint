@@ -217,7 +217,8 @@ def extract_args(filename: str) -> List[str]:
 
             ibmatch = ib111_re.match(line)
             if ibmatch:
-                result.append(f"{Option.SET_GROUPS.to_name()}=ib111-week-{ibmatch.group(1)}")
+                result.append(f"{Option.CONFIG.to_name()}=ib111.toml")
+                result.append(f"{Option.SET_GROUPS.to_name()}=warning")
 
     return result
 
