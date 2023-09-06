@@ -211,7 +211,12 @@ class TestIB111Week:
     def test_ib111_week_custom(
         self, lines: List[str], args: List[Arg], expected_output: List[Problem]
     ) -> None:
-        create_apply_and_lint(lines, args, expected_output, from_empty=False)
+        create_apply_and_lint(
+            lines,
+            [Arg(Option.CONFIG, "tests/ib111-weeks.toml")] + args,
+            expected_output,
+            from_empty=False,
+        )
 
 
 @pytest.mark.parametrize(
