@@ -99,7 +99,10 @@ def unused_import_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]
 
 
 def no_repeated_op_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
-    assert len(args) == 1 and args[0].option == Option.ENHANCEMENT
+    assert len(args) == 1
+
+    if "enhancement" in args[0].val:
+        return True
 
     match = self.match(problem)
     expr = match.group(1)
@@ -130,7 +133,7 @@ TWEAKERS = {
         set(), re.compile("'(.*)' imported but unused"), unused_import_keep
     ),
     (Linter.PYLINT, "R6607"): Tweaker(  # no-repeated-op
-        set([Option.ENHANCEMENT]),
+        set([Option.SET_GROUPS]),
         re.compile(r"^Use [^ ]* instead of repeated [^ ]* in ([^\.]*)."),
         no_repeated_op_keep,
     ),

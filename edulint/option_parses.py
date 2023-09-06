@@ -29,6 +29,10 @@ class Type(MultivaluedEnum):
         return [val] if val is not None else []
 
     @staticmethod
+    def _from_comma_separated_to_list_val(val: Optional[str]) -> List[str]:
+        return val.split(",") if val else []
+
+    @staticmethod
     def _to_str_val(val: Optional[str]) -> Optional[str]:
         return val
 
@@ -44,6 +48,7 @@ class Type(MultivaluedEnum):
 
     BOOL = (auto(), _to_bool_val)
     LIST = (auto(), _to_list_val)
+    COMMA_SEPARATED_LIST = (auto, _from_comma_separated_to_list_val)
     STR = (auto(), _to_str_val)
     INT = (auto(), _to_int_val)
 
@@ -107,43 +112,11 @@ OPTIONS: List[OptionParse] = [
         Combine.EXTEND,
     ),
     OptionParse(
-        Option.ENHANCEMENT,
-        "enable checking for ways to improve the code further",
-        TakesVal.NO,
-        False,
-        Type.BOOL,
-        Combine.REPLACE,
-    ),
-    OptionParse(
-        Option.PYTHON_SPECIFIC,
-        "enable checking for ways to improve the code with Python-specific constructions",
-        TakesVal.NO,
-        False,
-        Type.BOOL,
-        Combine.REPLACE,
-    ),
-    OptionParse(
-        Option.COMPLEXITY,
-        "enable checking for overly complicated pieces of code",
-        TakesVal.NO,
-        False,
-        Type.BOOL,
-        Combine.REPLACE,
-    ),
-    OptionParse(
         Option.ALLOWED_ONECHAR_NAMES,
         "only listed characters are allowed to be variable names of length one",
         TakesVal.YES,
         None,
         Type.STR,
-        Combine.REPLACE,
-    ),
-    OptionParse(
-        Option.IB111_WEEK,
-        "set which week's limitation should be applied",
-        TakesVal.YES,
-        None,
-        Type.INT,
         Combine.REPLACE,
     ),
     OptionParse(
@@ -159,12 +132,28 @@ OPTIONS: List[OptionParse] = [
         "config file) is ignored",
         TakesVal.YES,
         [],
-        Type.LIST,
+        Type.COMMA_SEPARATED_LIST,
+        Combine.REPLACE,
+    ),
+    OptionParse(
+        Option.EXPORT_GROUPS,
+        "sets which groups are to be advertised",
+        TakesVal.YES,
+        [],
+        Type.COMMA_SEPARATED_LIST,
+        Combine.REPLACE,
+    ),
+    OptionParse(
+        Option.SET_GROUPS,
+        "sets which groups are to be applied",
+        TakesVal.YES,
+        [],
+        Type.COMMA_SEPARATED_LIST,
         Combine.REPLACE,
     ),
 ]
 
-OLD_NAMES = {"python-spec": Option.PYTHON_SPECIFIC}
+TRANSLATIONS_LABEL = "translations"
 
 
 def get_option_parses() -> Dict[Option, OptionParse]:
@@ -172,6 +161,4 @@ def get_option_parses() -> Dict[Option, OptionParse]:
 
 
 def get_name_to_option(option_parses: Dict[Option, OptionParse]) -> Dict[str, Option]:
-    from_options = {parse.option.to_name(): opt for opt, parse in option_parses.items()}
-    from_options.update(OLD_NAMES)
-    return from_options
+    return {parse.option.to_name(): opt for opt, parse in option_parses.items()}

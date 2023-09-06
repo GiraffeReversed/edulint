@@ -1,71 +1,64 @@
+from typing import Dict, Any, Optional, List
+from dataclasses import dataclass, field
+from loguru import logger
+
 from edulint.linters import Linter
-from edulint.options import Option
-from typing import Dict, List
-from dataclasses import dataclass
+from edulint.config.utils import config_file_val_to_str
 
 
-@dataclass(frozen=True)
+@dataclass
 class Translation:
-    for_linter: Linter
-    vals: List[str]
+    to: Dict[Linter, List[str]] = field(default_factory=dict)
+    description: str = ""
 
 
-CONFIG_TRANSLATIONS: Dict[Option, Translation] = {
-    Option.ENHANCEMENT: Translation(
-        Linter.PYLINT,
-        [
-            "--enable=no-self-use,superfluous-parens,consider-using-min-builtin,"
-            "consider-using-max-builtin,consider-using-with,unspecified-encoding,"
-            "loop-shadows-control-variable,no-repeated-op,"
-            "forbidden-top-level-code,simplifiable-if-nested,simplifiable-if-seq,"
-            "simplifiable-if-return-conj,simplifiable-if-assignment-conj,simplifiable-if-expr-conj,"
-        ],
-    ),
-    Option.PYTHON_SPECIFIC: Translation(
-        Linter.PYLINT,
-        [
-            "--enable=unidiomatic-typecheck,misplaced-format-function,"
-            "use-enumerate,consider-iterating-dictionary,"
-            "consider-using-dict-items,consider-using-f-string,"
-            "inconsistent-return-statements,consider-swap-variables,"
-            "consider-using-join,consider-using-set-comprehension,"
-            "unnecessary-comprehension,use-a-generator,use-list-literal,"
-            "use-dict-literal,consider-using-in,"
-        ],
-    ),
-    Option.COMPLEXITY: Translation(
-        Linter.PYLINT,
-        [
-            "--enable=too-many-arguments,too-many-branches,too-many-statements,"
-            "too-many-return-statements,too-many-nested-blocks,too-many-locals,"
-            "too-many-boolean-expressions,"
-        ],
-    ),
-    Option.ALLOWED_ONECHAR_NAMES: Translation(Linter.PYLINT, ["--bad-names-rgxs=^[a-z]$"]),
-}
+Translations = Dict[str, Translation]
 
 
-def get_config_translations() -> Dict[Option, Translation]:
-    return CONFIG_TRANSLATIONS
+def parse_translations(raw_translations: Any) -> Optional[Translations]:
+    if not isinstance(raw_translations, dict):
+        logger.warning(
+            "translations are not a dictionary but a value {val} of type {type}",
+            val=raw_translations,
+            type=type(raw_translations),
+        )
+        return None
 
+    translations = {}
+    for name, to in raw_translations.items():
+        if not isinstance(to, dict):
+            logger.warning(
+                "translation named {name} is not a dictionary but a value {val} of type {type}",
+                name=name,
+                val=to,
+                type=type(to),
+            )
+            continue
 
-IB111_WEEK_TRANSLATIONS: List[Translation] = [
-    Translation(Linter.PYLINT, ["--disable=consider-using-in,consider-swap-variables"]),  # 0
-    Translation(Linter.PYLINT, ["--disable=consider-using-in,consider-swap-variables"]),  # 1
-    Translation(Linter.PYLINT, ["--disable=consider-using-in,consider-swap-variables"]),  # 2
-    Translation(Linter.PYLINT, ["--disable=consider-using-in"]),  # 3
-    Translation(Linter.PYLINT, ["--disable=consider-using-in"]),  # 4
-    Translation(Linter.PYLINT, ["--disable=consider-using-in"]),  # 5
-    Translation(Linter.PYLINT, ["--disable=consider-using-in"]),  # 6
-    Translation(Linter.PYLINT, []),  # 7
-    Translation(Linter.PYLINT, []),  # 8
-    Translation(Linter.PYLINT, []),  # 9
-    Translation(Linter.PYLINT, []),  # 10
-    Translation(Linter.PYLINT, []),  # 11
-    Translation(Linter.PYLINT, []),  # 12
-]
+        translation = Translation()
+        for linter_str, translated in to.items():
+            linter = Linter.safe_from_name(linter_str)
+            if linter is None:
+                logger.warning(
+                    "invalid value {linter} where one of {linters} is expected",
+                    linter=linter_str,
+                    linters=", ".join(linter.to_name() for linter in Linter),
+                )
+                continue
 
+            to_process = (
+                [translated] if not isinstance(translated, dict) else list(translated.items())
+            )
+            result = []
+            for processed in to_process:
+                str_val = config_file_val_to_str("translations", processed)
+                if str_val:
+                    result.append(str_val)
 
-def get_ib111_translations() -> List[Translation]:
-    assert len(IB111_WEEK_TRANSLATIONS) == 13
-    return IB111_WEEK_TRANSLATIONS
+            if len(result) > 0:
+                translation.to[linter] = result
+
+        if len(translation.to) > 0:
+            translations[name] = translation
+
+    return translations

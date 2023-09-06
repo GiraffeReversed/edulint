@@ -159,10 +159,12 @@ Translations
 
 EduLint provides convenience "bulk names" for groups of ``pylint`` messages. One flag enables multiple messages that have a common theme.
 
+These can be enabled by specifying :link_option:`set-groups` (e.g. ``set-groups=enhancement,complexity``).
+
 Enhancement
 """"""""""""
 
-The flag :link_option:`enhancement` groups those messages, that should be followed but it is not essential skill for a beginner:
+``enhancement`` groups those messages, that should be followed but it is not essential skill for a beginner:
 
 .. message-table::
    enhancement
@@ -170,11 +172,19 @@ The flag :link_option:`enhancement` groups those messages, that should be follow
 Python-specific
 """""""""""""""
 
-The flag :link_option:`python-specific` enables those messages that improve the code, but are specific to Python:
+``python-specific`` enables those messages that improve the code, but are specific to Python:
 
 .. message-table::
    python-specific
 
+
+Complexity
+""""""""""
+
+``complexity`` enables those messages that check for overly complex code but provide little guidance on how to fix it:
+
+.. message-table::
+   complexity
 
 Custom checkers
 ^^^^^^^^^^^^^^^
