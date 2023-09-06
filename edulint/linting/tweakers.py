@@ -109,6 +109,13 @@ def no_repeated_op_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg
     return bool(args[0].val) or expr.count("*") > 1
 
 
+def superfluous_parens_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
+    match = self.match(problem)
+    keyword = match.group(1).strip("'\"")
+
+    return keyword.lower() != "not"
+
+
 Tweakers = Dict[Tuple[Linter, str], Tweaker]
 
 TWEAKERS = {
@@ -136,6 +143,11 @@ TWEAKERS = {
         set([Option.SET_GROUPS]),
         re.compile(r"^Use [^ ]* instead of repeated [^ ]* in ([^\.]*)."),
         no_repeated_op_keep,
+    ),
+    (Linter.PYLINT, "C0325"): Tweaker(  # superfluous-parens
+        set(),
+        re.compile(r"Unnecessary parens after (.*) keyword"),
+        superfluous_parens_keep,
     ),
 }
 
