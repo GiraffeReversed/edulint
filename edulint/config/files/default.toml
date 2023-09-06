@@ -56,5 +56,126 @@ enable = [
 ]
 
 [flake8]
-select = "F,E,W,C"
-ignore = "E121,E123,E126,E133,E226,E241,E242,E704,W503,W504,W505"
+select = [
+    "W293", # line contains whitespace
+    "W292", # newline at end of file
+    "E302", # 2 blank lines, found 0
+    "E303", # many blank lines (3)
+    "E501", # too long (82 > 79 characters)
+    "F401", # imported but unused
+    "W291", # whitespace
+    "E231", # whitespace after ‘,’, ‘;’, or ‘:’
+    "F841", # variable name is assigned to but never used
+    "E225", # whitespace around operator
+    "E265", # comment should start with ‘# ‘
+    "E305", # 2 blank lines after end of function or class
+    "E211", # before ‘(’
+    "E999", # error
+    "E117", # indented
+    "E203", # before ‘:’
+    "F821", # name name
+    "E301", # 1 blank line, found 0
+    "E111", # is not a multiple of four
+    "E112", # an indented block
+    "E741", # not use variables named ‘l’, ‘O’, or ‘I’
+    "E261", # least two spaces before inline comment
+    "E712", # to True should be ‘if cond is True:’ or ‘if cond:’
+    "E228", # whitespace around modulo operator
+    "W391", # line at end of file
+    "E128", # line under-indented for visual indent
+    "E221", # spaces before operator
+    "E202", # before ‘)’
+    "E271", # spaces after keyword
+    "E711", # to None should be ‘if cond is None:’
+    "E222", # spaces after operator
+    "E127", # line over-indented for visual indent
+    "E262", # comment should start with ‘# ‘
+    "E115", # an indented block (comment)
+    "E125", # line with same indent as next logical line
+    "E502", # backslash is redundant between brackets
+    "E201", # after ‘(’
+    "W191", # contains tabs
+    "E701", # statements on one line (colon)
+    "E101", # contains mixed spaces and tabs
+    "E114", # is not a multiple of four (comment)
+    "E113", # indentation
+    "E116", # indentation (comment)
+    "E266", # many leading ‘#’ for block comment
+    "E272", # spaces before keyword
+    "E129", # indented line with same indent as next logical line
+    "E703", # ends with a semicolon
+    "E713", # for membership should be ‘not in’
+    "E902", # "W605",  # escape sequence ‘x’
+    "E122", # line missing indentation or outdented
+    "F403", # module import *’ used; unable to detect undefined names
+    "F811", # of unused name from line N
+    "E227", # whitespace around bitwise or shift operator
+    "E402", # level import not at top of file
+    "F405", # may be undefined, or defined from star imports: module
+    "E251", # spaces around keyword / parameter equals
+    "E306", # 1 blank line before a nested definition
+    "E722", # not use bare except, specify exception instead
+    "E131", # line unaligned for hanging indent
+    "E124", # bracket does not match visual indentation
+    "E252", # whitespace around parameter equals
+    "F541", # string without any placeholders
+    "F601", # key name repeated with different values
+    "F632", # ==/!= to compare str, bytes, and int literals
+    "F823", # variable name … referenced before assignment
+    "E223", # before operator
+    "E224", # after operator
+    "E273", # after keyword
+    "E274", # before keyword
+    "E275", # whitespace after keyword
+    "E304", # lines found after function decorator
+    "E401", # imports on one line
+    "E702", # statements on one line (semicolon)
+    "E714", # for object identity should be ‘is not’
+    "E721", # not compare types, use ‘isinstance()’
+    "E731", # not assign a lambda expression, use a def
+    "E742", # not define classes named ‘l’, ‘O’, or ‘I’
+    "E743", # not define functions named ‘l’, ‘O’, or ‘I’
+    "E901", # or IndentationError
+    "F402", # module from line N shadowed by loop variable
+    "F404", # import(s) name after other statements
+    "F406", # module import *’ only allowed at module level
+    "F407", # undefined __future__ feature name was imported
+    "F501", # % format literal
+    "F502", # format expected mapping but got sequence
+    "F503", # format expected sequence but got mapping
+    "F504", # format unused named arguments
+    "F505", # format missing named arguments
+    "F506", # format mixed positional and named arguments
+    "F507", # format mismatch of placeholder and argument count
+    "F508", # format with * specifier requires a sequence
+    "F509", # format with unsupported format character
+    "F521", # ormat(...) invalid format string
+    "F522", # ormat(...) unused named arguments
+    "F523", # ormat(...) unused positional arguments
+    "F524", # ormat(...) missing argument
+    "F525", # ormat(...) mixing automatic and manual numbering
+    "F602", # key variable name repeated with different values
+    "F621", # many expressions in an assignment with star-unpacking
+    "F622", # or more starred expressions in an assignment (a, *b, *c = d)
+    "F631", # test is a tuple, which is always True
+    "F633", # of >> is invalid with print function
+    "F634", # test is a tuple, which is always True
+    "F701", # break statement outside of a while or for loop
+    "F702", # continue statement outside of a while or for loop
+    "F703", # continue statement in a finally block in a loop
+    "F704", # yield or yield from statement outside of a function
+    "F705", # return statement with arguments inside a generator
+    "F706", # return statement outside of a function/method
+    "F707", # except: block as not the last exception handler
+    "F721", # error in doctest
+    "F722", # error in forward annotation
+    "F723", # error in type comment
+    "F822", # name name in __all__
+    "F831", # argument name in function definition
+    "F901", # NotImplemented should be raise NotImplementedError
+    "W601", # as_key() is deprecated, use ‘in’
+    "W602", # form of raising exception
+    "W603", # >’ is deprecated, use ‘!=’
+    "W604", # are deprecated, use ‘repr()’
+    "W606", # and ‘await’ are reserved keywords starting with Python 3.7
+]
