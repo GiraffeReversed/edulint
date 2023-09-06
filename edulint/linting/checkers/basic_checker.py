@@ -88,6 +88,34 @@ class ImproveForLoop(BaseChecker):  # type: ignore
             assert subscript.ctx == Context.Del
             return sub_loaded, sub_stored or used
 
+    class StructureIndexedByAnyOtherVisitor(ModifiedListener[bool]):
+        default = False
+
+        @staticmethod
+        def combine(results: List[bool]) -> bool:
+            return any(results)
+
+        def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):
+            super().__init__([structure, index])
+            self.structure = structure
+            self.index = index
+
+        def visit_subscript(self, subscript: nodes.Subscript) -> bool:
+            sub_indexed = self.visit_many(subscript.get_children())
+
+            if self.was_reassigned(self.structure, allow_definition=False) or self.was_reassigned(
+                self.index, allow_definition=False
+            ):
+                return True
+
+            return sub_indexed or (
+                subscript.value.as_string() == self.structure.as_string()
+                and (
+                    not isinstance(subscript.slice, nodes.Name)
+                    or subscript.slice.as_string() != self.index.as_string()
+                )
+            )
+
     class IndexUsedVisitor(ModifiedListener[UsesIndex]):
         default = UsesIndex.NEVER
 
@@ -165,7 +193,9 @@ class ImproveForLoop(BaseChecker):  # type: ignore
         structure_name = get_name(structure)
         uses_index = self.IndexUsedVisitor(structure, node.target).visit_many(node.body)
 
-        if uses_index == UsesIndex.INSIDE_SUBSCRIPT:
+        if uses_index == UsesIndex.INSIDE_SUBSCRIPT or self.StructureIndexedByAnyOtherVisitor(
+            structure, index
+        ).visit_many(node.body):
             return
         elif stored or uses_index == UsesIndex.OUTSIDE_SUBSCRIPT:
             self.add_message("use-enumerate", args=(index.name, structure_name), node=node)

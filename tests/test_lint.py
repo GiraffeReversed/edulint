@@ -90,7 +90,7 @@ def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Proble
             [
                 lazy_problem().set_code("R6609").set_line(10),
                 lazy_problem().set_code("R6303").set_line(42),
-                lazy_problem().set_code("R6102").set_line(80),
+                # lazy_problem().set_code("R6102").set_line(80), TODO differentiate?
                 lazy_problem().set_code("R6205").set_line(82),
                 lazy_problem().set_code("R6101").set_line(171),
                 lazy_problem().set_code("C0123").set_line(172),
@@ -101,7 +101,6 @@ def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Proble
             "z202817-zkouska.py",
             [Arg(Option.PYLINT, "--disable=all"), Arg(Option.SET_GROUPS, "python-specific")],
             [
-                lazy_problem().set_code("R6102").set_line(80),
                 lazy_problem().set_code("C0123").set_line(172),
             ],
         ),
@@ -442,11 +441,6 @@ class TestImproveFor:
             ),
             ("045294-p4_vigenere.py", [Arg(Option.PYLINT, "--enable=use-foreach")], []),
             (
-                "03-d4_points.py",
-                [Arg(Option.PYLINT, "--enable=improve-for-loop")],
-                [lazy_problem().set_code("R6102").set_line(92)],
-            ),
-            (
                 "umime_count_a.py",
                 [
                     Arg(Option.PYLINT, "--enable=improve-for-loop"),
@@ -459,6 +453,17 @@ class TestImproveFor:
                     .set_text(
                         'Iterate directly: "for var in text" (with appropriate name for "var")'
                     ),
+                ],
+            ),
+            ("03-d4_points.py", [Arg(Option.PYLINT, "--enable=use-enumerate")], []),
+            (
+                "046542-polybius.py",
+                [Arg(Option.PYLINT, "--enable=improve-for-loop")],
+                [
+                    lazy_problem().set_line(44),
+                    lazy_problem().set_line(45),
+                    lazy_problem().set_line(67),
+                    lazy_problem().set_line(68),
                 ],
             ),
         ],
