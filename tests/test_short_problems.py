@@ -22,7 +22,7 @@ class TestShort:
             "if x <= y:",
             "    print('bar')"
         ], [
-            lazy_problem().set_line(3).set_code("R6611")
+            # lazy_problem().set_line(3).set_code("R6611")  # TODO report another defect
         ]),
         ([
             "if x > y:",
@@ -46,9 +46,17 @@ class TestShort:
             "def foo(a):",
             "    a = a + 1",
         ], [lazy_problem()]),
+        # ([
+        #     "def foo(a):",
+        #     "    a = a * 2",
+        # ], []),
         ([
             "def foo(a):",
             "    a = a + [0]",
+        ], []),
+        ([
+            "def foo(a, b):",
+            "    a = a + b",
         ], []),
         ([
             "def foo(a):",
@@ -69,6 +77,10 @@ class TestShort:
         ([
             "def foo(a):",
             "    a = a & {'a'}",
+        ], []),
+        ([
+            "def foo(a, b):",
+            "    a = a & b",
         ], []),
     ])
     def test_augassign_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
@@ -217,6 +229,10 @@ class TestShort:
         ]),
         ("041630-ipv4.py", [
             lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")
+        ]),
+        ("043232-person_id.py", [  # no use else instead of elif on line
+            lazy_problem().set_code("R6613").set_line(44),
+            lazy_problem().set_code("R6613").set_line(44),
         ]),
         ("044834-ipv4.py", [
             lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")

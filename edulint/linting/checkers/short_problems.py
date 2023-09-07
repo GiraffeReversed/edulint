@@ -393,8 +393,9 @@ class Short(BaseChecker):
         if_test = node.test
         if node.has_elif_block():
             next_if = node.orelse[0]
-        elif isinstance(node.next_sibling(), nodes.If) and len(node.next_sibling().orelse) == 0:
-            next_if = node.next_sibling()
+        # TODO report another message (may be FP)
+        # elif isinstance(node.next_sibling(), nodes.If) and len(node.next_sibling().orelse) == 0:
+        #     next_if = node.next_sibling()
         else:
             return
 
