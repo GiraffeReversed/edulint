@@ -116,9 +116,12 @@ class Config:
         self.enablers = {}
         if enabler is not None:
             for arg in self.config:
-                if arg is not None and isinstance(arg.val, list):
-                    for val in arg.val:
-                        add_enabled(enabler, self.enablers, arg.option, val)
+                if arg is not None:
+                    if isinstance(arg.val, list):
+                        for val in arg.val:
+                            add_enabled(enabler, self.enablers, arg.option, val)
+                    elif isinstance(arg.val, str):
+                        add_enabled(enabler, self.enablers, arg.option, arg.val)
 
     @staticmethod
     def combine(lt: "Config", rt: "Config") -> "Config":
@@ -156,9 +159,6 @@ class Config:
 
         enablers_from_translations = {}
         for name, translation in translations.items():
-            if name not in ordered_args[int(Option.SET_GROUPS)].val:
-                continue
-
             for linter, vals in translation.to.items():
                 for val in vals:
                     add_enabled(

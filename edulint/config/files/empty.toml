@@ -63,5 +63,6 @@ enable = [
     "too-many-boolean-expressions",
 ]
 
-[translations.allowed-onechar-names]
-pylint = "--bad-names-rgxs=^[a-z]$"
+[translations.allowed-onechar-names.pylint]
+bad-names-rgxs = "^[a-z]$"
+enable = "disallowed-name"
