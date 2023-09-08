@@ -1,9 +1,9 @@
 from edulint.options import Option
 from edulint.option_parses import OptionParse, get_option_parses
-from edulint.config.config import get_config_many, get_cmd_args
+from edulint.config.config import get_config_many, get_cmd_args, ImmutableConfig
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Any
 import argparse
 import os
 import sys
@@ -89,6 +89,17 @@ def extract_files(files_or_dirs: List[str]) -> List[str]:
     return extract_files_rec(None, files_or_dirs, [])
 
 
+def to_json(configs: List[ImmutableConfig], problems: List[Problem]) -> str:
+    def config_to_json(obj: Any) -> str:
+        if isinstance(obj, ImmutableConfig):
+            return {arg.option.to_name(): arg.val for arg in obj.config}
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+    config_json = json.dumps(configs, default=config_to_json)
+    problems_json = Problem.schema().dumps(problems, indent=2, many=True)
+    return f'{{"configs": {config_json}, "problems": {problems_json}}}'
+
+
 @logger.catch
 def main() -> int:
     setup_logger()
@@ -107,7 +118,7 @@ def main() -> int:
     sorted_results = sort(files, results)
 
     if args.json:
-        print(Problem.schema().dumps(sorted_results, indent=2, many=True))  # type: ignore
+        print(to_json(file_configs, sorted_results))
     else:
         prev_problem = None
         for problem in sorted_results:
