@@ -86,7 +86,7 @@ class TestShort:
     def test_augassign_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.PYLINT, "--enable=use-augmenting-assignment")],
+            [Arg(Option.PYLINT, "--enable=use-augmented-assign")],
             [problem.set_code("R6609") for problem in expected_output]
         )
 
@@ -160,7 +160,7 @@ class TestShort:
     @pytest.mark.parametrize("filename,expected_output", [
         ("010666-prime.py", [
             lazy_problem().set_code("R6604").set_line(12).set_text("Do not use while loop with else."),
-            lazy_problem().set_code("R6609").set_line(15).set_text("Use augmenting assignment: 'i += 1'"),
+            lazy_problem().set_code("R6609").set_line(15).set_text("Use augmented assignment: 'i += 1'"),
         ]),
         ("012889-pythagorean.py", [
             lazy_problem().set_code("R6602").set_line(23).set_text("Use integral division //."),
@@ -192,7 +192,7 @@ class TestShort:
             .set_text("Use lst.append(number % 7) instead of lst += [number % 7].")
         ]),
         ("024042-cards.py", [
-            lazy_problem().set_code("R6609").set_line(9).set_text("Use augmenting assignment: 'number //= 10'"),
+            lazy_problem().set_code("R6609").set_line(9).set_text("Use augmented assignment: 'number //= 10'"),
             lazy_problem().set_code("R6613").set_line(37)
             .set_text("Use 'is_valid_card(number)' directly rather than as 'is_valid_card(number) is True'."),
             lazy_problem().set_code("R6613").set_line(55),
@@ -255,13 +255,13 @@ class TestShort:
         ]),
         ("104584-p4_digits.py", []),
         ("hw14358.py", [
-            lazy_problem().set_code("R6609").set_line(29).set_text("Use augmenting assignment: 'result -= element'"),
-            lazy_problem().set_code("R6609").set_line(31).set_text("Use augmenting assignment: 'b += 1'"),
-            lazy_problem().set_code("R6609").set_line(34).set_text("Use augmenting assignment: 'a += 1'"),
+            lazy_problem().set_code("R6609").set_line(29).set_text("Use augmented assignment: 'result -= element'"),
+            lazy_problem().set_code("R6609").set_line(31).set_text("Use augmented assignment: 'b += 1'"),
+            lazy_problem().set_code("R6609").set_line(34).set_text("Use augmented assignment: 'a += 1'"),
             lazy_problem().set_code("R6608").set_line(44).set_text("Redundant arithmetic: num // num"),
-            lazy_problem().set_code("R6609").set_line(50).set_text("Use augmenting assignment: 'count += 1'"),
-            lazy_problem().set_code("R6609").set_line(51).set_text("Use augmenting assignment: 'number //= n'"),
-            lazy_problem().set_code("R6609").set_line(53).set_text("Use augmenting assignment: 'primes += 1'"),
+            lazy_problem().set_code("R6609").set_line(50).set_text("Use augmented assignment: 'count += 1'"),
+            lazy_problem().set_code("R6609").set_line(51).set_text("Use augmented assignment: 'number //= n'"),
+            lazy_problem().set_code("R6609").set_line(53).set_text("Use augmented assignment: 'primes += 1'"),
             lazy_problem().set_code("R6609").set_line(54),
             lazy_problem().set_code("R6609").set_line(56),
             lazy_problem().set_code("R6609").set_line(57),

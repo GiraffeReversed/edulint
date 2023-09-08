@@ -50,7 +50,7 @@ def good(char: str):
 ```
 """
 
-[R6609] # use-augmenting-assignment
+[R6609] # use-augmented-assign
 why = "Using augmented assign is not only shorter, but also clearer and less prone to errors."
 examples = "For example, instead of writing `x = x + 1`, you can write `x += 1`. Works for almost any operator."
 

@@ -718,7 +718,7 @@ def test_ignore_infile_config(
                 lazy_problem()
                 .set_code("R6609")
                 .set_line(5)
-                .set_text("Use augmenting assignment: 'a += 1'"),
+                .set_text("Use augmented assignment: 'a += 1'"),
             ],
         ),
         (
@@ -749,7 +749,7 @@ def test_ignore_infile_config(
                 lazy_problem()
                 .set_code("R6609")
                 .set_line(12)
-                .set_text("Use augmenting assignment: 'a += 1'"),
+                .set_text("Use augmented assignment: 'a += 1'"),
             ],
         ),
     ],

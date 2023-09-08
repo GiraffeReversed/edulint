@@ -61,8 +61,8 @@ class Short(BaseChecker):
             "Emitted when there is redundant arithmetic (e.g. +0, *1) in an expression.",
         ),
         "R6609": (
-            "Use augmenting assignment: '%s %s= %s'",
-            "use-augmenting-assignment",
+            "Use augmented assignment: '%s %s= %s'",
+            "use-augmented-assign",
             "Emitted when an assignment can be simplified by using its augmented version.",
         ),
         "R6610": (
@@ -256,7 +256,7 @@ class Short(BaseChecker):
 
         def add_message(target: str, param: nodes.BinOp) -> None:
             self.add_message(
-                "use-augmenting-assignment",
+                "use-augmented-assign",
                 node=node,
                 args=(target, node.value.op, param.as_string()),
             )
@@ -603,11 +603,11 @@ class Short(BaseChecker):
         self._check_multiplied_list(node)
         self._check_use_ord_letter(node)
 
-    @only_required_for_messages("use-augmenting-assignment")
+    @only_required_for_messages("use-augmented-assign")
     def visit_assign(self, node: nodes.Assign) -> None:
         self._check_augmentable(node)
 
-    @only_required_for_messages("use-augmenting-assignment")
+    @only_required_for_messages("use-augmented-assign")
     def visit_annassign(self, node: nodes.AnnAssign) -> None:
         self._check_augmentable(node)
 

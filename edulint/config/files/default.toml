@@ -52,7 +52,7 @@ enable = [
     "use-literal-letter",
     "use-foreach",
     "use-append",
-    "use-augmenting-assignment",
+    "use-augmented-assign",
 ]
 
 [flake8]
