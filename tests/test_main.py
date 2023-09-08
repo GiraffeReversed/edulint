@@ -3,15 +3,15 @@ from edulint.edulint import main
 from os.path import join
 import logging
 
-def pytest_sessionfinish():
-    # pytest's capsys is enabled by default, see
-    # https://docs.pytest.org/en/7.1.x/how-to/capture-stdout-stderr.html.
-    # but pytest closes its internal stream for capturing the stdout and
-    # stderr, so we are not able to write the logger anymore once the test
-    # session finishes. see https://github.com/pytest-dev/pytest/issues/5577,
-    # to silence the warnings, let's just prevent logging from raising
-    # exceptions.
-    logging.raiseExceptions = False
+# def pytest_sessionfinish():
+#     # pytest's capsys is enabled by default, see
+#     # https://docs.pytest.org/en/7.1.x/how-to/capture-stdout-stderr.html.
+#     # but pytest closes its internal stream for capturing the stdout and
+#     # stderr, so we are not able to write the logger anymore once the test
+#     # session finishes. see https://github.com/pytest-dev/pytest/issues/5577,
+#     # to silence the warnings, let's just prevent logging from raising
+#     # exceptions.
+#     logging.raiseExceptions = False
 
 
 def compare_output(monkeypatch, capsys, argv, output):
