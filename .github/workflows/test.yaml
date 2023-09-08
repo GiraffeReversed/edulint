@@ -71,7 +71,7 @@ jobs:
           pip freeze
 
       - name: Test with pytest
-        run: pytest --junit-xml pytest.xml tests/
+        run: pytest --capture=no --junit-xml pytest.xml tests/
 
       - name: Upload Unit Test Results
         if: always()
