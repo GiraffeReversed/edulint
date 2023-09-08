@@ -126,6 +126,11 @@ def redefined_builtin_keep(self: Tweaker, problem: Problem, args: List[Immutable
     return not disallowed_builtin_names or redefined_builtin in disallowed_builtin_names
 
 
+def singleton_bool_comparison_reword(self: Tweaker, problem: Problem) -> bool:
+    match = self.match(problem)
+    return "".join(match.groups())
+
+
 Tweakers = Dict[Tuple[Linter, str], Tweaker]
 
 TWEAKERS = {
@@ -163,6 +168,11 @@ TWEAKERS = {
         set([Option.DISALLOWED_BUILTIN_NAMES]),
         re.compile(r"^Redefining built-in (.*)"),
         redefined_builtin_keep,
+    ),
+    (Linter.FLAKE8, "E712"): Tweaker(  # singleton bool comparison
+        set(),
+        re.compile(r"(comparison to (?:True|False) should be )'if cond is .*' or (.*)"),
+        reword=singleton_bool_comparison_reword,
     ),
 }
 
