@@ -12,7 +12,7 @@ from loguru import logger
 
 
 def setup_logger() -> None:
-    # logger.remove()
+    logger.remove()
     logger.add(
         sys.stderr,
         level="WARNING",
