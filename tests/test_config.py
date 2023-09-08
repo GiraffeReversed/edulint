@@ -184,6 +184,30 @@ def test_remote_config_parses():
     assert parse_config_file(url, get_option_parses()) is not None
 
 
+def test_local_config_found_relative_to_file():
+    filename = get_tests_path(str(Path() / "file" / "somewhere" / "deep" / "03-d4_points.py"))
+    iconfig = get_config_one(filename, [])
+
+    assert iconfig[Option.CONFIG] == "enable-missing-docstring.toml"
+    assert iconfig[Option.PYLINT][-1] == "--enable=missing-function-docstring"
+
+
+def test_local_configs_found_relative_to_files():
+    filename1 = get_tests_path(str(Path() / "file" / "somewhere" / "deep" / "03-d4_points.py"))
+    filename2 = get_tests_path(str(Path() / "file" / "somewhere" / "else" / "03-d4_points.py"))
+    iconfigs = get_config_many([filename1, filename2], [])
+
+    assert len(iconfigs) == 2
+    iconfig1 = iconfigs[0][1]
+    iconfig2 = iconfigs[1][1]
+
+    assert iconfig1[Option.CONFIG] == "enable-missing-docstring.toml"
+    assert iconfig1[Option.PYLINT][-1] == "--enable=missing-function-docstring"
+
+    assert iconfig2[Option.CONFIG] == "enable-missing-docstring.toml"
+    assert iconfig2[Option.PYLINT][-1] == "--enable=missing-module-docstring"
+
+
 @pytest.fixture
 def translations() -> Translations:
     return {

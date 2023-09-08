@@ -18,7 +18,7 @@ from edulint.option_parses import (
 from edulint.config.file_config import load_toml_file
 from edulint.config.config_translations import Translations, Translation, parse_translations
 from edulint.config.utils import print_invalid_type_message, config_file_val_to_str, add_enabled
-from typing import Dict, List, Optional, Tuple, Iterator, Any, cast
+from typing import Dict, List, Optional, Tuple, Iterator, Any, Set
 
 from dataclasses import dataclass
 from argparse import Namespace
@@ -26,6 +26,7 @@ from pathlib import Path
 import re
 import shlex
 from loguru import logger
+import os
 
 
 class Config:
@@ -360,17 +361,22 @@ def get_config_one(
     return config
 
 
-def _partition(filenames: List[str], configs: List[Config]) -> List[Tuple[List[str], Config]]:
-    immutable_configs = [c.to_immutable(log_unknown_groups=False) for c in configs]
+def _partition(
+    filenames: List[str], configs: List[Config], filenames_mapping: Dict[str, str]
+) -> List[Tuple[List[str], Config]]:
+    immutable_configs = [
+        (c.to_immutable(log_unknown_groups=False), filenames_mapping[filenames[i]])
+        for i, c in enumerate(configs)
+    ]
 
     indices: Dict[ImmutableConfig, int] = {}
     partition: List[Tuple[List[str], Config]] = []
     for i, filename in enumerate(filenames):
-        iconfig = immutable_configs[i]
+        id_ = immutable_configs[i]
         config = configs[i]
-        index = indices.get(iconfig)
+        index = indices.get(id_)
         if index is None:
-            indices[iconfig] = len(partition)
+            indices[id_] = len(partition)
             partition.append(([filename], config))
         else:
             partition[index][0].append(filename)
@@ -411,6 +417,27 @@ def _parse_infile_configs(
     return infile_configs
 
 
+def get_config_paths(
+    filenames: List[str], infile_configs: List[Config]
+) -> Tuple[Set[str], Dict[str, str]]:
+    assert len(filenames) == len(infile_configs)
+    config_paths = set()
+    filename_mapping = {}
+    for filename, config in zip(filenames, infile_configs):
+        config_file = config.get_last_value(Option.CONFIG, use_default=True)
+        if (
+            config_file.startswith("http")
+            or not config_file.endswith(".toml")
+            or os.path.isabs(config_file)
+        ):
+            config_path = config_file
+        else:
+            config_path = str(Path(filename).parent / config_file)
+        config_paths.add(config_path)
+        filename_mapping[filename] = config_path
+    return config_paths, filename_mapping
+
+
 def get_config_many(
     filenames: List[str],
     cmd_args_raw: List[str],
@@ -420,24 +447,21 @@ def get_config_many(
     infile_configs = _parse_infile_configs(filenames, cmd_config, option_parses)
 
     cmd_config_path = cmd_config.get_last_value(Option.CONFIG, use_default=False)
-    config_paths = (
-        {cast(str, cmd_config_path)}
-        if cmd_config_path is not None
-        else {
-            cast(str, infile_args.get_last_value(Option.CONFIG, use_default=True))
-            for infile_args in infile_configs
-        }
-    )
+
+    if cmd_config_path is not None:
+        config_paths = {cmd_config_path}
+        filenames_mapping = {filename: cmd_config_path for filename in filenames}
+    else:
+        config_paths, filenames_mapping = get_config_paths(filenames, infile_configs)
+
     file_configs_translations = {
         config_path: parse_config_file(config_path, option_parses) for config_path in config_paths
     }
 
     result: List[Tuple[List[str], ImmutableConfig]] = []
-    for files, infile_config in _partition(filenames, infile_configs):
+    for files, infile_config in _partition(filenames, infile_configs, filenames_mapping):
         combined = Config.combine(infile_config, cmd_config)
-        file_config_translations = file_configs_translations[
-            cast(str, combined.get_last_value(Option.CONFIG, use_default=True))
-        ]
+        file_config_translations = file_configs_translations[filenames_mapping[files[0]]]
         if file_config_translations is None:
             continue
         file_config, translations = file_config_translations
