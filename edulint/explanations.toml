@@ -7423,6 +7423,8 @@ def problematic(a: bool, b: bool) -> bool:
 def good(a: bool, b: bool) -> bool:
     return a or b
 ```
+
+**Danger:** if the condition is not a `bool` value (e.g. `if lst`), then returning the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
 """
 
 [R2044]
@@ -8915,6 +8917,8 @@ def problematic(word):
 def good(word):
     return word != \"\" and word[0] == \"A\"
 ```
+
+**Danger:** if the condition or some of the returned values is not a `bool` value (e.g. `if lst`), then returning the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
 """
 
 [R6603]
@@ -9010,7 +9014,11 @@ If you do not like the idea of comparing letters, you can use `ord(letter) > ord
 
 [R6204]
 why = "Having unnecessary conditions in code makes the code more cluttered and therefore harder to understand."
-examples = "Use `x > 0` instead of `True if x > 0 else False`."
+examples = """
+Use `x > 0` instead of `True if x > 0 else False`.
+
+**Danger:** if the condition is not a `bool` value (e.g. `True if lst else False`), then using the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
+"""
 
 [R6604]
 why = "Loops with `else` branch are harder to trace, so using them is prone to an error. Or maybe you did not realize that a loop does not have to have an `else` branch?"
@@ -9109,6 +9117,8 @@ def good(a: bool, b: bool) -> bool:
     val = a or b
     # more code
 ```
+
+**Danger:** if the condition is not a `bool` value (e.g. `if lst`), then assigning the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
 """
 
 [R6304]
@@ -9164,6 +9174,8 @@ def problematic(word):
 def good(word):
     starts_with_A = word != \"\" and word[0] == \"A\"
 ```
+
+**Danger:** if the condition or some of the assigned values is not a `bool` value (e.g. `if lst`), then assigning the value directly is not equivalent. In such case, take care to change the contition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
 """
 
 [R6612]
@@ -9194,6 +9206,8 @@ def problematic(word):
 def good(word):
     return word != \"\" and word[0] == \"A\"
 ```
+
+**Danger:** if the condition or some of the used values is not a `bool` value (e.g. `if lst`), then using the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
 """
 
 [R6610]
