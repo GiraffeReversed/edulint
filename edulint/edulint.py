@@ -13,14 +13,15 @@ from loguru import logger
 
 def setup_logger() -> None:
     # logger.remove()
-    # logger.add(
-    #     sys.stderr,
-    #     level="WARNING",
-    #     format="<level>{name}</level>: {message}",
-    #     diagnose=False,
-    #     backtrace=False,
-    #     catch=False,
-    # )
+    logger.add(
+        sys.stderr,
+        level="WARNING",
+        format="<level>{name}</level>: {message}",
+        diagnose=False,
+        backtrace=False,
+        catch=False,
+        enqueue=True
+    )
     pass
 
 
