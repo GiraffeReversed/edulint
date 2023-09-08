@@ -14,7 +14,6 @@ from edulint.linting.checkers.utils import (
     is_builtin,
     get_range_params,
     get_statements_count,
-    is_parents_elif,
 )
 from edulint.linting.checkers.modified_listener import ModifiedListener
 
@@ -262,11 +261,6 @@ class LongCodeChecker(BaseChecker):
             "long-function",
             "Emitted when there are too many statements inside a function definition.",
         ),
-        "R6703": (
-            "Use early return.",
-            "use-early-return",
-            "Emitted when a long block of code is followed by an else that just returns, breaks or continues.",
-        ),
     }
 
     @only_required_for_messages("long-script")
@@ -284,35 +278,6 @@ class LongCodeChecker(BaseChecker):
         count = get_statements_count(node.body, include_defs=False, include_name_main=False)
         if count > MAX_FUNC:
             self.add_message("long-function", node=node, args=(node.name, count, MAX_FUNC))
-
-    @only_required_for_messages("use-early-return")
-    def visit_if(self, node: nodes.If):
-        def ends_block(node: nodes.NodeNG) -> bool:
-            if isinstance(node, nodes.If):
-                return (
-                    ends_block(node.body[-1])
-                    and len(node.orelse) > 0
-                    and ends_block(node.orelse[-1])
-                )
-            return isinstance(node, (nodes.Return, nodes.Break, nodes.Continue))
-
-        if is_parents_elif(node):
-            return
-
-        if len(node.orelse) > 0:
-            if get_statements_count(node.orelse, include_defs=True, include_name_main=True) > 2:
-                return
-            last = node.orelse[-1]
-        elif ends_block(node.body[-1]):
-            last = node.next_sibling()
-        else:
-            return
-
-        if (
-            ends_block(last)
-            and get_statements_count(node.body, include_defs=True, include_name_main=True) > 3
-        ):
-            self.add_message("use-early-return", node=node)
 
 
 def register(linter: "PyLinter") -> None:
