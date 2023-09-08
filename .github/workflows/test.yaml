@@ -47,6 +47,11 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: 'pip'
 
+      - name: Pip freeze
+        run: |
+          pip freeze
+
+
       - name: Mock pylint version in requirements.txt and setup.cfg
         run: |
           sed -i "s/pylint *[~<>=][^\"]*/pylint==${{ matrix.pylint }}/" requirements.txt
