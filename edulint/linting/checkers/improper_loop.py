@@ -284,6 +284,7 @@ class ImproperLoop(BaseChecker):
                 self.add_message(
                     "loop-shadows-control-variable", node=mod_statement, args=(modifier.as_string())
                 )
+                continue
             if is_last_block(mod_statement, node):
                 self.add_message(
                     "changing-control-variable", node=mod_statement, args=(control_var.as_string(),)
