@@ -52,7 +52,7 @@ class ImproperLoop(BaseChecker):
 
         first = node.body[0]
         if isinstance(first, nodes.If) and isinstance(first.body[-1], nodes.Break):
-            self.add_message("no-while-true", node=node, args=(first.test.as_string()))
+            self.add_message("no-while-true", node=node, args=(first.test.as_string(),))
 
     def _check_use_for_loop(self, node: nodes.While) -> None:
         def get_relevant_vals(
