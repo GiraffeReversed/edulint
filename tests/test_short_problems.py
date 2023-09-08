@@ -255,7 +255,6 @@ class TestShort:
         ]),
         ("104584-p4_digits.py", []),
         ("hw14358.py", [
-            lazy_problem().set_code("R6609").set_line(29).set_text("Use augmented assignment: 'result -= element'"),
             lazy_problem().set_code("R6609").set_line(31).set_text("Use augmented assignment: 'b += 1'"),
             lazy_problem().set_code("R6609").set_line(34).set_text("Use augmented assignment: 'a += 1'"),
             lazy_problem().set_code("R6608").set_line(44).set_text("Redundant arithmetic: num // num"),

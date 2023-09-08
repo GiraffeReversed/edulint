@@ -252,7 +252,7 @@ class Short(BaseChecker):
             self.add_message("redundant-arithmetic", node=node, args=(node.as_string(),))
 
     def _check_augmentable(self, node: Union[nodes.Assign, nodes.AnnAssign]) -> None:
-        IMMUTABLE_OPS = ("-", "*", "/", "//", "%", "**", "<<", ">>")
+        IMMUTABLE_OPS = ("/", "//", "%", "**", "<<", ">>")
 
         def add_message(target: str, param: nodes.BinOp) -> None:
             self.add_message(
