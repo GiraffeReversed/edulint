@@ -184,7 +184,8 @@ class TestShort:
 
         ]),
         ("017667-prime.py", [
-            lazy_problem().set_code("R6604").set_line(6).set_text("Do not use for loop with else.")
+            lazy_problem().set_code("R6616").set_line(5).set_text("Use early return."),
+            lazy_problem().set_code("R6604").set_line(6).set_text("Do not use for loop with else."),
         ]),
         ("022859-digit_sum.py", [
             lazy_problem().set_code("R6601").set_line(20)
@@ -198,23 +199,26 @@ class TestShort:
         ]),
         ("024180-delete.py", [
             lazy_problem().set_code("R6606").set_line(7)
-            .set_text("Remove the for loop, as it makes only one iteration.")
+            .set_text("The for loop makes only one iteration.")
         ]),
         ("024233-cards.py", [
             lazy_problem().set_code("R6608").set_line(22).set_text("Redundant arithmetic: 0 + number"),
-            lazy_problem().set_code("R6608").set_line(42).set_text("Redundant arithmetic: 0 + number")
+            lazy_problem().set_code("R6616").set_line(23),
+            lazy_problem().set_code("R6608").set_line(42).set_text("Redundant arithmetic: 0 + number"),
+            lazy_problem().set_code("R6616").set_line(43),
+            lazy_problem().set_code("R6616").set_line(47)
         ]),
         ("024371-cards.py", [
-            lazy_problem().set_code("R6606").set_line(12).set_text("Remove the for loop, as it makes no iterations.")
+            lazy_problem().set_code("R6606").set_line(12).set_text("The for loop makes no iterations.")
         ]),
         ("024371-workdays.py", [
             lazy_problem().set_code("R6606").set_line(29)
-            .set_text("Remove the for loop, as it makes only one iteration."),
+            .set_text("The for loop makes only one iteration."),
             lazy_problem().set_code("R6608").set_line(30).set_text("Redundant arithmetic: i + 0"),
         ]),
         ("024491-cards.py", [
             lazy_problem().set_code("R6606").set_line(86)
-            .set_text("Remove the for loop, as it makes only one iteration.")
+            .set_text("The for loop makes only one iteration.")
         ]),
         ("024657-bisection.py", [
             lazy_problem().set_code("R6608").set_line(6).set_text("Redundant arithmetic: 0 - eps"),
@@ -266,6 +270,7 @@ class TestShort:
             lazy_problem().set_code("R6608").set_line(79).set_text("Redundant arithmetic: '' + str(count)")
         ]),
         ("hw34451.py", [
+            lazy_problem().set_code("R6616").set_line(13),
             lazy_problem().set_code("R6607").set_line(44)
             .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
             lazy_problem().set_code("R6607").set_line(47)
