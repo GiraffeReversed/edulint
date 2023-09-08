@@ -1,5 +1,6 @@
 name: Tests compatibility for several versions
 
+# Note that testing non-default pylint or flake8 version is only supported on Linux.
 
 on:
   workflow_call:
@@ -13,6 +14,9 @@ on:
       flake8_matrix:
         type: string
         default: '["default"]'
+      os_matrix:
+        type: string
+        default: '["ubuntu-latest"]'
     secrets:
       PAT_PRIVATE_TESTS:
         required: true
@@ -20,9 +24,6 @@ on:
 
 jobs:
   pytest:
-    # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-    runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
@@ -30,6 +31,10 @@ jobs:
         python: ${{ fromJSON(inputs.python_matrix) }}
         pylint: ${{ fromJSON(inputs.pylint_matrix) }}
         flake8: ${{ fromJSON(inputs.flake8_matrix) }}
+        os:     ${{ fromJSON(inputs.os_matrix) }}
+
+    # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Check out repository code

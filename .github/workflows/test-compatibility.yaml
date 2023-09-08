@@ -53,13 +53,17 @@ jobs:
     with:
       flake8_matrix: ${{needs.get-versions.outputs.flake8}}
 
+  test-os-versions:
+    uses: ./.github/workflows/test.yaml
+    secrets: inherit
+    needs: get-versions
+    with:
+      os_matrix: '["ubuntu-latest", "windows-latest", "macos-latest"]'
 
 
-    # either set permissive default permissions in repositories Actions settings or set them explicitly here
-    # permissions:
-    #   checks: write
-    #   issues: read
-    #   pull-requests: write
-    #   contents: read
-
-
+# either set permissive default permissions in repositories Actions settings or set them explicitly here
+permissions:
+  checks: write
+  issues: read
+  pull-requests: write
+  contents: read
