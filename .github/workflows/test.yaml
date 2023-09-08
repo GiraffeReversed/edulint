@@ -26,12 +26,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ${{ fromJSON(inputs.python_matrix) }}
-
         # https://github.com/actions/runner/issues/1660#issuecomment-1359707506
+        python: ${{ fromJSON(inputs.python_matrix) }}
         pylint: ${{ fromJSON(inputs.pylint_matrix) }}
-        # pylint: ${{ fromJSON('["2.16.4", "2.17.4", "3.0.0a6"]') }}
-
         flake8: ${{ fromJSON(inputs.flake8_matrix) }}
 
     steps:
