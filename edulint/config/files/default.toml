@@ -37,7 +37,7 @@ enable = [
     "use-integral-division",
     "use-isdecimal",
     "no-loop-else",
-    "remove-for",
+    "at-most-one-iteration-for-loop",
     "redundant-arithmetic",
     "do-not-multiply-mutable",
     "redundant-elif",

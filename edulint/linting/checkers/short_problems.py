@@ -40,8 +40,8 @@ class Short(BaseChecker):
             "the code mixes tabs and spaces.",
         ),
         "R6606": (
-            "Remove the for loop, as it makes %s.",
-            "remove-for",
+            "The for loop makes %s.",
+            "at-most-one-iteration-for-loop",
             "Emitted when a for loop would always perform at most one iteration.",
         ),
         "R6607": (
@@ -159,9 +159,13 @@ class Short(BaseChecker):
 
         if start is not None and stop is not None and step is not None:
             if start >= stop:
-                self.add_message("remove-for", node=node, args=("no iterations",))
+                self.add_message(
+                    "at-most-one-iteration-for-loop", node=node, args=("no iterations",)
+                )
             elif start + step >= stop:
-                self.add_message("remove-for", node=node, args=("only one iteration",))
+                self.add_message(
+                    "at-most-one-iteration-for-loop", node=node, args=("only one iteration",)
+                )
 
     def _check_repeated_operation_rec(
         self, node: nodes.NodeNG, op: str, name: Optional[str] = None
@@ -540,7 +544,7 @@ class Short(BaseChecker):
     def visit_while(self, node: nodes.While) -> None:
         self._check_loop_else(node.orelse, "while")
 
-    @only_required_for_messages("no-loop-else", "remove-for")
+    @only_required_for_messages("no-loop-else", "at-most-one-iteration-for-loop")
     def visit_for(self, node: nodes.For) -> None:
         self._check_loop_else(node.orelse, "for")
         self._check_iteration_count(node)

@@ -379,7 +379,7 @@ def good(n):
 ```
 """
 
-# [R6606] # remove-for
+# [R6606] # at-most-one-iteration-for-loop
 
 # [R6206] # no-value-in-one-branch-return
 
