@@ -20,7 +20,7 @@ def setup_logger() -> None:
         diagnose=False,
         backtrace=False,
         catch=False,
-        enqueue=True
+        # enqueue=True
     )
     pass
 
