@@ -1,16 +1,68 @@
-from edulint.config.config import get_config_many, get_cmd_args
+from edulint.options import Option
+from edulint.option_parses import OptionParse, get_option_parses
+from edulint.config.config import get_config_many, get_cmd_args, ImmutableConfig
 from edulint.linting.problem import Problem
-from edulint.linting.linting import lint_many, sort
-from typing import List, Optional
+from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
+from typing import List, Optional, Dict, Tuple, Any
 import argparse
 import os
 import sys
+import json
+from loguru import logger
 
 
-def setup_argparse() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Lints provided code.")
+def setup_logger() -> None:
+    logger.remove()
+    logger.add(
+        sys.stderr,
+        level="WARNING",
+        format="<level>{name}</level>: {message}",
+        diagnose=False,
+        backtrace=False,
+        catch=False,
+    )
+
+
+def format_options_help(option_parses: Dict[Option, OptionParse]) -> str:
+    def extract_line(words: List[str], max_len: int, start_i: int) -> Tuple[str, int]:
+        result = [words[start_i]]
+        current_len = len(words[start_i])
+        for i in range(start_i + 1, len(words)):
+            next_len = current_len + 1 + len(words[i])
+            if next_len > max_len:
+                return " ".join(result), i
+            result.append(words[i])
+            current_len += 1 + len(words[i])
+        return " ".join(result), len(words)
+
+    result = []
+    for op in option_parses.values():
+        words = (op.help_).split(" ")
+        i = 0
+        while i < len(words):
+            if i == 0:
+                start = op.option.to_name() + "  "
+            else:
+                start = " " * 4
+            line, i = extract_line(words, 80 - 25 - len(start), i)
+            result.append(start + line)
+    return "\n".join(result) + "\n"
+
+
+def setup_argparse(option_parses: Dict[Option, OptionParse]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="edulint",
+        description="Lints provided code.",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.add_argument(
-        "-o", "--option", dest="options", default=[], action="append", help="possible option"
+        "-o",
+        "--option",
+        metavar="OPTION",
+        dest="options",
+        default=[],
+        action="append",
+        help=format_options_help(option_parses),
     )
     parser.add_argument(
         "files_or_dirs",
@@ -37,27 +89,43 @@ def extract_files(files_or_dirs: List[str]) -> List[str]:
     return extract_files_rec(None, files_or_dirs, [])
 
 
+def to_json(configs: List[ImmutableConfig], problems: List[Problem]) -> str:
+    def config_to_json(obj: Any) -> str:
+        if isinstance(obj, ImmutableConfig):
+            return {arg.option.to_name(): arg.val for arg in obj.config}
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+    config_json = json.dumps(configs, default=config_to_json)
+    problems_json = Problem.schema().dumps(problems, indent=2, many=True)
+    return f'{{"configs": {config_json}, "problems": {problems_json}}}'
+
+
+@logger.catch
 def main() -> int:
-    args = setup_argparse()
+    setup_logger()
+    option_parses = get_option_parses()
+    args = setup_argparse(option_parses)
     cmd_args = get_cmd_args(args)
 
     files = extract_files(args.files_or_dirs)
-    file_configs = get_config_many(files, cmd_args)
+    file_configs = get_config_many(files, cmd_args, option_parses=option_parses)
 
     try:
-        result = sort(files, lint_many(file_configs))
-    except TimeoutError as e:
-        print(f"edulint: {e}", file=sys.stderr)
-        sys.exit(1)
+        results = lint_many(file_configs)
+    except (TimeoutError, json.decoder.JSONDecodeError, EduLintLinterFailedException):
+        return 2
+
+    sorted_results = sort(files, results)
 
     if args.json:
-        print(Problem.schema().dumps(result, indent=2, many=True))  # type: ignore
+        print(to_json(file_configs, sorted_results))
     else:
         prev_problem = None
-        for problem in result:
+        for problem in sorted_results:
             if len(files) > 1 and (prev_problem is None or prev_problem.path != problem.path):
                 print(f"****************** {os.path.basename(problem.path)}")
                 prev_problem = problem
 
             print(problem)
-    return 0
+
+    return 0 if len(sorted_results) == 0 else 1

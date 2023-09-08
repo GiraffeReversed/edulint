@@ -19,13 +19,12 @@ class Option(NumberFromZero):
     CONFIG = ()
     PYLINT = ()
     FLAKE8 = ()
-    ENHANCEMENT = ()
-    PYTHON_SPECIFIC = ()
-    COMPLEXITY = ()
     ALLOWED_ONECHAR_NAMES = ()
-    IB111_WEEK = ()
+    DISALLOWED_BUILTIN_NAMES = ()
     NO_FLAKE8 = ()
     IGNORE_INFILE_CONFIG_FOR = ()
+    EXPORT_GROUPS = ()
+    SET_GROUPS = ()
 
     def to_name(self) -> str:
         return self.name.lower().replace("_", "-")

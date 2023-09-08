@@ -4979,23 +4979,15 @@ def count_it(limit):
 <a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/redefined-outer-name.html\">Additional information</a>"""
 
 [W0622]
-why = "It looks like the variable or function override a built-in."
+why = "A variable or function name overrides a Python's built-in function (such as `sum` or `min`). Built-in function overrriding can lead to subtle bugs and code that is confusing to read."
 examples = """
-**Problematic code**
+Some renaming suggestions:
 
-```py
-def map():  # [redefined-builtin]
-    pass
-
-```
-
-**How to fix it**
-
-```py
-def map_iterable():
-    pass
-
-```
+- `sum` -> `total`, `result`, ...
+- `list` -> `students`, `numbers`, `data`, ...
+- `min` -> `minimum`, `lowest`, ...
+- `max` -> `maximum`, `highest`, ...
+- `len` -> `size`, `length`, ...
 """
 
 [W0631]
@@ -7431,6 +7423,8 @@ def problematic(a: bool, b: bool) -> bool:
 def good(a: bool, b: bool) -> bool:
     return a or b
 ```
+
+**Danger:** if the condition is not a `bool` value (e.g. `if lst`), then returning the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
 """
 
 [R2044]
@@ -8923,6 +8917,8 @@ def problematic(word):
 def good(word):
     return word != \"\" and word[0] == \"A\"
 ```
+
+**Danger:** if the condition or some of the returned values is not a `bool` value (e.g. `if lst`), then returning the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
 """
 
 [R6603]
@@ -9018,7 +9014,11 @@ If you do not like the idea of comparing letters, you can use `ord(letter) > ord
 
 [R6204]
 why = "Having unnecessary conditions in code makes the code more cluttered and therefore harder to understand."
-examples = "Use `x > 0` instead of `True if x > 0 else False`."
+examples = """
+Use `x > 0` instead of `True if x > 0 else False`.
+
+**Danger:** if the condition is not a `bool` value (e.g. `True if lst else False`), then using the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
+"""
 
 [R6604]
 why = "Loops with `else` branch are harder to trace, so using them is prone to an error. Or maybe you did not realize that a loop does not have to have an `else` branch?"
@@ -9098,6 +9098,29 @@ def good(n, m):
 In the problematic code, both `for` loops have `i` as their target. It is better to give nested loops different variable names, even if you do not use them.
 """
 
+[R6203]
+why = "Having unnecessary conditions in code makes the code more cluttered and therefore harder to understand."
+examples = """
+A condition that assigns bool in both branches can be simplified.
+
+```py
+def problematic(a: bool, b: bool) -> bool:
+    if a or b:
+        val = True
+    else:
+        val = False
+    # more code
+```
+
+```py
+def good(a: bool, b: bool) -> bool:
+    val = a or b
+    # more code
+```
+
+**Danger:** if the condition is not a `bool` value (e.g. `if lst`), then assigning the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
+"""
+
 [R6304]
 why = "Modifying the control variable at the end of a `for` loop has no effect. In Python, the `for` loop itself takes care of assigning new value in each iteration."
 examples = "You can just remove the line which modifies the variable."
@@ -9117,6 +9140,76 @@ def good(n):
 ```
 """
 
+[R6606]
+why = "A for loop that makes at most one iteration is unnecessary. This may be a result of refactoring, or a bug."
+examples = """
+Remove the for loop and deindent the code inside it, or change it to make more than one iteration. Did you maybe forget that range never provides the stop value? (`for i in range(5, 6)` assigns only 5 to `i`, but never 6).
+
+```py
+def problematic():
+    for i in range(5, 6):
+        # do stuff
+
+def good_removes_for():
+    # do stuff
+
+def good_makes_more_iterations():
+    for i in range(5, 7):
+        # do stuff
+```
+"""
+
+[R6210]
+why = "In some cases, using logical operator can simplify an `if` statement even if one of the branches does not return a bool value. Using `and`, `or` and negation can make the code more concise."
+examples = """
+```py
+# a function assigning the information if a word starts with A
+
+def problematic(word):
+    if word == \"\":
+        starts_with_A = False
+    else:
+        starts_with_A = word[0] == \"A\"
+
+def good(word):
+    starts_with_A = word != \"\" and word[0] == \"A\"
+```
+
+**Danger:** if the condition or some of the assigned values is not a `bool` value (e.g. `if lst`), then assigning the value directly is not equivalent. In such case, take care to change the contition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
+"""
+
+[R6612]
+why = "The else branch is unreachable due to preceding conditions, which exhaust all possibilities. This may be a result of refactoring, or a bug."
+examples = """
+```py
+def problematic(x):
+    if x > 0:
+        print(\"x is greater than zero\")
+    elif x <= 0:
+        print(\"x is lesser or equal to zero\")
+    else:
+        print(\"this code is unreachable\")
+```
+
+Remove the else branch or fix the preceding conditions.
+"""
+
+[R6209]
+why = "In some cases, using logical operator can simplify an `if` statement even if one of the branches does not return a bool value. Using `and`, `or` and negation can make the code more concise."
+examples = """
+```py
+# a function checking if a word starts with A
+
+def problematic(word):
+    return False if word == \"\" else word[0] == \"A\"
+
+def good(word):
+    return word != \"\" and word[0] == \"A\"
+```
+
+**Danger:** if the condition or some of the used values is not a `bool` value (e.g. `if lst`), then using the value directly is not equivalent. In such case, take care to change the condition to an expression that does evaluate to bool (e.g. `len(lst) > 0`).
+"""
+
 [R6610]
 why = """
 In Python, multiplying a list creates a list of references _to the same instance_ of the object the list contains. See the following code:
@@ -9129,3 +9222,55 @@ lst[0].append(42)
 `lst` now equals `[[42], [42], [42]] (try it!).
 """
 examples = "Instead of `[[]] * 3` use for example `[[] for i in range(3)]`."
+
+[R6616]
+why = "Early return is a pattern in which you first handle simple situations before moving on to complicated ones. It cleans up the control flow (simple situations usually represent invalid or trivial input) and usually allows the complicated code to be less indented, which makes it easier to read."
+examples = """
+```py
+# a function that transforms score to grade
+
+def problematic(score):
+    if 0 <= score and score <= 100:
+        if score >= 90:
+            return \"A\"
+        elif score >= 80:
+            return \"B\"
+        elif score >= 70:
+            return \"C\"
+        elif score >= 60:
+            return \"D\"
+        else:
+            return \"F\"
+    else:
+        return None
+
+def good(score):
+    if score < 0 or score > 100:
+        return None
+
+    if score >= 90:
+        return \"A\"
+    elif score >= 80:
+        return \"B\"
+    elif score >= 70:
+        return \"C\"
+    elif score >= 60:
+        return \"D\"
+    else:
+        return \"F\"
+```
+"""
+
+[E9984]
+why = "A for loop that assigns value to a list subscript or an attribute can have weird side effects and should be avoided as a bad practice."
+examples = """
+```py
+def problematic(lst, i, n):
+    for lst[i] in range(n):
+        # body
+
+def good(lst, i, n):
+    for j in range(n):
+        # body (possibly altering value of lst[i])
+```
+"""

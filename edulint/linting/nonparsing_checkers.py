@@ -1,6 +1,6 @@
-from typing import List, Set
+from typing import List, Set, Dict
 import re
-import sys
+from loguru import logger
 
 from edulint.linters import Linter
 from edulint.options import Option
@@ -20,7 +20,9 @@ CONFIG_PATTERNS = {
 }
 
 
-def report_infile_config(filenames: List[str], ignore_infile: Set[str]) -> List[Problem]:
+def report_infile_config(
+    filenames: List[str], ignore_infile: Set[str], enablers: Dict[str, str]
+) -> List[Problem]:
     if "all" in ignore_infile:
         ignore_infile = (ignore_infile - {"all"}) | {linter.to_name() for linter in Linter}
 
@@ -28,10 +30,10 @@ def report_infile_config(filenames: List[str], ignore_infile: Set[str]) -> List[
     for ignore_infile_linter in ignore_infile:
         linter = Linter.safe_from_name(ignore_infile_linter)
         if linter is None:
-            print(
-                f"edulint: invalid value '{ignore_infile_linter}' "
-                f"for option {Option.IGNORE_INFILE_CONFIG_FOR.to_name()}",
-                file=sys.stderr,
+            logger.warning(
+                "invalid value '{val}' for option {option}",
+                val=ignore_infile_linter,
+                option=Option.IGNORE_INFILE_CONFIG_FOR.to_name(),
             )
             continue
         patterns.extend(CONFIG_PATTERNS[linter])
@@ -47,6 +49,7 @@ def report_infile_config(filenames: List[str], ignore_infile: Set[str]) -> List[
                         results.append(
                             Problem(
                                 source=Linter.EDULINT,
+                                enabled_by=enablers.get("EDL001"),
                                 path=filename,
                                 line=i,
                                 column=len(match.group(1)),

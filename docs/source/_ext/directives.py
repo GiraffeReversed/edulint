@@ -2,7 +2,6 @@ from edulint.options import Option, DEFAULT_CONFIG
 from edulint.option_parses import get_option_parses
 from edulint.linters import Linter
 from edulint.config.config import parse_config_file
-from edulint.config.config_translations import get_config_translations
 import edulint.linting.checkers as custom_checkers
 from pylint.checkers import BaseChecker
 from docutils.parsers.rst import Directive
@@ -146,8 +145,8 @@ class OptionsTable(Directive):
                 "Option name",
                 "Takes argument",
                 "Default",
-                "Converts to",
-                "When used multiple types",
+                "Value type",
+                "When used multiple times",
                 "Description",
             ],
             [2, 1, 1, 1, 1, 10],
@@ -177,17 +176,14 @@ class MessageTable(Directive):
         table, tbody = prepare_table(["Message name", "Description"], [1, 3])
 
         arg = self.arguments[0]
-        if arg == "default":
-            option_parses = get_option_parses()
-            config = parse_config_file(DEFAULT_CONFIG, option_parses)
-            assert config is not None
-            iconfig = config.to_immutable()
 
-            # message_names = []
-            # for arg in iconfig[Option.PYLINT]:
-            #     if arg.startswith("--enable"):
-            #         arg = arg[len("--enable") :]
-            #         message_names.extend(c.strip() for c in arg.split(","))
+        option_parses = get_option_parses()
+        config_translations = parse_config_file(DEFAULT_CONFIG, option_parses)
+        assert config_translations is not None
+        config, translations = config_translations
+
+        if arg == "default":
+            iconfig = config.to_immutable()
 
             message_names = [
                 c.strip()
@@ -196,13 +192,10 @@ class MessageTable(Directive):
                 for c in arg[len("--enable=") :].split(",")
             ]
         else:
-            translations = get_config_translations()
-            opt_arg = Option.from_name(arg)
-            translation = translations[opt_arg]
-            assert translation.for_linter == Linter.PYLINT
-            message_names = [
-                c.strip() for v in translation.vals for c in v[len("--enable=") :].split(",")
-            ]
+            # TODO do properly (not only PYLINT, not only enable)
+            translation = translations[arg].to.get(Linter.PYLINT, [])
+            assert len(translation) == 1 and translation[0].startswith("--enable")
+            message_names = [c.strip() for c in translation[0][len("--enable=") :].split(",")]
 
         message_names = sorted([n for n in message_names if n])
 

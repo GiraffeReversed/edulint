@@ -99,11 +99,36 @@ def unused_import_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]
 
 
 def no_repeated_op_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
-    assert len(args) == 1 and args[0].option == Option.ENHANCEMENT
+    assert len(args) == 1
+
+    if "enhancement" in args[0].val:
+        return True
 
     match = self.match(problem)
     expr = match.group(1)
     return bool(args[0].val) or expr.count("*") > 1
+
+
+def superfluous_parens_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
+    match = self.match(problem)
+    keyword = match.group(1).strip("'\"")
+
+    return keyword.lower() != "not"
+
+
+def redefined_builtin_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
+    match = self.match(problem)
+    redefined_builtin = match.group(1).strip("'\"")
+
+    assert len(args) == 1 and args[0].option == Option.DISALLOWED_BUILTIN_NAMES
+    disallowed_builtin_names = args[0].val
+
+    return not disallowed_builtin_names or redefined_builtin in disallowed_builtin_names
+
+
+def singleton_bool_comparison_reword(self: Tweaker, problem: Problem) -> bool:
+    match = self.match(problem)
+    return "".join(match.groups())
 
 
 Tweakers = Dict[Tuple[Linter, str], Tweaker]
@@ -130,9 +155,24 @@ TWEAKERS = {
         set(), re.compile("'(.*)' imported but unused"), unused_import_keep
     ),
     (Linter.PYLINT, "R6607"): Tweaker(  # no-repeated-op
-        set([Option.ENHANCEMENT]),
+        set([Option.SET_GROUPS]),
         re.compile(r"^Use [^ ]* instead of repeated [^ ]* in ([^\.]*)."),
         no_repeated_op_keep,
+    ),
+    (Linter.PYLINT, "C0325"): Tweaker(  # superfluous-parens
+        set(),
+        re.compile(r"Unnecessary parens after (.*) keyword"),
+        superfluous_parens_keep,
+    ),
+    (Linter.PYLINT, "W0622"): Tweaker(  # redefined-builtin
+        set([Option.DISALLOWED_BUILTIN_NAMES]),
+        re.compile(r"^Redefining built-in (.*)"),
+        redefined_builtin_keep,
+    ),
+    (Linter.FLAKE8, "E712"): Tweaker(  # singleton bool comparison
+        set(),
+        re.compile(r"(comparison to (?:True|False) should be )'if cond is .*' or (.*)"),
+        reword=singleton_bool_comparison_reword,
     ),
 }
 

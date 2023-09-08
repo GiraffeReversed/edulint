@@ -7,3 +7,4 @@ flake8-json
 pylint
 dataclasses-json
 tomli
+loguru

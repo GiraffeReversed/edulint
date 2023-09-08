@@ -7,7 +7,13 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter
 
-from edulint.linting.checkers.utils import get_range_params, get_const_value, infer_to_value
+from edulint.linting.checkers.utils import (
+    get_range_params,
+    get_const_value,
+    infer_to_value,
+    is_parents_elif,
+    get_statements_count,
+)
 
 
 class Short(BaseChecker):
@@ -40,8 +46,8 @@ class Short(BaseChecker):
             "the code mixes tabs and spaces.",
         ),
         "R6606": (
-            "Remove the for loop, as it makes %s.",
-            "remove-for",
+            "The for loop makes %s.",
+            "at-most-one-iteration-for-loop",
             "Emitted when a for loop would always perform at most one iteration.",
         ),
         "R6607": (
@@ -55,8 +61,8 @@ class Short(BaseChecker):
             "Emitted when there is redundant arithmetic (e.g. +0, *1) in an expression.",
         ),
         "R6609": (
-            "Use augmenting assignment: '%s %s= %s'",
-            "use-augmenting-assignment",
+            "Use augmented assignment: '%s %s= %s'",
+            "use-augmented-assign",
             "Emitted when an assignment can be simplified by using its augmented version.",
         ),
         "R6610": (
@@ -89,6 +95,11 @@ class Short(BaseChecker):
             "the magical constant %i. Careful, this may require changing the comparison operator.",
             "use-literal-letter",
             "Emitted when the code uses a magical constant instead of a string literal in a comparison.",
+        ),
+        "R6616": (
+            "Use early return.",
+            "use-early-return",
+            "Emitted when a long block of code is followed by an else that just returns, breaks or continues.",
         ),
     }
 
@@ -159,9 +170,13 @@ class Short(BaseChecker):
 
         if start is not None and stop is not None and step is not None:
             if start >= stop:
-                self.add_message("remove-for", node=node, args=("no iterations",))
+                self.add_message(
+                    "at-most-one-iteration-for-loop", node=node, args=("no iterations",)
+                )
             elif start + step >= stop:
-                self.add_message("remove-for", node=node, args=("only one iteration",))
+                self.add_message(
+                    "at-most-one-iteration-for-loop", node=node, args=("only one iteration",)
+                )
 
     def _check_repeated_operation_rec(
         self, node: nodes.NodeNG, op: str, name: Optional[str] = None
@@ -237,11 +252,11 @@ class Short(BaseChecker):
             self.add_message("redundant-arithmetic", node=node, args=(node.as_string(),))
 
     def _check_augmentable(self, node: Union[nodes.Assign, nodes.AnnAssign]) -> None:
-        IMMUTABLE_OPS = ("-", "*", "/", "//", "%", "**", "<<", ">>")
+        IMMUTABLE_OPS = ("/", "//", "%", "**", "<<", ">>")
 
         def add_message(target: str, param: nodes.BinOp) -> None:
             self.add_message(
-                "use-augmenting-assignment",
+                "use-augmented-assign",
                 node=node,
                 args=(target, node.value.op, param.as_string()),
             )
@@ -393,8 +408,9 @@ class Short(BaseChecker):
         if_test = node.test
         if node.has_elif_block():
             next_if = node.orelse[0]
-        elif isinstance(node.next_sibling(), nodes.If) and len(node.next_sibling().orelse) == 0:
-            next_if = node.next_sibling()
+        # TODO report another message (may be FP)
+        # elif isinstance(node.next_sibling(), nodes.If) and len(node.next_sibling().orelse) == 0:
+        #     next_if = node.next_sibling()
         else:
             return
 
@@ -524,6 +540,34 @@ class Short(BaseChecker):
                 ):
                     add_message(param, value, f"{op} '{chr(value)}'")
 
+    def _check_use_early_return(self, node: nodes.If):
+        def ends_block(node: nodes.NodeNG) -> bool:
+            if isinstance(node, nodes.If):
+                return (
+                    ends_block(node.body[-1])
+                    and len(node.orelse) > 0
+                    and ends_block(node.orelse[-1])
+                )
+            return isinstance(node, (nodes.Return, nodes.Break, nodes.Continue))
+
+        if is_parents_elif(node):
+            return
+
+        if len(node.orelse) > 0:
+            if get_statements_count(node.orelse, include_defs=True, include_name_main=True) > 2:
+                return
+            last = node.orelse[-1]
+        elif ends_block(node.body[-1]):
+            last = node.next_sibling()
+        else:
+            return
+
+        if (
+            ends_block(last)
+            and get_statements_count(node.body, include_defs=True, include_name_main=True) > 3
+        ):
+            self.add_message("use-early-return", node=node)
+
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
@@ -539,15 +583,16 @@ class Short(BaseChecker):
     def visit_while(self, node: nodes.While) -> None:
         self._check_loop_else(node.orelse, "while")
 
-    @only_required_for_messages("no-loop-else", "remove-for")
+    @only_required_for_messages("no-loop-else", "at-most-one-iteration-for-loop")
     def visit_for(self, node: nodes.For) -> None:
         self._check_loop_else(node.orelse, "for")
         self._check_iteration_count(node)
 
-    @only_required_for_messages("use-elif", "redundant-elif")
+    @only_required_for_messages("use-elif", "redundant-elif", "use-early-return")
     def visit_if(self, node: nodes.If) -> None:
         self._check_else_if(node)
         self._check_redundant_elif(node)
+        self._check_use_early_return(node)
 
     @only_required_for_messages(
         "no-repeated-op", "redundant-arithmetic", "do-not-multiply-mutable", "use-ord-letter"
@@ -558,11 +603,11 @@ class Short(BaseChecker):
         self._check_multiplied_list(node)
         self._check_use_ord_letter(node)
 
-    @only_required_for_messages("use-augmenting-assignment")
+    @only_required_for_messages("use-augmented-assign")
     def visit_assign(self, node: nodes.Assign) -> None:
         self._check_augmentable(node)
 
-    @only_required_for_messages("use-augmenting-assignment")
+    @only_required_for_messages("use-augmented-assign")
     def visit_annassign(self, node: nodes.AnnAssign) -> None:
         self._check_augmentable(node)
 

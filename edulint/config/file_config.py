@@ -2,10 +2,10 @@ from pathlib import Path
 import string
 import os
 from typing import Dict, Any, Optional
-import sys
 import hashlib
 import json
 import time
+from loguru import logger
 
 import tomli
 import requests
@@ -33,20 +33,14 @@ def load_toml_file(filename_or_url: str) -> Optional[Dict[str, Any]]:
     try:
         file_content = _load_file_from_uri(filename_or_url)
     except Exception as e:
-        print(
-            f"edulint: Error locating config file '{filename_or_url}': {e}",
-            file=sys.stderr,
-        )
+        logger.error("error locating config file '{f}':\n {e}", f=filename_or_url, e=e)
         return None
 
     try:
         file_toml = tomli.loads(file_content)
         return file_toml
     except tomli.TOMLDecodeError as e:
-        print(
-            f"edulint: Invalid TOML config file '{filename_or_url}': {e}",
-            file=sys.stderr,
-        )
+        logger.error("invalid TOML config file '{f}':\n {e}", f=filename_or_url, e=e)
         return None
 
 
@@ -57,7 +51,7 @@ def _load_file_from_uri(path_or_url: str) -> str:
     if _only_acceptable_chars(path_or_url):
         return _load_packaged_config_file(path_or_url)
 
-    return _load_local_config_file(path_or_url, "found locally")
+    return _load_local_config_file(path_or_url, path_or_url, "found locally")
 
 
 def _only_acceptable_chars(filepath: str) -> bool:
@@ -68,16 +62,20 @@ def _load_packaged_config_file(filename: str) -> str:
     assert _only_acceptable_chars(filename)
 
     relative_path = os.path.join(os.path.dirname(__file__), "files", filename + ".toml")
-    return _load_local_config_file(relative_path, "packaged", is_path_safe=True)
+    return _load_local_config_file(relative_path, filename, "packaged", is_path_safe=True)
 
 
-def _load_local_config_file(filepath: str, message: str, is_path_safe: bool = False) -> str:
+def _load_local_config_file(
+    filepath: str, passed_name: str, message: str, is_path_safe: bool = False
+) -> str:
     if not is_path_safe and not ALLOW_UNRESTRICTED_LOCAL_PATHS:
-        raise ConfigFileAccessMethodNotAllowedException("Arbitrary local filepaths are not enabled.")
+        raise ConfigFileAccessMethodNotAllowedException(
+            "arbitrary local filepaths are not enabled."
+        )
 
     # Doing the test in two steps should prevent possible exception during the if test.
     if not (Path(filepath).exists() and Path(filepath).is_file()):
-        raise FileNotFoundError(f"Configuration file '{filepath}' not {message}.")
+        raise FileNotFoundError(f"configuration file '{passed_name}' not {message}.")
 
     with open(filepath, encoding="utf8") as f:
         return f.read()
@@ -85,14 +83,22 @@ def _load_local_config_file(filepath: str, message: str, is_path_safe: bool = Fa
 
 def _load_external_config_file(url: str) -> str:
     if not ALLOW_HTTP_S_PATHS:
-        raise ConfigFileAccessMethodNotAllowedException("Loading of external configs using HTTP/HTTPS is disallowed in EduLint's configuration.")
+        raise ConfigFileAccessMethodNotAllowedException(
+            "loading of external configs using HTTP/HTTPS is disallowed in EduLint's configuration."
+        )
 
-    return CachedHTTPGet.http_get(url)  # can throw exception FileNotFoundError if remote URL didn't work and file is not cached yet
+    # can throw exception FileNotFoundError if remote URL didn't work and file is not cached yet
+    return CachedHTTPGet.http_get(url)
 
 
 class CachedHTTPGet:
     @classmethod
-    def http_get(cls, url: str, max_cache_time: int = 5 * 60, max_cache_time_when_offline: int = 500 * 24 * 60) -> str:
+    def http_get(
+        cls,
+        url: str,
+        max_cache_time: int = 5 * 60,
+        max_cache_time_when_offline: int = 500 * 24 * 60,
+    ) -> str:
         """
         Source priority: file cache with max age > HTTP GET from URL > file cache with extended max age
         """
@@ -108,15 +114,24 @@ class CachedHTTPGet:
                 cls._write_version_to_disk(url, content)
                 return content
 
-            print(f"Request for external config '{url}' failed with status code {resp.status_code}. Trying to fallback to cached version if available.", file=sys.stderr)
+            logger.error(
+                "request for external config '{url}' failed with status code {code}. "
+                "Trying to fallback to cached version if available.",
+                url=url,
+                code=resp.status_code,
+            )
 
         except requests.exceptions.RequestException:
             pass
 
-        cached_version: str = cls._read_version_from_disk(url, max_age_in_seconds=max_cache_time_when_offline)
+        cached_version: str = cls._read_version_from_disk(
+            url, max_age_in_seconds=max_cache_time_when_offline
+        )
         if cached_version:
             return cached_version
-        raise FileNotFoundError(f"Request for external config '{url}' failed -- maybe you are offline or the URL is incorrect.")
+        raise FileNotFoundError(
+            f"request for external config '{url}' failed -- maybe you are offline or the URL is incorrect."
+        )
 
     @staticmethod
     def _get_timestamp() -> int:
@@ -149,17 +164,24 @@ class CachedHTTPGet:
     def _write_version_to_disk(cls, source: str, content: str):
         try:
             with open(cls._get_filepath_from_source(source), "w", encoding="utf8") as f:
-                f.write(content)  # security: writing arbitrary content from web is not great, but at least it's written as text
+                # security: writing arbitrary content from web is not great, but at least it's written as text
+                f.write(content)
             with open(cls._get_metadata_filepath(source), "w", encoding="utf8") as f:
-                json.dump({
+                json.dump(
+                    {
                         "timestamp": cls._get_timestamp(),
                         "source": source,
-                    }, f, indent=4)
+                    },
+                    f,
+                    indent=4,
+                )
         except Exception as e:
-            print(f"[!] Saving cache file for configuration failed. {e}", file=sys.stderr)
+            logger.error("saving cache file for configuration failed:\n {e}", e=e)
 
     @classmethod
-    def _read_version_from_disk(cls, source: str, max_age_in_seconds: int = 5 * 60) -> Optional[str]:
+    def _read_version_from_disk(
+        cls, source: str, max_age_in_seconds: int = 5 * 60
+    ) -> Optional[str]:
         try:
             with open(cls._get_metadata_filepath(source), "r", encoding="utf8") as f:
                 metadata = json.load(f)
@@ -171,6 +193,6 @@ class CachedHTTPGet:
         except FileNotFoundError:
             return None
         except Exception as e:
-            print(f"[!] Reading or parsing cache file for configuration failed. {e}", file=sys.stderr)
+            logger.error("reading or parsing cache file for configuration failed:\n {e}", e=e)
 
         return None

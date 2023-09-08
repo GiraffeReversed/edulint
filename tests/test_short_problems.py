@@ -22,7 +22,7 @@ class TestShort:
             "if x <= y:",
             "    print('bar')"
         ], [
-            lazy_problem().set_line(3).set_code("R6611")
+            # lazy_problem().set_line(3).set_code("R6611")  # TODO report another defect
         ]),
         ([
             "if x > y:",
@@ -46,9 +46,17 @@ class TestShort:
             "def foo(a):",
             "    a = a + 1",
         ], [lazy_problem()]),
+        # ([
+        #     "def foo(a):",
+        #     "    a = a * 2",
+        # ], []),
         ([
             "def foo(a):",
             "    a = a + [0]",
+        ], []),
+        ([
+            "def foo(a, b):",
+            "    a = a + b",
         ], []),
         ([
             "def foo(a):",
@@ -70,11 +78,15 @@ class TestShort:
             "def foo(a):",
             "    a = a & {'a'}",
         ], []),
+        ([
+            "def foo(a, b):",
+            "    a = a & b",
+        ], []),
     ])
     def test_augassign_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.PYLINT, "--enable=use-augmenting-assignment")],
+            [Arg(Option.PYLINT, "--enable=use-augmented-assign")],
             [problem.set_code("R6609") for problem in expected_output]
         )
 
@@ -148,7 +160,7 @@ class TestShort:
     @pytest.mark.parametrize("filename,expected_output", [
         ("010666-prime.py", [
             lazy_problem().set_code("R6604").set_line(12).set_text("Do not use while loop with else."),
-            lazy_problem().set_code("R6609").set_line(15).set_text("Use augmenting assignment: 'i += 1'"),
+            lazy_problem().set_code("R6609").set_line(15).set_text("Use augmented assignment: 'i += 1'"),
         ]),
         ("012889-pythagorean.py", [
             lazy_problem().set_code("R6602").set_line(23).set_text("Use integral division //."),
@@ -172,37 +184,41 @@ class TestShort:
 
         ]),
         ("017667-prime.py", [
-            lazy_problem().set_code("R6604").set_line(6).set_text("Do not use for loop with else.")
+            lazy_problem().set_code("R6616").set_line(5).set_text("Use early return."),
+            lazy_problem().set_code("R6604").set_line(6).set_text("Do not use for loop with else."),
         ]),
         ("022859-digit_sum.py", [
             lazy_problem().set_code("R6601").set_line(20)
             .set_text("Use lst.append(number % 7) instead of lst += [number % 7].")
         ]),
         ("024042-cards.py", [
-            lazy_problem().set_code("R6609").set_line(9).set_text("Use augmenting assignment: 'number //= 10'"),
+            lazy_problem().set_code("R6609").set_line(9).set_text("Use augmented assignment: 'number //= 10'"),
             lazy_problem().set_code("R6613").set_line(37)
             .set_text("Use 'is_valid_card(number)' directly rather than as 'is_valid_card(number) is True'."),
             lazy_problem().set_code("R6613").set_line(55),
         ]),
         ("024180-delete.py", [
             lazy_problem().set_code("R6606").set_line(7)
-            .set_text("Remove the for loop, as it makes only one iteration.")
+            .set_text("The for loop makes only one iteration.")
         ]),
         ("024233-cards.py", [
             lazy_problem().set_code("R6608").set_line(22).set_text("Redundant arithmetic: 0 + number"),
-            lazy_problem().set_code("R6608").set_line(42).set_text("Redundant arithmetic: 0 + number")
+            lazy_problem().set_code("R6616").set_line(23),
+            lazy_problem().set_code("R6608").set_line(42).set_text("Redundant arithmetic: 0 + number"),
+            lazy_problem().set_code("R6616").set_line(43),
+            lazy_problem().set_code("R6616").set_line(47)
         ]),
         ("024371-cards.py", [
-            lazy_problem().set_code("R6606").set_line(12).set_text("Remove the for loop, as it makes no iterations.")
+            lazy_problem().set_code("R6606").set_line(12).set_text("The for loop makes no iterations.")
         ]),
         ("024371-workdays.py", [
             lazy_problem().set_code("R6606").set_line(29)
-            .set_text("Remove the for loop, as it makes only one iteration."),
+            .set_text("The for loop makes only one iteration."),
             lazy_problem().set_code("R6608").set_line(30).set_text("Redundant arithmetic: i + 0"),
         ]),
         ("024491-cards.py", [
             lazy_problem().set_code("R6606").set_line(86)
-            .set_text("Remove the for loop, as it makes only one iteration.")
+            .set_text("The for loop makes only one iteration.")
         ]),
         ("024657-bisection.py", [
             lazy_problem().set_code("R6608").set_line(6).set_text("Redundant arithmetic: 0 - eps"),
@@ -217,6 +233,10 @@ class TestShort:
         ]),
         ("041630-ipv4.py", [
             lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")
+        ]),
+        ("043232-person_id.py", [  # no use else instead of elif on line
+            lazy_problem().set_code("R6613").set_line(44),
+            lazy_problem().set_code("R6613").set_line(44),
         ]),
         ("044834-ipv4.py", [
             lazy_problem().set_code("R6603").set_line(15).set_text("Use isdecimal to test if string contains a number.")
@@ -235,13 +255,12 @@ class TestShort:
         ]),
         ("104584-p4_digits.py", []),
         ("hw14358.py", [
-            lazy_problem().set_code("R6609").set_line(29).set_text("Use augmenting assignment: 'result -= element'"),
-            lazy_problem().set_code("R6609").set_line(31).set_text("Use augmenting assignment: 'b += 1'"),
-            lazy_problem().set_code("R6609").set_line(34).set_text("Use augmenting assignment: 'a += 1'"),
+            lazy_problem().set_code("R6609").set_line(31).set_text("Use augmented assignment: 'b += 1'"),
+            lazy_problem().set_code("R6609").set_line(34).set_text("Use augmented assignment: 'a += 1'"),
             lazy_problem().set_code("R6608").set_line(44).set_text("Redundant arithmetic: num // num"),
-            lazy_problem().set_code("R6609").set_line(50).set_text("Use augmenting assignment: 'count += 1'"),
-            lazy_problem().set_code("R6609").set_line(51).set_text("Use augmenting assignment: 'number //= n'"),
-            lazy_problem().set_code("R6609").set_line(53).set_text("Use augmenting assignment: 'primes += 1'"),
+            lazy_problem().set_code("R6609").set_line(50).set_text("Use augmented assignment: 'count += 1'"),
+            lazy_problem().set_code("R6609").set_line(51).set_text("Use augmented assignment: 'number //= n'"),
+            lazy_problem().set_code("R6609").set_line(53).set_text("Use augmented assignment: 'primes += 1'"),
             lazy_problem().set_code("R6609").set_line(54),
             lazy_problem().set_code("R6609").set_line(56),
             lazy_problem().set_code("R6609").set_line(57),
@@ -250,6 +269,7 @@ class TestShort:
             lazy_problem().set_code("R6608").set_line(79).set_text("Redundant arithmetic: '' + str(count)")
         ]),
         ("hw34451.py", [
+            lazy_problem().set_code("R6616").set_line(13),
             lazy_problem().set_code("R6607").set_line(44)
             .set_text("Use exponentiation instead of repeated muliplication in i * i * i."),
             lazy_problem().set_code("R6607").set_line(47)

@@ -53,11 +53,12 @@ It supports the same configuration options as the native Python package.
 
 ## Road map (long-term)
 
-- [ ] Additional explanations for problems detected in code
+- [x] Additional explanations for problems detected in code
+- [x] [Thonny plugin](https://github.com/GiraffeReversed/thonny-edulint)
 - [ ] More code quality defects (from WPS; detecting duplicate code)
 - [ ] Rewrite web to [React](https://github.com/GiraffeReversed/edulint-react-web) to allow for additional functionality (more settings, better teacher onboarding, …)
 - [ ] Speed-up linting by switching to [Ruff](https://github.com/charliermarsh/ruff)
-- [ ] VS Code and Thonny plugins
+- [ ] VS Code plugin
 
 
 ## Sponsorship and academic collaboration
@@ -70,8 +71,4 @@ Are you interested in sponsoring this project, want to collaborate on an academi
 
 Supported: >= 3.8
 
-Python 3.7 mostly works, but can fail in edge cases due to different parsing between package `typed-ast` (<=3.7) and Python's native `ast` (>=3.8). We discovered those using the existing test suite.
-
-#### Pylint and Flake8
-
-Right now Edulint has pinned specific versions of both packages, because part of the functionality is based on specific format of messages. In future we aim to rework the offending functionality and make it more version independent. For current state you can check the matrix in the GitHub action that [tests it](https://github.com/GiraffeReversed/edulint/actions/workflows/test-compatibility.yaml).
+Python 3.7 mostly works, but can fail in edge cases due to different parsing between package `typed-ast` (<=3.7) and Python's native `ast` (>=3.8). We discovered those using the existing [compatibility test suite](https://github.com/GiraffeReversed/edulint/actions/workflows/test-compatibility.yaml).
