@@ -9,10 +9,10 @@ on:
         default: '["3.8"]'
       pylint_matrix:
         type: string
-        default: '["2.17.5"]'
+        default: '["default"]'
       flake8_matrix:
         type: string
-        default: '["6.1.0"]'
+        default: '["default"]'
     secrets:
       PAT_PRIVATE_TESTS:
         required: true
@@ -50,20 +50,23 @@ jobs:
       - name: Mock pylint version in requirements.txt and setup.cfg
         run: |
           sed -i "s/pylint *[~<>=][^\"]*/pylint==${{ matrix.pylint }}/" requirements.txt
+        if: ${{ matrix.pylint != 'default' }}
 
       - name: Mock flake8 version in requirements.txt and setup.cfg
         run: |
           sed -i "s/flake8 *[~<>=][^\"]*/flake8==${{ matrix.flake8 }}/" requirements.txt
+        if: ${{ matrix.flake8 != 'default' }}
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.dev.txt ]; then pip install -r requirements.dev.txt; fi
-          if [ -f tests/requirements.txt ]; then pip install -r tests/requirements.txt; fi
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.dev.txt -r tests/requirements.txt -r requirements.txt
 
       - name: Install Edulint
         run: pip install .
+
+      - name: Log versions of python packages
+        run: pip freeze
 
       - name: Test with pytest
         run: pytest --junit-xml pytest.xml tests/
