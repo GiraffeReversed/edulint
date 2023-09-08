@@ -4979,23 +4979,15 @@ def count_it(limit):
 <a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/warning/redefined-outer-name.html\">Additional information</a>"""
 
 [W0622]
-why = "It looks like the variable or function override a built-in."
+why = "A variable or function name overrides a Python's built-in function (such as `sum` or `min`). Built-in function overrriding can lead to subtle bugs and code that is confusing to read."
 examples = """
-**Problematic code**
+Some renaming suggestions:
 
-```py
-def map():  # [redefined-builtin]
-    pass
-
-```
-
-**How to fix it**
-
-```py
-def map_iterable():
-    pass
-
-```
+- `sum` -> `total`, `result`, ...
+- `list` -> `students`, `numbers`, `data`, ...
+- `min` -> `minimum`, `lowest`, ...
+- `max` -> `maximum`, `highest`, ...
+- `len` -> `size`, `length`, ...
 """
 
 [W0631]
