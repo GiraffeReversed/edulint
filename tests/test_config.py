@@ -115,9 +115,9 @@ def mock_contents(mocker, contents) -> None:
             "# edulint: pylint=--enable=missing-module-docstring",
             ["pylint=--enable=missing-module-docstring"],
         ),
-        ("from ib111 import week_12", ["config=ib111.toml", "set-groups=warning"]),
-        ("from ib111 import week_02  # noqa", ["config=ib111.toml", "set-groups=warning"]),
-        ("#from ib111 import week_02", ["config=ib111.toml", "set-groups=warning"]),
+        ("from ib111 import week_12", ["config=ib111.toml"]),
+        ("from ib111 import week_02  # noqa", ["config=ib111.toml"]),
+        ("#from ib111 import week_02", ["config=ib111.toml"]),
     ],
 )
 def test_extract_args(mocker, contents, args):
