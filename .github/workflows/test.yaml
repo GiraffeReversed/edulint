@@ -66,7 +66,7 @@ jobs:
         run: pip install .
 
       - name: Test with pytest
-        run: pytest --junit-xml pytest.xml tests/
+        run: pytest -n1 --junit-xml pytest.xml tests/
 
       - name: Upload Unit Test Results
         if: always()
