@@ -1,7 +1,7 @@
 name: Run latest published edulint version
 
 on:
-  push:  # This is used for tests using `act`
+  # push:  # This is used for tests using `act`
   workflow_call:
   schedule:
     - cron:  '42 19 * * *'
