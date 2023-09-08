@@ -4,7 +4,7 @@ import os
 import sys
 from subprocess import PIPE, TimeoutExpired, Popen
 from typing import Optional, Tuple, List
-from loguru import logger
+# from loguru import logger
 
 """ Author: Ondrej Borysek, License: MIT, Last update: 2021-04-19"""
 
@@ -35,13 +35,13 @@ class ProcessHandler:
         if self.last_child is None or self.last_child.poll() is not None:
             return
 
-        logger.info("trying to terminate")
+        # logger.info("trying to terminate")
         self.last_child.terminate()  # Ask the child to exit peacefully.
 
         try:
             self.last_child.wait(timeout=self.sigterm_grace_period)
         except TimeoutExpired:
-            logger.info("child refused to terminate; trying SIGKILL if available")
+            # logger.info("child refused to terminate; trying SIGKILL if available")
             self.last_child.kill()  # Kill anyone still standing, just like Anakin did.
             # self.last_child.wait()  # Waiting would be safe on Linux, but on Windows .kill from Python
             # is just .terminate
@@ -52,9 +52,9 @@ class ProcessHandler:
                     timeout=0.2
                 )  # this can garbage collect the process
             except TimeoutExpired:
-                logger.warning(
-                    "the process refused to die, you might need to kill the zombi manually"
-                )
+                # logger.warning(
+                #     "the process refused to die, you might need to kill the zombi manually"
+                # )
                 ProcessHandler.linux_print_processes()
 
     def __start_process(
@@ -73,7 +73,7 @@ class ProcessHandler:
             )
             return_code = proc.returncode
         except TimeoutExpired:
-            logger.warning("timeout, trying to kill")
+            # logger.warning("timeout, trying to kill")
             proc.kill()
             outb, errb = proc.communicate()
             # proc.returncode will be ignored
@@ -92,18 +92,18 @@ class ProcessHandler:
 
         ph = ProcessHandler(timeout=timeout)
         return_code, outs, errs = ph.__start_process(command, input_str=input_str)
-        logger.trace(
-            "Command: {command}\n"
-            "Input:\n---\n{input_str}\n---\n"
-            "Return code: {return_code}\n"
-            "Output:\n---\n{output_str}\n---\n"
-            "Error:\n---\n{error_str}\n---\n",
-            command=command,
-            input_str=input_str,
-            return_code=return_code,
-            output_str=ProcessHandler.prettyfi_the_output(outs),
-            error_str=ProcessHandler.prettyfi_the_output(errs),
-        )
+        # logger.trace(
+        #     "Command: {command}\n"
+        #     "Input:\n---\n{input_str}\n---\n"
+        #     "Return code: {return_code}\n"
+        #     "Output:\n---\n{output_str}\n---\n"
+        #     "Error:\n---\n{error_str}\n---\n",
+        #     command=command,
+        #     input_str=input_str,
+        #     return_code=return_code,
+        #     output_str=ProcessHandler.prettyfi_the_output(outs),
+        #     error_str=ProcessHandler.prettyfi_the_output(errs),
+        # )
         return return_code, outs, errs
 
     @staticmethod
@@ -114,10 +114,10 @@ class ProcessHandler:
     def linux_print_processes() -> None:
         if not sys.platform.startswith("linux"):
             return
-        logger.warning(
-            "please check that you do not see any zombie processes from running this script, "
-            "they would have nice value of 19. You can use command 'ps a -o pid,ni,time,cmd'"
-        )
+        # logger.warning(
+        #     "please check that you do not see any zombie processes from running this script, "
+        #     "they would have nice value of 19. You can use command 'ps a -o pid,ni,time,cmd'"
+        # )
 
     @staticmethod
     def is_status_code_by_timeout(status_code: int) -> bool:
