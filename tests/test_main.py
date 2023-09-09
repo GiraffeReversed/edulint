@@ -42,8 +42,8 @@ def test_single_file_stdout(monkeypatch, capsys, argv, output):
                 join("tests", "data", "custom_nonpep_assign.py"),
             ],
             "****************** custom_nonpep_assign.py\n"
-            'tests/data/custom_nonpep_assign.py:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
-            "tests/data/custom_nonpep_assign.py:1:2: E225 missing whitespace around operator [default]\n",
+            f'{join("tests", "data", "custom_nonpep_assign.py")}:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
+            f"{join('tests', 'data', 'custom_nonpep_assign.py')}:1:2: E225 missing whitespace around operator [default]\n",
         ),
         (
             [
@@ -51,11 +51,11 @@ def test_single_file_stdout(monkeypatch, capsys, argv, output):
                 join("tests", "data", "custom_flake8_pylint.py"),
             ],
             "****************** custom_nonpep_assign.py\n"
-            'tests/data/custom_nonpep_assign.py:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
-            "tests/data/custom_nonpep_assign.py:1:2: E225 missing whitespace around operator [default]\n"
+            f'{join("tests", "data", "custom_nonpep_assign.py")}:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
+            f"{join('tests', 'data', 'custom_nonpep_assign.py')}:1:2: E225 missing whitespace around operator [default]\n"
             "****************** custom_flake8_pylint.py\n"
-            'tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name "foo" [default]\n'
-            "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
+            f'{join("tests", "data", "custom_flake8_pylint.py")}:1:0: C0104 Disallowed name "foo" [default]\n'
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
         ),
         (
             [
@@ -63,11 +63,11 @@ def test_single_file_stdout(monkeypatch, capsys, argv, output):
                 join("tests", "data", "custom_nonpep_assign.py"),
             ],
             "****************** custom_flake8_pylint.py\n"
-            'tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name "foo" [default]\n'
-            "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used [default]\n"
+            f'{join("tests", "data", "custom_flake8_pylint.py")}:1:0: C0104 Disallowed name "foo" [default]\n'
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:2:5: F841 local variable 'a' is assigned to but never used [default]\n"
             "****************** custom_nonpep_assign.py\n"
-            'tests/data/custom_nonpep_assign.py:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
-            "tests/data/custom_nonpep_assign.py:1:2: E225 missing whitespace around operator [default]\n",
+            f'{join("tests", "data", "custom_nonpep_assign.py")}:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
+            f"{join('tests', 'data', 'custom_nonpep_assign.py')}:1:2: E225 missing whitespace around operator [default]\n",
         ),
     ],
 )
@@ -84,12 +84,12 @@ def test_multiple_files_stdout(monkeypatch, capsys, argv, output):
                 join("tests", "data", "custom_flake8_pylint_config.py"),
             ],
             "****************** custom_nonpep_assign.py\n"
-            'tests/data/custom_nonpep_assign.py:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
-            "tests/data/custom_nonpep_assign.py:1:2: E225 missing whitespace around operator [default]\n"
+            f'{join("tests", "data", "custom_nonpep_assign.py")}:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
+            f"{join('tests', 'data', 'custom_nonpep_assign.py')}:1:2: E225 missing whitespace around operator [default]\n"
             "****************** custom_flake8_pylint_config.py\n"
-            "tests/data/custom_flake8_pylint_config.py:1:0: C0114 Missing module docstring [in-file]\n"
-            'tests/data/custom_flake8_pylint_config.py:3:0: C0104 Disallowed name "foo" [default]\n'
-            "tests/data/custom_flake8_pylint_config.py:4:5: F841 local variable 'a' is assigned to but never used [default]\n",
+            f"{join('tests', 'data', 'custom_flake8_pylint_config.py')}:1:0: C0114 Missing module docstring [in-file]\n"
+            f'{join("tests", "data", "custom_flake8_pylint_config.py")}:3:0: C0104 Disallowed name "foo" [default]\n'
+            f"{join('tests', 'data', 'custom_flake8_pylint_config.py')}:4:5: F841 local variable 'a' is assigned to but never used [default]\n",
         ),
         (
             [
@@ -97,12 +97,12 @@ def test_multiple_files_stdout(monkeypatch, capsys, argv, output):
                 join("tests", "data", "custom_nonpep_assign.py"),
             ],
             "****************** custom_flake8_pylint_config.py\n"
-            "tests/data/custom_flake8_pylint_config.py:1:0: C0114 Missing module docstring [in-file]\n"
-            'tests/data/custom_flake8_pylint_config.py:3:0: C0104 Disallowed name "foo" [default]\n'
-            "tests/data/custom_flake8_pylint_config.py:4:5: F841 local variable 'a' is assigned to but never used [default]\n"
+            f"{join('tests', 'data', 'custom_flake8_pylint_config.py')}:1:0: C0114 Missing module docstring [in-file]\n"
+            f'{join("tests", "data", "custom_flake8_pylint_config.py")}:3:0: C0104 Disallowed name "foo" [default]\n'
+            f"{join('tests', 'data', 'custom_flake8_pylint_config.py')}:4:5: F841 local variable 'a' is assigned to but never used [default]\n"
             "****************** custom_nonpep_assign.py\n"
-            'tests/data/custom_nonpep_assign.py:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
-            "tests/data/custom_nonpep_assign.py:1:2: E225 missing whitespace around operator [default]\n",
+            f'{join("tests", "data", "custom_nonpep_assign.py")}:1:0: C0103 Constant name "a" doesn\'t conform to UPPER_CASE naming style [default]\n'
+            f"{join('tests', 'data', 'custom_nonpep_assign.py')}:1:2: E225 missing whitespace around operator [default]\n",
         ),
     ],
 )
@@ -115,34 +115,34 @@ def test_different_configs(monkeypatch, capsys, argv, output):
     [
         (
             f"{join('tests', 'data', 'custom_flake8_pylint.py')} -o pylint=--enable=missing-module-docstring".split(),
-            "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring [cmd]\n"
-            'tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name "foo" [default]\n'
-            "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:1:0: C0114 Missing module docstring [cmd]\n"
+            f'{join("tests", "data", "custom_flake8_pylint.py")}:1:0: C0104 Disallowed name "foo" [default]\n'
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
         ),
         (
             f"{join('tests', 'data', 'custom_flake8_pylint.py')} -o=pylint=--enable=missing-module-docstring".split(),
-            "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring [cmd]\n"
-            'tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name "foo" [default]\n'
-            "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:1:0: C0114 Missing module docstring [cmd]\n"
+            f'{join("tests", "data", "custom_flake8_pylint.py")}:1:0: C0104 Disallowed name "foo" [default]\n'
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
         ),
         (
             f"{join('tests', 'data', 'custom_flake8_pylint.py')} --option pylint=--enable=missing-module-docstring".split(),
-            "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring [cmd]\n"
-            'tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name "foo" [default]\n'
-            "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:1:0: C0114 Missing module docstring [cmd]\n"
+            f'{join("tests", "data", "custom_flake8_pylint.py")}:1:0: C0104 Disallowed name "foo" [default]\n'
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
         ),
         (
             f"{join('tests', 'data', 'custom_flake8_pylint.py')} --option=pylint=--enable=missing-module-docstring".split(),
-            "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring [cmd]\n"
-            'tests/data/custom_flake8_pylint.py:1:0: C0104 Disallowed name "foo" [default]\n'
-            "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:1:0: C0114 Missing module docstring [cmd]\n"
+            f'{join("tests", "data", "custom_flake8_pylint.py")}:1:0: C0104 Disallowed name "foo" [default]\n'
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
         ),
         (
             f"{join('tests', 'data', 'custom_flake8_pylint.py')} "
             "-o pylint=--enable=missing-module-docstring "
             "-o pylint=--disable=C0104".split(),
-            "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring [cmd]\n"
-            "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:1:0: C0114 Missing module docstring [cmd]\n"
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
         ),
         (
             [
@@ -150,8 +150,8 @@ def test_different_configs(monkeypatch, capsys, argv, output):
                 "-o",
                 "pylint=--enable=missing-module-docstring pylint=--disable=C0104",
             ],
-            "tests/data/custom_flake8_pylint.py:1:0: C0114 Missing module docstring [cmd]\n"
-            "tests/data/custom_flake8_pylint.py:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:1:0: C0114 Missing module docstring [cmd]\n"
+            f"{join('tests', 'data', 'custom_flake8_pylint.py')}:2:5: F841 local variable 'a' is assigned to but never used [default]\n",
         ),
     ],
 )
