@@ -5,8 +5,7 @@ from typing import Dict, Any, List, Optional
 from collections import defaultdict
 import argparse
 
-from utils import Version
-
+from edulint.versions.utils import Version
 
 def _fully_released_versions(data: Dict[str, Any]) -> List[Version]:
     releases = data["releases"]
@@ -37,7 +36,7 @@ def _only_last_patch_of_each_minor(versions: List[Version]) -> List[Version]:
 
 
 def get_versions(package_name: str = 'edulint') -> List[Version]:
-    edulint_info = requests.get(f"https://pypi.org/pypi/{package_name}/json").json()
+    edulint_info = requests.get(f"https://pypi.org/pypi/{package_name}/json", timeout=3).json()
     version_ids: List[Version] = _fully_released_versions(edulint_info)
     return version_ids
 

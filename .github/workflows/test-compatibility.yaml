@@ -26,11 +26,11 @@ jobs:
  
       - id: pylint
         name: Get Pylint versions
-        run: python pypi_helper.py pylint --github --n-versions 6 >> "$GITHUB_OUTPUT"
+        run: python edulint/versions/pypi_helper.py pylint --github --n-versions 6 >> "$GITHUB_OUTPUT"
 
       - id: flake8
         name: Get Flake8 versions
-        run: python pypi_helper.py flake8 --github --n-versions 6 >> "$GITHUB_OUTPUT"
+        run: python edulint/versions/pypi_helper.py flake8 --github --n-versions 6 >> "$GITHUB_OUTPUT"
 
   test-python-versions:
     uses: ./.github/workflows/test.yaml

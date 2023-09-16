@@ -3,11 +3,13 @@ from edulint.option_parses import OptionParse, get_option_parses
 from edulint.config.config import get_config_many, get_cmd_args, ImmutableConfig
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
+from edulint.versions.version_checker import PackageInfoManager
 from typing import List, Optional, Dict, Tuple, Any
 import argparse
 import os
 import sys
 import json
+import sys
 from loguru import logger
 
 
@@ -71,6 +73,12 @@ def setup_argparse(option_parses: Dict[Option, OptionParse]) -> argparse.Namespa
         help="the file(s) or directory(ies) to lint",
     )
     parser.add_argument("--json", action="store_true", help="should output problems in json format")
+    parser.add_argument(
+        "--disable-version-check",
+        action='store_true',
+        default=False,
+        help="EduLint checks for a newer version at most once per hour. If newer version is available in pip it will print a message to stderr. Specifying this flag disables the check completely.",
+    )
     return parser.parse_args()
 
 
@@ -99,12 +107,22 @@ def to_json(configs: List[ImmutableConfig], problems: List[Problem]) -> str:
     problems_json = Problem.schema().dumps(problems, indent=2, many=True)
     return f'{{"configs": {config_json}, "problems": {problems_json}}}'
 
+def check_for_updates(is_check_disabled: bool = False):
+    if is_check_disabled:
+        return
+
+    python_executable = sys.executable or ("python" if os.name == 'nt' else "python3")  # nt is Windows
+    version_ttl = 600
+    if PackageInfoManager.is_update_waiting("edulint", ttl=version_ttl):
+        logger.warning(f"Update for EduLint ({PackageInfoManager.get_latest_version('edulint', version_ttl)}) is available. You can upgrade using `{python_executable} -m pip install --upgrade --user edulint`")
+
 
 @logger.catch
 def main() -> int:
     setup_logger()
     option_parses = get_option_parses()
     args = setup_argparse(option_parses)
+    check_for_updates(args.disable_version_check)
     cmd_args = get_cmd_args(args)
 
     files = extract_files(args.files_or_dirs)
