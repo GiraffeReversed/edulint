@@ -21,7 +21,9 @@ GITHUB_URL = "https://raw.githubusercontent.com/GiraffeReversed/edulint/main/edu
 
 
 # --- Read explanations
-def get_explanations() -> Dict[str, Dict[str, str]]:
+def get_explanations(disable_explanations_update: bool = False) -> Dict[str, Dict[str, str]]:
+    update_explanations(disable_explanations_update)  # This is async. Its results won't be ready during the lifetime of this function.
+
     updated_explanations = _load_updated_explanations()
     if updated_explanations:
         return updated_explanations
@@ -67,7 +69,7 @@ def _thread_update_explanations(ttl: int = 600):
         with open(EXPLANATIONS_ONLINE_DISTRIBUTED_FILEPATH, "w", encoding="utf8") as f:
             f.write(resp.text)
     except Exception as e:
-        logger.debug("Update of explanations failed with {e}.")
+        logger.debug(f"Update of explanations failed with {e}.")
 
 # todo: add test to load explanantions (toml parser is sensitive to small mistakes)
 

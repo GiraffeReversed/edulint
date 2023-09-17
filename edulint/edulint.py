@@ -136,7 +136,7 @@ def main() -> int:
     option_parses = get_option_parses()
     args = setup_argparse(option_parses)
     check_for_updates(args.disable_version_check)
-    update_explanations(args.disable_explanations_update)
+    update_explanations(args.disable_explanations_update)  # get_explanations also can trigger update, but we're not calling it anywhere else.
     cmd_args = get_cmd_args(args)
 
     files = extract_files(args.files_or_dirs)
