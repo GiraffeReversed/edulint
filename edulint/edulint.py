@@ -4,6 +4,7 @@ from edulint.config.config import get_config_many, get_cmd_args, ImmutableConfig
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
 from edulint.versions.version_checker import PackageInfoManager
+from edulint.explanations import update_explanations
 from typing import List, Optional, Dict, Tuple, Any
 import argparse
 import os
@@ -80,6 +81,12 @@ def setup_argparse(option_parses: Dict[Option, OptionParse]) -> argparse.Namespa
         default=False,
         help="EduLint checks for a newer version at most once per hour. If newer version is available in pip it will print a message to stderr. Specifying this flag disables the check completely.",
     )
+    parser.add_argument(
+        "--disable-explanations-update",
+        action='store_true',
+        default=False,
+        help="EduLint periodically updates explanations. Specifying this flag disables the updates.",
+    )
     return parser.parse_args()
 
 
@@ -129,6 +136,7 @@ def main() -> int:
     option_parses = get_option_parses()
     args = setup_argparse(option_parses)
     check_for_updates(args.disable_version_check)
+    update_explanations(args.disable_explanations_update)
     cmd_args = get_cmd_args(args)
 
     files = extract_files(args.files_or_dirs)
