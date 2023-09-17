@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import sys
+from threading import Thread
 from loguru import logger
 
 
@@ -107,10 +108,15 @@ def to_json(configs: List[ImmutableConfig], problems: List[Problem]) -> str:
     problems_json = Problem.schema().dumps(problems, indent=2, many=True)
     return f'{{"configs": {config_json}, "problems": {problems_json}}}'
 
+
 def check_for_updates(is_check_disabled: bool = False):
     if is_check_disabled:
         return
 
+    Thread(target=_update_check).start()
+
+
+def _update_check():
     python_executable = sys.executable or ("python" if os.name == 'nt' else "python3")  # nt is Windows
     version_ttl = 600
     if PackageInfoManager.is_update_waiting("edulint", ttl=version_ttl):

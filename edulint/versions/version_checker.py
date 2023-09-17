@@ -48,7 +48,7 @@ class PackageInfoManager:
 
     @classmethod
     def _package_info_path(cls):
-        filepath = os.path.join(PlatformDirs(appname="thonny-edulint").user_data_dir, "versions.json")
+        filepath = os.path.join(PlatformDirs(appname="edulint").user_data_dir, "versions.json")
         cls._create_json_file_if_doesnt_exist(filepath)
         return filepath 
 
@@ -104,15 +104,7 @@ class PackageInfoManager:
         return local_package_version != latest_version  # This presumes local version is never higher than pypi version
 
 
-def update_awaiting(ttl: int = 600) -> bool:
-    is_edulint_outdated = PackageInfoManager.is_update_waiting("edulint", ttl)
-    is_thonny_edulint_outdated = PackageInfoManager.is_update_waiting("thonny-edulint", ttl)
-    any_updates = is_edulint_outdated or is_thonny_edulint_outdated
-    return bool(any_updates)  # converting from None, True, False to just bool
-
-
 if __name__ == "__main__":
     print("START")
-    print(update_awaiting())
     print(PackageInfoManager.get_latest_version("edulint"))
     print("END")
