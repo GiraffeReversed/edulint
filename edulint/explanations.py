@@ -61,12 +61,12 @@ def update_explanations(disable_explanations_update: bool = False):
 
 
 def _thread_update_explanations(ttl: int = 600): 
-    with dbm.open(EXPLANATIONS_DBM, 'c') as db:
-        if current_timestamp() < int(db.get('last_update', b'0')) + ttl:
-            return
-        db['last_update'] = str(current_timestamp())  # We're counting any update attempt, not just the succesfull ones
-
     try:
+        with dbm.open(EXPLANATIONS_DBM, 'c') as db:
+            if current_timestamp() < int(db.get('last_update', b'0')) + ttl:
+                return
+            db['last_update'] = str(current_timestamp())  # We're counting any update attempt, not just the succesfull ones
+
         resp = requests.get(GITHUB_URL, timeout=3)
         if resp.status_code != 200:
             return
