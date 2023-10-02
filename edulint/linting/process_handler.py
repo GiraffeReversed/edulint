@@ -29,7 +29,10 @@ class ProcessHandler:
 
     def __try_to_be_nice(self) -> None:
         if getattr(os, "nice", None):
-            os.nice(10)
+            try:
+                os.nice(10)
+            except Exception as e:
+                logger.warning(f"System suports 'nice', but the attempt failed with {e}")  # This happens with Ubuntu snaps.
 
     def __kill_children(self) -> None:
         if self.last_child is None or self.last_child.poll() is not None:
