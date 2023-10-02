@@ -15,10 +15,15 @@ from loguru import logger
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 EXPLANATIONS_PIP_DISTRIBUTED_FILEPATH = os.path.join(SCRIPT_PATH, "explanations.toml")
 
-EXPLANATIONS_ONLINE_DISTRIBUTED_FILEPATH = os.path.join(PlatformDirs(appname="edulint").user_data_dir, "explanations_online.toml")
-EXPLANATIONS_DBM = os.path.join(PlatformDirs(appname="edulint").user_data_dir, "explanations.dbm")
+EDULINT_LOCAL_DATA_FOLDER = PlatformDirs(appname="edulint").user_data_dir
+EXPLANATIONS_ONLINE_DISTRIBUTED_FILEPATH = os.path.join(EDULINT_LOCAL_DATA_FOLDER, "explanations_online.toml")
+EXPLANATIONS_DBM = os.path.join(EDULINT_LOCAL_DATA_FOLDER, "explanations.dbm")
 GITHUB_URL = "https://raw.githubusercontent.com/GiraffeReversed/edulint/main/edulint/explanations.toml"
 
+try:
+    Path(EDULINT_LOCAL_DATA_FOLDER).mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    logger.warning("Failed to create local directory for edulints internal files. {e}")
 
 # --- Read explanations
 def get_explanations(disable_explanations_update: bool = False) -> Dict[str, Dict[str, str]]:
@@ -56,12 +61,12 @@ def update_explanations(disable_explanations_update: bool = False):
 
 
 def _thread_update_explanations(ttl: int = 600): 
-    with dbm.open(EXPLANATIONS_DBM, 'c') as db:
-        if current_timestamp() < int(db.get('last_update', b'0')) + ttl:
-            return
-        db['last_update'] = str(current_timestamp())  # We're counting any update attempt, not just the succesfull ones
-
     try:
+        with dbm.open(EXPLANATIONS_DBM, 'c') as db:
+            if current_timestamp() < int(db.get('last_update', b'0')) + ttl:
+                return
+            db['last_update'] = str(current_timestamp())  # We're counting any update attempt, not just the succesfull ones
+
         resp = requests.get(GITHUB_URL, timeout=3)
         if resp.status_code != 200:
             return
