@@ -10,7 +10,6 @@ import argparse
 import os
 import sys
 import json
-import sys
 from threading import Thread
 from loguru import logger
 
@@ -77,13 +76,14 @@ def setup_argparse(option_parses: Dict[Option, OptionParse]) -> argparse.Namespa
     parser.add_argument("--json", action="store_true", help="should output problems in json format")
     parser.add_argument(
         "--disable-version-check",
-        action='store_true',
+        action="store_true",
         default=False,
-        help="EduLint checks for a newer version at most once per hour. If newer version is available in pip it will print a message to stderr. Specifying this flag disables the check completely.",
+        help="EduLint checks for a newer version at most once per hour. If newer version is available in pip, "
+        "it will print a message to stderr. Specifying this flag disables the check completely.",
     )
     parser.add_argument(
         "--disable-explanations-update",
-        action='store_true',
+        action="store_true",
         default=False,
         help="EduLint periodically updates explanations. Specifying this flag disables the updates.",
     )
@@ -124,10 +124,15 @@ def check_for_updates(is_check_disabled: bool = False):
 
 
 def _update_check():
-    python_executable = sys.executable or ("python" if os.name == 'nt' else "python3")  # nt is Windows
+    python_executable = sys.executable or (
+        "python" if os.name == "nt" else "python3"
+    )  # nt is Windows
     version_ttl = 600
     if PackageInfoManager.is_update_waiting("edulint", ttl=version_ttl):
-        logger.warning(f"Update for EduLint ({PackageInfoManager.get_latest_version('edulint', version_ttl)}) is available. You can upgrade using `{python_executable} -m pip install --upgrade --user edulint`")
+        logger.warning(
+            f"Update for EduLint ({PackageInfoManager.get_latest_version('edulint', version_ttl)}) is available. "
+            f"You can upgrade using `{python_executable} -m pip install --upgrade --user edulint`"
+        )
 
 
 @logger.catch
@@ -136,7 +141,9 @@ def main() -> int:
     option_parses = get_option_parses()
     args = setup_argparse(option_parses)
     check_for_updates(args.disable_version_check)
-    update_explanations(args.disable_explanations_update)  # get_explanations also can trigger update, but we're not calling it anywhere else.
+    update_explanations(
+        args.disable_explanations_update
+    )  # get_explanations also can trigger update, but we're not calling it anywhere else.
     cmd_args = get_cmd_args(args)
 
     files = extract_files(args.files_or_dirs)
