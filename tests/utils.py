@@ -57,7 +57,9 @@ def remote_empty_config_url() -> str:
 def prepare_config(args: List[UnprocessedArg], from_empty: bool) -> Config:
     config_args = Config("test", args)
     config_path = (
-        config_args.get_last_value(Option.CONFIG, use_default=True) if not from_empty else "empty"
+        config_args.get_last_value(Option.CONFIG_FILE, use_default=True)
+        if not from_empty
+        else "empty"
     )
     config_file_translations = parse_config_file(config_path, get_option_parses())
     assert config_file_translations is not None

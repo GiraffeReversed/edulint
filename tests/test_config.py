@@ -33,7 +33,7 @@ def advertised_options(all_advertised_options: List[Option]) -> Set[Option]:
 def always_managed_options() -> Set[Option]:
     return set(
         (
-            Option.CONFIG,
+            Option.CONFIG_FILE,
             Option.PYLINT,
             Option.FLAKE8,
             Option.NO_FLAKE8,
@@ -115,9 +115,9 @@ def mock_contents(mocker, contents) -> None:
             "# edulint: pylint=--enable=missing-module-docstring",
             ["pylint=--enable=missing-module-docstring"],
         ),
-        ("from ib111 import week_12", ["config=ib111.toml"]),
-        ("from ib111 import week_02  # noqa", ["config=ib111.toml"]),
-        ("#from ib111 import week_02", ["config=ib111.toml"]),
+        ("from ib111 import week_12", ["config-file=ib111.toml"]),
+        ("from ib111 import week_02  # noqa", ["config-file=ib111.toml"]),
+        ("#from ib111 import week_02", ["config-file=ib111.toml"]),
     ],
 )
 def test_extract_args(mocker, contents, args):
@@ -132,8 +132,8 @@ def options() -> Dict[Option, OptionParse]:
             Option.SET_GROUPS, "", TakesVal.YES, [], Type.LIST, Combine.REPLACE
         ),
         Option.FLAKE8: OptionParse(Option.FLAKE8, "", TakesVal.YES, [], Type.STR, Combine.EXTEND),
-        Option.CONFIG: OptionParse(
-            Option.CONFIG, "", TakesVal.YES, DEFAULT_CONFIG, Type.STR, Combine.REPLACE
+        Option.CONFIG_FILE: OptionParse(
+            Option.CONFIG_FILE, "", TakesVal.YES, DEFAULT_CONFIG, Type.STR, Combine.REPLACE
         ),
     }
 
@@ -160,7 +160,7 @@ def options() -> Dict[Option, OptionParse]:
                 UnprocessedArg(Option.SET_GROUPS, "ib111-week-02"),
             ],
         ),
-        (["config=empty"], [UnprocessedArg(Option.CONFIG, "empty")]),
+        (["config=empty"], [UnprocessedArg(Option.CONFIG_FILE, "empty")]),
     ],
 )
 def test_parse_args(
@@ -188,7 +188,7 @@ def test_local_config_found_relative_to_file():
     filename = get_tests_path(str(Path() / "file" / "somewhere" / "deep" / "03-d4_points.py"))
     iconfig = get_config_one(filename, [])
 
-    assert iconfig[Option.CONFIG] == "enable-missing-docstring.toml"
+    assert iconfig[Option.CONFIG_FILE] == "enable-missing-docstring.toml"
     assert iconfig[Option.PYLINT][-1] == "--enable=missing-function-docstring"
 
 
@@ -201,10 +201,10 @@ def test_local_configs_found_relative_to_files():
     iconfig1 = iconfigs[0][1]
     iconfig2 = iconfigs[1][1]
 
-    assert iconfig1[Option.CONFIG] == "enable-missing-docstring.toml"
+    assert iconfig1[Option.CONFIG_FILE] == "enable-missing-docstring.toml"
     assert iconfig1[Option.PYLINT][-1] == "--enable=missing-function-docstring"
 
-    assert iconfig2[Option.CONFIG] == "enable-missing-docstring.toml"
+    assert iconfig2[Option.CONFIG_FILE] == "enable-missing-docstring.toml"
     assert iconfig2[Option.PYLINT][-1] == "--enable=missing-module-docstring"
 
 
@@ -351,7 +351,7 @@ def test_combine_and_translate_translates(
 
 def _fill_in_file_config(config: Config) -> Config:
     file_config_translations = parse_config_file(
-        config.get_last_value(Option.CONFIG, use_default=True), get_option_parses()
+        config.get_last_value(Option.CONFIG_FILE, use_default=True), get_option_parses()
     )
     assert file_config_translations is not None
     file_config, translations = file_config_translations
@@ -367,21 +367,21 @@ def _arg_to_str(option: Option, val: Optional[str]) -> str:
 @pytest.mark.parametrize(
     "filename,cmd,args",
     [
-        ("custom_set_empty_config.py", [], [Arg(Option.CONFIG, "empty")]),
+        ("custom_set_empty_config.py", [], [Arg(Option.CONFIG_FILE, "empty")]),
         (
             "custom_set_empty_config.py",
-            [_arg_to_str(Option.CONFIG, "default")],
-            [Arg(Option.CONFIG, "default")],
+            [_arg_to_str(Option.CONFIG_FILE, "default")],
+            [Arg(Option.CONFIG_FILE, "default")],
         ),
         (
             "custom_set_empty_config.py",
             [_arg_to_str(Option.IGNORE_INFILE_CONFIG_FOR, Linter.EDULINT.to_name())],
-            [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "edulint"), Arg(Option.CONFIG, "default")],
+            [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "edulint"), Arg(Option.CONFIG_FILE, "default")],
         ),
         (
             "custom_set_empty_config.py",
             [_arg_to_str(Option.IGNORE_INFILE_CONFIG_FOR, "all")],
-            [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "all"), Arg(Option.CONFIG, "default")],
+            [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "all"), Arg(Option.CONFIG_FILE, "default")],
         ),
         ("custom_set_ignore_infile_and_some.py", [], [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "all")]),
         ("custom_set_replace_option.py", [], [Arg(Option.SET_GROUPS, "ib111-week-01")]),

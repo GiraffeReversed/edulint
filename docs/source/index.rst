@@ -118,9 +118,9 @@ It is also possible to pass multiple options in one ``--option`` argument.
 Configuration files
 ^^^^^^^^^^^^^^^^^^^
 
-It is possible to specify a config file, either in linted file (:python:`# edulint: config=default`) or through command line (:code:`-o config=default`). It is possible to choose a prepared config file (:code:`empty` for no checks, :code:`default` for default configuration), or specify one's own.
+It is possible to specify a config file, either in linted file (:python:`# edulint: config-file=default`) or through command line (:code:`-o config-file=default`). It is possible to choose a prepared config file (:code:`empty` for no checks, :code:`default` for default configuration), or specify one's own.
 
-Apart from prepared configuration files, the :link_option:`config` also accepts a local path (:code:`config=/path/to/local/toml/file`) or URL (:code:`config=https://web.tld/path/to/remote/toml`).
+Apart from prepared configuration files, the :link_option:`config-file` also accepts a local path (:code:`config-file=/path/to/local/toml/file`) or URL (:code:`config-file=https://web.tld/path/to/remote/toml`).
 
 The required format is currently undocumented.
 

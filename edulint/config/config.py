@@ -9,7 +9,6 @@ from edulint.options import (
 from edulint.option_parses import (
     OptionParse,
     get_option_parses,
-    get_name_to_option,
     TakesVal,
     Combine,
     TRANSLATIONS_LABEL,
@@ -162,9 +161,7 @@ class Config:
         for name, translation in translations.items():
             for linter, vals in translation.to.items():
                 for val in vals:
-                    add_enabled(
-                        name, enablers_from_translations, Option.from_name(linter.to_name()), val
-                    )
+                    add_enabled(name, enablers_from_translations, linter.to_option(), val)
 
         return ImmutableConfig(
             tuple(ImmutableArg(o, self._to_immutable(ordered_args[int(o)].val)) for o in Option),
@@ -218,18 +215,17 @@ def extract_args(filename: str) -> List[str]:
 
             ibmatch = ib111_re.match(line)
             if ibmatch:
-                result.append(f"{Option.CONFIG.to_name()}=ib111.toml")
+                result.append(f"{Option.CONFIG_FILE.to_name()}=ib111.toml")
 
     return result
 
 
 def parse_option(
     option_parses: Dict[Option, OptionParse],
-    name_to_option: Dict[str, Option],
     name: str,
     val: Optional[str],
 ) -> Optional[Option]:
-    option = name_to_option.get(name)
+    option = Option.safe_from_name(name)
 
     if option is None:
         logger.warning("unrecognized option {name}", name=name)
@@ -247,8 +243,6 @@ def parse_option(
 
 
 def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> List[UnprocessedArg]:
-    name_to_option = get_name_to_option(option_parses)
-
     def get_name_val(arg: str) -> Tuple[str, Optional[str]]:
         if "=" in arg:
             name, val = arg.split("=", 1)
@@ -258,7 +252,7 @@ def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Lis
     result: List[UnprocessedArg] = []
     for arg in args:
         name, val = get_name_val(arg)
-        option = parse_option(option_parses, name_to_option, name, val)
+        option = parse_option(option_parses, name, val)
         if option is not None:
             result.append(UnprocessedArg(option, val))
     return result
@@ -293,9 +287,9 @@ def parse_config_file(
     path: str, option_parses: Dict[Option, OptionParse]
 ) -> Optional[Tuple[Config, Translations]]:
     def parse_base_config(config_dict: Dict[str, Any]) -> Optional[Config]:
-        rec_config = config_dict.get(Option.CONFIG.to_name(), BASE_CONFIG)
+        rec_config = config_dict.get(Option.CONFIG_FILE.to_name(), BASE_CONFIG)
         if not isinstance(rec_config, str):
-            print_invalid_type_message(Option.CONFIG, rec_config)
+            print_invalid_type_message(Option.CONFIG_FILE, rec_config)
             rec_config = BASE_CONFIG
         return parse_config_file(rec_config, option_parses)
 
@@ -313,7 +307,6 @@ def parse_config_file(
     base_config, base_translations = base
 
     result = []
-    name_to_option = get_name_to_option(option_parses)
     this_file_translations = {}
     for name, val in config_dict.items():
         if name == TRANSLATIONS_LABEL:
@@ -321,8 +314,10 @@ def parse_config_file(
         elif name == DEFAULT_ENABLER_LABEL:
             continue
         else:
-            option = parse_option(option_parses, name_to_option, name, val)
-            if option is None or option == Option.CONFIG:  # config is handled as the first option
+            option = parse_option(option_parses, name, val)
+            if (
+                option is None or option == Option.CONFIG_FILE
+            ):  # config is handled as the first option
                 continue
 
             if not isinstance(val, dict):
@@ -424,7 +419,7 @@ def get_config_paths(
     config_paths = set()
     filename_mapping = {}
     for filename, config in zip(filenames, infile_configs):
-        config_file = config.get_last_value(Option.CONFIG, use_default=True)
+        config_file = config.get_last_value(Option.CONFIG_FILE, use_default=True)
         if (
             config_file.startswith("http")
             or not config_file.endswith(".toml")
@@ -446,7 +441,7 @@ def get_config_many(
     cmd_config = parse_cmd_config(cmd_args_raw, option_parses)
     infile_configs = _parse_infile_configs(filenames, cmd_config, option_parses)
 
-    cmd_config_path = cmd_config.get_last_value(Option.CONFIG, use_default=False)
+    cmd_config_path = cmd_config.get_last_value(Option.CONFIG_FILE, use_default=False)
 
     if cmd_config_path is not None:
         config_paths = {cmd_config_path}

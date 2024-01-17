@@ -16,7 +16,7 @@ ImmutableT = Union[bool, Tuple[str, ...], Optional[str], Optional[int]]
 
 
 class Option(NumberFromZero):
-    CONFIG = ()
+    CONFIG_FILE = ()
     PYLINT = ()
     FLAKE8 = ()
     ALLOWED_ONECHAR_NAMES = ()
@@ -30,15 +30,29 @@ class Option(NumberFromZero):
         return self.name.lower().replace("_", "-")
 
     @staticmethod
-    def from_name(option_str: str) -> "Option":
+    def safe_from_name(option_str: str) -> Optional["Option"]:
+        aliased = OPTION_ALIASES.get(option_str.lower())
+        if aliased is not None:
+            return aliased
+
         for option in Option:
             if option.to_name() == option_str.lower():
                 return option
+        return None
+
+    @staticmethod
+    def from_name(option_str: str) -> "Option":
+        option = Option.safe_from_name(option_str)
+        if option is not None:
+            return option
+
         assert False, "no such option: " + option_str
 
     def __int__(self) -> int:
         return self.value  # type: ignore
 
+
+OPTION_ALIASES = {"config": Option.CONFIG_FILE}
 
 DEFAULT_CONFIG = "default"
 BASE_CONFIG = "empty"

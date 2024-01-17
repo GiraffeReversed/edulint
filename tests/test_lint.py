@@ -212,7 +212,7 @@ class TestIB111Week:
     ) -> None:
         create_apply_and_lint(
             lines,
-            [Arg(Option.CONFIG, "tests/ib111-weeks.toml")] + args,
+            [Arg(Option.CONFIG_FILE, "tests/ib111-weeks.toml")] + args,
             expected_output,
             from_empty=False,
         )

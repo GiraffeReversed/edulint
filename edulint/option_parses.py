@@ -88,7 +88,7 @@ class OptionParse:
 
 OPTIONS: List[OptionParse] = [
     OptionParse(
-        Option.CONFIG,
+        Option.CONFIG_FILE,
         "config file to use for the linting (packaged name, local path or remote)",
         TakesVal.YES,
         DEFAULT_CONFIG,
@@ -167,7 +167,3 @@ DEFAULT_ENABLER_LABEL = "default-enabler-name"
 
 def get_option_parses() -> Dict[Option, OptionParse]:
     return {parse.option: parse for parse in OPTIONS}
-
-
-def get_name_to_option(option_parses: Dict[Option, OptionParse]) -> Dict[str, Option]:
-    return {parse.option.to_name(): opt for opt, parse in option_parses.items()}
