@@ -208,12 +208,14 @@ class MessageTable(Directive):
                     )
                 )
             else:
-                message = nodes.reference(internal=True, refuri="#custom-checkers", text=name)
+                message = nodes.reference(internal=True, refuri="checkers.html", text=name)
                 para = nodes.paragraph()
                 para.append(nodes.inline(text="Custom message or checker, see "))
                 para.append(
                     nodes.reference(
-                        internal=True, refuri="#custom-checkers", text="the corresponding section."
+                        internal=True,
+                        refuri="checkers.html#custom-checkers",
+                        text="the corresponding section.",
                     )
                 )
                 tbody.append(prepare_row(message, para))
@@ -228,15 +230,17 @@ def link_pylint(name, rawtext, text, lineno, inliner, options={}, content=[]):
 def link_option(name, rawtext, text, lineno, inliner, options={}, context=[]):
     return [
         nodes.reference(
-            internal=True, refuri=f"#option-{Option.from_name(text).to_name()}", text=text
+            internal=True,
+            refuri=f"configuration.html#option-{Option.from_name(text).to_name()}",
+            text=text,
         )
     ], []
 
 
-def prepare_section(name, title):
-    section = nodes.section(ids=[f"checker-{name}"])
+def prepare_topic(name, title):
+    topic = nodes.topic(ids=[f"checker-{name}"])
     titlenode = nodes.title(text=title)
-    section += titlenode
+    topic += titlenode
     para = nodes.paragraph()
     para.extend(
         [
@@ -245,8 +249,8 @@ def prepare_section(name, title):
             nodes.inline(text=" checker."),
         ]
     )
-    section += para
-    return section
+    topic += para
+    return topic
 
 
 class CheckersBlock(Directive):
@@ -292,18 +296,18 @@ class CheckersBlock(Directive):
         result = []
         for checker_class in self._iterate_checkers():
             name = checker_class.name
-            section = prepare_section(name, name.replace("-", " ").title())
+            topic = prepare_topic(name, name.replace("-", " ").title())
 
             table, tbody = prepare_table(["Message name", "Format", "Description"], [1, 3, 3])
             for message_code, (message_format, message_name, desc) in checker_class.msgs.items():
                 tbody.append(prepare_row(message_name, nodes.literal(text=message_format), desc))
-            section.append(table)
+            topic.append(table)
 
             options = checker_class.options
             if options:
-                section.extend(self._prepare_option_defaults_table(options))
+                topic.extend(self._prepare_option_defaults_table(options))
 
-            result.append(section)
+            result.append(topic)
         return result
 
 

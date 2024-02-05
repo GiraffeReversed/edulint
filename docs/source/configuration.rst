@@ -1,24 +1,21 @@
 .. role:: python(code)
    :language: python
 
-Overview
---------
+Configuration
+-------------
 
 EduLint wraps around `Pylint <https://pylint.pycqa.org/>`_ and `Flake8 <https://flake8.pycqa.org/>`_, allowing for separate configuration of each of the tools. It provides a reasonable default and convenience "bulk names" for groups of checks that make sense to be enabled together. It transforms some messages to make them clearer to a beginner, or drops some messages entirely. It also provides extra checks for situations not covered by either of the linters.
 
 As of now, it is possible to configure the tool in three ways:
 
--  by augmenting the checked source with lines beginning with :python:`# edulint`, with the configuration applying to that file only
+- by augmenting the checked source with lines beginning with :python:`# edulint:`, with the configuration applying to that file only
 - by passing arguments through the CLI, applying to all files linted by that command
 - by setting a config file, specified by one of the two means above
-
-Configuration
--------------
 
 Edulint takes arguments in one of the following forms: ``<option-name>`` for options that do not take an argument and either ``<option-name>=<value-without-spaces>`` or ``<option-name>="<value-with-spaces>"`` for options that do take an argument.
 
 .. note::
-   In-file configuration always applies to the whole file, even if configuration lines are only after some code.
+   In-file configuration always applies to the whole file, even if the configuration lines are only after some code.
 
 .. note::
    CLI configuration always applies to all files linted with that command, even if some files are specified before an option.
@@ -64,20 +61,20 @@ When configuring through CLI, pass the configuration through the option ``--opti
 
 .. code::
 
-   python3 -m edulint --option enhancement -o pylint=--enable=no-self-use code/to/check.py
+   python3 -m edulint --option set-groups=enhancement -o pylint=--enable=no-self-use code/to/check.py
 
 It is also possible to pass multiple options in one ``--option`` argument.
 
 .. code::
 
-   python3 -m edulint --option "enhancement pylint=--enable=no-self-use" code/to/check.py
+   python3 -m edulint --option "set-groups=enhancement pylint=--enable=no-self-use" code/to/check.py
 
 Configuration files
 ^^^^^^^^^^^^^^^^^^^
 
-It is possible to specify a config file, either in linted file (:python:`# edulint: config-file=default`) or through command line (:code:`-o config-file=default`). It is possible to choose a prepared config file (:code:`empty` for no checks, :code:`default` for default configuration), or specify one's own.
+It is possible to specify a config file, either in linted file (:python:`# edulint: config-file=default`) or through the command line (:code:`-o config-file=default`). It is possible to choose a prepared config file (:code:`empty` for no checks, :code:`default` for default configuration), or specify one's own.
 
-Apart from prepared configuration files, the :link_option:`config-file` also accepts a local path (:code:`config-file=/path/to/local/toml/file`) or URL (:code:`config-file=https://web.tld/path/to/remote/toml`).
+Apart from prepared configuration files, the :link_option:`config-file` option also accepts a local path (:code:`config-file=/path/to/local/toml/file`) or URL (:code:`config-file=https://web.tld/path/to/remote/toml`). Relative local config files specified in-file are evaluated related to the file. Local config files specified from CLI are evaluated related to the current working directory.
 
 The required format is currently undocumented.
 
@@ -90,14 +87,14 @@ Currently available options are as follows:
 
 .. options-table::
 
-Capabilities
-------------
+Packaged configurations
+-----------------------
 
-On top of the linters used, EduLint provides several extra or convenience capabilities: it has (what we deemed) reasonable default set of pylint checks, with shortcut names for enabling groups of more checks, that are not necessarily essential for a beginning programmer, but can be useful for one who no longer struggles with the basics, but wants to improve further.
+EduLint offers two configurations that are directly packaged with the tool: :code:`empty` and :code:`default`. The :code:`empty` configuration runs no checks. The :code:`default` configuration provides a reasonable default set of checks. On top of these, additional three convenience extension groups of checks can be enabled: :code:`python-specific`, :code:`enhancement` and :code:`complexity`. The check in these extensions groups are not necessarily essential for a novice programmer, but addressing them can improve the code further.
 
-It filters out or tweaks emitted messages to make them more comprehensible to a beginning programmer (currently there is no way to turn these off).
+EduLint filters out or tweaks emitted messages to make them more comprehensible to a beginning programmer (currently there is no way to turn these tweakers off).
 
-It provides explanation (currently only a very limited number) for why is some reported problem really a problem and how it can be fixed (at present, available in web version only).
+EduLint provides explanations for why and how can a reported problem be fixed (at present, available in web version only).
 
 .. note::
 
@@ -111,8 +108,8 @@ In the default configuration, the default configuration of ``flake8`` is used. F
 .. message-table::
    default
 
-Translations
-^^^^^^^^^^^^
+Extension groups
+^^^^^^^^^^^^^^^^
 
 EduLint provides convenience "bulk names" for groups of ``pylint`` messages. One flag enables multiple messages that have a common theme.
 
@@ -121,7 +118,7 @@ These can be enabled by specifying :link_option:`set-groups` (e.g. ``set-groups=
 Enhancement
 """"""""""""
 
-``enhancement`` groups those messages, that should be followed but it is not essential skill for a beginner:
+The ``enhancement`` extension groups contains those messages, that should be followed but it is not essential skill for a beginner:
 
 .. message-table::
    enhancement
@@ -129,7 +126,7 @@ Enhancement
 Python-specific
 """""""""""""""
 
-``python-specific`` enables those messages that improve the code, but are specific to Python:
+The ``python-specific`` extension group enables those messages that improve the code, but are specific to Python:
 
 .. message-table::
    python-specific
@@ -138,7 +135,7 @@ Python-specific
 Complexity
 """"""""""
 
-``complexity`` enables those messages that check for overly complex code but provide little guidance on how to fix it:
+The ``complexity`` extension group enables those messages that check for overly complex code but provide little guidance on how to fix it:
 
 .. message-table::
    complexity

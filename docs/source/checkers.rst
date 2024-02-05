@@ -1,12 +1,16 @@
-Custom checkers
-^^^^^^^^^^^^^^^
+Custom changes
+^^^^^^^^^^^^^^
 
-EduLint provides custom checkers to report more problems frequent in beginners' code. It does so by extending Pylint with extra plugins. The checkers can therefore be invoked in the standard Pylint manner (e.g. using :code:`--enable` or :code:`--disable`) on the Edulint's :link_option:`pylint` option.
+Custom checkers
+---------------
+
+
+EduLint provides custom checkers to report more problems frequent in novice code. It does so by extending Pylint with extra plugins. The checkers can therefore be invoked in the standard Pylint manner (e.g. using :code:`--enable` or :code:`--disable`) on the Edulint's :link_option:`pylint` option.
 
 .. checkers-block::
 
 Tweakers
-^^^^^^^^
+--------
 
 .. list-table::
    :widths: 25 75

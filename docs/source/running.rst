@@ -1,10 +1,10 @@
 Running EduLint
 ---------------
 
-Simply use
-^^^^^^^^^^
+Online instance
+^^^^^^^^^^^^^^^
 
-A publicly available instance of EduLint with is running at `EduLint <https://edulint.rechtackova.cz/editor>`_.
+A publicly available instance of EduLint with is running at `edulint.com <https://edulint.com>`_.
 
 Installation
 ^^^^^^^^^^^^
