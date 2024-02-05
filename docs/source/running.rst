@@ -19,7 +19,7 @@ To install EduLint locally, open an interactive shell and run:
     python3 -m pip install --user edulint
 
 .. note::
-   EduLint needs Python version at least 3.7 to work.
+   EduLint needs Python version at least 3.8 to work.
 
 Run EduLint locally
 """""""""""""""""""
