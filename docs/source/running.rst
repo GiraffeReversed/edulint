@@ -1,13 +1,16 @@
 Running EduLint
 ---------------
 
-Online instance
-^^^^^^^^^^^^^^^
+Use online instance
+^^^^^^^^^^^^^^^^^^^
 
 A publicly available instance of EduLint with is running at `edulint.com <https://edulint.com>`_.
 
+Use locally
+^^^^^^^^^^^
+
 Installation
-^^^^^^^^^^^^
+""""""""""""
 
 To install EduLint locally, open an interactive shell and run:
 
@@ -19,7 +22,7 @@ To install EduLint locally, open an interactive shell and run:
    EduLint needs Python version at least 3.7 to work.
 
 Run EduLint locally
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
 
 To start using EduLint, open an interactive shell and run:
 
