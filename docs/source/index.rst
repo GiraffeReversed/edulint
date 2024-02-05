@@ -10,6 +10,17 @@
 EduLint: a Python linter for novice programmers
 ================================================
 
+EduLint is a linter that helps novice programmers learn writing good code. EduLint notifies its users of many frequent code quality defects and guides them in improving the code. It wraps popular Python linters `Pylint <https://pylint.pycqa.org/>`_ and `Flake8 <https://flake8.pycqa.org/>`_ and extends them by many new defect detectors.
+
+.. tip::
+
+   Try EduLint `here <https://edulint.com/editor/umime_count_a>`_.
+
+
+Do you have any problem or could use a new feature? See `project's GitHub issues <https://github.com/GiraffeReversed/edulint/issues>`_.
+
+----------------------
+
 .. toctree::
 
    running
