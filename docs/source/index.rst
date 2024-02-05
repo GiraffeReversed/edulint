@@ -22,7 +22,9 @@ Do you have any problem or could use a new feature? See `project's GitHub issues
 ----------------------
 
 .. toctree::
+   :maxdepth: 2
 
+   user_guides
    running
    configuration
    checkers

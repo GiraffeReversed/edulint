@@ -54,6 +54,8 @@ One option can be used multiple times, the rules for how its values are combined
 
    # edulint: allowed-onechar-names=abc allowed-onechar-names=ijk
 
+.. _cli configuration:
+
 Configuration through CLI
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -68,6 +70,8 @@ It is also possible to pass multiple options in one ``--option`` argument.
 .. code::
 
    python3 -m edulint --option "set-groups=enhancement pylint=--enable=no-self-use" code/to/check.py
+
+.. _configuration files:
 
 Configuration files
 ^^^^^^^^^^^^^^^^^^^
@@ -99,6 +103,8 @@ Currently available options are as follows:
 
 .. options-table::
 
+.. _packaged configurations:
+
 Packaged configurations
 -----------------------
 
@@ -111,6 +117,8 @@ EduLint provides explanations for why and how can a reported problem be fixed (a
 .. note::
 
    In this section, the descriptions of Pylint messages are scraped directly from Pylint documentation: `(1) <https://pylint.pycqa.org/en/latest/user_guide/checkers/features.html>`_, `(2) <https://pylint.pycqa.org/en/latest/user_guide/checkers/extensions.html>`_.
+
+.. _default:
 
 Default
 ^^^^^^^
