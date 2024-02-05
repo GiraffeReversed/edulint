@@ -6,8 +6,8 @@ Use online instance
 
 A publicly available instance of EduLint with is running at `edulint.com <https://edulint.com>`_.
 
-Use locally
-^^^^^^^^^^^
+Use local installation
+^^^^^^^^^^^^^^^^^^^^^^
 
 Installation
 """"""""""""
@@ -32,3 +32,8 @@ To start using EduLint, open an interactive shell and run:
 
 .. note::
    Multiple filenames can be passed and linted at once. If a directory is passed, it is traversed and all :code:`.py` files it contains are linted.
+
+Use Thonny plugin
+^^^^^^^^^^^^^^^^^
+
+`Thonny <https://thonny.org/>`_ is an integrated development environment developed specifically for novice programmers. EduLint also comes as a plugin for this IDE. `Here <https://github.com/GiraffeReversed/thonny-edulint/blob/main/README.md>`_ you can learn how to install it.
