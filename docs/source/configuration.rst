@@ -72,9 +72,21 @@ It is also possible to pass multiple options in one ``--option`` argument.
 Configuration files
 ^^^^^^^^^^^^^^^^^^^
 
+.. _set config file:
+
+Setting configuration file
+""""""""""""""""""""""""""""
+
 It is possible to specify a config file, either in linted file (:python:`# edulint: config-file=default`) or through the command line (:code:`-o config-file=default`). It is possible to choose a prepared config file (:code:`empty` for no checks, :code:`default` for default configuration), or specify one's own.
 
 Apart from prepared configuration files, the :link_option:`config-file` option also accepts a local path (:code:`config-file=/path/to/local/toml/file`) or URL (:code:`config-file=https://web.tld/path/to/remote/toml`). Relative local config files specified in-file are evaluated related to the file. Local config files specified from CLI are evaluated related to the current working directory.
+
+If the config file name does not end in :code:`.toml`, it is treated as a packaged configuration (and looked up accordingly). If the name starts with :code:`http/https` protocol, it is treated as a remote configuration, otherwise (ends with :code:`.toml`, but does not start with a protocol) it is processed as a local configuration.
+
+.. _create config file:
+
+Creating custom configuration
+"""""""""""""""""""""""""""""
 
 The required format is currently undocumented.
 
