@@ -2,7 +2,7 @@
    :language: python
 
 Configuration
--------------
+=============
 
 EduLint wraps around `Pylint <https://pylint.pycqa.org/>`_ and `Flake8 <https://flake8.pycqa.org/>`_, allowing for separate configuration of each of the tools. It provides a reasonable default and convenience "bulk names" for groups of checks that make sense to be enabled together. It transforms some messages to make them clearer to a beginner, or drops some messages entirely. It also provides extra checks for situations not covered by either of the linters.
 
@@ -28,7 +28,7 @@ Edulint takes arguments in one of the following forms: ``<option-name>`` for opt
    The options are evaluated in the order in which they are written.
 
 Configuration through comments in the code
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------------
 
 When configuring in the linted file directly, the lines must start with :python:`# edulint:`
 
@@ -57,7 +57,7 @@ One option can be used multiple times, the rules for how its values are combined
 .. _cli configuration:
 
 Configuration through CLI
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 When configuring through CLI, pass the configuration through the option ``--option`` (``-o`` for short).
 
@@ -74,12 +74,12 @@ It is also possible to pass multiple options in one ``--option`` argument.
 .. _configuration files:
 
 Configuration files
-^^^^^^^^^^^^^^^^^^^
+-------------------
 
 .. _set config file:
 
 Setting configuration file
-""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 It is possible to specify a config file, either in linted file (:python:`# edulint: config-file=default`) or through the command line (:code:`-o config-file=default`). It is possible to choose a prepared config file (:code:`empty` for no checks, :code:`default` for default configuration), or specify one's own.
 
@@ -90,12 +90,102 @@ If the config file name does not end in :code:`.toml`, it is treated as a packag
 .. _create config file:
 
 Creating custom configuration
-"""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The required format is currently undocumented.
+Format
+""""""
+
+An EduLint config file is a TOML storing option-value pairs, with several convenience tweaks.
+
+A simple configuration example:
+
+.. code::
+
+   pylint = "--enable=no-self-use,use-foreach"
+   disallowed-builtin-names = "sum,len"
+
+To set more options for Pylint and flake8, TOML tables can be used. In this case, Pylint and flake8 options are not prefixed with --.
+
+.. code::
+
+   disallowed-builtin-names = "sum,len"
+
+   [pylint]
+   enable = "no-self-use,use-foreach"
+   bad-names-rgxs = "^[a-z]$"
+
+   [flake8]
+   ignore = "E"
+   extend-select = "E225,E211"
+
+Finally, instead of comma separated lists, TOML lists can be used:
+
+.. code::
+
+   disallowed-builtin-names = ["sum", "len"]
+
+   [pylint]
+   enable = ["no-self-use", "use-foreach"]
+   bad-names-rgxs = "^[a-z]$"
+
+   [flake8]
+   ignore = "E"
+   extend-select = ["E225", "E211"]
+
+Configuration inheritance
+"""""""""""""""""""""""""
+
+The :link_option:`config-file` option can be used inside config files as well. In that case, the configuration from the referenced file will also be used, as if prepended to the current file's configuration.
+
+For example, consider following two configurations files (in the same folder):
+
+.. code::
+
+   # file: A.toml
+
+   [pylint]
+   enable = "no-self-use"
+
+.. code::
+
+   # file: B.toml
+
+   config-file = "A.toml"
+   [pylint]
+   enable = "use-foreach"
+
+When using :code:`B.toml`, both :code:`no-self-use` and :code:`use-foreach` will be enabled.
+
+.. TODO: link empty config
+
+If the :link_option:`config-file` option is not specified in a configuration file, the empty configuration will be used.
+
+Custom translations
+"""""""""""""""""""
+
+It is possible to define own names for groups of options. If a configuration contains the following tables, then passing :link_option:`set-groups` with value :code:`extra` adds the specified options to the configuration used for the respective tool.
+
+.. code::
+
+   [translations.extra.pylint]
+   enable = ["no-self-use", "use-foreach"]
+   bad-names-rgxs = "^[a-z]$"
+
+   [translations.extra.flake8]
+   ignore = "E"
+   extend-select = ["E225", "E211"]
+
+The string :code:`translations` is required (verbatim), followed by the name of the group and the name of the linter to which the options belong.
+
+Multiple translations can be specified using different names. The previous example could be extended with the following table:
+
+.. code::
+
+   [translations.even-more-extra.pylint]
+   enable = ["duplicate-if-branches", "duplicate-seq-ifs", "duplicate-exprs"]
 
 Options
-^^^^^^^
+-------
 
 Currently available options are as follows:
 
@@ -106,7 +196,7 @@ Currently available options are as follows:
 .. _packaged configurations:
 
 Packaged configurations
------------------------
+=======================
 
 EduLint offers two configurations that are directly packaged with the tool: :code:`empty` and :code:`default`. The :code:`empty` configuration runs no checks. The :code:`default` configuration provides a reasonable default set of checks. On top of these, additional three convenience extension groups of checks can be enabled: :code:`python-specific`, :code:`enhancement` and :code:`complexity`. The check in these extensions groups are not necessarily essential for a novice programmer, but addressing them can improve the code further.
 
@@ -121,7 +211,7 @@ EduLint provides explanations for why and how can a reported problem be fixed (a
 .. _default:
 
 Default
-^^^^^^^
+-------
 
 In the default configuration, the default configuration of ``flake8`` is used. For ``pylint``, the following checks are enabled:
 
@@ -129,14 +219,14 @@ In the default configuration, the default configuration of ``flake8`` is used. F
    default
 
 Extension groups
-^^^^^^^^^^^^^^^^
+----------------
 
 EduLint provides convenience "bulk names" for groups of ``pylint`` messages. One flag enables multiple messages that have a common theme.
 
 These can be enabled by specifying :link_option:`set-groups` (e.g. ``set-groups=enhancement,complexity``).
 
 Enhancement
-""""""""""""
+^^^^^^^^^^^
 
 The ``enhancement`` extension groups contains those messages, that should be followed but it is not essential skill for a beginner:
 
@@ -144,7 +234,7 @@ The ``enhancement`` extension groups contains those messages, that should be fol
    enhancement
 
 Python-specific
-"""""""""""""""
+^^^^^^^^^^^^^^^
 
 The ``python-specific`` extension group enables those messages that improve the code, but are specific to Python:
 
@@ -153,7 +243,7 @@ The ``python-specific`` extension group enables those messages that improve the 
 
 
 Complexity
-""""""""""
+^^^^^^^^^^
 
 The ``complexity`` extension group enables those messages that check for overly complex code but provide little guidance on how to fix it:
 
