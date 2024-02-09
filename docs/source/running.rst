@@ -6,7 +6,7 @@ Running EduLint
 Use online instance
 ^^^^^^^^^^^^^^^^^^^
 
-A publicly available instance of EduLint with is running at `edulint.com <https://edulint.com>`_.
+A publicly available instance of EduLint is running at `edulint.com <https://edulint.com>`_.
 
 .. _local installation:
 
@@ -23,7 +23,7 @@ To install EduLint locally, open an interactive shell and run:
     python3 -m pip install --user edulint
 
 .. note::
-   EduLint needs Python version at least 3.8 to work.
+   EduLint needs Python 3.8 (or higher).
 
 Run EduLint locally
 """""""""""""""""""
@@ -43,3 +43,5 @@ Use Thonny plugin
 ^^^^^^^^^^^^^^^^^
 
 `Thonny <https://thonny.org/>`_ is an integrated development environment developed specifically for novice programmers. EduLint also comes as a plugin for this IDE. `Here <https://github.com/GiraffeReversed/thonny-edulint/blob/main/README.md>`_ you can learn how to install it.
+
+.. TODO: Docker, VS Code

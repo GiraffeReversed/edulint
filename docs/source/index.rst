@@ -16,6 +16,8 @@ EduLint is a linter that helps novice programmers learn writing good code. EduLi
 
    Try EduLint `here <https://edulint.com/editor/umime_count_a>`_.
 
+.. TODO: Feature list, good start is in first paragraph of configuration.rst
+
 
 Do you have any problem or could use a new feature? See `project's GitHub issues <https://github.com/GiraffeReversed/edulint/issues>`_.
 

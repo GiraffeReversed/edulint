@@ -8,7 +8,7 @@ EduLint wraps around `Pylint <https://pylint.pycqa.org/>`_ and `Flake8 <https://
 
 As of now, it is possible to configure the tool in three ways:
 
-- by augmenting the checked source with lines beginning with :python:`# edulint:`, with the configuration applying to that file only
+- by augmenting the checked source code with lines beginning with :python:`# edulint:`, with the configuration applying to that file only
 - by passing arguments through the CLI, applying to all files linted by that command
 - by setting a config file, specified by one of the two means above
 
@@ -83,7 +83,7 @@ Setting configuration file
 
 It is possible to specify a config file, either in linted file (:python:`# edulint: config-file=default`) or through the command line (:code:`-o config-file=default`). It is possible to choose a prepared config file (:code:`empty` for no checks, :code:`default` for default configuration), or specify one's own.
 
-Apart from prepared configuration files, the :link_option:`config-file` option also accepts a local path (:code:`config-file=/path/to/local/toml/file`) or URL (:code:`config-file=https://web.tld/path/to/remote/toml`). Relative local config files specified in-file are evaluated related to the file. Local config files specified from CLI are evaluated related to the current working directory.
+Apart from :ref:`prepared configuration files <packaged configurations>`, the :link_option:`config-file` option also accepts a local path (:code:`config-file=/path/to/local/toml/file`) or URL (:code:`config-file=https://web.tld/path/to/remote/toml`). Relative local config files specified in-file are evaluated related to the file. Local config files specified from CLI are evaluated related to the current working directory.
 
 If the config file name does not end in :code:`.toml`, it is treated as a packaged configuration (and looked up accordingly). If the name starts with :code:`http/https` protocol, it is treated as a remote configuration, otherwise (ends with :code:`.toml`, but does not start with a protocol) it is processed as a local configuration.
 
@@ -104,7 +104,7 @@ A simple configuration example:
    pylint = "--enable=no-self-use,use-foreach"
    disallowed-builtin-names = "sum,len"
 
-To set more options for Pylint and flake8, TOML tables can be used. In this case, Pylint and flake8 options are not prefixed with --.
+To set more options for Pylint and flake8, TOML tables (configuration sections) can be used. In this case, Pylint and flake8 options are not prefixed with --.
 
 .. code::
 
@@ -163,7 +163,7 @@ If the :link_option:`config-file` option is not specified in a configuration fil
 Custom translations
 """""""""""""""""""
 
-It is possible to define own names for groups of options. If a configuration contains the following tables, then passing :link_option:`set-groups` with value :code:`extra` adds the specified options to the configuration used for the respective tool.
+It is possible to define own names for groups of options. If a configuration contains the following tables (configuration sections), then passing :link_option:`set-groups` with value :code:`extra` adds the specified options to the configuration used for the respective tool.
 
 .. code::
 
@@ -199,6 +199,8 @@ Packaged configurations
 =======================
 
 EduLint offers two configurations that are directly packaged with the tool: :code:`empty` and :code:`default`. The :code:`empty` configuration runs no checks. The :code:`default` configuration provides a reasonable default set of checks. On top of these, additional three convenience extension groups of checks can be enabled: :code:`python-specific`, :code:`enhancement` and :code:`complexity`. The check in these extensions groups are not necessarily essential for a novice programmer, but addressing them can improve the code further.
+
+The TOML files for these configuration can be found `here <https://github.com/GiraffeReversed/edulint/tree/main/edulint/config/files>`_.
 
 EduLint filters out or tweaks emitted messages to make them more comprehensible to a beginning programmer (currently there is no way to turn these tweakers off).
 
