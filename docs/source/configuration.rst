@@ -27,6 +27,8 @@ Edulint takes arguments in one of the following forms: ``<option-name>`` for opt
 
    The options are evaluated in the order in which they are written.
 
+.. _infile configuration:
+
 Configuration through comments in the code
 ------------------------------------------
 

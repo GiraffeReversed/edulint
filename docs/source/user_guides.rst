@@ -4,7 +4,7 @@ User guides
 Student
 ^^^^^^^
 
-To run EduLint, use the :ref:`the online instance <online instance>` or :ref:`the Thonny plugin <thonny plugin>`. Thonny <https://thonny.org/> is an integrated development environment for novice programmers that we recommend if you are starting to learn programming.
+To run EduLint, use the :ref:`the online instance <online instance>` or :ref:`the Thonny plugin <thonny plugin>`. `Thonny <https://thonny.org/>`_ is an integrated development environment for novice programmers that we recommend if you are starting to learn programming.
 
 If you were asked to use a specific configuration, make sure that the file with your code contains a line like :code:`# edulint: config-file=<the-configuration-name>`.
 
@@ -23,9 +23,17 @@ Distributing the configuration
 
 If you choose a non-default configuration, then you need to setup EduLint to use the correct configuration. The most convenient way is to set the :link_option:`config-file` option in the linted file (:ref:`detailed description here <set config file>`).
 
-Then you need to instruct the students to put the configuration line into the file they create, or if you are already distributing solution templates to the student, you can put the configuration line directly into the template.
+Then you need to instruct the students to put the configuration line into the file they create, or if you are already distributing solution templates to the student, you can put the configuration line directly into the solution template like so:
 
-.. Todo: example solution template code
+.. code:: python
+
+    # edulint: config-file=<selected-config-file>
+
+    # write function returning how many 'a's and 'A's are there in the passed string.
+    def count_a(text):
+        return 0  # implement this
+
+The configuration line can be anywhere in the file. More on configuring through in-file comments can be found :ref:`here <infile configuration>`.
 
 Students use EduLint
 """"""""""""""""""""
@@ -37,9 +45,15 @@ Running EduLint for evaluation
 
 To evaluate students, we recommend :ref:`running EduLint locally <local installation>`.
 
-If you want to enforce that students implement all of EduLints feedback that is generated based on a given configuration, we recommend setting the :link_option:`ignore-infile-config-for` to :code:`all`. This way, the students will not be able to get a clean pass by turning off the checks by infile configuration of their own rather than fixing the defects. Even with the option set, the student may be able to change the *number* of reported defects, but will not be able to bring it to zero. Depending on which means of disabling detectors the student uses, an unfixed defect may end up not reported, but instead, EduLint will issue a report of using disallowed configuration option.
+You may want to enforce that students implement all of EduLint's feedback generated based on the configuration you selected. For evaluation, we recommend setting the :link_option:`ignore-infile-config-for` to :code:`all`. This way, EduLint will report comments used to suppress Flake8's and Pylint's messages by using :code:`# noqa` and :code:`# pylint: disable=all`. Students will therefore not be able to suppress all reports, there will always be at least the report of these comments. But careful, the student will still be able to change the *number* of reported defects, just not bring it down to zero.
 
-.. todo example command
+The command used for evaluation should look as follows:
+
+.. code:: bash
+
+    python3 -m edulint -o config-file=<selected-config-file> -o ignore-infile-config-for=all <file-or-directory>
+
+It is necessary to specify the config file to use, even if it is already specified in the checked file itself. The :code:`ignore-infile-config-for=all` will ignore even EduLint's configuration.
 
 EduLint terminates with a non-zero code if it encountered a defect during the linting process or if there was an error.
 
