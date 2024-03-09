@@ -125,7 +125,7 @@ def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Proble
         ),
     ],
 )
-def test_translations(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
+def test_option_sets(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
         args + [Arg(Option.FLAKE8, "--extend-ignore=E721")],

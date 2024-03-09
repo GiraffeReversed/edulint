@@ -162,8 +162,8 @@ When using :code:`B.toml`, both :code:`no-self-use` and :code:`use-foreach` will
 
 If the :link_option:`config-file` option is not specified in a configuration file, the empty configuration will be used.
 
-Custom translations
-"""""""""""""""""""
+Custom option sets
+""""""""""""""""""
 
 It is possible to define own names for groups of options. If a configuration contains the following tables (configuration sections), then passing :link_option:`set-groups` with value :code:`extra` adds the specified options to the configuration used for the respective tool.
 
@@ -179,7 +179,7 @@ It is possible to define own names for groups of options. If a configuration con
 
 The string :code:`translations` is required (verbatim), followed by the name of the group and the name of the linter to which the options belong.
 
-Multiple translations can be specified using different names. The previous example could be extended with the following table:
+Multiple option sets can be specified using different names. The previous example could be extended with the following table:
 
 .. code::
 

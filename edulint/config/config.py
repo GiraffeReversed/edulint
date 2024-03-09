@@ -11,11 +11,11 @@ from edulint.option_parses import (
     get_option_parses,
     TakesVal,
     Combine,
-    TRANSLATIONS_LABEL,
+    OPTION_SETS_LABEL,
     DEFAULT_ENABLER_LABEL,
 )
 from edulint.config.file_config import load_toml_file
-from edulint.config.config_translations import Translations, Translation, parse_translations
+from edulint.config.option_sets import OptionSets, OptionSet, parse_option_sets
 from edulint.config.utils import print_invalid_type_message, config_file_val_to_str, add_enabled
 from typing import Dict, List, Optional, Tuple, Iterator, Any, Set
 
@@ -40,13 +40,11 @@ class Config:
     def _translate(
         self,
         args: List[Optional[ProcessedArg]],
-        translations: Translations,
+        option_sets: OptionSets,
         log_unknown_groups: bool,
     ) -> List[Optional[ProcessedArg]]:
-        def apply_translation(
-            result: List[Optional[ProcessedArg]], translation: Translation
-        ) -> None:
-            for linter, vals in translation.to.items():
+        def apply_option_set(result: List[Optional[ProcessedArg]], option_set: OptionSet) -> None:
+            for linter, vals in option_set.to.items():
                 translated_option = linter.to_option()
                 parse = self.option_parses[translated_option]
                 for translated in vals:
@@ -60,20 +58,20 @@ class Config:
 
             if arg.option == Option.SET_GROUPS:
                 for group in arg.val:
-                    translation = translations.get(group)
-                    if translation is None:
+                    option_set = option_sets.get(group)
+                    if option_set is None:
                         if log_unknown_groups:
                             logger.warning(
                                 "unknown group {group}, known groups are {groups}",
                                 group=group,
-                                groups=", ".join(translations.keys()),
+                                groups=", ".join(option_sets.keys()),
                             )
                         continue
-                    apply_translation(result, translation)
+                    apply_option_set(result, option_set)
 
-            option_translation = translations.get(arg.option.to_name())
-            if option_translation is not None:
-                apply_translation(result, option_translation)
+            option_option_set = option_sets.get(arg.option.to_name())
+            if option_option_set is not None:
+                apply_option_set(result, option_option_set)
 
         return result
 
@@ -146,9 +144,9 @@ class Config:
         return val if not isinstance(val, list) else tuple(val)
 
     def to_immutable(
-        self, translations: Translations = {}, log_unknown_groups: bool = True
+        self, option_sets: OptionSets = {}, log_unknown_groups: bool = True
     ) -> "ImmutableConfig":
-        translated = self._translate(self.config, translations, log_unknown_groups)
+        translated = self._translate(self.config, option_sets, log_unknown_groups)
         combined = self._combine(translated, allowed_combines=(Combine.REPLACE, Combine.EXTEND))
 
         ordered_args = [ProcessedArg(o, self.option_parses[o].default) for o in Option]
@@ -157,15 +155,15 @@ class Config:
                 continue
             ordered_args[int(arg.option)] = arg
 
-        enablers_from_translations = {}
-        for name, translation in translations.items():
-            for linter, vals in translation.to.items():
+        enablers_from_option_sets = {}
+        for name, option_set in option_sets.items():
+            for linter, vals in option_set.to.items():
                 for val in vals:
-                    add_enabled(name, enablers_from_translations, linter.to_option(), val)
+                    add_enabled(name, enablers_from_option_sets, linter.to_option(), val)
 
         return ImmutableConfig(
             tuple(ImmutableArg(o, self._to_immutable(ordered_args[int(o)].val)) for o in Option),
-            hashabledict({**enablers_from_translations, **self.enablers}),
+            hashabledict({**enablers_from_option_sets, **self.enablers}),
         )
 
 
@@ -258,9 +256,9 @@ def parse_args(args: List[str], option_parses: Dict[Option, OptionParse]) -> Lis
     return result
 
 
-def fill_in_val(arg: UnprocessedArg, translation: List[str]) -> List[str]:
+def fill_in_val(arg: UnprocessedArg, option_set: List[str]) -> List[str]:
     result = []
-    for t in translation:
+    for t in option_set:
         if "<val>" in t:
             assert isinstance(arg.val, str)
             result.append(t.replace("<val>", arg.val))
@@ -285,7 +283,7 @@ def parse_infile_config(filename: str, option_parses: Dict[Option, OptionParse])
 
 def parse_config_file(
     path: str, option_parses: Dict[Option, OptionParse]
-) -> Optional[Tuple[Config, Translations]]:
+) -> Optional[Tuple[Config, OptionSets]]:
     def parse_base_config(config_dict: Dict[str, Any]) -> Optional[Config]:
         rec_config = config_dict.get(Option.CONFIG_FILE.to_name(), BASE_CONFIG)
         if not isinstance(rec_config, str):
@@ -304,13 +302,13 @@ def parse_config_file(
     )
     if base is None:
         return None
-    base_config, base_translations = base
+    base_config, base_option_sets = base
 
     result = []
-    this_file_translations = {}
+    this_file_option_sets = {}
     for name, val in config_dict.items():
-        if name == TRANSLATIONS_LABEL:
-            this_file_translations = parse_translations(val)
+        if name == OPTION_SETS_LABEL:
+            this_file_option_sets = parse_option_sets(val)
         elif name == DEFAULT_ENABLER_LABEL:
             continue
         else:
@@ -337,7 +335,7 @@ def parse_config_file(
     this_file_config = Config(enabler_name, result, option_parses)
     return (
         Config.combine(base_config, this_file_config),
-        {**base_translations, **this_file_translations},
+        {**base_option_sets, **this_file_option_sets},
     )
 
 
@@ -378,7 +376,7 @@ def _partition(
     return partition
 
 
-def _get_default_config(option_parses: Dict[Option, OptionParse]) -> Tuple[Config, Translations]:
+def _get_default_config(option_parses: Dict[Option, OptionParse]) -> Tuple[Config, OptionSets]:
     return Config(enabler=None, option_parses=option_parses), {}
 
 
@@ -449,17 +447,17 @@ def get_config_many(
     else:
         config_paths, filenames_mapping = get_config_paths(filenames, infile_configs)
 
-    file_configs_translations = {
+    file_configs_option_sets = {
         config_path: parse_config_file(config_path, option_parses) for config_path in config_paths
     }
 
     result: List[Tuple[List[str], ImmutableConfig]] = []
     for files, infile_config in _partition(filenames, infile_configs, filenames_mapping):
         combined = Config.combine(infile_config, cmd_config)
-        file_config_translations = file_configs_translations[filenames_mapping[files[0]]]
-        if file_config_translations is None:
+        file_config_option_sets = file_configs_option_sets[filenames_mapping[files[0]]]
+        if file_config_option_sets is None:
             continue
-        file_config, translations = file_config_translations
+        file_config, option_sets = file_config_option_sets
 
         if _ignore_infile(file_config):
             if cmd_config_path is not None:
@@ -468,7 +466,7 @@ def get_config_many(
                 config = cmd_config
         else:
             config = Config.combine(file_config, combined)
-        result.append((files, config.to_immutable(translations)))
+        result.append((files, config.to_immutable(option_sets)))
     return result
 
 

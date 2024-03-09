@@ -178,9 +178,9 @@ class MessageTable(Directive):
         arg = self.arguments[0]
 
         option_parses = get_option_parses()
-        config_translations = parse_config_file(DEFAULT_CONFIG, option_parses)
-        assert config_translations is not None
-        config, translations = config_translations
+        result = parse_config_file(DEFAULT_CONFIG, option_parses)
+        assert result is not None
+        config, option_sets = result
 
         if arg == "default":
             iconfig = config.to_immutable()
@@ -193,9 +193,9 @@ class MessageTable(Directive):
             ]
         else:
             # TODO do properly (not only PYLINT, not only enable)
-            translation = translations[arg].to.get(Linter.PYLINT, [])
-            assert len(translation) == 1 and translation[0].startswith("--enable")
-            message_names = [c.strip() for c in translation[0][len("--enable=") :].split(",")]
+            option_set = option_sets[arg].to.get(Linter.PYLINT, [])
+            assert len(option_set) == 1 and option_set[0].startswith("--enable")
+            message_names = [c.strip() for c in option_set[0][len("--enable=") :].split(",")]
 
         message_names = sorted([n for n in message_names if n])
 

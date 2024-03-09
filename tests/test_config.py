@@ -12,7 +12,7 @@ from edulint.config.config import (
     get_config_many,
     get_config_one,
 )
-from edulint.config.config_translations import Translation, Translations
+from edulint.config.option_sets import OptionSet, OptionSets
 from edulint.linting.tweakers import get_tweakers
 from utils import get_tests_path, remote_empty_config_url
 from typing import List, Set, Dict, Tuple, Optional
@@ -209,14 +209,14 @@ def test_local_configs_found_relative_to_files():
 
 
 @pytest.fixture
-def translations() -> Translations:
+def option_sets() -> OptionSets:
     return {
-        "enhancement": Translation({Linter.PYLINT: ["aaa"]}),
-        "python-specific": Translation({Linter.PYLINT: ["bbb"]}),
-        Option.ALLOWED_ONECHAR_NAMES.to_name(): Translation({Linter.PYLINT: ["ccc"]}),
-        "ib111-week-00": Translation({Linter.PYLINT: ["iii"]}),
-        "ib111-week-02": Translation({Linter.PYLINT: ["kkk"]}),
-        "ib111-week-12": Translation({Linter.PYLINT: ["lll"]}),
+        "enhancement": OptionSet({Linter.PYLINT: ["aaa"]}),
+        "python-specific": OptionSet({Linter.PYLINT: ["bbb"]}),
+        Option.ALLOWED_ONECHAR_NAMES.to_name(): OptionSet({Linter.PYLINT: ["ccc"]}),
+        "ib111-week-00": OptionSet({Linter.PYLINT: ["iii"]}),
+        "ib111-week-02": OptionSet({Linter.PYLINT: ["kkk"]}),
+        "ib111-week-12": OptionSet({Linter.PYLINT: ["lll"]}),
     }
 
 
@@ -333,7 +333,7 @@ def translations() -> Translations:
     ],
 )
 def test_combine_and_translate_translates(
-    args: List[UnprocessedArg], translations: Translations, config: List[ProcessedArg]
+    args: List[UnprocessedArg], option_sets: OptionSets, config: List[ProcessedArg]
 ) -> None:
     def fill_in_defaults(
         config: List[ProcessedArg], option_parses: Dict[Option, OptionParse]
@@ -344,18 +344,18 @@ def test_combine_and_translate_translates(
         return tuple(result)
 
     option_parses = get_option_parses()
-    result = Config("test", args, option_parses).to_immutable(translations)
+    result = Config("test", args, option_parses).to_immutable(option_sets)
     reference = fill_in_defaults(config, option_parses)
     assert result.config == reference
 
 
 def _fill_in_file_config(config: Config) -> Config:
-    file_config_translations = parse_config_file(
+    file_config_option_sets = parse_config_file(
         config.get_last_value(Option.CONFIG_FILE, use_default=True), get_option_parses()
     )
-    assert file_config_translations is not None
-    file_config, translations = file_config_translations
-    return Config.combine(file_config, config).to_immutable(translations)
+    assert file_config_option_sets is not None
+    file_config, option_sets = file_config_option_sets
+    return Config.combine(file_config, config).to_immutable(option_sets)
 
 
 def _arg_to_str(option: Option, val: Optional[str]) -> str:

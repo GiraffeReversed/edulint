@@ -4,38 +4,39 @@ from loguru import logger
 
 from edulint.linters import Linter
 from edulint.config.utils import config_file_val_to_str
+from edulint.option_parses import OPTION_SETS_LABEL
 
 
 @dataclass
-class Translation:
+class OptionSet:
     to: Dict[Linter, List[str]] = field(default_factory=dict)
     description: str = ""
 
 
-Translations = Dict[str, Translation]
+OptionSets = Dict[str, OptionSet]
 
 
-def parse_translations(raw_translations: Any) -> Optional[Translations]:
-    if not isinstance(raw_translations, dict):
+def parse_option_sets(raw_option_sets: Any) -> Optional[OptionSets]:
+    if not isinstance(raw_option_sets, dict):
         logger.warning(
-            "translations are not a dictionary but a value {val} of type {type}",
-            val=raw_translations,
-            type=type(raw_translations),
+            "option sets are not a dictionary but a value {val} of type {type}",
+            val=raw_option_sets,
+            type=type(raw_option_sets),
         )
         return None
 
-    translations = {}
-    for name, to in raw_translations.items():
+    option_sets = {}
+    for name, to in raw_option_sets.items():
         if not isinstance(to, dict):
             logger.warning(
-                "translation named {name} is not a dictionary but a value {val} of type {type}",
+                "option set named {name} is not a dictionary but a value {val} of type {type}",
                 name=name,
                 val=to,
                 type=type(to),
             )
             continue
 
-        translation = Translation()
+        option_set = OptionSet()
         for linter_str, translated in to.items():
             linter = Linter.safe_from_name(linter_str)
             if linter is None:
@@ -51,14 +52,14 @@ def parse_translations(raw_translations: Any) -> Optional[Translations]:
             )
             result = []
             for processed in to_process:
-                str_val = config_file_val_to_str("translations", processed)
+                str_val = config_file_val_to_str(OPTION_SETS_LABEL, processed)
                 if str_val:
                     result.append(str_val)
 
             if len(result) > 0:
-                translation.to[linter] = result
+                option_set.to[linter] = result
 
-        if len(translation.to) > 0:
-            translations[name] = translation
+        if len(option_set.to) > 0:
+            option_sets[name] = option_set
 
-    return translations
+    return option_sets

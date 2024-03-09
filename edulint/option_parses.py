@@ -161,7 +161,7 @@ OPTIONS: List[OptionParse] = [
     ),
 ]
 
-TRANSLATIONS_LABEL = "translations"
+OPTION_SETS_LABEL = "translations"
 DEFAULT_ENABLER_LABEL = "default-enabler-name"
 
 
