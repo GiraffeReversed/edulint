@@ -186,7 +186,7 @@ def test_remote_config_parses():
 
 def test_local_config_found_relative_to_file():
     filename = get_tests_path(str(Path() / "file" / "somewhere" / "deep" / "03-d4_points.py"))
-    iconfig = get_config_one(filename, [])
+    iconfig, _lang_translations = get_config_one(filename, [])
 
     assert iconfig[Option.CONFIG_FILE] == "enable-missing-docstring.toml"
     assert iconfig[Option.PYLINT][-1] == "--enable=missing-function-docstring"
@@ -350,11 +350,11 @@ def test_combine_and_translate_translates(
 
 
 def _fill_in_file_config(config: Config) -> Config:
-    file_config_option_sets = parse_config_file(
+    config_file_result = parse_config_file(
         config.get_last_value(Option.CONFIG_FILE, use_default=True), get_option_parses()
     )
-    assert file_config_option_sets is not None
-    file_config, option_sets = file_config_option_sets
+    assert config_file_result is not None
+    file_config, option_sets, _lang_translations = config_file_result
     return Config.combine(file_config, config).to_immutable(option_sets)
 
 
@@ -397,7 +397,7 @@ def _arg_to_str(option: Option, val: Optional[str]) -> str:
 )
 def test_get_config_one(filename: str, cmd: List[str], args: List[UnprocessedArg]):
     iconfig = _fill_in_file_config(Config("test", args))
-    assert get_config_one(get_tests_path(filename), cmd).config == iconfig.config
+    assert get_config_one(get_tests_path(filename), cmd)[0].config == iconfig.config
 
 
 @pytest.mark.parametrize(
@@ -426,7 +426,7 @@ def test_get_config_many(filenames: List[str], partition: List[Tuple[List[str], 
     assert len(configs) == len(partition)
 
     for i in range(len(configs)):
-        fns1, iconfig1 = configs[i]
+        fns1, iconfig1, _lang_translations = configs[i]
         fns2, config2 = partition[i]
 
         assert fns1 == fns2

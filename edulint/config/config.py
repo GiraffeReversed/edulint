@@ -12,10 +12,12 @@ from edulint.option_parses import (
     TakesVal,
     Combine,
     OPTION_SETS_LABEL,
+    LANG_TRANSLATIONS_LABEL,
     DEFAULT_ENABLER_LABEL,
 )
 from edulint.config.file_config import load_toml_file
 from edulint.config.option_sets import OptionSets, OptionSet, parse_option_sets
+from edulint.config.language_translations import LangTranslations, parse_lang_translations
 from edulint.config.utils import print_invalid_type_message, config_file_val_to_str, add_enabled
 from typing import Dict, List, Optional, Tuple, Iterator, Any, Set
 
@@ -283,7 +285,7 @@ def parse_infile_config(filename: str, option_parses: Dict[Option, OptionParse])
 
 def parse_config_file(
     path: str, option_parses: Dict[Option, OptionParse]
-) -> Optional[Tuple[Config, OptionSets]]:
+) -> Optional[Tuple[Config, OptionSets, LangTranslations]]:
     def parse_base_config(config_dict: Dict[str, Any]) -> Optional[Config]:
         rec_config = config_dict.get(Option.CONFIG_FILE.to_name(), BASE_CONFIG)
         if not isinstance(rec_config, str):
@@ -302,13 +304,16 @@ def parse_config_file(
     )
     if base is None:
         return None
-    base_config, base_option_sets = base
+    base_config, base_option_sets, base_lang_tranlations = base
 
     result = []
     this_file_option_sets = {}
+    this_file_lang_translations = {}
     for name, val in config_dict.items():
         if name == OPTION_SETS_LABEL:
             this_file_option_sets = parse_option_sets(val)
+        elif name == LANG_TRANSLATIONS_LABEL:
+            this_file_lang_translations = parse_lang_translations(val)
         elif name == DEFAULT_ENABLER_LABEL:
             continue
         else:
@@ -336,6 +341,7 @@ def parse_config_file(
     return (
         Config.combine(base_config, this_file_config),
         {**base_option_sets, **this_file_option_sets},
+        {**base_lang_tranlations, **this_file_lang_translations},
     )
 
 
@@ -346,12 +352,12 @@ def get_config_one(
     filename: str,
     cmd_args: List[str],
     option_parses: Dict[Option, OptionParse] = get_option_parses(),
-) -> Optional[ImmutableConfig]:
+) -> Optional[Tuple[ImmutableConfig, LangTranslations]]:
     configs = get_config_many([filename], cmd_args, option_parses)
     if len(configs) == 0:
         return None
-    _filenames, config = configs[0]
-    return config
+    _filenames, config, lang_translations = configs[0]
+    return config, lang_translations
 
 
 def _partition(
@@ -377,7 +383,7 @@ def _partition(
 
 
 def _get_default_config(option_parses: Dict[Option, OptionParse]) -> Tuple[Config, OptionSets]:
-    return Config(enabler=None, option_parses=option_parses), {}
+    return Config(enabler=None, option_parses=option_parses), {}, {}
 
 
 def _ignore_infile(config: Config) -> bool:
@@ -435,7 +441,7 @@ def get_config_many(
     filenames: List[str],
     cmd_args_raw: List[str],
     option_parses: Dict[Option, OptionParse] = get_option_parses(),
-) -> List[Tuple[List[str], ImmutableConfig]]:
+) -> List[Tuple[List[str], ImmutableConfig, LangTranslations]]:
     cmd_config = parse_cmd_config(cmd_args_raw, option_parses)
     infile_configs = _parse_infile_configs(filenames, cmd_config, option_parses)
 
@@ -447,17 +453,17 @@ def get_config_many(
     else:
         config_paths, filenames_mapping = get_config_paths(filenames, infile_configs)
 
-    file_configs_option_sets = {
+    config_file_results = {
         config_path: parse_config_file(config_path, option_parses) for config_path in config_paths
     }
 
-    result: List[Tuple[List[str], ImmutableConfig]] = []
+    result: List[Tuple[List[str], ImmutableConfig, LangTranslations]] = []
     for files, infile_config in _partition(filenames, infile_configs, filenames_mapping):
         combined = Config.combine(infile_config, cmd_config)
-        file_config_option_sets = file_configs_option_sets[filenames_mapping[files[0]]]
-        if file_config_option_sets is None:
+        config_file_result = config_file_results[filenames_mapping[files[0]]]
+        if config_file_result is None:
             continue
-        file_config, option_sets = file_config_option_sets
+        file_config, option_sets, lang_translations = config_file_result
 
         if _ignore_infile(file_config):
             if cmd_config_path is not None:
@@ -466,7 +472,7 @@ def get_config_many(
                 config = cmd_config
         else:
             config = Config.combine(file_config, combined)
-        result.append((files, config.to_immutable(option_sets)))
+        result.append((files, config.to_immutable(option_sets), lang_translations))
     return result
 
 

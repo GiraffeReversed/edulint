@@ -1,6 +1,7 @@
 from edulint.options import Option
 from edulint.option_parses import OptionParse, get_option_parses
 from edulint.config.config import get_config_many, get_cmd_args, ImmutableConfig
+from edulint.config.language_translations import LangTranslations
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
 from edulint.versions.version_checker import PackageInfoManager
@@ -105,13 +106,15 @@ def extract_files(files_or_dirs: List[str]) -> List[str]:
     return extract_files_rec(None, files_or_dirs, [])
 
 
-def to_json(configs: List[ImmutableConfig], problems: List[Problem]) -> str:
+def to_json(
+    configs: List[Tuple[ImmutableConfig, LangTranslations]], problems: List[Problem]
+) -> str:
     def config_to_json(obj: Any) -> str:
         if isinstance(obj, ImmutableConfig):
             return {arg.option.to_name(): arg.val for arg in obj.config}
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
-    config_json = json.dumps(configs, default=config_to_json)
+    config_json = json.dumps([config for config, translation in configs], default=config_to_json)
     problems_json = Problem.schema().dumps(problems, indent=2, many=True)
     return f'{{"configs": {config_json}, "problems": {problems_json}}}'
 

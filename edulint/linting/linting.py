@@ -5,6 +5,7 @@ from edulint.linting.process_handler import ProcessHandler
 from edulint.linting.overrides import get_overriders
 from edulint.linting.tweakers import get_tweakers, Tweakers
 from edulint.config.config import ImmutableConfig
+from edulint.config.language_translations import LangTranslations
 from edulint.options import Option, ImmutableT
 from edulint.linters import Linter
 from functools import partial
@@ -208,5 +209,20 @@ def lint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
     return sort(filenames, result)
 
 
-def lint_many(partition: List[Tuple[List[str], ImmutableConfig]]) -> List[Problem]:
-    return [problem for filenames, config in partition for problem in lint(filenames, config)]
+def translate(lang_translations: LangTranslations, problem: Problem):
+    translation = lang_translations.get(problem.code)
+    if translation is None:
+        return problem
+
+    problem.text = translation.translate(problem.text)
+    return problem
+
+
+def lint_many(
+    partition: List[Tuple[List[str], ImmutableConfig, LangTranslations]]
+) -> List[Problem]:
+    return [
+        translate(lang_translations, problem)
+        for filenames, config, lang_translations in partition
+        for problem in lint(filenames, config)
+    ]

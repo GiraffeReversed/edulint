@@ -61,9 +61,9 @@ def prepare_config(args: List[UnprocessedArg], from_empty: bool) -> Config:
         if not from_empty
         else "empty"
     )
-    config_file_option_sets = parse_config_file(config_path, get_option_parses())
-    assert config_file_option_sets is not None
-    config_file, option_sets = config_file_option_sets
+    config_file_result = parse_config_file(config_path, get_option_parses())
+    assert config_file_result is not None
+    config_file, option_sets, _lang_translations = config_file_result
     return Config.combine(config_file, config_args).to_immutable(option_sets)
 
 

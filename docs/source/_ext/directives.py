@@ -180,7 +180,7 @@ class MessageTable(Directive):
         option_parses = get_option_parses()
         result = parse_config_file(DEFAULT_CONFIG, option_parses)
         assert result is not None
-        config, option_sets = result
+        config, option_sets, _lang_translations = result
 
         if arg == "default":
             iconfig = config.to_immutable()
