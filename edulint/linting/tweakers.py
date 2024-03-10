@@ -143,14 +143,14 @@ TWEAKERS = {
         disallowed_name_keep,
         disallowed_name_reword,
     ),
-    (Linter.PYLINT, "R1714"): Tweaker(  # consider-using-in
-        set(),
-        re.compile(
-            r"^(Consider merging these comparisons with ['\"]in['\"] (to|by using) "
-            r"(\"|\')([^\s]*)( not)? in )\((.+)\)(\"|\')"
-        ),
-        reword=consider_using_in_reword,
-    ),
+    # (Linter.PYLINT, "R1714"): Tweaker(  # consider-using-in
+    #     set(),
+    #     re.compile(
+    #         r"^(Consider merging these comparisons with ['\"]in['\"] (to|by using) "
+    #         r"(\"|\')([^\s]*)( not)? in )\((.+)\)(\"|\')"
+    #     ),
+    #     reword=consider_using_in_reword,
+    # ),
     (Linter.FLAKE8, "F401"): Tweaker(  # module imported but unused
         set(), re.compile("'(.*)' imported but unused"), unused_import_keep
     ),

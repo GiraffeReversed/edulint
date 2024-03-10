@@ -318,14 +318,19 @@ def test_allowed_onechar_names(
             "105119-p5_template.py",
             [Arg(Option.PYLINT, "--enable=R1714")],
             [
-                lazy_problem()
-                .set_code("R1714")
-                .set_line(22)
-                .set_text("Consider merging these comparisons with 'in' by using 'i not in '[]''"),
+                lazy_problem().set_code("R1714").set_line(22)
+                # .set_text("Consider merging these comparisons with 'in' by using 'i not in '[]''"),
+                .set_text(
+                    "Consider merging these comparisons with 'in' by using 'i not in ('[', ']')'. "
+                    "Use a set instead if elements are hashable."
+                ),
                 lazy_problem()
                 .set_code("R1714")
                 .set_line(35)
-                .set_text("Consider merging these comparisons with 'in' by using 'i in (1, 2, 3)'"),
+                .set_text(
+                    "Consider merging these comparisons with 'in' by using 'i in (1, 2, 3)'. "
+                    "Use a set instead if elements are hashable."
+                ),
             ],
         ),
     ],
@@ -732,10 +737,12 @@ def test_ignore_infile_config(
                 .set_code("R6201")
                 .set_line(2)
                 .set_text("The if statement can be replaced with 'return ch == 'a' or ch == 'A''"),
-                lazy_problem()
-                .set_code("R1714")
-                .set_line(2)
-                .set_text("Consider merging these comparisons with 'in' by using 'ch in 'aA''"),
+                lazy_problem().set_code("R1714").set_line(2)
+                # .set_text("Consider merging these comparisons with 'in' by using 'ch in 'aA''"),
+                .set_text(
+                    "Consider merging these comparisons with 'in' by using 'ch in ('a', 'A')'. "
+                    "Use a set instead if elements are hashable."
+                ),
                 lazy_problem()
                 .set_code("C0104")
                 .set_line(9)
