@@ -188,8 +188,9 @@ def apply_tweaks(
     return result
 
 
-def lint_one(filename: str, config: ImmutableConfig) -> List[Problem]:
-    return lint([filename], config)
+def lint_one(filename: str, config: Tuple[ImmutableConfig, LangTranslations]) -> List[Problem]:
+    option_config, lang_translations = config
+    return lint_many([([filename], option_config, lang_translations)])
 
 
 def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
@@ -212,9 +213,11 @@ def lint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
 def translate(lang_translations: LangTranslations, problem: Problem):
     translation = lang_translations.get(problem.code)
     if translation is None:
-        return problem
+        translation = lang_translations.get(problem.symbol)
+        if translation is None:
+            return problem
 
-    problem.text = translation.translate(problem.text)
+    problem.text = translation.translate(problem.code, problem.text)
     return problem
 
 
