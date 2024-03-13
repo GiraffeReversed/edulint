@@ -36,7 +36,7 @@ check: mypy test
 
 run:
 	export PYTHONPATH=${EDULINT_PATH} && \
-		python3 -m edulint ${ARGS}
+		python3 -m edulint --disable-version-check ${ARGS}
 
 lint_data:
 	DATA_DIR=${DATA_PATH}/${YEAR}; \
