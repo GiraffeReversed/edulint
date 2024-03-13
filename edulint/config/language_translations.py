@@ -11,6 +11,7 @@ import pylint
 from pylint.checkers import BaseChecker
 
 from edulint.option_parses import LANG_TRANSLATED_EXTRACTS_LABEL
+from edulint.config.file_config import load_toml_file
 from edulint.config.raw_flake8_patterns import FLAKE8
 from edulint.linting import checkers as edulint_checkers
 
@@ -144,3 +145,8 @@ def parse_lang_translations(raw_lang_translations: Any) -> LangTranslations:
         lang_translations[id_] = Translation(translation, translated_extracts.get(id_, {}))
 
     return lang_translations
+
+
+def parse_lang_file(filename: str):
+    lang_file_raw = load_toml_file(filename)
+    return parse_lang_translations(lang_file_raw)

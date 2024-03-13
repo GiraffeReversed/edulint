@@ -159,6 +159,14 @@ OPTIONS: List[OptionParse] = [
         Type.COMMA_SEPARATED_LIST,
         Combine.REPLACE,
     ),
+    OptionParse(
+        Option.LANGUAGE_FILE,
+        "file with translations for linter messages",
+        TakesVal.YES,
+        None,
+        Type.STR,
+        Combine.REPLACE,
+    ),
 ]
 
 OPTION_SETS_LABEL = "translations"

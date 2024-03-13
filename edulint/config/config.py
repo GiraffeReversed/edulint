@@ -17,7 +17,11 @@ from edulint.option_parses import (
 )
 from edulint.config.file_config import load_toml_file
 from edulint.config.option_sets import OptionSets, OptionSet, parse_option_sets
-from edulint.config.language_translations import LangTranslations, parse_lang_translations
+from edulint.config.language_translations import (
+    LangTranslations,
+    parse_lang_translations,
+    parse_lang_file,
+)
 from edulint.config.utils import print_invalid_type_message, config_file_val_to_str, add_enabled
 from typing import Dict, List, Optional, Tuple, Iterator, Any, Set
 
@@ -456,6 +460,7 @@ def get_config_many(
     config_file_results = {
         config_path: parse_config_file(config_path, option_parses) for config_path in config_paths
     }
+    lang_file_results = {}
 
     result: List[Tuple[List[str], ImmutableConfig, LangTranslations]] = []
     for files, infile_config in _partition(filenames, infile_configs, filenames_mapping):
@@ -472,7 +477,18 @@ def get_config_many(
                 config = cmd_config
         else:
             config = Config.combine(file_config, combined)
-        result.append((files, config.to_immutable(option_sets), lang_translations))
+
+        iconfig = config.to_immutable(option_sets)
+        language_file = iconfig[Option.LANGUAGE_FILE]
+        if language_file is not None:
+            lang_file_translations = lang_file_results.get(
+                language_file, parse_lang_file(iconfig[Option.LANGUAGE_FILE])
+            )
+            if lang_file_translations is not None:
+                lang_translations = {**lang_translations, **lang_file_translations}
+                lang_file_results[language_file] = lang_translations
+
+        result.append((files, iconfig, lang_translations))
     return result
 
 

@@ -40,6 +40,7 @@ def always_managed_options() -> Set[Option]:
             Option.IGNORE_INFILE_CONFIG_FOR,
             Option.EXPORT_GROUPS,
             Option.SET_GROUPS,
+            Option.LANGUAGE_FILE,
         )
     )
 

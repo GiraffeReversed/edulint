@@ -25,6 +25,7 @@ class Option(NumberFromZero):
     IGNORE_INFILE_CONFIG_FOR = ()
     EXPORT_GROUPS = ()
     SET_GROUPS = ()
+    LANGUAGE_FILE = ()
 
     def to_name(self) -> str:
         return self.name.lower().replace("_", "-")
