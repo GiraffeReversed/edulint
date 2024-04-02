@@ -107,14 +107,16 @@ def extract_files(files_or_dirs: List[str]) -> List[str]:
 
 
 def to_json(
-    configs: List[Tuple[ImmutableConfig, LangTranslations]], problems: List[Problem]
+    configs: List[Tuple[List[str], ImmutableConfig, LangTranslations]], problems: List[Problem]
 ) -> str:
     def config_to_json(obj: Any) -> str:
         if isinstance(obj, ImmutableConfig):
             return {arg.option.to_name(): arg.val for arg in obj.config}
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
-    config_json = json.dumps([config for config, translation in configs], default=config_to_json)
+    config_json = json.dumps(
+        [config for _files, config, _translation in configs], default=config_to_json
+    )
     problems_json = Problem.schema().dumps(problems, indent=2, many=True)
     return f'{{"configs": {config_json}, "problems": {problems_json}}}'
 

@@ -1,16 +1,20 @@
 import pytest
 from edulint.edulint import main
 from os.path import join
+import sys
+import json
 
-
-def compare_output(monkeypatch, capsys, argv, output):
+def run(monkeypatch, capsys, argv) -> str:
     monkeypatch.setattr("sys.argv", ["script"] + argv)
     main()
     captured = capsys.readouterr()
-    import sys
 
     print(captured.err, file=sys.stderr)
-    assert captured.out == output
+
+    return captured.out
+
+def compare_output(monkeypatch, capsys, argv, output):
+    assert run(monkeypatch, capsys, argv) == output
 
 
 @pytest.mark.parametrize(
@@ -32,6 +36,17 @@ def compare_output(monkeypatch, capsys, argv, output):
 def test_single_file_stdout(monkeypatch, capsys, argv, output):
     compare_output(monkeypatch, capsys, argv, output)
 
+@pytest.mark.parametrize(
+    "argv",
+    [
+        [join("tests", "data", "hello_world.py")],
+        [join("tests", "data", "custom_nonpep_assign.py")],
+    ],
+)
+def test_single_file_stdout_json(monkeypatch, capsys, argv):
+    out = run(monkeypatch, capsys, argv + ["--json"])
+    result = json.loads(out)
+    assert result
 
 @pytest.mark.parametrize(
     "argv,output",
