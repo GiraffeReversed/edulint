@@ -98,6 +98,6 @@ jobs:
           path: artifacts
 
       - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@2.16.1
+        uses: EnricoMi/publish-unit-test-result-action@v2.16.1
         with:
           files: "artifacts/**/pytest.xml"
