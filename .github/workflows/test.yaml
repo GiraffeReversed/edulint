@@ -77,7 +77,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-${{ matrix.python }}.xml
+          name: pytest-${{ matrix.os }}-${{ matrix.python }}--flake8-${{ matrix.flake8 }}--pylint-${{ matrix.pylint }}.xml
           path: pytest.xml
 
   publish-test-results:
