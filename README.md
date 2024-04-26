@@ -1,7 +1,7 @@
 # EduLint
 
 [![Pypi](https://img.shields.io/pypi/v/edulint)](https://pypi.org/project/edulint/)
-![Python versions](https://img.shields.io/badge/python-%3E%3D%203.8-blue)
+![Python versions](https://img.shields.io/pypi/pyversions/edulint)
 ![Tests](https://img.shields.io/github/actions/workflow/status/GiraffeReversed/edulint/test.yaml)
 [![ReadTheDocs](https://img.shields.io/readthedocs/edulint)](https://edulint.readthedocs.io/)
 [![Docker image](https://img.shields.io/docker/image-size/edulint/edulint-cli/latest?label=Docker%20image%20size)](https://hub.docker.com/r/edulint/edulint-cli)
@@ -69,6 +69,8 @@ Are you interested in sponsoring this project, want to collaborate on an academi
 
 #### Python version
 
-Supported: >= 3.8
+Supported: Python 3.8 - 3.11
+
+Python 3.12 is not yet supported by all our dependencies.
 
 Python 3.7 mostly works, but can fail in edge cases due to different parsing between package `typed-ast` (<=3.7) and Python's native `ast` (>=3.8). We discovered those using the existing [compatibility test suite](https://github.com/GiraffeReversed/edulint/actions/workflows/test-compatibility.yaml).
