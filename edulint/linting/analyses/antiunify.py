@@ -297,8 +297,11 @@ def can_be_removed(core, avar) -> bool:
 
 
 def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
+    if isinstance(core, list) and any(len(c.sub_locs) != len(core[0].sub_locs) for c in core):
+        return core, avars
+
+    vars_used_after = get_vars_used_after(core)
     for avar in avars:
-        vars_used_after = get_vars_used_after(core)
         if not isinstance(avar.parent, nodes.AssignName) or any(
             (sub, get_scope(sub, get_cfg_loc(avar).node.sub_locs[i])) in vars_used_after
             for i, sub in enumerate(avar.subs)
