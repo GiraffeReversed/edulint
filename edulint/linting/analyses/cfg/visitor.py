@@ -85,12 +85,31 @@ class CFGVisitor:
 
     def visit_classdef(self, node: nodes.ClassDef) -> None:
         functions_to_render = self.options.get("functions", [])
+
+        if self._current_block is not None:
+            self._current_block.add_statement(node)
+
+        previous_cfg = self._current_cfg
+        previous_block = self._current_block
+
+        self.cfgs[node] = ControlFlowGraph(self.cfg_count)
+        self.cfg_count += 1
+        self._current_cfg = self.cfgs[node]
+
+        self._current_block = self._current_cfg.create_block()
+
         for child in node.body:
             if functions_to_render:
                 if isinstance(child, nodes.FunctionDef):
                     child.accept(self)
             else:
                 child.accept(self)
+
+        self._current_cfg.link_or_merge(self._current_block, self._current_cfg.end)
+        self._current_cfg.update_block_reachability()
+
+        self._current_block = previous_block
+        self._current_cfg = previous_cfg
 
     def visit_functiondef(self, func: nodes.FunctionDef) -> None:
         # If user specifies to only render functions, check if the function/method name is listed

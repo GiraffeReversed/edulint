@@ -1623,7 +1623,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             (
                 stmt_loc.node
                 for loc in successors_from_loc(
-                    node.cfg_loc, include_start=True, explore_functions=True
+                    node.cfg_loc, include_start=True, explore_functions=True, explore_classes=True
                 )
                 for stmt_loc in get_stmt_locs(loc)
                 if stmt_loc is not None
@@ -1653,6 +1653,9 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     continue
 
             fst_siblings = get_siblings(fst)
+            if any(isinstance(n, nodes.ClassDef) for n in fst_siblings):
+                continue
+
             if len(fst_siblings) >= 3 and not any(
                 isinstance(node, nodes.FunctionDef) for node in fst_siblings
             ):
@@ -1679,8 +1682,9 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 if break_snd_loop:
                     break_snd_loop = False
                     break
-                fst_siblings = get_siblings(fst)
                 snd_siblings = get_siblings(snd)
+                if any(isinstance(n, nodes.ClassDef) for n in snd_siblings):
+                    continue
 
                 for length in range(min(len(fst_siblings), len(snd_siblings)), 0, -1):
                     to_aunify = [fst_siblings[:length], snd_siblings[:length]]
