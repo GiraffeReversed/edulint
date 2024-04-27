@@ -212,6 +212,7 @@ def test_similar_to_function(filename: str, expected_output: List[Problem]) -> N
     ("uc_73_3819_50_56.py", []),
     ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]),
     ("uc_73_5468_12_52.py", [lazy_problem().set_line(3)]),
+    ("uc_73_7863_14_44.py", [lazy_problem().set_line(3)]),
 ])
 def test_if_into_variables(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
@@ -238,7 +239,7 @@ def test_if_into_variables(filename: str, expected_output: List[Problem]) -> Non
     ("uc_73_3819_50_56.py", [lazy_problem().set_line(6), lazy_problem().set_line(16)]),
     ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]),
     ("uc_73_5468_12_52.py", []),
-    ("uc_73_7863_14_44.py", [lazy_problem().set_line(3)]),
+    ("uc_73_7863_14_44.py", []),
 ])
 def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
