@@ -131,6 +131,9 @@ def get_cfg_loc(in_stmt: nodes.NodeNG) -> CFGLoc:
 def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
     parent = loc.node.parent
 
+    if isinstance(loc.node, nodes.Arguments):
+        return None, None
+
     if (isinstance(parent, (nodes.If, nodes.While)) and loc.node == parent.test) or (
         isinstance(parent, nodes.For) and loc.node in (parent.target, parent.iter)
     ):
@@ -148,10 +151,12 @@ def syntactic_children_locs_from(
 ) -> Generator[CFGLoc, None, None]:
     if isinstance(syntactic, list):
         stop_on = lambda loc: all(  # noqa: E731
-            s not in loc.node.node_ancestors() for s in syntactic
+            s != loc.node and s not in loc.node.node_ancestors() for s in syntactic
         )
     else:
-        stop_on = lambda loc: syntactic not in loc.node.node_ancestors()  # noqa: E731
+        stop_on = (  # noqa: E731
+            lambda loc: syntactic != loc.node and syntactic not in loc.node.node_ancestors()
+        )
 
     for succ in successors_from_loc(
         loc,
