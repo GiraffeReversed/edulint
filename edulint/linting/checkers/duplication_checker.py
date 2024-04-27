@@ -27,6 +27,7 @@ from edulint.linting.checkers.utils import (
     get_statements_count,
     var_used_after,
     eprint,
+    cformat,  # noqa: F401
     get_token_count,
     has_else_block,
 )
