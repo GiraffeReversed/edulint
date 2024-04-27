@@ -832,6 +832,11 @@ def assignment_to_aunify_var(subs) -> bool:
 def called_aunify_var(subs) -> bool:
     for avar in subs[0].keys():
         node = avar.parent
+        if (isinstance(node, nodes.Compare) and avar in [o for o, n in node.ops]) or (
+            isinstance(node, nodes.AugAssign) and avar == node.op
+        ):
+            return True
+
         while node is not None:
             if isinstance(node.parent, nodes.Call) and node == node.parent.func:
                 return True

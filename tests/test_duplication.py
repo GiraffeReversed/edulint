@@ -209,6 +209,7 @@ def test_similar_to_function(filename: str, expected_output: List[Problem]) -> N
     ("fdc1570861-p6_workdays.py", [lazy_problem().set_line(47)]),  # multiple if branches differing in one value
     ("tarot_card_reader.py", []),
     ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
+    ("uc_73_3819_50_56.py", []),
     ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]),
     ("uc_73_5468_12_52.py", [lazy_problem().set_line(3)]),
 ])
@@ -234,6 +235,7 @@ def test_if_into_variables(filename: str, expected_output: List[Problem]) -> Non
     ("fdc1570861-p6_workdays.py", []),
     ("tarot_card_reader.py", []),
     ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
+    ("uc_73_3819_50_56.py", [lazy_problem().set_line(6), lazy_problem().set_line(16)]),
     ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]),
     ("uc_73_5468_12_52.py", []),
 ])

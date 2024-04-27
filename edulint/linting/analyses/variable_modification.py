@@ -97,7 +97,10 @@ class VarEventListener(ScopeListener[None]):
 
     # @override
     def visit_augassign(self, node: nodes.AugAssign) -> None:
-        self._add_var_event(node.target.name, get_cfg_loc(node), VarEventType.READ)
+        stripped = self._strip(node.target)
+        if stripped is not None:
+            self._add_var_event(stripped.name, get_cfg_loc(node), VarEventType.READ)
+
         super().visit_augassign(node)
 
     def visit_name(self, node: nodes.Name) -> None:

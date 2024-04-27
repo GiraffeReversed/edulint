@@ -97,7 +97,7 @@ class OneIterationChecker(BaseChecker):
             return False
 
         for pred in preds:
-            stmt = pred.source.statements[0]
+            stmt = pred.source.locs[0].node
             if node.parent_of(stmt) and pred.source.reachable:
                 if isinstance(node, nodes.For) and stmt is node.iter:
                     continue
