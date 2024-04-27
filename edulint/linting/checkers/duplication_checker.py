@@ -1320,7 +1320,7 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         target.elts = avars
         return target
 
-    def get_fixed_by_function(to_aunify, core, avars):
+    def get_fixed_by_loop(to_aunify, core, avars):
         sequences = [avar.subs for avar in avars]
 
         for_ = nodes.For()
@@ -1332,13 +1332,17 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
             "similar-to-loop",
             get_token_count(for_),
             get_statements_count(for_, include_defs=False, include_name_main=True),
-            (),
+            (
+                len(to_aunify),
+                get_statements_count(to_aunify[0], include_defs=False, include_name_main=True),
+            ),
         )
 
     if (
         length_or_type_mismatch(avars)
         or assignment_to_aunify_var(avars)
         or called_aunify_var(avars)
+        or max(len(to_aunify), len(to_aunify[0])) <= 2  # TODO parametrize?
     ):
         return False
 
@@ -1347,7 +1351,7 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         get_statements_count(node, include_defs=False, include_name_main=True) for node in to_aunify
     )
 
-    fixed = get_fixed_by_function(to_aunify, core, avars)
+    fixed = get_fixed_by_loop(to_aunify, core, avars)
     if not saves_enough_tokens(tokens_before, stmts_before, fixed):
         return False
 
@@ -1376,7 +1380,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             "",
         ),
         "R6802": (
-            "Extract code into loop",
+            "Extract code into loop (%d repetitions of %d statements)",
             "similar-to-loop",
             "",
         ),
@@ -1608,14 +1612,12 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             return tokens_after < 0.8 * tokens_before
 
         def get_loop_repetitions(
-            block: List[nodes.NodeNG], start: int
+            block: List[nodes.NodeNG],
         ) -> Generator[Tuple[int, List[List[nodes.NodeNG]]], None, None]:
-            for end in range(len(fst_siblings), start, -1):
-                for subblock_len in range(1, (end - start) // 2 + 1):
-                    yield (
-                        start + ((end - start) // subblock_len) * subblock_len,
-                        [block[i : i + subblock_len] for i in range(start, end, subblock_len)],
-                    )
+            for end in range(len(fst_siblings), 0, -1):
+                for subblock_len in range(1, end // 2 + 1):
+                    subblocks = [block[i : i + subblock_len] for i in range(0, end, subblock_len)]
+                    yield ((end // subblock_len) * subblock_len, subblocks)
 
         stmt_nodes = sorted(
             (
@@ -1654,7 +1656,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             if len(fst_siblings) >= 3 and not any(
                 isinstance(node, nodes.FunctionDef) for node in fst_siblings
             ):
-                for end, to_aunify in get_loop_repetitions(fst_siblings, 0):
+                for end, to_aunify in get_loop_repetitions(fst_siblings):
                     core, avars = antiunify(to_aunify)
                     if similar_to_loop(self, to_aunify, core, avars):
                         duplicate.update(
