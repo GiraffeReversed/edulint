@@ -155,6 +155,12 @@ class CFGLoc:
     node: nodes.NodeNG
     var_events: List["VarEvent"] = field(default_factory=list)  # noqa: F821
 
+    def __eq__(self, other):
+        return self.block == other.block and self.pos == other.pos and self.node == other.node
+
+    def __hash__(self):
+        return hash((self.block, self.pos, self.node))
+
 
 class CFGBlock:
     """A node in a control flow graph.
