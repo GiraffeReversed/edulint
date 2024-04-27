@@ -15,6 +15,7 @@ class AunifyVar(nodes.Name):
         self.parent = None
         self.lineno = 0
         self.subs = []
+        self.sub_locs = []
 
     def __repr__(self):
         return self.name
@@ -49,6 +50,10 @@ class Antiunify:
     def _new_aunifier(self, lt: nodes.NodeNG, rt: nodes.NodeNG, extra: str = None):
         avar = self._get_new_avar(extra)
         avar.subs = [lt, rt]
+        if hasattr(lt, "cfg_loc"):
+            avar.sub_locs.append(lt.cfg_loc)
+        if hasattr(rt, "cfg_loc"):
+            avar.sub_locs.append(rt.cfg_loc)
         return avar, [avar]
 
     def _aunify_consts(self, lt: Any, rt: Any):
@@ -150,9 +155,11 @@ class Antiunify:
             core = type(lt)(lineno=0, **attr_cores_before)
 
         # pylint overloads __getitem__ on nodes, so hasattr fails
-        if not isinstance(lt, nodes.Const) and hasattr(lt, "cfg_loc"):
-            assert hasattr(rt, "cfg_loc")
-            core.cfg_loc = _to_list(lt.cfg_loc) + _to_list(rt.cfg_loc)
+        if not isinstance(lt, nodes.Const) and (hasattr(lt, "cfg_loc") or hasattr(lt, "sub_locs")):
+            assert hasattr(rt, "cfg_loc") or hasattr(rt, "sub_locs")
+            core.sub_locs = (
+                [getattr(lt, "cfg_loc")] if hasattr(lt, "cfg_loc") else getattr(lt, "sub_locs")
+            ) + ([getattr(rt, "cfg_loc")] if hasattr(rt, "cfg_loc") else getattr(rt, "sub_locs"))
 
         for attr_core_before in attr_cores_before.values():
             self._set_parents(core, attr_core_before)
