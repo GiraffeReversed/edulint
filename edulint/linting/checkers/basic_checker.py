@@ -53,8 +53,7 @@ class ImproveForLoop(BaseChecker):  # type: ignore
     class StructureIndexedVisitor(ModifiedListener[Tuple[bool, bool]]):
         default = (False, False)
 
-        @staticmethod
-        def combine(results: List[Tuple[bool, bool]]) -> Tuple[bool, bool]:
+        def combine(self, results: List[Tuple[bool, bool]]) -> Tuple[bool, bool]:
             return any(loaded for loaded, _stored in results), any(
                 stored for _loaded, stored in results
             )
@@ -90,8 +89,7 @@ class ImproveForLoop(BaseChecker):  # type: ignore
     class StructureIndexedByAnyOtherVisitor(ModifiedListener[bool]):
         default = False
 
-        @staticmethod
-        def combine(results: List[bool]) -> bool:
+        def combine(self, results: List[bool]) -> bool:
             return any(results)
 
         def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):
@@ -118,8 +116,7 @@ class ImproveForLoop(BaseChecker):  # type: ignore
     class IndexUsedVisitor(ModifiedListener[UsesIndex]):
         default = UsesIndex.NEVER
 
-        @staticmethod
-        def combine(results: List[UsesIndex]) -> UsesIndex:
+        def combine(self, results: List[UsesIndex]) -> UsesIndex:
             return reduce(UsesIndex.combine, results, UsesIndex.NEVER)
 
         def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):

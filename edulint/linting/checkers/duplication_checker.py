@@ -905,7 +905,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         core, avars = antiunify(if_bodies[0], if_bodies[1])
         for i in range(2, len(if_bodies)):
             core, new_avars = antiunify(core, if_bodies[i])
-            avars.update(new_avars)
+            avars.extend(new_avars)
 
         return core, avars
 

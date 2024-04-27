@@ -15,10 +15,9 @@ T = TypeVar("T")
 class BaseVisitor(Generic[T]):
     default: T = None  # type: ignore
 
-    @classmethod
-    def combine(cls, results: List[T]) -> T:
+    def combine(self, results: List[T]) -> T:
         if not results:
-            return cls.default  # type: ignore
+            return self.default  # type: ignore
         return results[-1]
 
     def visit(self, node: nodes.NodeNG) -> T:
