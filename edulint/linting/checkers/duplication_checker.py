@@ -799,9 +799,9 @@ def get_returned_values(lt, rt, core, s1, s2):
     return returned_values
 
 
-def similar_to_function(lt: nodes.NodeNG, rt: nodes.NodeNG, core, s1, s2) -> bool:
-    if length_or_type_mismatch([s1, s2]) or not all(
-        replaceable_with(s1[key], s2[key]) for key in s1.keys()
+def similar_to_function(lt: nodes.NodeNG, rt: nodes.NodeNG, core, avars) -> bool:
+    if length_or_type_mismatch(avars) or not all(
+        replaceable_with(avar.subs[0], avar.subs[1]) for avar in avars
     ):
         return False
 
@@ -821,16 +821,16 @@ def similar_to_function(lt: nodes.NodeNG, rt: nodes.NodeNG, core, s1, s2) -> boo
     return size_after_decomposition < size_before_decomposition
 
 
-def length_or_type_mismatch(subs) -> bool:
-    return any("-" in id_.name for id_ in subs[0])
+def length_or_type_mismatch(avars) -> bool:
+    return any("-" in id_.name for id_ in avars)
 
 
-def assignment_to_aunify_var(subs) -> bool:
-    return any(isinstance(avar.parent, nodes.AssignName) for avar in subs[0].keys())
+def assignment_to_aunify_var(avars) -> bool:
+    return any(isinstance(avar.parent, nodes.AssignName) for avar in avars)
 
 
-def called_aunify_var(subs) -> bool:
-    for avar in subs[0].keys():
+def called_aunify_var(avars) -> bool:
+    for avar in avars:
         node = avar.parent
         if (isinstance(node, nodes.Compare) and avar in [o for o, n in node.ops]) or (
             isinstance(node, nodes.AugAssign) and avar == node.op
@@ -902,16 +902,12 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         return result
 
     def get_core(if_bodies: List[List[nodes.NodeNG]]):
-        core, sl, sr = antiunify(if_bodies[0], if_bodies[1])
-        subs = [sl, sr]
+        core, avars = antiunify(if_bodies[0], if_bodies[1])
         for i in range(2, len(if_bodies)):
-            core, sl, sr = antiunify(core, if_bodies[i])
+            core, new_avars = antiunify(core, if_bodies[i])
+            avars.update(new_avars)
 
-            for sub in subs:
-                sub.update(sl)
-            subs.append(sr)
-
-        return core, subs
+        return core, avars
 
     def to_node(val, avar=None) -> nodes.NodeNG:
         if isinstance(val, nodes.NodeNG):
@@ -944,8 +940,8 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     COMPLEX_EXPRESSION_TYPES = (nodes.BinOp,)
     # SIMPLE_EXPRESSION_TYPES = (nodes.AugAssign, nodes.Call, nodes.BoolOp, nodes.Compare)
 
-    def is_part_of_complex_expression(subs) -> bool:
-        for avar in subs[0].keys():
+    def is_part_of_complex_expression(avars) -> bool:
+        for avar in avars:
             parent = to_parent(avar)
             assert parent is not None
 
@@ -954,10 +950,10 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
                 return True
         return False
 
-    def variables_change(tests, core, subs):
+    def test_variables_change(tests, core, avars):
         varnames = extract_varnames(tests)
         first_loc = tests[0].cfg_loc
-        avars_locs = [get_cfg_loc(to_parent(avar)) for avar in subs[0].keys()]
+        avars_locs = [get_cfg_loc(to_parent(avar)) for avar in avars]
         return any(
             is_changed_between(varname, first_loc, avar_locs)
             for varname in varnames
@@ -965,33 +961,40 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         )
 
     @check_enabled("if-to-ternary")
-    def get_fixed_by_ternary(tests, core, subs):
+    def get_fixed_by_ternary(tests, core, avars):
         if len(tests) > 2:
             return None
-        if is_part_of_complex_expression(subs):
+        if is_part_of_complex_expression(avars):
             return None
-        if variables_change(tests, core, subs):
+        if test_variables_change(tests, core, avars):
             return None
 
         # generate exprs
         exprs = []
-        for avar in subs[0].keys():
-            assert len(subs) == len(tests) + 1
-            expr = to_node(subs[-1][avar], avar)
-            for test, sub in reversed(list(zip(tests, subs))):
+        for avar in avars:
+            assert len(avar.subs) == len(tests) + 1
+            expr = to_node(avar.subs[-1], avar)
+            for test, avar_val in reversed(list(zip(tests, avars))):
                 new = nodes.IfExp()
-                new.postinit(test=test, body=to_node(sub[avar], avar), orelse=expr)
+                new.postinit(test=test, body=to_node(avar_val, avar), orelse=expr)
                 expr = new
 
             exprs.append(expr)
 
         return (
-            get_token_count(core)
-            - len(subs[0].keys())  # subtract aunify vars
-            + get_token_count(exprs),
+            get_token_count(core) - len(avars) + get_token_count(exprs),  # subtract aunify vars
             get_statements_count(core, include_defs=False, include_name_main=True),
             (),
         )
+
+    @check_enabled("if-into-block")
+    def get_fixed_by_moving_if(tests, core, avars):
+        # too restrictive -- the change may be before the avar but after the place
+        # where the if would be inserted
+        if test_variables_change(tests, core, avars):
+            return None
+
+        return None
 
     def create_ifs(tests: List[nodes.NodeNG]) -> nodes.If:
         root = nodes.If()
@@ -1009,20 +1012,12 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
                 if_bodies.append(if_.orelse)
         return root, if_bodies
 
-    @check_enabled("if-into-block")
-    def get_fixed_by_moving_if(tests, core, subs):
-        if variables_change(tests, core, subs):
-            return None
-
-        # return 0, 0, ()
-        return None
-
     @check_enabled("if-to-variables")
-    def get_fixed_by_vars(tests, core, subs):
+    def get_fixed_by_vars(tests, core, avars):
         root, if_bodies = create_ifs(tests)
         seen = {}
-        for avar in subs[0].keys():
-            var_vals = tuple(sub[avar] for sub in subs)
+        for avar in avars:
+            var_vals = tuple(avar.subs)
             varname = seen.get(var_vals, avar.name)
 
             if varname != avar.name:
@@ -1043,13 +1038,13 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         )
 
     @check_enabled("similar-to-function")
-    def get_fixed_by_function(tests, core, subs):
+    def get_fixed_by_function(tests, core, avars):
         root, if_bodies = create_ifs(tests)
 
         # compute necessary arguments from different values
         seen = {}
-        for avar in subs[0].keys():
-            var_vals = tuple(sub[avar] for sub in subs)
+        for avar in avars:
+            var_vals = tuple(avar.subs)
             varname = seen.get(var_vals, avar.name)
 
             if varname != avar.name:
@@ -1062,7 +1057,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         control_needed = len(get_control_statements(core))
 
         # generate calls in ifs
-        vals = [[s[i] for s in seen] for i in range(len(subs))]
+        vals = [[s[i] for s in seen] for i in range(len(tests) + 1)]
         for if_vals, body in zip(vals, if_bodies):
             call = nodes.Call()
             call.func = nodes.Name("<placeholder>")
@@ -1110,9 +1105,13 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
     if_bodies = get_bodies(ifs)
     assert len(if_bodies) >= 2
-    core, subs = get_core(if_bodies)
+    core, avars = get_core(if_bodies)
 
-    if length_or_type_mismatch(subs) or assignment_to_aunify_var(subs) or called_aunify_var(subs):
+    if (
+        length_or_type_mismatch(avars)
+        or assignment_to_aunify_var(avars)
+        or called_aunify_var(avars)
+    ):
         return False
 
     tokens_before = get_token_count(node)
@@ -1120,10 +1119,10 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
     tests = [if_.test for if_ in ifs]
     fixed = [
-        get_fixed_by_ternary(tests, core, subs),
-        get_fixed_by_moving_if(tests, core, subs),
-        get_fixed_by_vars(tests, core, subs),
-        get_fixed_by_function(tests, core, subs),
+        get_fixed_by_ternary(tests, core, avars),
+        get_fixed_by_moving_if(tests, core, avars),
+        get_fixed_by_vars(tests, core, avars),
+        get_fixed_by_function(tests, core, avars),
     ]
 
     fixed = [
@@ -1420,8 +1419,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 continue
 
             for rt in candidate_rt(to_check_in_file, lt):
-                core, s1, s2 = antiunify(lt, rt)
-                if similar_to_function(lt, rt, core, s1, s2):
+                core, avars = antiunify(lt, rt)
+                if similar_to_function(lt, rt, core, avars):
                     self.add_message("similar-to-function", node=lt)
                     break
 
