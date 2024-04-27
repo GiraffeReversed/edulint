@@ -31,8 +31,7 @@ class AunifyVar(nodes.Name):
 
 
 class Antiunify:
-    def __init__(self):
-        self.__num = 0
+    __num = 0
 
     def _get_new_varname(self, extra: str = None):
         self.__num += 1
@@ -48,8 +47,17 @@ class Antiunify:
         id_ = self._get_new_varname()
         return id_, {id_: lt}, {id_: rt}
 
-    def _aunify_lists(self, lts: List[nodes.NodeNG], rts: List[nodes.NodeNG]):
-        assert len(lts) == len(rts)
+    def antiunify_lists(
+        self, lts: List[nodes.NodeNG], rts: List[nodes.NodeNG], attr: str = "<none>"
+    ):
+        if len(lts) != len(rts):
+            attr_core, attr_lt_subst, attr_rt_subst = self._new_aunifier(
+                lts,
+                rts,
+                extra=f"{attr}-{len(lts)}-{len(rts)}",
+            )
+            return [attr_core], attr_lt_subst, attr_rt_subst
+        assert len(lts) == len(rts), lts[0].root().file
 
         core = []
         lt_subst = {}
@@ -76,7 +84,10 @@ class Antiunify:
                 ):
                     fst_core, fst_lt_subst, fst_rt_subst = self._aunify_consts(lt_fst, rt_fst)
                     snd_core, snd_lt_subst, snd_rt_subst = self.antiunify(lt_snd, rt_snd)
-                elif all(isinstance(n, nodes.NodeNG) for n in (lt_fst, lt_snd, rt_fst, rt_snd)):
+                elif all(
+                    isinstance(n, nodes.NodeNG) or n is None
+                    for n in (lt_fst, lt_snd, rt_fst, rt_snd)
+                ):
                     fst_core, fst_lt_subst, fst_rt_subst = self.antiunify(lt_fst, rt_fst)
                     snd_core, snd_lt_subst, snd_rt_subst = self.antiunify(lt_snd, rt_snd)
 
@@ -91,6 +102,12 @@ class Antiunify:
     def antiunify(
         self, lt: nodes.NodeNG, rt: nodes.NodeNG
     ) -> Tuple[Any, Dict[str, nodes.NodeNG], Dict[str, nodes.NodeNG]]:
+        if isinstance(lt, AunifyVar):
+            return lt, {}, {lt.name: rt}
+
+        if isinstance(rt, AunifyVar):
+            return rt, {rt.name: lt}, {}
+
         if not isinstance(lt, type(rt)):
             return self._new_aunifier(lt, rt, extra=f"{type(lt).__name__}-{type(rt).__name__}")
 
@@ -104,38 +121,28 @@ class Antiunify:
         return self._aunify_by_attrs(lt._astroid_fields, lt, rt)
 
     def _aunify_by_attrs(self, attrs: List[str], lt, rt):
+
+        def set_parents(core, attr_core):
+            if isinstance(attr_core, nodes.NodeNG):
+                attr_core.parent = core
+            elif isinstance(attr_core, list):
+                for elem in attr_core:
+                    if isinstance(elem, tuple):
+                        if elem[1] is not None:
+                            elem[1].parent = core
+                    elif isinstance(elem, nodes.NodeNG):
+                        elem.parent = core
+            elif attr_core is not None and not isinstance(attr_core, str):
+                assert False, f"unreachable, but {type(attr_core)}"
+
         assert isinstance(
             lt, type(rt)
         ), f"lt type: {type(lt).__name__}, rt type: {type(rt).__name__}"
 
-        if isinstance(lt, nodes.Const):
-            attr_core, attr_lt_subst, attr_rt_subst = self._aunify_consts(lt.value, rt.value)
-            return nodes.Const(attr_core), attr_lt_subst, attr_rt_subst
-
-        if isinstance(lt, (nodes.Global, nodes.Nonlocal)):
-            if len(lt.names) != len(rt.names):
-                names_core, names_lt_subst, names_rt_subst = self._new_aunifier(
-                    lt.names, rt.names, extra=f"names-{len(lt.names)}-"
-                )
-            else:
-                names_core = []
-                names_lt_subst = {}
-                names_rt_subst = {}
-                for lt_name, rt_name in zip(lt.names, rt.names):
-                    name, name_lt_subst, name_rt_subst = self._new_aunifier(lt_name, rt_name)
-                    names_core.append(name)
-                    names_lt_subst.update(name_lt_subst)
-                    names_rt_subst.update(name_rt_subst)
-            return type(lt)(names=names_core), names_lt_subst, names_rt_subst
-
-        try:
-            if isinstance(lt, (nodes.Arguments, nodes.Comprehension)):
-                core = type(lt)()
-            else:
-                core = type(lt)(lineno=0)
-        except TypeError:
-            eprint("XXXXXXXXXXXXXXXXXXXXX", type(lt))
+        if isinstance(lt, (nodes.Arguments, nodes.Comprehension)):
             core = type(lt)()
+        else:
+            core = type(lt)(lineno=0)
 
         lt_subst = {}
         rt_subst = {}
@@ -149,17 +156,9 @@ class Antiunify:
 
             if isinstance(lt_attr_val, list):
                 assert isinstance(rt_attr_val, list), f"rt type: {type(rt_attr_val).__name__}"
-                if len(lt_attr_val) != len(rt_attr_val):
-                    attr_core, attr_lt_subst, attr_rt_subst = self._new_aunifier(
-                        lt_attr_val,
-                        rt_attr_val,
-                        extra=f"{attr}-{len(lt_attr_val)}-{len(rt_attr_val)}",
-                    )
-                    attr_core = [attr_core]
-                else:
-                    attr_core, attr_lt_subst, attr_rt_subst = self._aunify_lists(
-                        lt_attr_val, rt_attr_val
-                    )
+                attr_core, attr_lt_subst, attr_rt_subst = self.antiunify_lists(
+                    lt_attr_val, rt_attr_val, attr=attr
+                )
             elif isinstance(lt_attr_val, nodes.NodeNG):
                 attr_core, attr_lt_subst, attr_rt_subst = self.antiunify(lt_attr_val, rt_attr_val)
             else:
@@ -168,17 +167,7 @@ class Antiunify:
                 )
 
             setattr(core, attr, attr_core)
-            if isinstance(attr_core, list):
-                for elem in attr_core:
-                    if isinstance(elem, tuple):
-                        if elem[1] is not None:
-                            elem[1].parent = core
-                    elif isinstance(elem, nodes.NodeNG):
-                        if elem is not None:
-                            elem.parent = core
-            elif isinstance(attr_core, nodes.NodeNG):
-                if attr_core is not None:
-                    attr_core.parent = core
+            set_parents(core, attr_core)
 
             lt_subst.update(attr_lt_subst)
             rt_subst.update(attr_rt_subst)
@@ -193,9 +182,6 @@ class Antiunify:
 
     def _aunify_assignname(self, lt: nodes.AssignName, rt: nodes.AssignName):
         return self._aunify_by_attr("name", lt, rt)
-
-    def _aunify_const(self, lt: nodes.Const, rt: nodes.Const):
-        return self._aunify_by_attr("value", lt, rt)
 
     def _aunify_attribute(self, lt: nodes.Attribute, rt: nodes.Attribute):
         return self._aunify_by_attrs(["expr", "attrname"], lt, rt)
@@ -218,11 +204,79 @@ class Antiunify:
     def _aunify_functiondef(self, lt: nodes.FunctionDef, rt: nodes.FunctionDef):
         return self._aunify_by_attrs(lt._astroid_fields + ("name",), lt, rt)
 
+    def _aunify_const(self, lt: nodes.Const, rt: nodes.Const):
+        attr_core, attr_lt_subst, attr_rt_subst = self._aunify_consts(lt.value, rt.value)
+        return nodes.Const(attr_core), attr_lt_subst, attr_rt_subst
+
+    def _aunify_strs(self, lt: str, rt: str):
+        if lt != rt:
+            return self._new_aunifier(lt, rt)
+        return lt, {}, {}
+
+    def _aunify_scope_modifier(
+        self, lt: Union[nodes.Nonlocal, nodes.Global], rt: Union[nodes.Nonlocal, nodes.Global]
+    ):
+        if len(lt.names) != len(rt.names):
+            names_core, names_lt_subst, names_rt_subst = self._new_aunifier(
+                lt.names, rt.names, extra=f"names-{len(lt.names)}-"
+            )
+        else:
+            names_core = []
+            names_lt_subst = {}
+            names_rt_subst = {}
+            for lt_name, rt_name in zip(lt.names, rt.names):
+                name, name_lt_subst, name_rt_subst = self._aunify_strs(lt_name, rt_name)
+                names_core.append(name)
+                names_lt_subst.update(name_lt_subst)
+                names_rt_subst.update(name_rt_subst)
+        return type(lt)(names=names_core), names_lt_subst, names_rt_subst
+
+    def _aunify_nonlocal(self, lt: nodes.Nonlocal, rt: nodes.Nonlocal):
+        return self._aunify_scope_modifier(lt, rt)
+
+    def _aunify_global(self, lt: nodes.Global, rt: nodes.Global):
+        return self._aunify_scope_modifier(lt, rt)
+
+    def _aunify_importfrom(self, lt: nodes.ImportFrom, rt: nodes.ImportFrom):
+        modname_core, modname_lt_subst, modname_rt_subst = self._aunify_strs(lt.modname, rt.modname)
+        if len(lt.names) != len(rt.names):
+            names_core, names_lt_subst, names_rt_subst = self._new_aunifier(
+                lt.names, rt.names, extra=f"names-{len(lt.names)}-"
+            )
+        else:
+            names_core = []
+            names_lt_subst = {}
+            names_rt_subst = {}
+            for (lt_name, lt_alias), (rt_name, rt_alias) in zip(lt.names, rt.names):
+                name, name_lt_subst, name_rt_subst = self._aunify_strs(lt_name, rt_name)
+                alias, alias_lt_subst, alias_rt_subst = self._aunify_strs(lt_alias, rt_alias)
+                names_core.append((name, alias))
+                names_lt_subst.update(name_lt_subst)
+                names_lt_subst.update(alias_lt_subst)
+                names_rt_subst.update(name_rt_subst)
+                names_rt_subst.update(alias_rt_subst)
+        return (
+            type(lt)(fromname=modname_core, names=names_core),
+            {**modname_lt_subst, **names_lt_subst},
+            {**modname_rt_subst, **names_rt_subst},
+        )
+
 
 def antiunify(
     lt: nodes.NodeNG, rt: nodes.NodeNG
 ) -> Tuple[Any, Dict[str, nodes.NodeNG], Dict[str, nodes.NodeNG]]:
     return Antiunify().antiunify(lt, rt)
+
+
+def antiunify_lists(
+    lts: List[nodes.NodeNG], rts: List[nodes.NodeNG]
+) -> Tuple[Any, Dict[str, nodes.NodeNG], Dict[str, nodes.NodeNG]]:
+    return Antiunify().antiunify_lists(lts, rts)
+
+
+##############################################################################
+####                            to string                                 ####
+##############################################################################
 
 
 class AunifyVarAsString(nodes.as_string.AsStringVisitor):
@@ -308,8 +362,11 @@ class AunifyVarAsString(nodes.as_string.AsStringVisitor):
                 yield pair.name
 
 
-def aunify_node_as_string(n) -> str:
-    return n.accept(AunifyVarAsString())
+def core_as_string(n) -> str:
+    visitor = AunifyVarAsString()
+    if isinstance(n, list):
+        return "\n".join(n.accept(visitor) for n in n)
+    return n.accept(visitor)
 
 
 def eprint_aunify_core(n, depth: int = 0):
