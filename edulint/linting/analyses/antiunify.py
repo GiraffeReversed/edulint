@@ -113,7 +113,11 @@ class Antiunify:
             )
             some = [v for n in to_aunify for v in n][0]
             if isinstance(some, tuple):
-                return [(attr_core, None)], attr_avars
+                fst, snd = some
+                if isinstance(fst, str) and isinstance(snd, (str, type(None))):
+                    return [(attr_core, None)], attr_avars
+                elif isinstance(fst, str) and isinstance(snd, nodes.NodeNG):
+                    return [("", attr_core)], attr_avars
             return [attr_core], attr_avars
 
         core = []
