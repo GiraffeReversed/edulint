@@ -1600,18 +1600,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             fsts, snds = to_aunify
             return stmt_nodes.index(fsts[-1], i) >= stmt_nodes.index(snds[-1], j)
 
-        def is_candidate_core(to_aunify, core, avars) -> bool:
-            tokens_before = sum(get_token_count(n) for n in to_aunify)
-            tokens_after = get_token_count(core) + sum(
-                (
-                    get_token_count(to_node(sub))
-                    if not isinstance(sub, list)
-                    else sum(get_token_count(to_node(s)) for s in sub)
-                )
-                for avar in avars
-                for sub in avar.subs
-            )
-            return tokens_after < 0.8 * tokens_before
+        def is_duplication_candidate(to_aunify) -> bool:
+            for ns in zip(*to_aunify):
+                if not all(isinstance(n, type(ns[0])) for n in ns):
+                    return False
+            return True
 
         def get_loop_repetitions(
             block: List[nodes.NodeNG],
@@ -1693,17 +1686,14 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
                 for length in range(min(len(fst_siblings), len(snd_siblings)), 0, -1):
                     to_aunify = [fst_siblings[:length], snd_siblings[:length]]
-                    core, avars = antiunify(to_aunify)
 
-                    if not overlap(stmt_nodes, i, j, to_aunify) and is_candidate_core(
-                        to_aunify, core, avars
+                    if not overlap(stmt_nodes, i, j, to_aunify) and is_duplication_candidate(
+                        to_aunify
                     ):
                         # TODO or larger?
-                        id_, ccore, cavars = candidates.get(
-                            (fst, length), (len(candidates), None, None)
-                        )
-                        candidates[(fst, length)] = id_, ccore, cavars
-                        candidates[(snd, length)] = id_, core, avars
+                        id_ = candidates.get((fst, length), len(candidates))
+                        candidates[(fst, length)] = id_
+                        candidates[(snd, length)] = id_
 
                         # duplicate.update(
                         #     {loc.node for loc in syntactic_children_locs_from(fst.cfg_loc, fst)}
@@ -1711,10 +1701,10 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                         break_snd_loop = True
                         break
 
-        for this_id in {id_ for id_, _, _ in candidates.values()}:
+        for this_id in set(candidates.values()):
             to_aunify = [
                 get_siblings(node)[:length]
-                for (node, length), (id_, _, _) in candidates.items()
+                for (node, length), id_ in candidates.items()
                 if id_ == this_id
             ]
             # if any(n in duplicate for ns in to_aunify for n in ns):
