@@ -885,10 +885,10 @@ def if_to_variables(self, node: nodes.If) -> bool:
         return result
 
     def get_core(if_bodies: List[List[nodes.NodeNG]]):
-        core, sl, sr = antiunify_lists(if_bodies[0], if_bodies[1])
+        core, sl, sr = antiunify(if_bodies[0], if_bodies[1])
         subs = [sl, sr]
         for i in range(2, len(if_bodies)):
-            core, sl, sr = antiunify_lists(core, if_bodies[i])
+            core, sl, sr = antiunify(core, if_bodies[i])
 
             for sub in subs:
                 sub.update(sl)
