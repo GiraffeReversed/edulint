@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Generator, List, Optional, Set, Tuple
+from dataclasses import dataclass, field
+from typing import Any, Generator, List, Optional, Set
 
-from astroid import Break, Continue, NodeNG, Raise, Return
+from astroid import nodes
 
 
 class ControlFlowGraph:
@@ -62,7 +63,7 @@ class ControlFlowGraph:
         """
         if source.is_jump():
             return
-        if source.statements == []:
+        if source.locs == []:
             if source is self.start:
                 self.start = target
             else:
@@ -86,7 +87,7 @@ class ControlFlowGraph:
         Precondition:
             - source != cfg.start
         """
-        if source.statements == []:
+        if source.locs == []:
             for edge in source.predecessors:
                 for t in targets:
                     CFGEdge(edge.source, t)
@@ -147,6 +148,14 @@ class ControlFlowGraph:
                 self.unreachable_blocks.remove(block)
 
 
+@dataclass
+class CFGLoc:
+    block: CFGBlock
+    pos: int
+    node: nodes.NodeNG
+    var_events: List["VarEvent"] = field(default_factory=list)
+
+
 class CFGBlock:
     """A node in a control flow graph.
 
@@ -156,7 +165,7 @@ class CFGBlock:
     # A unique identifier
     id: int
     # The statements in this block.
-    statements: List[NodeNG]
+    locs: List[CFGLoc]
     # This block's in-edges (from blocks that can execute immediately before this one).
     predecessors: List[CFGEdge]
     # This block's out-edges (to blocks that can execute immediately after this one).
@@ -167,25 +176,54 @@ class CFGBlock:
     def __init__(self, id_: int) -> None:
         """Initialize a new CFGBlock."""
         self.id = id_
-        self.statements = []
+        self.locs = []
         self.predecessors = []
         self.successors = []
         self.reachable = False
 
-    def add_statement(self, statement: NodeNG) -> None:
+    def add_statement(self, statement: nodes.NodeNG) -> None:
         if not self.is_jump():
-            self.statements.append(statement)
-            statement.cfg_block = self
+            loc = CFGLoc(self, len(self.locs), statement)
+            self.locs.append(loc)
+            statement.cfg_loc = loc
+
+    def _CF_statement_to_pos(self, statement: nodes.NodeNG) -> int:
+        if isinstance(statement, nodes.Module):
+            pos = 0
+            # assert self.locs[pos] == self.locs[self._CF_statement_to_pos(statement.body[0])]
+        elif isinstance(statement, nodes.If):
+            pos = len(self.locs) - 1
+            assert self.locs[pos].node == statement.test
+        elif isinstance(statement, nodes.While):
+            pos = 0
+            assert self.locs[pos].node == statement.test
+        elif isinstance(statement, nodes.For):
+            pos = 0
+            assert self.locs[pos].node == statement.iter
+        elif isinstance(statement, nodes.TryExcept):
+            pos = 0
+            assert self.locs[pos].node == statement.body[0]
+        elif isinstance(statement, nodes.ExceptHandler):
+            pos = 0
+            assert self.locs[pos].node in (statement.name, statement.body[0])
+        else:
+            assert False, f"unreachable, but {type(statement)}"
+        return pos
+
+    def add_CF_statement(self, statement: nodes.NodeNG) -> None:
+        pos = self._CF_statement_to_pos(statement)
+        loc = CFGLoc(self, pos, statement)
+        statement.cfg_loc = loc
 
     @property
-    def jump(self) -> Optional[NodeNG]:
-        if len(self.statements) > 0:
-            return self.statements[-1]
+    def jump(self) -> Optional[nodes.NodeNG]:
+        if len(self.locs) > 0:
+            return self.locs[-1]
 
     def is_jump(self) -> bool:
         """Returns True if the block has a statement that branches
         the control flow (ex: `break`)"""
-        return isinstance(self.jump, (Break, Continue, Return, Raise))
+        return isinstance(self.jump, (nodes.Break, nodes.Continue, nodes.Return, nodes.Raise))
 
 
 class CFGEdge:
@@ -206,6 +244,3 @@ class CFGEdge:
         self.label = edge_label
         self.source.successors.append(self)
         self.target.predecessors.append(self)
-
-
-CFGStmtRef = Tuple[CFGBlock, int]

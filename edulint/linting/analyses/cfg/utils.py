@@ -1,9 +1,9 @@
-from typing import Generator, List
+from typing import Generator, Optional, Callable
 from enum import Enum
 
 from astroid import nodes
 
-from edulint.linting.analyses.cfg.graph import CFGBlock
+from edulint.linting.analyses.cfg.graph import CFGBlock, CFGLoc
 
 
 class Direction(Enum):
@@ -14,7 +14,7 @@ class Direction(Enum):
     def to_index(pos: int, direction: "Direction") -> int:
         if direction == Direction.SUCCESSORS:
             return pos
-        elif direction == Direction.PREDECESSORS:
+        if direction == Direction.PREDECESSORS:
             return -pos - 1
         assert False, "unreachable"
 
@@ -25,20 +25,33 @@ class Direction(Enum):
             yield getattr(edge, "target" if direction == Direction.SUCCESSORS else "source")
 
 
-def essors_from_statement(
-    stmt: nodes.NodeNG, direction: Direction, include_start: bool
-) -> Generator[nodes.NodeNG, None, None]:
-    def get_start_position(stmt: nodes.NodeNG, statements: List[nodes.NodeNG]):
-        for pos in range(len(statements)):
-            if statements[Direction.to_index(pos, direction)] == stmt:
-                return pos
-        assert False, "unreachable"
+def essors_from_loc(
+    loc: CFGLoc,
+    direction: Direction,
+    stop_on: Optional[Callable[[CFGLoc], bool]],
+    include_start: bool,
+    include_end: bool,
+    explore_functions: bool,
+) -> Generator[CFGLoc, None, None]:
+    def explore_function(node: nodes.FunctionDef) -> Generator[CFGLoc, None, None]:
+        assert direction == Direction.SUCCESSORS
+        yield from dfs_rec(node.args.cfg_loc.block, 0)
 
-    def dfs_rec(current_block: CFGBlock, from_pos: int = 0) -> Generator[nodes.NodeNG, None, None]:
-        for nth in range(from_pos, len(current_block.statements)):
+    def try_explore_function(loc: CFGLoc) -> Generator[CFGLoc, None, None]:
+        if explore_functions and isinstance(loc.node, nodes.FunctionDef):
+            yield from explore_function(loc.node)
+
+    def dfs_rec(current_block: CFGBlock, from_pos: int = 0) -> Generator[CFGLoc, None, None]:
+        for nth in range(from_pos, len(current_block.locs)):
             i = Direction.to_index(nth, direction)
-            current_stmt = current_block.statements[i]
-            yield current_stmt
+            current_loc = current_block.locs[i]
+
+            stop = stop_on(current_loc)
+            if not stop or include_end:
+                yield current_loc
+                yield from try_explore_function(current_loc)
+            if stop:
+                return
 
         for essor in Direction.get_essors(current_block, direction):
             if essor in visited:
@@ -48,34 +61,41 @@ def essors_from_statement(
             yield from dfs_rec(essor)
 
     if include_start:
-        yield stmt
+        yield loc
+    yield from try_explore_function(loc)
 
-    current_block = stmt.cfg_block
-    stmt_pos = get_start_position(stmt, current_block.statements)
-
+    stop_on = stop_on if stop_on is not None else lambda _v: False
     visited = set()
-    yield from dfs_rec(current_block, stmt_pos + 1)
+    yield from dfs_rec(loc.block, loc.pos + 1)
 
 
-def successors_from_statement(
-    stmt: nodes.NodeNG, include_start: bool = False
-) -> Generator[nodes.NodeNG, None, None]:
-    yield from essors_from_statement(stmt, Direction.SUCCESSORS, include_start)
+def successors_from_loc(
+    loc: CFGLoc,
+    stop_on: Optional[Callable[[CFGLoc], bool]] = None,
+    include_start: bool = False,
+    include_end: bool = False,
+    explore_functions: bool = False,
+) -> Generator[CFGLoc, None, None]:
+    yield from essors_from_loc(
+        loc, Direction.SUCCESSORS, stop_on, include_start, include_end, explore_functions
+    )
 
 
-def predecessors_from_statement(
-    stmt: nodes.NodeNG, include_start: bool = False
-) -> Generator[nodes.NodeNG, None, None]:
-    yield from essors_from_statement(stmt, Direction.PREDECESSORS, include_start)
+def predecessors_from_loc(
+    loc: CFGLoc,
+    stop_on: Optional[Callable[[CFGLoc], bool]] = None,
+    include_start: bool = False,
+    include_end: bool = False,
+    explore_functions: bool = False,
+) -> Generator[CFGLoc, None, None]:
+    yield from essors_from_loc(
+        loc, Direction.PREDECESSORS, stop_on, include_start, include_end, explore_functions
+    )
 
 
-def get_stmt_ref(in_stmt: nodes.NodeNG):
-    while not hasattr(in_stmt, "cfg_block"):
+def get_cfg_loc(in_stmt: nodes.NodeNG) -> CFGLoc:
+    while not hasattr(in_stmt, "cfg_loc"):
         in_stmt = in_stmt.parent
         assert in_stmt is not None
 
-    block = in_stmt.cfg_block
-    for i, stmt in enumerate(block.statements):
-        if stmt == in_stmt:
-            return block, i
-    assert False, "unreachable"
+    return in_stmt.cfg_loc

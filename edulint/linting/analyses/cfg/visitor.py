@@ -74,10 +74,11 @@ class CFGVisitor:
         self.cfg_count += 1
         self._current_cfg = self.cfgs[module]
         self._current_block = self._current_cfg.start
-        module.cfg_block = self._current_cfg.start
 
         for child in module.body:
             child.accept(self)
+
+        self._current_cfg.start.add_CF_statement(module)
 
         self._current_cfg.link_or_merge(self._current_block, self._current_cfg.end)
         self._current_cfg.update_block_reachability()
@@ -105,7 +106,6 @@ class CFGVisitor:
 
         if self._current_block is not None:
             self._current_block.add_statement(func)
-        func.cfg_block = self._current_block
 
         previous_cfg = self._current_cfg
         previous_block = self._current_block
@@ -154,7 +154,7 @@ class CFGVisitor:
             # If the options doesn't specify to separate the test condition blocks, just add it to
             # the current block.
             self._current_block.add_statement(node.test)
-        node.cfg_block = self._current_block
+        self._current_block.add_CF_statement(node)
         old_curr = self._current_block
 
         # Handle "then" branch and label it.
@@ -195,7 +195,7 @@ class CFGVisitor:
         # Handle "test" block
         test_block = self._current_cfg.create_block()
         test_block.add_statement(node.test)
-        node.cfg_block = test_block
+        test_block.add_CF_statement(node)
         self._current_cfg.link_or_merge(old_curr, test_block)
 
         after_while_block = self._current_cfg.create_block()
@@ -236,7 +236,7 @@ class CFGVisitor:
 
         old_curr = self._current_block
         old_curr.add_statement(node.iter)
-        node.cfg_block = old_curr
+        old_curr.add_CF_statement(node)
 
         # Handle "test" block
         test_block = self._current_cfg.create_block()
@@ -317,10 +317,9 @@ class CFGVisitor:
         if self._current_cfg is None:
             return
 
-        if self._current_block.statements != []:
+        if self._current_block.locs != []:
             self._current_block = self._current_cfg.create_block(self._current_block)
-
-        node.cfg_block = self._current_block
+        node_block = self._current_block
 
         # Construct the exception handlers first
         # Initialize a temporary block to later merge with end_body
@@ -337,7 +336,6 @@ class CFGVisitor:
         for handler in reversed(node.handlers):
             h = self._current_cfg.create_block()
             self._current_block = h
-            handler.cfg_block = h
 
             exceptions = _extract_exceptions(handler)
             # Edge case: catch-all except clause (i.e. except: ...)
@@ -355,6 +353,9 @@ class CFGVisitor:
             for child in handler.body:
                 child.accept(self)
             end_handler = self._current_block
+
+            h.add_CF_statement(handler)
+
             self._current_cfg.link_or_merge(end_handler, end_block)
             after_body.append(h)
 
@@ -368,11 +369,13 @@ class CFGVisitor:
             self._current_cfg.link_or_merge(self._current_block, end_block)
 
         # Construct the try body so reset current block to this node's block
-        self._current_block = node.cfg_block
+        self._current_block = node_block
 
         for child in node.body:
             child.accept(self)
         end_body = self._current_block
+
+        self._current_block.add_CF_statement(node)
 
         # Remove each control boundary that we added in this method
         for _ in range(cbs_added):

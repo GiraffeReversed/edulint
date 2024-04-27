@@ -140,7 +140,7 @@ def _visit(block: CFGBlock, graph: graphviz.Digraph, visited: Set[int], end: CFG
     if node_id in visited:
         return
 
-    label = "\n".join([s.as_string() for s in block.statements]) + "\n"
+    label = "\n".join([s.as_string() for s in block.locs]) + "\n"
     # Need to escape backslashes explicitly.
     label = label.replace("\\", "\\\\")
     # \l is used for left alignment.
