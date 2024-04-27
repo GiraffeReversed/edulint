@@ -756,7 +756,7 @@ def length_or_type_mismatch(avars) -> bool:
 
 
 def assignment_to_aunify_var(avars) -> bool:
-    return any(isinstance(avar.parent, nodes.AssignName) for avar in avars)
+    return any(isinstance(avar.parent, (nodes.AssignName, nodes.AssignAttr)) for avar in avars)
 
 
 def called_aunify_var(avars) -> bool:
@@ -766,6 +766,7 @@ def called_aunify_var(avars) -> bool:
             (isinstance(node, nodes.Compare) and avar in [o for o, n in node.ops])
             or (isinstance(node, nodes.BinOp) and avar == node.op)
             or (isinstance(node, nodes.AugAssign) and avar == node.op)
+            or (isinstance(node, nodes.Attribute) and avar == node.attrname)
         ):
             return True
 
@@ -1587,7 +1588,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             siblings = []
             sibling = node
             while sibling is not None:
-                siblings.append(sibling)
+                if not is_block_comment(sibling):
+                    siblings.append(sibling)
                 sibling = sibling.next_sibling()
             return siblings
 

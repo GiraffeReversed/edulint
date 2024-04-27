@@ -45,7 +45,7 @@ def essors_from_locs(
     def explore_class(node: nodes.ClassDef) -> Generator[CFGLoc, None, None]:
         assert direction == Direction.SUCCESSORS
         for child in node.body:
-            yield from try_explore_function(child)
+            yield from try_explore_function(child.cfg_loc)
 
     def try_explore_class(loc: CFGLoc) -> Generator[CFGLoc, None, None]:
         if explore_classes and isinstance(loc.node, nodes.ClassDef):

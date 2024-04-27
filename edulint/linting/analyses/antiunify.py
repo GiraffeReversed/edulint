@@ -118,6 +118,11 @@ class Antiunify:
                     return [(attr_core, None)], attr_avars
                 elif isinstance(fst, str) and isinstance(snd, nodes.NodeNG):
                     return [("", attr_core)], attr_avars
+                elif isinstance(fst, nodes.NodeNG) and isinstance(snd, nodes.NodeNG):
+                    other_core, _ = self._new_aunifier(
+                        [], extra=f"{attr}-" + "-".join(str(len(n)) for n in to_aunify)
+                    )
+                    return [(attr_core, other_core)], attr_avars
             return [attr_core], attr_avars
 
         core = []
