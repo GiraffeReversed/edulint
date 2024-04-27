@@ -968,15 +968,13 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             return None
         if is_part_of_complex_expression(avars):
             return None
-        if test_variables_change(tests, core, avars):
-            return None
 
         # generate exprs
         exprs = []
         for avar in avars:
             assert len(avar.subs) == len(tests) + 1
             expr = to_node(avar.subs[-1], avar)
-            for test, avar_val in reversed(list(zip(tests, avars))):
+            for test, avar_val in reversed(list(zip(tests, avar.subs))):
                 new = nodes.IfExp()
                 new.postinit(test=test, body=to_node(avar_val, avar), orelse=expr)
                 expr = new
@@ -1062,8 +1060,6 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     def get_fixed_by_moving_if(tests, core, avars):
         # too restrictive -- the change may be before the avar but after the place
         # where the if would be inserted
-        if test_variables_change(tests, core, avars):
-            return None
         if (not isinstance(core, list) and not if_can_be_moved(core, avars)) or (
             isinstance(core, list) and len(core) == 1 and not if_can_be_moved(core[0], avars)
         ):
@@ -1130,14 +1126,14 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         seen = {}
         for avar in avars:
             var_vals = tuple(avar.subs)
-            varname = seen.get(var_vals, avar.name)
+            old_avar = seen.get(var_vals, avar)
 
-            if varname != avar.name:
+            if old_avar != avar:
                 continue
-            seen[var_vals] = avar.name
+            seen[var_vals] = avar
 
         # compute extras
-        extra_args_needed = len(get_vars_defined_before(core))
+        extra_args = get_vars_defined_before(core)
         return_vals_needed = len(get_vars_used_after(core))
         control_needed = len(get_control_statements(core))
 
@@ -1145,31 +1141,39 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         vals = [[s[i] for s in seen] for i in range(len(tests) + 1)]
         for if_vals, body in zip(vals, if_bodies):
             call = nodes.Call()
-            call.func = nodes.Name("<placeholder>")
+            call.func = nodes.Name("AUX")
             call.args = [to_node(val) for val in if_vals] + [
-                f"<v{i}>" for i in range(extra_args_needed)
+                nodes.Name(varname) for varname, _scope in extra_args
             ]
             if return_vals_needed + control_needed == 0:
                 body.append(call)
             else:
                 assign = nodes.Assign()
                 assign.targets = [
-                    nodes.AsssignName(f"<r{i}>") for i in range(control_needed + return_vals_needed)
+                    nodes.AssignName(f"<r{i}>") for i in range(control_needed + return_vals_needed)
                 ]
                 assign.value = call
                 body.append(assign)
 
         # generate function
-        fun_def = nodes.FunctionDef(name=nodes.Name("<placeholder>"))
-        fun_def.args = [nodes.Name(f"<v{i}>") for i in range(len(seen))]
+        fun_def = nodes.FunctionDef(name="AUX")
+        fun_def.args = nodes.Arguments()
+        fun_def.args.postinit(
+            args=[nodes.AssignName(avar.name) for avar in seen.values()]
+            + [nodes.AssignName(varname) for varname, _scope in extra_args],
+            defaults=None,
+            kwonlyargs=[],
+            kw_defaults=None,
+            annotations=[],
+        )
         fun_def.body = core if isinstance(core, list) else [core]
 
         # generate management for returned values
         if control_needed > 0:
             root = [root]
-            for i in control_needed:
+            for i in range(control_needed):
                 test = nodes.BinOp("is")
-                test.postinit(left=f"<r{i}>", right=nodes.Const(None))
+                test.postinit(left=nodes.Name(f"<r{i}>"), right=nodes.Const(None))
                 if_ = nodes.If()
                 if_.test = test
                 if_.body = [nodes.Return()]  # placeholder for a control
@@ -1177,7 +1181,8 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
         return (
             get_token_count(root) + get_token_count(fun_def),
-            get_statements_count(root) + get_statements_count(fun_def),
+            get_statements_count(root, include_defs=False, include_name_main=True)
+            + get_statements_count(fun_def, include_defs=False, include_name_main=True),
             (),
         )
 
@@ -1192,22 +1197,20 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     assert len(if_bodies) >= 2
     core, avars = get_core(if_bodies)
 
-    if (
-        length_or_type_mismatch(avars)
-        or assignment_to_aunify_var(avars)
-        or called_aunify_var(avars)
-    ):
+    if length_or_type_mismatch(avars) or assignment_to_aunify_var(avars):
         return False
 
     tokens_before = get_token_count(node)
     stmts_before = get_statements_count(node, include_defs=False, include_name_main=True)
 
     tests = [if_.test for if_ in ifs]
+    called_avar = called_aunify_var(avars)
+    tvs_change = test_variables_change(tests, core, avars)
     fixed = [
-        get_fixed_by_ternary(tests, core, avars),
-        get_fixed_by_moving_if(tests, core, avars),
-        get_fixed_by_vars(tests, core, avars),
-        get_fixed_by_function(tests, core, avars),
+        get_fixed_by_ternary(tests, core, avars) if not called_avar and not tvs_change else None,
+        get_fixed_by_moving_if(tests, core, avars) if not tvs_change else None,
+        get_fixed_by_vars(tests, core, avars) if not called_avar else None,
+        get_fixed_by_function(tests, core, avars) if not called_avar else None,
     ]
 
     fixed = [
@@ -1255,7 +1258,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
     name = "big-no-duplicate-code"
     msgs = {
         "R6801": (
-            "Lines %i to %i are similar to lines %i through %i. Extract them to a common function.",
+            # "Lines %i to %i are similar to lines %i through %i. Extract them to a common function.",
+            "Extract to a common function.",
             "similar-to-function",
             "",
         ),
@@ -1280,12 +1284,12 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             "",
         ),
         "R6806": (
-            "Extract ifs",
+            "Extract ifs to variables",
             "if-to-variables",
             "",
         ),
         "R6807": (
-            "Extract ifs",
+            "Move if into block",
             "if-into-block",
             "",
         ),

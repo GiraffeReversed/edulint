@@ -53,7 +53,7 @@ def is_changed_between(varname: str, before_loc: CFGLoc, after_locs: List[CFGLoc
 def get_vars_defined_before(core):
     result = set()
 
-    first_loc = core[0] if isinstance(core, list) else core
+    first_loc = get_cfg_loc(core[0] if isinstance(core, list) else core)
 
     vars = {
         (varname, scope)
@@ -124,7 +124,8 @@ def get_vars_used_after(core) -> Set[Tuple[str, ScopeNode]]:
 
 def get_control_statements(core):
     result = []
-    for loc in syntactic_children_locs_from(core):
+    first_loc = get_cfg_loc(core[0] if isinstance(core, list) else core)
+    for loc in syntactic_children_locs_from(first_loc, core):
         if isinstance(loc.node, (nodes.Return, nodes.Break, nodes.Continue)):
             result.append(loc.node)
     return result

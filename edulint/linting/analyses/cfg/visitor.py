@@ -291,18 +291,17 @@ class CFGVisitor:
             return
 
         old_curr = self._current_block
+        old_curr.add_statement(node)
         for boundary, exits in reversed(self._control_boundaries):
             if isinstance(node, nodes.Raise):
                 exc_name = _get_raise_exc(node)
 
                 if exc_name in exits:
                     self._current_cfg.link(old_curr, exits[exc_name])
-                    old_curr.add_statement(node)
                     break
 
             if type(node).__name__ in exits:
                 self._current_cfg.link(old_curr, exits[type(node).__name__])
-                old_curr.add_statement(node)
                 break
         unreachable_block = self._current_cfg.create_block()
         self._current_block = unreachable_block

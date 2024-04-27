@@ -40,22 +40,23 @@ class VarEventListener(ScopeListener[None]):
 
     def _add_var_event(self, name: VarName, loc: CFGLoc, action: VarEventType):
         scope = self._get_var_scope(name)
-        assert (
-            scope is not None
-            or name.startswith("__")
-            or (isinstance(loc.node, nodes.Call) and is_builtin(loc.node.func, name))
-            or (
-                isinstance(loc.node, (nodes.Expr, nodes.Assign))
-                and isinstance(loc.node.value, nodes.Call)
-                and is_builtin(loc.node.value.func, name)
-            )
-            or (
-                isinstance(loc.node, nodes.ExceptHandler)
-                and loc.node.type is not None
-                and is_builtin(loc.node.type, name)
-            )
-        )
-        loc.var_events.append(VarEvent(name, scope, action))
+        # assert (
+        #     scope is not None
+        #     or name.startswith("__")
+        #     or (isinstance(loc.node, nodes.Call) and is_builtin(loc.node.func, name))
+        #     or (
+        #         isinstance(loc.node, (nodes.Expr, nodes.Assign))
+        #         and isinstance(loc.node.value, nodes.Call)
+        #         and is_builtin(loc.node.value.func, name)
+        #     )
+        #     or (
+        #         isinstance(loc.node, nodes.ExceptHandler)
+        #         and loc.node.type is not None
+        #         and is_builtin(loc.node.type, name)
+        #     )
+        # )
+        if scope is not None:
+            loc.var_events.append(VarEvent(name, scope, action))
 
     # @override
     def _init_var_in_scope(self, name: VarName, scope_node: nodes.NodeNG, offset: int = 0) -> None:

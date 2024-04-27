@@ -67,6 +67,8 @@ def essors_from_locs(
     stop_on = stop_on if stop_on is not None else lambda _v: False
     visited = set()
     for loc in locs:
+        # to unwrap nodes that are not part of the CFG (for, if, while, ...)
+        loc = loc.block.locs[loc.pos]
         if loc in visited:
             continue
         visited.add(loc)
