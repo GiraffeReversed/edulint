@@ -816,38 +816,18 @@ def length_or_type_mismatch(subs) -> bool:
     return any("-" in id_.name for id_ in subs[0])
 
 
-def assignment_to_aunify_var(node) -> bool:
-    if isinstance(node, nodes.AssignName) and isinstance(node.name, AunifyVar):
-        return True
-
-    if isinstance(node, list):
-        return any(assignment_to_aunify_var(n) for n in node)
-
-    return any(assignment_to_aunify_var(n) for n in node.get_children())
+def assignment_to_aunify_var(subs) -> bool:
+    return any(isinstance(avar.parent, nodes.AssignName) for avar in subs[0].keys())
 
 
-def called_aunify_var(node, inside_called: bool = False) -> bool:
-    if inside_called and (
-        (isinstance(node, nodes.Name) and isinstance(node.name, AunifyVar))
-        or (isinstance(node, nodes.Attribute) and isinstance(node.attrname, AunifyVar))
-    ):
-        return True
-
-    if isinstance(node, nodes.Call):
-        if called_aunify_var(node.func, inside_called=True):
-            return True
-        return any(called_aunify_var(n) for n in node.get_children())
-
-    if isinstance(node, nodes.BinOp) and isinstance(node.op, AunifyVar):
-        return True
-
-    if isinstance(node, nodes.Compare) and any(isinstance(op, AunifyVar) for op in node.ops):
-        return True
-
-    if isinstance(node, list):
-        return any(called_aunify_var(n) for n in node)
-
-    return any(called_aunify_var(n) for n in node.get_children())
+def called_aunify_var(subs) -> bool:
+    for avar in subs[0].keys():
+        node = avar.parent
+        while node is not None:
+            if isinstance(node.parent, nodes.Call) and node == node.parent.func:
+                return True
+            node = node.parent
+    return False
 
 
 def extract_from_elif(node: nodes.If, result: List[nodes.If] = None) -> bool:
@@ -927,7 +907,7 @@ def if_to_variables(self, node: nodes.If) -> bool:
     assert len(if_bodies) >= 2
     core, subs = get_core(if_bodies)
 
-    if length_or_type_mismatch(subs) or assignment_to_aunify_var(core) or called_aunify_var(core):
+    if length_or_type_mismatch(subs) or assignment_to_aunify_var(subs) or called_aunify_var(subs):
         return False
 
     tokens_before = get_token_count(node)

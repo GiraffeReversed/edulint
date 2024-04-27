@@ -12,6 +12,7 @@ Substitution = Dict[str, Union[nodes.NodeNG, Tuple[str, nodes.NodeNG]]]
 class AunifyVar(nodes.Name):
     def __init__(self, name: str):
         self.name = name.upper()
+        self.parent = None
         self.lineno = 0
 
     def __repr__(self):
@@ -117,7 +118,8 @@ class Antiunify:
         if not isinstance(lt, type(rt)):
             return self._new_aunifier(lt, rt, extra=f"{type(lt).__name__}-{type(rt).__name__}")
 
-        if lt is None or rt is None:
+        if lt is None:
+            assert rt is None
             return None, {}, {}
 
         aunify_funcname = f"_aunify_{type(lt).__name__.lower()}"
@@ -126,21 +128,21 @@ class Antiunify:
 
         return self._aunify_by_attrs(lt._astroid_fields, lt, rt)
 
+    def _set_parents(self, core, node):
+        if isinstance(node, nodes.NodeNG):
+            node.parent = core
+        elif isinstance(node, list):
+            for elem in node:
+                if isinstance(elem, nodes.NodeNG):
+                    elem.parent = core
+                elif isinstance(elem, tuple):
+                    for e in elem:
+                        if isinstance(e, nodes.NodeNG):
+                            e.parent = core
+        elif node is not None and not isinstance(node, str):
+            assert False, f"unreachable, but {type(node)}"
+
     def _aunify_by_attrs(self, attrs: List[str], lt, rt):
-
-        def set_parents(core, attr_core):
-            if isinstance(attr_core, nodes.NodeNG):
-                attr_core.parent = core
-            elif isinstance(attr_core, list):
-                for elem in attr_core:
-                    if isinstance(elem, tuple):
-                        if elem[1] is not None:
-                            elem[1].parent = core
-                    elif isinstance(elem, nodes.NodeNG):
-                        elem.parent = core
-            elif attr_core is not None and not isinstance(attr_core, str):
-                assert False, f"unreachable, but {type(attr_core)}"
-
         assert isinstance(
             lt, type(rt)
         ), f"lt type: {type(lt).__name__}, rt type: {type(rt).__name__}"
@@ -173,7 +175,7 @@ class Antiunify:
                 )
 
             setattr(core, attr, attr_core)
-            set_parents(core, attr_core)
+            self._set_parents(core, attr_core)
 
             lt_subst.update(attr_lt_subst)
             rt_subst.update(attr_rt_subst)
@@ -212,7 +214,10 @@ class Antiunify:
 
     def _aunify_const(self, lt: nodes.Const, rt: nodes.Const):
         attr_core, attr_lt_subst, attr_rt_subst = self._aunify_consts(lt.value, rt.value)
-        return nodes.Const(attr_core), attr_lt_subst, attr_rt_subst
+        core = nodes.Const(attr_core)
+        if isinstance(attr_core, AunifyVar):
+            attr_core.parent = core
+        return core, attr_lt_subst, attr_rt_subst
 
     def _aunify_strs(self, lt: str, rt: str):
         if lt != rt:
@@ -226,6 +231,7 @@ class Antiunify:
             names_core, names_lt_subst, names_rt_subst = self._new_aunifier(
                 lt.names, rt.names, extra=f"names-{len(lt.names)}-{len(rt.names)}"
             )
+            names_core = [names_core]
         else:
             names_core = []
             names_lt_subst = {}
@@ -235,7 +241,9 @@ class Antiunify:
                 names_core.append(name)
                 names_lt_subst.update(name_lt_subst)
                 names_rt_subst.update(name_rt_subst)
-        return type(lt)(names=names_core), names_lt_subst, names_rt_subst
+        core = type(lt)(names=names_core)
+        self._set_parents(core, names_core)
+        return core, names_lt_subst, names_rt_subst
 
     def _aunify_nonlocal(self, lt: nodes.Nonlocal, rt: nodes.Nonlocal):
         return self._aunify_scope_modifier(lt, rt)
@@ -249,6 +257,7 @@ class Antiunify:
             names_core, names_lt_subst, names_rt_subst = self._new_aunifier(
                 lt.names, rt.names, extra=f"names-{len(lt.names)}-{len(rt.names)}"
             )
+            names_core = [names_core]
         else:
             names_core = []
             names_lt_subst = {}
@@ -261,8 +270,12 @@ class Antiunify:
                 names_lt_subst.update(alias_lt_subst)
                 names_rt_subst.update(name_rt_subst)
                 names_rt_subst.update(alias_rt_subst)
+
+        core = type(lt)(fromname=modname_core, names=names_core)
+        self._set_parents(core, modname_core)
+        self._set_parents(core, names_core)
         return (
-            type(lt)(fromname=modname_core, names=names_core),
+            core,
             {**modname_lt_subst, **names_lt_subst},
             {**modname_rt_subst, **names_rt_subst},
         )
