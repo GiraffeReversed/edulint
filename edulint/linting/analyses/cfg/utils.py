@@ -167,6 +167,13 @@ def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
     if isinstance(loc.node, nodes.Arguments):
         return None, None
 
+    if isinstance(parent, nodes.With):
+        if loc.node == parent.items[0][0]:
+            return None, parent.cfg_loc
+        if any(loc.node == v for item in parent.items for v in item):
+            return None, None
+        return loc, None
+
     if (isinstance(parent, (nodes.If, nodes.While)) and loc.node == parent.test) or (
         isinstance(parent, nodes.For) and loc.node in (parent.target, parent.iter)
     ):
@@ -183,9 +190,14 @@ def syntactic_children_locs_from(
     syntactic: nodes.NodeNG,
 ) -> Generator[CFGLoc, None, None]:
     if isinstance(syntactic, list):
-        stop_on = lambda loc: all(  # noqa: E731
-            s != loc.node and s not in loc.node.node_ancestors() for s in syntactic
-        )
+        # stop_on = lambda loc: all(  # noqa: E731
+        #     s != loc.node and s not in loc.node.node_ancestors() for s in syntactic
+        # )
+        syntactic_set = set(syntactic)
+
+        def stop_on(loc):
+            return len(syntactic_set & (set(loc.node.node_ancestors()) | {loc.node})) == 0
+
     else:
         stop_on = (  # noqa: E731
             lambda loc: syntactic != loc.node and syntactic not in loc.node.node_ancestors()
@@ -202,9 +214,14 @@ def syntactic_children_locs_from(
 
 def get_first_locs_after(loc):
     if isinstance(loc, list):
-        stop_on = lambda succ: all(  # noqa: E731
-            s.node not in succ.node.node_ancestors() for s in loc
-        )
+        # stop_on = lambda succ: all(  # noqa: E731
+        #     s.node not in succ.node.node_ancestors() for s in loc
+        # )
+        loc_node_set = set(s.node for s in loc)
+
+        def stop_on(loc):
+            return len(loc_node_set & (set(loc.node.node_ancestors()) | {loc.node})) == 0
+
     else:
         stop_on = lambda succ: loc.node not in succ.node.node_ancestors()  # noqa: E731
 

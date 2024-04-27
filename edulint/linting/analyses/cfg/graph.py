@@ -213,6 +213,8 @@ class CFGBlock:
         elif isinstance(statement, nodes.ExceptHandler):
             pos = 0
             assert self.locs[pos].node in (statement.name, statement.body[0])
+        elif isinstance(statement, nodes.With):
+            pos = len(self.locs)
         else:
             assert False, f"unreachable, but {type(statement)}"
         return pos

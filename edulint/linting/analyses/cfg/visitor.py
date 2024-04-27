@@ -403,6 +403,7 @@ class CFGVisitor:
         if self._current_cfg is None:
             return
 
+        self._current_block.add_CF_statement(node)
         for context_node, name in node.items:
             self._current_block.add_statement(context_node)
             if name is not None:
