@@ -213,3 +213,54 @@ def get_statements_count(
         return 1 + count(node.body)
 
     return 1
+
+
+# TODO consider redefiniton?
+def contains_name(node: nodes.NodeNG, var: nodes.Name) -> bool:
+    if isinstance(node, nodes.Name):
+        return var.name == node.name
+
+    return any(contains_name(n, var) for n in node.get_children())
+
+
+# TODO consider redefinition inside examined block
+def defines_name(node: nodes.NodeNG, var: nodes.Name) -> bool:
+    if isinstance(node, nodes.AssignName):
+        return var.name == node.name
+    if isinstance(node, nodes.For) and var.name == node.target.as_string():
+        return True
+
+    return any(defines_name(n, var) for n in node.get_children())
+
+
+def var_used(node: nodes.NodeNG, var: nodes.Name, test, direction: str) -> bool:
+    method_name = f"{direction}_sibling"
+    current = getattr(node, method_name)()
+    while current is not None:
+        parent = current.parent
+        scope = current.scope()
+        while current is not None:
+            if test(current, var):
+                return True
+            current = getattr(current, method_name)()
+        if scope == parent.scope():
+            current = getattr(parent, method_name)()
+        else:
+            break
+    return False
+
+
+def var_used_after(node: nodes.NodeNG, var: nodes.Name) -> bool:
+    return var_used(node, var, contains_name, "next")
+
+
+def var_used_before(node: nodes.NodeNG, var: nodes.Name) -> bool:
+    return var_used(node, var, contains_name, "previous")
+
+
+def var_defined_after(node: nodes.NodeNG, var: nodes.Name) -> bool:
+    return var_used(node, var, defines_name, "next")
+
+
+def var_defined_before(node: nodes.NodeNG, var: nodes.Name) -> bool:
+    return var_used(node, var, defines_name, "previous")

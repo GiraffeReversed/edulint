@@ -15,6 +15,9 @@ from edulint.linting.checkers.utils import (
     is_main_block,
     is_block_comment,
     get_statements_count,
+    var_defined_before,
+    var_used_after,
+    eprint,
 )
 
 
@@ -688,8 +691,420 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
         self.duplicate_sequence(node)
 
 
+Substitution = Dict[str, Union[nodes.NodeNG, Tuple[str, nodes.NodeNG]]]
+
+
+class Antiunify:
+    def __init__(self):
+        self.__num = 0
+
+    def _get_id(self):
+        self.__num += 1
+        return f"id_{self.__num}"
+
+    def _new_aunifier(self, lt: nodes.NodeNG, rt: nodes.NodeNG, name: str = None):
+        id_ = self._get_id()
+        name = name if name is not None else lt
+        return (name, [id_]), {id_: lt}, {id_: rt}
+
+    def _aunify_consts(self, lt: Any, rt: Any, lt_node: nodes.NodeNG, rt_node: nodes.NodeNG):
+        if lt == rt:
+            return [], {}, {}
+        id_ = self._get_id()
+        return [id_], {id_: lt_node}, {id_: rt_node}
+
+    def _aunify_lists(self, lts: List[nodes.NodeNG], rts: List[nodes.NodeNG]):
+        assert len(lts) == len(rts)
+
+        core = []
+        lt_subst = {}
+        rt_subst = {}
+        for i in range(len(lts)):
+            lt_child, rt_child = lts[i], rts[i]
+            assert isinstance(lt_child, tuple) == isinstance(
+                rt_child, tuple
+            ), f"lt type: {type(lt_child).__name__}, rt type: {type(rt_child).__name__}"
+
+            if not isinstance(lt_child, tuple):
+                child_core, child_lt_subst, child_rt_subst = self.antiunify(lt_child, rt_child)
+                core.append(child_core)
+                lt_subst.update(child_lt_subst)
+                rt_subst.update(child_rt_subst)
+            else:
+                lt_str, lt_node = lt_child
+                rt_str, rt_node = rt_child
+                assert (
+                    isinstance(lt_str, str)
+                    and isinstance(lt_node, nodes.NodeNG)
+                    and isinstance(rt_str, str)
+                    and isinstance(rt_node, nodes.NodeNG)
+                )
+                str_core, str_lt_subst, str_rt_subst = self._aunify_consts(
+                    lt_str, rt_str, lt_child, rt_child
+                )
+                node_core, node_lt_subst, node_rt_subst = self.antiunify(lt_node, rt_node)
+
+                core.append(str_core)
+                core.append(node_core)
+                lt_subst.update(str_lt_subst)
+                lt_subst.update(node_lt_subst)
+                rt_subst.update(str_rt_subst)
+                rt_subst.update(node_rt_subst)
+
+        return core, lt_subst, rt_subst
+
+    def antiunify(
+        self, lt: nodes.NodeNG, rt: nodes.NodeNG
+    ) -> Tuple[Any, Dict[str, nodes.NodeNG], Dict[str, nodes.NodeNG]]:
+        if not isinstance(lt, type(rt)):
+            return self._new_aunifier(lt, rt, name=f"{type(lt).__name__}-{type(rt).__name__}")
+
+        aunify_funcname = f"_aunify_{type(lt).__name__.lower()}"
+        if hasattr(self, aunify_funcname):
+            return getattr(self, aunify_funcname)(lt, rt)
+
+        lt_children = list(lt.get_children())
+        rt_children = list(rt.get_children())
+
+        if len(lt_children) != len(rt_children):
+            return self._new_aunifier(
+                lt,
+                rt,
+                name=f"{type(lt).__name__}-{len(lt_children)}-{len(rt_children)}",
+            )
+
+        core, lt_subst, rt_subst = self._aunify_lists(lt_children, rt_children)
+        return (lt, core), lt_subst, rt_subst
+
+    def _aunify_by_attrs(self, attrs: List[str], lt, rt):
+        assert isinstance(
+            lt, type(rt)
+        ), f"lt type: {type(lt).__name__}, rt type: {type(rt).__name__}"
+
+        core = []
+        lt_subst = {}
+        rt_subst = {}
+
+        for attr in attrs:
+            assert hasattr(lt, attr), f"{type(lt).__name__} does not have '{attr}'"
+            assert hasattr(rt, attr), f"{type(rt).__name__} does not have '{attr}'"
+
+            lt_attr_val = getattr(lt, attr)
+            rt_attr_val = getattr(rt, attr)
+
+            if isinstance(lt_attr_val, list):
+                assert isinstance(rt_attr_val, list), f"rt type: {type(rt_attr_val).__name__}"
+                if len(lt_attr_val) != len(rt_attr_val):
+                    return self._new_aunifier(lt, rt)
+                attr_core, attr_lt_subst, attr_rt_subst = self._aunify_lists(
+                    lt_attr_val, rt_attr_val
+                )
+                attr_core = (attr, attr_core)
+            elif isinstance(lt_attr_val, nodes.NodeNG):
+                attr_core, attr_lt_subst, attr_rt_subst = self.antiunify(lt_attr_val, rt_attr_val)
+            else:
+                attr_core, attr_lt_subst, attr_rt_subst = self._aunify_consts(
+                    lt_attr_val, rt_attr_val, lt, rt
+                )
+
+            core.append(attr_core)
+            lt_subst.update(attr_lt_subst)
+            rt_subst.update(attr_rt_subst)
+
+        return (lt, core), lt_subst, rt_subst
+
+    def _aunify_by_attr(self, attr: str, lt, rt):
+        return self._aunify_by_attrs([attr], lt, rt)
+
+    def _aunify_name(self, lt: nodes.Name, rt: nodes.Name):
+        return self._aunify_by_attr("name", lt, rt)
+
+    def _aunify_assignname(self, lt: nodes.AssignName, rt: nodes.AssignName):
+        return self._aunify_by_attr("name", lt, rt)
+
+    def _aunify_const(self, lt: nodes.Const, rt: nodes.Const):
+        return self._aunify_by_attr("value", lt, rt)
+
+    def _aunify_attribute(self, lt: nodes.Attribute, rt: nodes.Attribute):
+        return self._aunify_by_attrs(["expr", "attrname"], lt, rt)
+
+    def _aunify_assignattr(self, lt: nodes.AssignAttr, rt: nodes.AssignAttr):
+        return self._aunify_by_attrs(["expr", "attrname"], lt, rt)
+
+    def _aunify_compare(self, lt: nodes.Compare, rt: nodes.Compare):
+        return self._aunify_by_attrs(["left", "ops"], lt, rt)
+
+    def _aunify_boolop(self, lt: nodes.BoolOp, rt: nodes.BoolOp):
+        return self._aunify_by_attrs(["op", "values"], lt, rt)
+
+    def _aunify_binop(self, lt: nodes.BinOp, rt: nodes.BinOp):
+        return self._aunify_by_attrs(["left", "op", "right"], lt, rt)
+
+    def _aunify_unaryop(self, lt: nodes.UnaryOp, rt: nodes.UnaryOp):
+        return self._aunify_by_attrs(["op", "operand"], lt, rt)
+
+    def _aunify_augassign(self, lt: nodes.AugAssign, rt: nodes.AugAssign):
+        return self._aunify_by_attrs(["target", "op", "value"], lt, rt)
+
+
+OPS = {
+    "+": 0,
+    "+=": 0,
+    "-": 0,
+    "-=": 0,
+    "*": 1,
+    "*=": 1,
+    "/": 2,
+    "/=": 2,
+    "//": 2,
+    "//=": 2,
+    "%": 3,
+    "%=": 3,
+    "**": 4,
+    "**=": 4,
+    "==": 5,
+    "!=": 5,
+    ">": 6,
+    "<": 6,
+    ">=": 6,
+    "<=": 6,
+    "and": 7,
+    "or": 7,
+    "not": 8,
+    "is": 9,
+    "is not": 9,
+    "&": 10,
+    "&=": 10,
+    "|": 10,
+    "|=": 10,
+    "^": 11,
+    "^-": 11,
+    "~": 12,
+    "~=": 12,
+    "<<": 13,
+    "<<=": 13,
+    ">>": 14,
+    ">>=": 14,
+}
+
+
+# def replaceable(node: nodes.NodeNG) -> bool:
+# v = isinstance(
+#     node,
+#     (nodes.Expr, nodes.AssignName, nodes.Name, nodes.Const, nodes.Attribute, nodes.AssignAttr),
+# )
+# # eprint(node, v)
+# return v
+
+TYPES_MATCH_REQUIRED = (nodes.Return,)
+
+
+def replaceable_with(node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
+    if isinstance(node1, tuple):
+        assert isinstance(node2, tuple)
+        op1, n1 = node1
+        op2, n2 = node2
+
+        too_different_operators = OPS[op1] == OPS[op2]
+        return too_different_operators
+
+    if isinstance(node1, TYPES_MATCH_REQUIRED):
+        return isinstance(node2, TYPES_MATCH_REQUIRED)
+
+    return True
+
+
+def get_returned_values(lt, rt, core, s1, s2):
+    returned_values = set()
+
+    def find_returned_values(nx):
+        if not isinstance(nx, tuple):
+            assert not isinstance(nx, nodes.NodeNG)
+            return
+
+        n, children = nx
+        # eprint(n, children)
+        if isinstance(n, nodes.Return):
+            assert len(children) <= 1
+            if len(children) == 0:
+                returned_values.add("None")
+            elif isinstance(children[0], tuple):
+                assert isinstance(children[0][0], nodes.NodeNG)
+                returned_values.add(children[0][0].as_string())
+            else:
+                raise Exception()
+
+        if isinstance(n, nodes.AssignName):
+            if len(children) == 0 and var_used_after(lt, n):
+                returned_values.add(n.name)
+            elif len(children) == 1:
+                # eprint(children[0])
+                if var_used_after(lt, s1[children[0][0]]) or var_used_after(rt, s2[children[0][0]]):
+                    returned_values.add(f"{s1[children[0][0]].name}-{s2[children[0][0]].name}")
+
+        for child in children:
+            if child:
+                find_returned_values(child)
+
+    try:
+        find_returned_values(core)
+    except Exception as e:
+        eprint(e)
+        return None
+    # find_returned_values(core)
+    return returned_values
+
+
+# def count_params_returns(core, s1, s2):
+#     def count_returns_in_core(n):
+#         if not isinstance(n, tuple):
+#             assert not isinstance(n, nodes.NodeNG)
+#             return 0
+
+#         tag, children = n
+#         return sum(count_returns_in_core(child) for child in children) + int(
+#             tag == type(nodes.Return).__name__ and not isinstance(children, tuple)
+#         )
+
+#     params_count = 0
+#     returns_count = count_returns_in_core
+
+#     for key in s1:
+#         n1 = s1[key]
+#         n2 = s2[key]
+
+
+def eprint_list_tree(n: Any, depth: int = 0):
+    if isinstance(n, tuple):
+        n, children = n
+        eprint(depth * " |", f"{type(n).__name__} node" if isinstance(n, nodes.NodeNG) else n)
+        for child in children:
+            if child:
+                eprint_list_tree(child, depth + 1)
+    else:
+        eprint(depth * " |", n)
+
+
+def id_with_dash(n: Any) -> bool:
+    if isinstance(n, tuple):
+        n, children = n
+        if isinstance(n, str) and "-" in n:
+            return True
+        return any(child and id_with_dash(child) for child in children)
+    else:
+        return False
+
+
+def is_duplicate_block(lt: nodes.NodeNG, rt: nodes.NodeNG) -> bool:
+    core, s1, s2 = Antiunify().antiunify(lt, rt)
+
+    if id_with_dash(core) or not all(replaceable_with(s1[key], s2[key]) for key in s1.keys()):
+        return False
+
+    eprint("x")
+    eprint(lt.root().file)
+    eprint(lt.as_string())
+    eprint(rt.as_string())
+    eprint()
+    eprint_list_tree(core)
+    # eprint(s1)
+    # eprint(s2)
+    # eprint(get_returned_values(lt, rt, core, s1, s2))
+    # eprint("\n")
+    eprint("x", end="")
+    return True
+
+
+class BigNoDuplicateCode(BaseChecker):  # type: ignore
+    name = "big-no-duplicate-code"
+    msgs = {
+        "R6501": (
+            "Lines %i to %i are similar to lines %i through %i.",
+            "no-duplicates",
+            "Emitted when duplicate code is encountered",
+        )
+    }
+
+    def __init__(self, linter: "PyLinter"):
+        super().__init__(linter)
+        # self.to_check = {nodes.FunctionDef: [], nodes.If: [], nodes.While: [], nodes.For: []}
+        self.to_check = {}
+
+    def _add_to_check(self, node: nodes.NodeNG) -> None:
+        # self.to_check[type(node)].append(node)
+        fn = node.root().name
+        if fn not in self.to_check:
+            self.to_check[fn] = {
+                nodes.FunctionDef: [],
+                nodes.If: [],
+                nodes.While: [],
+                nodes.For: [],
+            }
+        self.to_check[fn][type(node)].append(node)
+
+    def visit_if(self, node: nodes.If) -> None:
+        self._add_to_check(node)
+
+    def visit_while(self, node: nodes.While) -> None:
+        self._add_to_check(node)
+
+    def visit_for(self, node: nodes.For) -> None:
+        self._add_to_check(node)
+
+    def visit_functiondef(self, node: nodes.FunctionDef) -> None:
+        self._add_to_check(node)
+
+    Interval = Tuple[int, int]
+    DuplicateIntervals = Dict[Tuple[Interval, Interval], Tuple[nodes.NodeNG, nodes.NodeNG]]
+
+    @staticmethod
+    def _in_interval(i: int, j: int, intervals: DuplicateIntervals) -> bool:
+        return any(
+            lt_f <= i <= lt_t and rt_f <= j <= rt_t for ((lt_f, lt_t), (rt_f, rt_t)) in intervals
+        )
+
+    @staticmethod
+    def _remove_interval(lt: nodes.NodeNG, rt: nodes.NodeNG, intervals: DuplicateIntervals) -> None:
+        for (lt_f, lt_t), (rt_f, rt_t) in intervals:
+            if (
+                lt.fromlineno <= lt_f
+                and lt_t <= lt.tolineno
+                and rt.fromlineno <= rt_f
+                and rt_t <= rt.tolineno
+            ):
+                intervals.pop(((lt_f, lt_t), (rt_f, rt_t)))
+                return
+
+    @staticmethod
+    def _add_interval(lt: nodes.NodeNG, rt: nodes.NodeNG, intervals: DuplicateIntervals) -> None:
+        intervals[((lt.fromlineno, lt.tolineno), (rt.fromlineno, rt.tolineno))] = (lt, rt)
+
+    def close(self) -> None:
+        for to_check_in_file in self.to_check.values():
+            duplicate_intervals = {}
+            for candidate_nodes in to_check_in_file.values():
+                for i in range(len(candidate_nodes)):
+                    for j in range(i + 1, len(candidate_nodes)):
+                        lt = candidate_nodes[i]
+                        rt = candidate_nodes[j]
+                        if is_duplicate_block(lt, rt) and not BigNoDuplicateCode._in_interval(
+                            lt.fromlineno, rt.fromlineno, duplicate_intervals
+                        ):
+                            BigNoDuplicateCode._remove_interval(lt, rt, duplicate_intervals)
+                            BigNoDuplicateCode._add_interval(lt, rt, duplicate_intervals)
+                            break
+
+            for lt, rt in duplicate_intervals.values():
+                self.add_message(
+                    "no-duplicates",
+                    node=lt,
+                    args=(lt.fromlineno, lt.tolineno, rt.fromlineno, rt.tolineno),
+                )
+
+
 def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
     :param linter: The linter to register the checker to.
     """
     linter.register_checker(NoDuplicateCode(linter))
+    linter.register_checker(BigNoDuplicateCode(linter))
