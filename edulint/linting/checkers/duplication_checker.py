@@ -1659,11 +1659,13 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     if similar_to_loop(self, to_aunify, core, avars):
                         duplicate.update(
                             {
-                                loc.node
+                                stmt_loc.node
                                 for loc in syntactic_children_locs_from(
                                     get_cfg_loc(to_aunify[0][0]),
                                     [n for ns in to_aunify for n in ns],
                                 )
+                                for stmt_loc in get_stmt_locs(loc)
+                                if stmt_loc is not None
                             }
                         )
                         break
