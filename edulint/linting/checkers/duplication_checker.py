@@ -1621,6 +1621,9 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     subblocks = [block[i : i + subblock_len] for i in range(0, end, subblock_len)]
                     yield ((end // subblock_len) * subblock_len, subblocks)
 
+        if len(node.body) == 0:
+            return
+
         stmt_nodes = sorted(
             (
                 stmt_loc.node
