@@ -140,7 +140,7 @@ class ScopeListener(BaseVisitor[T]):
         return self.visit_import(node)
 
     def visit_call(self, node: nodes.Call) -> T:
-        if is_builtin(node.func) and node.func.as_string() in ("locals", "globals"):
+        if node.func.as_string() in ("locals", "globals") and is_builtin(node.func):
             raise UnknowableLocalsException(
                 f"call to {node.func.as_string()}, unable to determine variable scopes"
             )
