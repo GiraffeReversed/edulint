@@ -1588,7 +1588,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             siblings = []
             sibling = node
             while sibling is not None:
-                if not is_block_comment(sibling):
+                if include_in_stmts(sibling):
                     siblings.append(sibling)
                 sibling = sibling.next_sibling()
             return siblings
@@ -1614,6 +1614,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     subblocks = [block[i : i + subblock_len] for i in range(0, end, subblock_len)]
                     yield ((end // subblock_len) * subblock_len, subblocks)
 
+        def include_in_stmts(node):
+            return not is_block_comment(node) and not isinstance(
+                node, (nodes.Pass, nodes.Assert, nodes.ClassDef)
+            )
+
         if len(node.body) == 0:
             return
 
@@ -1624,7 +1629,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     node.cfg_loc, include_start=True, explore_functions=True, explore_classes=True
                 )
                 for stmt_loc in get_stmt_locs(loc)
-                if stmt_loc is not None
+                if stmt_loc is not None and include_in_stmts(stmt_loc.node)
             ),
             key=lambda node: (
                 node.fromlineno,
@@ -1651,8 +1656,6 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     continue
 
             fst_siblings = get_siblings(fst)
-            if any(isinstance(n, nodes.ClassDef) for n in fst_siblings):
-                continue
 
             if len(fst_siblings) >= 3 and not any(
                 isinstance(node, nodes.FunctionDef) for node in fst_siblings
@@ -1681,8 +1684,6 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     break_snd_loop = False
                     break
                 snd_siblings = get_siblings(snd)
-                if any(isinstance(n, nodes.ClassDef) for n in snd_siblings):
-                    continue
 
                 for length in range(min(len(fst_siblings), len(snd_siblings)), 0, -1):
                     to_aunify = [fst_siblings[:length], snd_siblings[:length]]
