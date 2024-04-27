@@ -988,14 +988,97 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             (),
         )
 
+    def contains_avar(node: nodes.NodeNG, avars):
+        for avar in avars:
+            for ancestor in avar.node_ancestors():
+                if ancestor == node:
+                    return True
+        return False
+
+    HEADER_ATTRIBUTES = {
+        nodes.For: ["target", "iter"],
+        nodes.While: ["test"],
+        # nodes.If: ["test"],
+        nodes.FunctionDef: ["name", "args"],
+        nodes.ExceptHandler: ["name", "type"],
+        nodes.TryExcept: [],
+        nodes.TryFinally: [],
+        nodes.With: ["items"],
+    }
+
+    BODY_ATTRIBUTES = {
+        nodes.For: ["body", "orelse"],
+        nodes.While: ["body", "orelse"],
+        # nodes.If: ["body", "orelse"],
+        nodes.FunctionDef: ["body"],
+        nodes.ExceptHandler: ["body"],
+        nodes.TryExcept: ["body", "handlers", "orelse"],
+        nodes.TryFinally: ["body", "finalbody"],
+        nodes.With: ["body"],
+    }
+
+    def if_can_be_moved(core, avars):
+        return type(core) in HEADER_ATTRIBUTES.keys() and not any(
+            contains_avar(getattr(core, attr), avars) for attr in HEADER_ATTRIBUTES[type(core)]
+        )
+
+    def get_fixed_by_moving_if_rec(tests, core, avars):
+        if isinstance(core, list):
+            if len(core) == 0:
+                return []
+
+            avar_indices = []
+            for i, stmt in enumerate(core):
+                if contains_avar(stmt, avars):
+                    avar_indices.append(i)
+
+            assert len(avar_indices) > 0
+            min_ = avar_indices[0]
+            max_ = avar_indices[-1]
+
+            if min_ == max_ and if_can_be_moved(core[min_], avars):
+                root = get_fixed_by_moving_if_rec(tests, core[min_], avars)
+            else:
+                root, if_bodies = create_ifs(tests)
+                for if_body in if_bodies:
+                    if_body.extend(core[min_ : max_ + 1])
+
+            return core[:min_] + [root] + core[max_ + 1 :]
+
+        assert contains_avar(core, avars) and if_can_be_moved(core, avars)
+        new_core = type(core)()
+
+        for attr in HEADER_ATTRIBUTES[type(core)]:
+            setattr(new_core, attr, getattr(core, attr))
+
+        for attr in BODY_ATTRIBUTES[type(core)]:
+            new_body = get_fixed_by_moving_if_rec(tests, getattr(core, attr), avars)
+            setattr(new_core, attr, new_body)
+
+        return new_core
+
     @check_enabled("if-into-block")
     def get_fixed_by_moving_if(tests, core, avars):
         # too restrictive -- the change may be before the avar but after the place
         # where the if would be inserted
         if test_variables_change(tests, core, avars):
             return None
+        if (not isinstance(core, list) and not if_can_be_moved(core, avars)) or (
+            isinstance(core, list) and len(core) == 1 and not if_can_be_moved(core[0], avars)
+        ):
+            return None
 
-        return None
+        fixed = get_fixed_by_moving_if_rec(tests, core, avars)
+        return (
+            get_token_count(fixed)
+            + sum(
+                get_token_count(v) if isinstance(v, nodes.NodeNG) else 0
+                for avar in avars
+                for v in avar.subs
+            ),
+            get_statements_count(fixed, include_defs=True, include_name_main=False),
+            (),
+        )
 
     def create_ifs(tests: List[nodes.NodeNG]) -> nodes.If:
         root = nodes.If()

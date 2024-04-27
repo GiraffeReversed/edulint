@@ -238,10 +238,38 @@ def test_if_into_variables(filename: str, expected_output: List[Problem]) -> Non
     ("uc_73_3819_50_56.py", [lazy_problem().set_line(6), lazy_problem().set_line(16)]),
     ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]),
     ("uc_73_5468_12_52.py", []),
+    ("uc_73_7863_14_44.py", [lazy_problem().set_line(3)]),
 ])
 def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
         [Arg(Option.PYLINT, "--enable=if-to-ternary")],
+        expected_output
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("0bf69cc1a5-p4_geometry.py", []),
+    ("163aadb1dd-p4_geometry.py", []),
+    ("5ce8692f42-p5_fibsum.py", []),
+    ("769200244d-p6_workdays.py", [lazy_problem().set_line(66)]),
+    ("7e1dd5c338-p1_digit_sum.py", []),
+    ("7e1dd5c338-p5_credit.py", []),
+    ("9668dff756-p6_workdays.py", []),
+    ("ccf4a9f103-p6_workdays.py", []),
+    ("custom_if_calls_to_variables.py", []),
+    ("fd637a2984-p6_workdays.py", []),
+    ("fdc1570861-p6_workdays.py", []),
+    ("tarot_card_reader.py", []),
+    ("uc_73_2551_11_17.py", []), # dubious
+    ("uc_73_3819_50_56.py", [lazy_problem().set_line(6), lazy_problem().set_line(16)]),
+    ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]),
+    ("uc_73_5468_12_52.py", []),
+    ("uc_73_7863_14_44.py", [lazy_problem().set_line(3)]),
+])
+def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=if-into-block")],
         expected_output
     )
