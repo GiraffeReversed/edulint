@@ -161,6 +161,8 @@ class Antiunify:
         if isinstance(some, (nodes.Arguments, nodes.Comprehension)):
             core = type(some)()
         else:
+            if isinstance(some, nodes.ImportFrom):
+                attr_cores_before["fromname"] = attr_cores_before.pop("modname")
             core = type(some)(lineno=0, **attr_cores_before)
 
         # pylint overloads __getitem__ on constants, so hasattr would fail
