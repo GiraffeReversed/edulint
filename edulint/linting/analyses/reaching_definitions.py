@@ -30,9 +30,18 @@ def vars_in(
 
 def get_scope(varname: VarName, loc: CFGLoc) -> Optional[ScopeNode]:
     for loc in predecessors_from_loc(loc, include_start=True):
-        for loc_varname, scope, event in loc.var_events:
+        for loc_varname, scope, _event in loc.var_events:
             if varname == loc_varname:
                 return scope
+    for node in loc.node.root().body:
+        for loc_varname, scope, _event in node.cfg_loc.var_events:
+            if varname == loc_varname:
+                return scope
+        if isinstance(node, nodes.ClassDef):
+            for node in node.body:
+                for loc_varname, scope, _event in node.cfg_loc.var_events:
+                    if varname == loc_varname:
+                        return scope
     return None
 
 
