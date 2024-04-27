@@ -17,6 +17,8 @@ from edulint.linting.checkers.utils import (
     get_statements_count,
     var_defined_before,
     var_used_after,
+    aunify_node_as_string,
+    eprint_aunify_core,
     eprint,
 )
 
@@ -694,24 +696,44 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
 Substitution = Dict[str, Union[nodes.NodeNG, Tuple[str, nodes.NodeNG]]]
 
 
+class AunifyVar(nodes.Name):
+    def __init__(self, name: str):
+        self.name = name.upper()
+        self.lineno = 0
+
+    def __repr__(self):
+        return self.name
+
+    def accept(self, visitor):
+        return getattr(visitor, "visit_name")(self)
+
+    def isdigit(self):
+        return False
+
+    def __len__(self):
+        return 1
+
+    def __str__(self):
+        return self.name
+
+
 class Antiunify:
     def __init__(self):
         self.__num = 0
 
-    def _get_id(self):
+    def _get_new_varname(self, extra: str = None):
         self.__num += 1
-        return f"id_{self.__num}"
+        return AunifyVar(f"id_{self.__num}{('_' + extra) if extra is not None else ''}")
 
-    def _new_aunifier(self, lt: nodes.NodeNG, rt: nodes.NodeNG, name: str = None):
-        id_ = self._get_id()
-        name = name if name is not None else lt
-        return (name, [id_]), {id_: lt}, {id_: rt}
+    def _new_aunifier(self, lt: nodes.NodeNG, rt: nodes.NodeNG, extra: str = None):
+        id_ = self._get_new_varname(extra)
+        return id_, {id_: lt}, {id_: rt}
 
-    def _aunify_consts(self, lt: Any, rt: Any, lt_node: nodes.NodeNG, rt_node: nodes.NodeNG):
+    def _aunify_consts(self, lt: Any, rt: Any):
         if lt == rt:
-            return [], {}, {}
-        id_ = self._get_id()
-        return [id_], {id_: lt_node}, {id_: rt_node}
+            return lt, {}, {}
+        id_ = self._get_new_varname()
+        return id_, {id_: lt}, {id_: rt}
 
     def _aunify_lists(self, lts: List[nodes.NodeNG], rts: List[nodes.NodeNG]):
         assert len(lts) == len(rts)
@@ -731,25 +753,25 @@ class Antiunify:
                 lt_subst.update(child_lt_subst)
                 rt_subst.update(child_rt_subst)
             else:
-                lt_str, lt_node = lt_child
-                rt_str, rt_node = rt_child
-                assert (
-                    isinstance(lt_str, str)
-                    and isinstance(lt_node, nodes.NodeNG)
-                    and isinstance(rt_str, str)
-                    and isinstance(rt_node, nodes.NodeNG)
-                )
-                str_core, str_lt_subst, str_rt_subst = self._aunify_consts(
-                    lt_str, rt_str, lt_child, rt_child
-                )
-                node_core, node_lt_subst, node_rt_subst = self.antiunify(lt_node, rt_node)
+                lt_fst, lt_snd = lt_child
+                rt_fst, rt_snd = rt_child
+                if (  # first is op, second is operand
+                    isinstance(lt_fst, str)
+                    and isinstance(lt_snd, nodes.NodeNG)
+                    and isinstance(rt_fst, str)
+                    and isinstance(rt_snd, nodes.NodeNG)
+                ):
+                    fst_core, fst_lt_subst, fst_rt_subst = self._aunify_consts(lt_fst, rt_fst)
+                    snd_core, snd_lt_subst, snd_rt_subst = self.antiunify(lt_snd, rt_snd)
+                elif all(isinstance(n, nodes.NodeNG) for n in (lt_fst, lt_snd, rt_fst, rt_snd)):
+                    fst_core, fst_lt_subst, fst_rt_subst = self.antiunify(lt_fst, rt_fst)
+                    snd_core, snd_lt_subst, snd_rt_subst = self.antiunify(lt_snd, rt_snd)
 
-                core.append(str_core)
-                core.append(node_core)
-                lt_subst.update(str_lt_subst)
-                lt_subst.update(node_lt_subst)
-                rt_subst.update(str_rt_subst)
-                rt_subst.update(node_rt_subst)
+                core.append((fst_core, snd_core))
+                lt_subst.update(fst_lt_subst)
+                lt_subst.update(snd_lt_subst)
+                rt_subst.update(fst_rt_subst)
+                rt_subst.update(snd_rt_subst)
 
         return core, lt_subst, rt_subst
 
@@ -757,31 +779,51 @@ class Antiunify:
         self, lt: nodes.NodeNG, rt: nodes.NodeNG
     ) -> Tuple[Any, Dict[str, nodes.NodeNG], Dict[str, nodes.NodeNG]]:
         if not isinstance(lt, type(rt)):
-            return self._new_aunifier(lt, rt, name=f"{type(lt).__name__}-{type(rt).__name__}")
+            return self._new_aunifier(lt, rt, extra=f"{type(lt).__name__}-{type(rt).__name__}")
+
+        if lt is None or rt is None:
+            return None, {}, {}
 
         aunify_funcname = f"_aunify_{type(lt).__name__.lower()}"
         if hasattr(self, aunify_funcname):
             return getattr(self, aunify_funcname)(lt, rt)
 
-        lt_children = list(lt.get_children())
-        rt_children = list(rt.get_children())
-
-        if len(lt_children) != len(rt_children):
-            return self._new_aunifier(
-                lt,
-                rt,
-                name=f"{type(lt).__name__}-{len(lt_children)}-{len(rt_children)}",
-            )
-
-        core, lt_subst, rt_subst = self._aunify_lists(lt_children, rt_children)
-        return (lt, core), lt_subst, rt_subst
+        return self._aunify_by_attrs(lt._astroid_fields, lt, rt)
 
     def _aunify_by_attrs(self, attrs: List[str], lt, rt):
         assert isinstance(
             lt, type(rt)
         ), f"lt type: {type(lt).__name__}, rt type: {type(rt).__name__}"
 
-        core = []
+        if isinstance(lt, nodes.Const):
+            attr_core, attr_lt_subst, attr_rt_subst = self._aunify_consts(lt.value, rt.value)
+            return nodes.Const(attr_core), attr_lt_subst, attr_rt_subst
+
+        if isinstance(lt, (nodes.Global, nodes.Nonlocal)):
+            if len(lt.names) != len(rt.names):
+                names_core, names_lt_subst, names_rt_subst = self._new_aunifier(
+                    lt.names, rt.names, extra=f"names-{len(lt.names)}-"
+                )
+            else:
+                names_core = []
+                names_lt_subst = {}
+                names_rt_subst = {}
+                for lt_name, rt_name in zip(lt.names, rt.names):
+                    name, name_lt_subst, name_rt_subst = self._new_aunifier(lt_name, rt_name)
+                    names_core.append(name)
+                    names_lt_subst.update(name_lt_subst)
+                    names_rt_subst.update(name_rt_subst)
+            return type(lt)(names=names_core), names_lt_subst, names_rt_subst
+
+        try:
+            if isinstance(lt, (nodes.Arguments, nodes.Comprehension)):
+                core = type(lt)()
+            else:
+                core = type(lt)(lineno=0)
+        except TypeError:
+            eprint("XXXXXXXXXXXXXXXXXXXXX", type(lt))
+            core = type(lt)()
+
         lt_subst = {}
         rt_subst = {}
 
@@ -795,23 +837,40 @@ class Antiunify:
             if isinstance(lt_attr_val, list):
                 assert isinstance(rt_attr_val, list), f"rt type: {type(rt_attr_val).__name__}"
                 if len(lt_attr_val) != len(rt_attr_val):
-                    return self._new_aunifier(lt, rt)
-                attr_core, attr_lt_subst, attr_rt_subst = self._aunify_lists(
-                    lt_attr_val, rt_attr_val
-                )
-                attr_core = (attr, attr_core)
+                    attr_core, attr_lt_subst, attr_rt_subst = self._new_aunifier(
+                        lt_attr_val,
+                        rt_attr_val,
+                        extra=f"{attr}-{len(lt_attr_val)}-{len(rt_attr_val)}",
+                    )
+                    attr_core = [attr_core]
+                else:
+                    attr_core, attr_lt_subst, attr_rt_subst = self._aunify_lists(
+                        lt_attr_val, rt_attr_val
+                    )
             elif isinstance(lt_attr_val, nodes.NodeNG):
                 attr_core, attr_lt_subst, attr_rt_subst = self.antiunify(lt_attr_val, rt_attr_val)
             else:
                 attr_core, attr_lt_subst, attr_rt_subst = self._aunify_consts(
-                    lt_attr_val, rt_attr_val, lt, rt
+                    lt_attr_val, rt_attr_val
                 )
 
-            core.append(attr_core)
+            setattr(core, attr, attr_core)
+            if isinstance(attr_core, list):
+                for elem in attr_core:
+                    if isinstance(elem, tuple):
+                        if elem[1] is not None:
+                            elem[1].parent = core
+                    elif isinstance(elem, nodes.NodeNG):
+                        if elem is not None:
+                            elem.parent = core
+            elif isinstance(attr_core, nodes.NodeNG):
+                if attr_core is not None:
+                    attr_core.parent = core
+
             lt_subst.update(attr_lt_subst)
             rt_subst.update(attr_rt_subst)
 
-        return (lt, core), lt_subst, rt_subst
+        return core, lt_subst, rt_subst
 
     def _aunify_by_attr(self, attr: str, lt, rt):
         return self._aunify_by_attrs([attr], lt, rt)
@@ -831,9 +890,6 @@ class Antiunify:
     def _aunify_assignattr(self, lt: nodes.AssignAttr, rt: nodes.AssignAttr):
         return self._aunify_by_attrs(["expr", "attrname"], lt, rt)
 
-    def _aunify_compare(self, lt: nodes.Compare, rt: nodes.Compare):
-        return self._aunify_by_attrs(["left", "ops"], lt, rt)
-
     def _aunify_boolop(self, lt: nodes.BoolOp, rt: nodes.BoolOp):
         return self._aunify_by_attrs(["op", "values"], lt, rt)
 
@@ -845,6 +901,9 @@ class Antiunify:
 
     def _aunify_augassign(self, lt: nodes.AugAssign, rt: nodes.AugAssign):
         return self._aunify_by_attrs(["target", "op", "value"], lt, rt)
+
+    def _aunify_functiondef(self, lt: nodes.FunctionDef, rt: nodes.FunctionDef):
+        return self._aunify_by_attrs(lt._astroid_fields + ("name",), lt, rt)
 
 
 OPS = {
@@ -887,29 +946,18 @@ OPS = {
     ">>=": 14,
 }
 
-
-# def replaceable(node: nodes.NodeNG) -> bool:
-# v = isinstance(
-#     node,
-#     (nodes.Expr, nodes.AssignName, nodes.Name, nodes.Const, nodes.Attribute, nodes.AssignAttr),
-# )
-# # eprint(node, v)
-# return v
-
 TYPES_MATCH_REQUIRED = (nodes.Return,)
 
 
-def replaceable_with(node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
-    if isinstance(node1, tuple):
-        assert isinstance(node2, tuple)
-        op1, n1 = node1
-        op2, n2 = node2
+def replaceable_with(v1, v2) -> bool:
+    if isinstance(v1, str) and v1 in OPS:
+        assert isinstance(v2, str) and v2 in OPS
 
-        too_different_operators = OPS[op1] == OPS[op2]
+        too_different_operators = OPS[v1] == OPS[v2]
         return too_different_operators
 
-    if isinstance(node1, TYPES_MATCH_REQUIRED):
-        return isinstance(node2, TYPES_MATCH_REQUIRED)
+    if isinstance(v1, TYPES_MATCH_REQUIRED):
+        return isinstance(v2, TYPES_MATCH_REQUIRED)
 
     return True
 
@@ -955,44 +1003,36 @@ def get_returned_values(lt, rt, core, s1, s2):
     return returned_values
 
 
-# def count_params_returns(core, s1, s2):
-#     def count_returns_in_core(n):
-#         if not isinstance(n, tuple):
-#             assert not isinstance(n, nodes.NodeNG)
-#             return 0
-
-#         tag, children = n
-#         return sum(count_returns_in_core(child) for child in children) + int(
-#             tag == type(nodes.Return).__name__ and not isinstance(children, tuple)
-#         )
-
-#     params_count = 0
-#     returns_count = count_returns_in_core
-
-#     for key in s1:
-#         n1 = s1[key]
-#         n2 = s2[key]
-
-
-def eprint_list_tree(n: Any, depth: int = 0):
-    if isinstance(n, tuple):
-        n, children = n
-        eprint(depth * " |", f"{type(n).__name__} node" if isinstance(n, nodes.NodeNG) else n)
-        for child in children:
-            if child:
-                eprint_list_tree(child, depth + 1)
-    else:
-        eprint(depth * " |", n)
-
-
 def id_with_dash(n: Any) -> bool:
-    if isinstance(n, tuple):
-        n, children = n
-        if isinstance(n, str) and "-" in n:
-            return True
-        return any(child and id_with_dash(child) for child in children)
-    else:
+    if isinstance(n, AunifyVar):
+        return "-" in n.name
+
+    if isinstance(n, list):
+        return any(child and id_with_dash(child) for child in n)
+
+    if isinstance(n, nodes.Compare):
+        for pair in n.ops:
+            if isinstance(pair, tuple):
+                _op, expr = pair
+                if id_with_dash(expr):
+                    return True
+            else:
+                if id_with_dash(pair):
+                    return True
         return False
+
+    if isinstance(n, nodes.Dict):
+        for pair in n.items:
+            if isinstance(pair, tuple):
+                fst, snd = pair
+                if id_with_dash(fst) or id_with_dash(snd):
+                    return True
+            else:
+                if id_with_dash(pair):
+                    return True
+        return False
+
+    return any(child and id_with_dash(child) for child in n.get_children())
 
 
 def is_duplicate_block(lt: nodes.NodeNG, rt: nodes.NodeNG) -> bool:
@@ -1002,16 +1042,20 @@ def is_duplicate_block(lt: nodes.NodeNG, rt: nodes.NodeNG) -> bool:
         return False
 
     eprint("x")
-    eprint(lt.root().file)
     eprint(lt.as_string())
+    eprint()
     eprint(rt.as_string())
     eprint()
-    eprint_list_tree(core)
-    # eprint(s1)
-    # eprint(s2)
-    # eprint(get_returned_values(lt, rt, core, s1, s2))
-    # eprint("\n")
+    eprint(aunify_node_as_string(core))
+    # eprint_aunify_core(core)
+    # eprint(id_with_dash(core))
+    eprint()
+    eprint(*s1.items(), sep="\n", end="\n\n")
+    eprint(*s2.items(), sep="\n", end="\n\n")
+    # # eprint(get_returned_values(lt, rt, core, s1, s2))
+    eprint("\n")
     eprint("x", end="")
+
     return True
 
 
