@@ -153,7 +153,7 @@ class CFGLoc:
     block: CFGBlock
     pos: int
     node: nodes.NodeNG
-    var_events: List["VarEvent"] = field(default_factory=list)
+    var_events: List["VarEvent"] = field(default_factory=list)  # noqa: F821
 
 
 class CFGBlock:
