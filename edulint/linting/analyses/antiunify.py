@@ -1,4 +1,4 @@
-from typing import Dict, Union, Tuple, List, Any, Iterator, Set
+from typing import Dict, Union, Tuple, List, Any, Iterator, List
 import copy
 
 from astroid import nodes
@@ -46,25 +46,25 @@ class Antiunify:
     def _new_aunifier(self, lt: nodes.NodeNG, rt: nodes.NodeNG, extra: str = None):
         avar = self._get_new_avar(extra)
         avar.subs = [lt, rt]
-        return avar, {avar}
+        return avar, [avar]
 
     def _aunify_consts(self, lt: Any, rt: Any):
         if lt == rt:
-            return lt, set()
+            return lt, []
 
         return self._new_aunifier(lt, rt)
 
-    def antiunify(self, lt, rt) -> Tuple[Any, Set[AunifyVar]]:
+    def antiunify(self, lt, rt) -> Tuple[Any, List[AunifyVar]]:
         if isinstance(lt, AunifyVar):
             if isinstance(rt, AunifyVar):
                 lt.subs.extend(rt.subs)
             else:
                 lt.subs.append(rt)
-            return lt, {lt}
+            return lt, [lt]
 
         if isinstance(rt, AunifyVar):
             rt.subs = [lt] + rt.subs
-            return rt, {rt}
+            return rt, [rt]
 
         if isinstance(lt, (list, tuple)):
             assert isinstance(rt, (list, tuple))
@@ -95,7 +95,7 @@ class Antiunify:
             return [attr_core], attr_avars
 
         core = []
-        avars = set()
+        avars = []
         for i in range(len(lts)):
             lt_child, rt_child = lts[i], rts[i]
 
@@ -103,12 +103,12 @@ class Antiunify:
             child_core = tuple(child_core) if isinstance(lt_child, tuple) else child_core
 
             core.append(child_core)
-            avars.update(child_avars)
+            avars.extend(child_avars)
 
         return core, avars
 
     def _aunify_many_attrs(self, attrs, lt, rt):
-        avars = set()
+        avars = []
         attr_cores = {}
 
         for attr in attrs:
@@ -121,7 +121,7 @@ class Antiunify:
             attr_core, attr_avars = self.antiunify(lt_attr_val, rt_attr_val)
             attr_cores[attr] = attr_core
 
-            avars.update(attr_avars)
+            avars.extend(attr_avars)
 
         return attr_cores, avars
 
@@ -159,7 +159,7 @@ class Antiunify:
             setattr(core, attr, attr_core_after)
             self._set_parents(core, attr_core_after)
 
-        return core, avars_before | avars_after
+        return core, avars_before + avars_after
 
     def _aunify_by_attr(self, lt, rt, attr: str):
         return self._aunify_by_attrs(lt, rt, [], [attr])
@@ -207,7 +207,7 @@ class Antiunify:
         return self._aunify_by_attrs(lt, rt, [], ["modname", "names"])
 
 
-def antiunify(lt: nodes.NodeNG, rt: nodes.NodeNG) -> Tuple[Any, Set[AunifyVar]]:
+def antiunify(lt: nodes.NodeNG, rt: nodes.NodeNG) -> Tuple[Any, List[AunifyVar]]:
     return Antiunify().antiunify(lt, rt)
 
 
