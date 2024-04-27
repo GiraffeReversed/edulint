@@ -197,15 +197,22 @@ def test_similar_to_function(filename: str, expected_output: List[Problem]) -> N
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("0bf69cc1a5-p4_geometry.py", []),
-    ("163aadb1dd-p4_geometry.py", []),
+    ("163aadb1dd-p4_geometry.py", []),  # dubious
     ("5ce8692f42-p5_fibsum.py", []),
+    ("769200244d-p6_workdays.py", [lazy_problem().set_line(66)]),
+    ("7e1dd5c338-p1_digit_sum.py", []), # [lazy_problem().set_line(23)]), dubious
+    ("7e1dd5c338-p5_credit.py", []),
     ("9668dff756-p6_workdays.py", []),
-    ("fdc1570861-p6_workdays.py", [lazy_problem().set_line(50)]),  # multiple if branches differing in one value
-    ("uc_73_5468_12_52.py", [lazy_problem().set_line(4)]),
+    ("ccf4a9f103-p6_workdays.py", []),
+    ("custom_if_calls_to_variables.py", []),
+    ("fd637a2984-p6_workdays.py", []),
+    ("fdc1570861-p6_workdays.py", [lazy_problem().set_line(47)]),  # multiple if branches differing in one value
+    ("tarot_card_reader.py", []),
+    ("uc_73_5468_12_52.py", [lazy_problem().set_line(3)]),
 ])
-def test_if_into_similar(filename: str, expected_output: List[Problem]) -> None:
+def test_if_into_variables(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=if-into-similar")],
+        [Arg(Option.PYLINT, "--enable=if-to-variables")],
         expected_output
     )

@@ -147,6 +147,10 @@ def is_parents_elif(node: nodes.If) -> bool:
     return isinstance(parent, nodes.If) and parent.has_elif_block() and parent.orelse[0] == node
 
 
+def has_else_block(node: Union[nodes.For, nodes.While, nodes.If]):
+    return len(node.orelse) > 0 and (not isinstance(node, nodes.If) or not node.has_elif_block())
+
+
 def get_lines_between(first: nodes.NodeNG, last: nodes.NodeNG, including_last: bool) -> int:
     assert first.fromlineno <= last.fromlineno
 
@@ -198,7 +202,7 @@ def get_statements_count(
     if isinstance(node, (nodes.For, nodes.While, nodes.If)):
         if is_main_block(node) and not include_name_main:
             return 0
-        return 1 + count(node.body) + count(node.orelse)
+        return 1 + count(node.body) + (1 if has_else_block(node) else 0) + count(node.orelse)
 
     if isinstance(node, nodes.Module):
         return count(node.body)

@@ -7,7 +7,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify
+from edulint.linting.analyses.antiunify import antiunify, antiunify_lists, AunifyVar
 from edulint.linting.checkers.utils import (
     is_parents_elif,
     BaseVisitor,
@@ -19,6 +19,7 @@ from edulint.linting.checkers.utils import (
     var_used_after,
     eprint,
     get_token_count,
+    has_else_block,
 )
 
 
@@ -738,9 +739,7 @@ TYPES_MATCH_REQUIRED = (nodes.Return,)
 
 
 def replaceable_with(v1, v2) -> bool:
-    if isinstance(v1, str) and v1 in OPS:
-        assert isinstance(v2, str) and v2 in OPS, v2
-
+    if isinstance(v1, str) and v1 in OPS and isinstance(v2, str) and v2 in OPS:
         too_different_operators = OPS[v1] == OPS[v2]
         return too_different_operators
 
@@ -792,7 +791,7 @@ def get_returned_values(lt, rt, core, s1, s2):
 
 
 def similar_to_function(lt: nodes.NodeNG, rt: nodes.NodeNG, core, s1, s2) -> bool:
-    if length_or_type_mismatch(s1, s2) or not all(
+    if length_or_type_mismatch([s1, s2]) or not all(
         replaceable_with(s1[key], s2[key]) for key in s1.keys()
     ):
         return False
@@ -813,8 +812,146 @@ def similar_to_function(lt: nodes.NodeNG, rt: nodes.NodeNG, core, s1, s2) -> boo
     return size_after_decomposition < size_before_decomposition
 
 
-def length_or_type_mismatch(s1, _s2) -> bool:
-    return any("-" in id_.name for id_ in s1.keys())
+def length_or_type_mismatch(subs) -> bool:
+    return any("-" in id_.name for id_ in subs[0])
+
+
+def assignment_to_aunify_var(node) -> bool:
+    if isinstance(node, nodes.AssignName) and isinstance(node.name, AunifyVar):
+        return True
+
+    if isinstance(node, list):
+        return any(assignment_to_aunify_var(n) for n in node)
+
+    return any(assignment_to_aunify_var(n) for n in node.get_children())
+
+
+def called_aunify_var(node, inside_called: bool = False) -> bool:
+    if inside_called and (
+        (isinstance(node, nodes.Name) and isinstance(node.name, AunifyVar))
+        or (isinstance(node, nodes.Attribute) and isinstance(node.attrname, AunifyVar))
+    ):
+        return True
+
+    if isinstance(node, nodes.Call):
+        if called_aunify_var(node.func, inside_called=True):
+            return True
+        return any(called_aunify_var(n) for n in node.get_children())
+
+    if isinstance(node, nodes.BinOp) and isinstance(node.op, AunifyVar):
+        return True
+
+    if isinstance(node, nodes.Compare) and any(isinstance(op, AunifyVar) for op in node.ops):
+        return True
+
+    if isinstance(node, list):
+        return any(called_aunify_var(n) for n in node)
+
+    return any(called_aunify_var(n) for n in node.get_children())
+
+
+def extract_from_elif(node: nodes.If, result: List[nodes.If] = None) -> bool:
+    """
+    returns True iff elifs end with else
+    """
+
+    def count_elses(node: nodes.If) -> int:
+        if len(node.body) != 1 or not isinstance(node.body[0], nodes.If):
+            return 0
+
+        node = node.body[0]
+        result = 0
+        while node.has_elif_block():
+            node = node.orelse[0]
+            result += 1
+        return result + (1 if has_else_block(node) else 0)
+
+    result = [node] if result is None else result
+    if has_else_block(node):
+        return True, result
+
+    current = node
+    else_count = count_elses(node)
+    while current.has_elif_block():
+        elif_ = current.orelse[0]
+        result.append(elif_)
+        if has_else_block(elif_):
+            return True, (
+                result if else_count == 0 or else_count >= len(result) else result[:-else_count]
+            )
+        current = elif_
+    return False, result
+
+
+def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
+    sibling = node.next_sibling()
+    while sibling is not None and isinstance(sibling, nodes.If):
+        new: List[nodes.NodeNG] = []
+        if not extract_from_elif(sibling, new):
+            return
+        seq_ifs.append(sibling)
+        seq_ifs.extend(new)
+        sibling = sibling.next_sibling()
+
+
+def if_to_variables(node: nodes.If) -> bool:
+
+    def get_bodies(ifs: List[nodes.If]) -> List[List[nodes.NodeNG]]:
+        result = []
+        for i, if_ in enumerate(ifs):
+            result.append(if_.body)
+            if i == len(ifs) - 1:
+                result.append(if_.orelse)
+        return result
+
+    def get_core(if_bodies: List[List[nodes.NodeNG]]):
+        core, sl, sr = antiunify_lists(if_bodies[0], if_bodies[1])
+        subs = [sl, sr]
+        for i in range(2, len(if_bodies)):
+            core, sl, sr = antiunify_lists(core, if_bodies[i])
+
+            for sub in subs:
+                sub.update(sl)
+            subs.append(sr)
+
+        return core, subs
+
+    if is_parents_elif(node):
+        return False
+
+    ends_with_else, ifs = extract_from_elif(node)
+    if not ends_with_else:
+        return False
+
+    if_bodies = get_bodies(ifs)
+    assert len(if_bodies) >= 2
+    core, subs = get_core(if_bodies)
+
+    if length_or_type_mismatch(subs) or assignment_to_aunify_var(core) or called_aunify_var(core):
+        return False
+
+    max_unique_vals = max(len(set(sub.values())) for sub in subs)
+
+    tokens_before_decomposition = get_token_count(node)
+    tokens_after_decomposition = (
+        get_token_count(core)
+        + sum(get_token_count(if_.test) + 1 for if_ in ifs)  # if
+        + len(if_bodies) * max_unique_vals * 3  # var = val
+    )
+
+    stmts_before_decomposition = get_statements_count(
+        node, include_defs=False, include_name_main=True
+    )
+    stmts_after_decomposition = get_statements_count(
+        core, include_defs=False, include_name_main=True
+    ) + (len(if_bodies)) * (
+        max_unique_vals + 1  # + tests
+    )
+
+    return (
+        tokens_after_decomposition < 0.8 * tokens_before_decomposition  # TODO extract into variable
+        and stmts_after_decomposition < stmts_before_decomposition
+    )
 
 
 def if_into_similar(lt: nodes.If, rt: nodes.If, core, s1, s2) -> bool:
@@ -829,7 +966,7 @@ def if_into_similar(lt: nodes.If, rt: nodes.If, core, s1, s2) -> bool:
     ):
         return False
 
-    if length_or_type_mismatch(s1, s2):
+    if length_or_type_mismatch([s1, s2]):
         return False
 
     if len(set(s1.values()) | set(s2.values())) != 2:
@@ -837,7 +974,7 @@ def if_into_similar(lt: nodes.If, rt: nodes.If, core, s1, s2) -> bool:
 
     size_before_decomposition = get_token_count(lt.parent)
     size_after_decomposition = get_token_count(core) + len(s1) * (
-        3 + get_token_count(lt.parent.test)  # V1 if ... (else) V2
+        4 + get_token_count(lt.parent.test)  # V1 if ... else V2
     )
 
     return size_after_decomposition < size_before_decomposition
@@ -862,13 +999,18 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             "",
         ),
         "R6804": (
-            "Move if inside block",
-            "if-into-similar",
+            "Extract ifs to ternary",
+            "if-to-ternary",
             "",
         ),
         "R6805": (
             "Combine",
             "seq-into-similar",
+            "",
+        ),
+        "R6806": (
+            "Extract ifs",
+            "if-to-variables",
             "",
         ),
         "R6851": (
@@ -973,11 +1115,13 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         if branches is None:
             return False
 
+        any_message = False
         same_prefix_len = get_stmts_difference(branches, forward=True)
         if same_prefix_len >= 1:
             add_message(branches, same_prefix_len, node, forward=True)
+            any_message = True
             if any(same_prefix_len == len(b) for b in branches):
-                return False
+                return any_message
 
         same_suffix_len = get_stmts_difference(branches, forward=False)
         if same_suffix_len >= 1:
@@ -988,7 +1132,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     i += 1
                 branches = branches[i:]
                 if len(branches) < 2:
-                    return False
+                    return any_message
             defect_node = branches[0][-1].parent
 
             # disallow breaking up coherent segments
@@ -1004,38 +1148,13 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 )
                 < 1 / 2
             ):  # TODO extract into parameter
-                return False
+                return any_message
 
             add_message(branches, same_suffix_len, defect_node, forward=False)
-            return True
+            any_message = True
+        return any_message
 
     def identical_seq_ifs(self, node: nodes.If) -> bool:
-
-        def extract_from_elif(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> bool:
-            """
-            returns False iff elifs end with else
-            """
-            if len(node.orelse) > 0 and not node.has_elif_block():
-                return False
-
-            current = node
-            while current.has_elif_block():
-                elif_ = current.orelse[0]
-                seq_ifs.append(elif_)
-                if len(elif_.orelse) > 0 and not elif_.has_elif_block():
-                    return False
-                current = elif_
-            return True
-
-        def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
-            sibling = node.next_sibling()
-            while sibling is not None and isinstance(sibling, nodes.If):
-                new: List[nodes.NodeNG] = []
-                if not extract_from_elif(sibling, new):
-                    return
-                seq_ifs.append(sibling)
-                seq_ifs.extend(new)
-                sibling = sibling.next_sibling()
 
         def same_ifs_count(seq_ifs: List[nodes.NodeNG], start: int) -> int:
             reference = seq_ifs[start].body
@@ -1054,13 +1173,12 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
         prev_sibling = node.previous_sibling()
         if is_parents_elif(node) or (
-            isinstance(prev_sibling, nodes.If) and extract_from_elif(prev_sibling, [])
+            isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]
         ):
             return False
 
-        seq_ifs = [node]
-
-        if not extract_from_elif(node, seq_ifs):
+        ends_with_else, seq_ifs = extract_from_elif(node)
+        if ends_with_else:
             return False
         extract_from_siblings(node, seq_ifs)
 
@@ -1105,14 +1223,14 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 if lt.fromlineno < rt.fromlineno:
                     yield rt
 
-        # for lt, rt in candidate_pairs():
         for to_check_in_file, lt in candidate_lt():
+            if isinstance(lt, nodes.If) and if_to_variables(lt):
+                self.add_message("if-to-variables", node=lt)
+                continue
+
             for rt in candidate_rt(to_check_in_file, lt):
                 core, s1, s2 = antiunify(lt, rt)
-                if if_into_similar(lt, rt, core, s1, s2):
-                    self.add_message("if-into-similar", node=lt)
-                    break
-                elif similar_to_function(lt, rt, core, s1, s2):
+                if similar_to_function(lt, rt, core, s1, s2):
                     self.add_message("similar-to-function", node=lt)
                     break
 
