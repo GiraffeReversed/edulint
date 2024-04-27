@@ -71,10 +71,10 @@ from typing import List
     ]),
     ("hw48505.py", []),
 ])
-def test_duplicate_if_branches(filename: str, expected_output: List[Problem]) -> None:
+def test_identical_before_after_branch(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=duplicate-if-branches")],
+        [Arg(Option.PYLINT, "--enable=identical-before-after-branch")],
         expected_output
     )
 
@@ -104,10 +104,10 @@ def test_duplicate_if_branches(filename: str, expected_output: List[Problem]) ->
     ]),
     ("052975-parse_time.py", []),
 ])
-def test_duplicate_seq_ifs(filename: str, expected_output: List[Problem]) -> None:
+def test_identical_seq_ifs(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=duplicate-seq-ifs")],
+        [Arg(Option.PYLINT, "--enable=identical-seq-ifs")],
         expected_output
     )
 
@@ -181,5 +181,31 @@ def test_duplicate_sequence(filename: str, expected_output: List[Problem]) -> No
     apply_and_lint(
         filename,
         [Arg(Option.PYLINT, "--enable=duplicate-sequence")],
+        expected_output
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("c69c0646b0-p4_triangle.py", [])
+])
+def test_similar_to_function(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=similar-to-function")],
+        expected_output
+    )
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("0bf69cc1a5-p4_geometry.py", []),
+    ("163aadb1dd-p4_geometry.py", []),
+    ("5ce8692f42-p5_fibsum.py", []),
+    ("9668dff756-p6_workdays.py", []),
+    ("fdc1570861-p6_workdays.py", [lazy_problem().set_line(50)]),  # multiple if branches differing in one value
+    ("uc_73_5468_12_52.py", [lazy_problem().set_line(4)]),
+])
+def test_if_into_similar(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=if-into-similar")],
         expected_output
     )

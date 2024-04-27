@@ -336,6 +336,22 @@ def get_statements_count(
     return 1
 
 
+class TokenCountingVisitor(BaseVisitor[int]):
+    default = 0
+
+    @classmethod
+    def combine(cls, results: List[int]) -> int:
+        return sum(results) + 1
+
+
+def get_token_count(node: Union[nodes.NodeNG, List[nodes.NodeNG]]) -> int:
+    visitor = TokenCountingVisitor()
+    if isinstance(node, list):
+        return visitor.visit_many(node)
+    else:
+        return visitor.visit(node)
+
+
 # TODO consider redefiniton?
 def contains_name(node: nodes.NodeNG, var: nodes.Name) -> bool:
     if isinstance(node, nodes.Name):

@@ -15,11 +15,9 @@ from edulint.linting.checkers.utils import (
     is_main_block,
     is_block_comment,
     get_statements_count,
-    var_defined_before,
     var_used_after,
-    aunify_node_as_string,
-    eprint_aunify_core,
     eprint,
+    get_token_count,
 )
 
 
@@ -932,6 +930,8 @@ OPS = {
     "not": 8,
     "is": 9,
     "is not": 9,
+    "in": 15,
+    "not in": 15,
     "&": 10,
     "&=": 10,
     "|": 10,
@@ -951,7 +951,7 @@ TYPES_MATCH_REQUIRED = (nodes.Return,)
 
 def replaceable_with(v1, v2) -> bool:
     if isinstance(v1, str) and v1 in OPS:
-        assert isinstance(v2, str) and v2 in OPS
+        assert isinstance(v2, str) and v2 in OPS, v2
 
         too_different_operators = OPS[v1] == OPS[v2]
         return too_different_operators
@@ -1003,79 +1003,114 @@ def get_returned_values(lt, rt, core, s1, s2):
     return returned_values
 
 
-def id_with_dash(n: Any) -> bool:
-    if isinstance(n, AunifyVar):
-        return "-" in n.name
-
-    if isinstance(n, list):
-        return any(child and id_with_dash(child) for child in n)
-
-    if isinstance(n, nodes.Compare):
-        for pair in n.ops:
-            if isinstance(pair, tuple):
-                _op, expr = pair
-                if id_with_dash(expr):
-                    return True
-            else:
-                if id_with_dash(pair):
-                    return True
+def similar_to_function(lt: nodes.NodeNG, rt: nodes.NodeNG, core, s1, s2) -> bool:
+    if length_or_type_mismatch(s1, s2) or not all(
+        replaceable_with(s1[key], s2[key]) for key in s1.keys()
+    ):
         return False
 
-    if isinstance(n, nodes.Dict):
-        for pair in n.items:
-            if isinstance(pair, tuple):
-                fst, snd = pair
-                if id_with_dash(fst) or id_with_dash(snd):
-                    return True
-            else:
-                if id_with_dash(pair):
-                    return True
+    size_before_decomposition = get_statements_count(
+        lt, include_defs=False, include_name_main=True
+    ) + get_statements_count(rt, include_defs=False, include_name_main=True)
+    size_after_decomposition = (
+        # function header
+        1
+        # implementation
+        + get_statements_count(core, include_defs=False, include_name_main=True)
+        + 1  # return
+        # calls
+        + 2
+    )
+
+    return size_after_decomposition < size_before_decomposition
+
+
+def length_or_type_mismatch(s1, _s2) -> bool:
+    return any("-" in id_.name for id_ in s1.keys())
+
+
+def if_into_similar(lt: nodes.If, rt: nodes.If, core, s1, s2) -> bool:
+
+    if (
+        not isinstance(lt.parent, nodes.If)
+        or lt.parent != rt.parent
+        or len(lt.parent.body) != 1
+        or lt.parent.body[0] != lt
+        or len(rt.parent.body) != 1
+        or rt.parent.orelse[0] != rt
+    ):
         return False
 
-    return any(child and id_with_dash(child) for child in n.get_children())
-
-
-def is_duplicate_block(lt: nodes.NodeNG, rt: nodes.NodeNG) -> bool:
-    core, s1, s2 = Antiunify().antiunify(lt, rt)
-
-    if id_with_dash(core) or not all(replaceable_with(s1[key], s2[key]) for key in s1.keys()):
+    if length_or_type_mismatch(s1, s2):
         return False
 
-    eprint("x")
-    eprint(lt.as_string())
-    eprint()
-    eprint(rt.as_string())
-    eprint()
-    eprint(aunify_node_as_string(core))
-    # eprint_aunify_core(core)
-    # eprint(id_with_dash(core))
-    eprint()
-    eprint(*s1.items(), sep="\n", end="\n\n")
-    eprint(*s2.items(), sep="\n", end="\n\n")
-    # # eprint(get_returned_values(lt, rt, core, s1, s2))
-    eprint("\n")
-    eprint("x", end="")
+    if len(set(s1.values()) | set(s2.values())) != 2:
+        return False
 
-    return True
+    size_before_decomposition = get_token_count(lt.parent)
+    size_after_decomposition = get_token_count(core) + len(s1) * (
+        3 + get_token_count(lt.parent.test)  # V1 if ... (else) V2
+    )
+
+    return size_after_decomposition < size_before_decomposition
 
 
 class BigNoDuplicateCode(BaseChecker):  # type: ignore
     name = "big-no-duplicate-code"
     msgs = {
-        "R6501": (
-            "Lines %i to %i are similar to lines %i through %i.",
-            "no-duplicates",
-            "Emitted when duplicate code is encountered",
-        )
+        "R6801": (
+            "Lines %i to %i are similar to lines %i through %i. Extract them to a common function.",
+            "similar-to-function",
+            "",
+        ),
+        "R6802": (
+            "Extract code into loop",
+            "similar-to-loop",
+            "",
+        ),
+        "R6803": (
+            "Use existing function",
+            "similar-to-call",
+            "",
+        ),
+        "R6804": (
+            "Move if inside block",
+            "if-into-similar",
+            "",
+        ),
+        "R6805": (
+            "Combine",
+            "seq-into-similar",
+            "",
+        ),
+        "R6851": (
+            "Identical code inside all if's branches, move %d lines %s the if.",
+            "identical-before-after-branch",
+            "Emitted when identical code starts or ends all branches of an if statement.",
+        ),
+        "R6852": (
+            "Identical code inside %d consecutive ifs, join their conditions using 'or'.",
+            "identical-seq-ifs",
+            "Emitted when several consecutive if statements have identical bodies and thus can be "
+            "joined by or in their conditions.",
+        ),
+        "R6853": (
+            "A complex expression '%s' used repeatedly (on lines %s). Extract it to a local variable.",
+            "identical-exprs-to-variable",
+            "Emitted when an overly complex expression is used multiple times.",
+        ),
+        "R6854": (
+            "A complex expression '%s' used repeatedly (on lines %s). Extract it to a local variable.",
+            "identical-exprs-to-function",
+            "Emitted when an overly complex expression is used multiple times.",
+        ),
     }
 
     def __init__(self, linter: "PyLinter"):
         super().__init__(linter)
-        # self.to_check = {nodes.FunctionDef: [], nodes.If: [], nodes.While: [], nodes.For: []}
         self.to_check = {}
 
     def _add_to_check(self, node: nodes.NodeNG) -> None:
-        # self.to_check[type(node)].append(node)
         fn = node.root().name
         if fn not in self.to_check:
             self.to_check[fn] = {
@@ -1087,7 +1122,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         self.to_check[fn][type(node)].append(node)
 
     def visit_if(self, node: nodes.If) -> None:
-        self._add_to_check(node)
+        any_message1 = self.identical_before_after_branch(node)
+        any_message2 = self.identical_seq_ifs(node)
+
+        if not any_message1 and not any_message2:
+            self._add_to_check(node)
 
     def visit_while(self, node: nodes.While) -> None:
         self._add_to_check(node)
@@ -1098,52 +1137,243 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
     def visit_functiondef(self, node: nodes.FunctionDef) -> None:
         self._add_to_check(node)
 
-    Interval = Tuple[int, int]
-    DuplicateIntervals = Dict[Tuple[Interval, Interval], Tuple[nodes.NodeNG, nodes.NodeNG]]
+    def identical_before_after_branch(self, node: nodes.If) -> bool:
+        def extract_branch_bodies(node: nodes.If) -> Optional[List[nodes.NodeNG]]:
+            branches = [node.body]
+            current = node
+            while current.has_elif_block():
+                elif_ = current.orelse[0]
+                if not elif_.orelse:
+                    return None
 
-    @staticmethod
-    def _in_interval(i: int, j: int, intervals: DuplicateIntervals) -> bool:
-        return any(
-            lt_f <= i <= lt_t and rt_f <= j <= rt_t for ((lt_f, lt_t), (rt_f, rt_t)) in intervals
-        )
+                branches.append(elif_.body)
+                current = elif_
+            branches.append(current.orelse)
+            return branches
 
-    @staticmethod
-    def _remove_interval(lt: nodes.NodeNG, rt: nodes.NodeNG, intervals: DuplicateIntervals) -> None:
-        for (lt_f, lt_t), (rt_f, rt_t) in intervals:
+        def get_stmts_difference(branches: List[nodes.NodeNG], forward: bool) -> int:
+            reference = branches[0]
+            compare = branches[1:]
+            for i in range(min(map(len, branches))):
+                for branch in compare:
+                    index = i if forward else -i - 1
+                    if reference[index].as_string() != branch[index].as_string():
+                        return i
+            return i + 1
+
+        def add_message(
+            branches: List[nodes.NodeNG],
+            stmts_difference: int,
+            defect_node: nodes.NodeNG,
+            forward: bool = True,
+        ) -> None:
+            reference = branches[0]
+            first = reference[0 if forward else -stmts_difference]
+            last = reference[stmts_difference - 1 if forward else -1]
+            lines_difference = get_lines_between(first, last, including_last=True)
+
+            self.add_message(
+                "identical-before-after-branch",
+                node=defect_node,
+                args=(lines_difference, "before" if forward else "after"),
+            )
+
+        if not node.orelse or is_parents_elif(node):
+            return False
+
+        branches = extract_branch_bodies(node)
+        if branches is None:
+            return False
+
+        same_prefix_len = get_stmts_difference(branches, forward=True)
+        if same_prefix_len >= 1:
+            add_message(branches, same_prefix_len, node, forward=True)
+            if any(same_prefix_len == len(b) for b in branches):
+                return False
+
+        same_suffix_len = get_stmts_difference(branches, forward=False)
+        if same_suffix_len >= 1:
+            # allow early returns
+            if same_suffix_len == 1 and isinstance(branches[0][-1], nodes.Return):
+                i = 0
+                while len(branches[i]) == 1:
+                    i += 1
+                branches = branches[i:]
+                if len(branches) < 2:
+                    return False
+            defect_node = branches[0][-1].parent
+
+            # disallow breaking up coherent segments
+            same_part = branches[0][-same_suffix_len:]
             if (
-                lt.fromlineno <= lt_f
-                and lt_t <= lt.tolineno
-                and rt.fromlineno <= rt_f
-                and rt_t <= rt.tolineno
-            ):
-                intervals.pop(((lt_f, lt_t), (rt_f, rt_t)))
-                return
+                get_statements_count(same_part, include_defs=True, include_name_main=True)
+                / (
+                    min(
+                        get_statements_count(branch, include_defs=True, include_name_main=True)
+                        for branch in branches
+                    )
+                    - same_prefix_len
+                )
+                < 1 / 2
+            ):  # TODO extract into parameter
+                return False
 
-    @staticmethod
-    def _add_interval(lt: nodes.NodeNG, rt: nodes.NodeNG, intervals: DuplicateIntervals) -> None:
-        intervals[((lt.fromlineno, lt.tolineno), (rt.fromlineno, rt.tolineno))] = (lt, rt)
+            add_message(branches, same_suffix_len, defect_node, forward=False)
+            return True
+
+    def identical_seq_ifs(self, node: nodes.If) -> bool:
+
+        def extract_from_elif(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> bool:
+            """
+            returns False iff elifs end with else
+            """
+            if len(node.orelse) > 0 and not node.has_elif_block():
+                return False
+
+            current = node
+            while current.has_elif_block():
+                elif_ = current.orelse[0]
+                seq_ifs.append(elif_)
+                if len(elif_.orelse) > 0 and not elif_.has_elif_block():
+                    return False
+                current = elif_
+            return True
+
+        def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
+            sibling = node.next_sibling()
+            while sibling is not None and isinstance(sibling, nodes.If):
+                new: List[nodes.NodeNG] = []
+                if not extract_from_elif(sibling, new):
+                    return
+                seq_ifs.append(sibling)
+                seq_ifs.extend(new)
+                sibling = sibling.next_sibling()
+
+        def same_ifs_count(seq_ifs: List[nodes.NodeNG], start: int) -> int:
+            reference = seq_ifs[start].body
+            for i in range(start + 1, len(seq_ifs)):
+                # do not suggest join of elif and sibling
+                if seq_ifs[start].parent not in seq_ifs[i].node_ancestors():
+                    return i - start
+
+                compared = seq_ifs[i].body
+                if len(reference) != len(compared):
+                    return i - start
+                for j in range(len(reference)):
+                    if reference[j].as_string() != compared[j].as_string():
+                        return i - start
+            return len(seq_ifs) - start
+
+        prev_sibling = node.previous_sibling()
+        if is_parents_elif(node) or (
+            isinstance(prev_sibling, nodes.If) and extract_from_elif(prev_sibling, [])
+        ):
+            return False
+
+        seq_ifs = [node]
+
+        if not extract_from_elif(node, seq_ifs):
+            return False
+        extract_from_siblings(node, seq_ifs)
+
+        if len(seq_ifs) == 1:
+            return False
+
+        i = 0
+        any_message = False
+        while i < len(seq_ifs) - 1:
+            count = same_ifs_count(seq_ifs, i)
+            if count > 1:
+                first = seq_ifs[i]
+                assert isinstance(seq_ifs[i + count - 1], nodes.If)
+                last = seq_ifs[i + count - 1].body[-1]
+
+                self.add_message(
+                    "identical-seq-ifs",
+                    line=first.fromlineno,
+                    col_offset=first.col_offset,
+                    end_lineno=last.tolineno,
+                    end_col_offset=last.end_col_offset,
+                    args=(count,),
+                )
+                any_message = True
+            i += count
+        return any_message
 
     def close(self) -> None:
-        for to_check_in_file in self.to_check.values():
-            duplicate_intervals = {}
-            for candidate_nodes in to_check_in_file.values():
-                for i in range(len(candidate_nodes)):
-                    for j in range(i + 1, len(candidate_nodes)):
-                        lt = candidate_nodes[i]
-                        rt = candidate_nodes[j]
-                        if is_duplicate_block(lt, rt) and not BigNoDuplicateCode._in_interval(
-                            lt.fromlineno, rt.fromlineno, duplicate_intervals
-                        ):
-                            BigNoDuplicateCode._remove_interval(lt, rt, duplicate_intervals)
-                            BigNoDuplicateCode._add_interval(lt, rt, duplicate_intervals)
-                            break
-
-            for lt, rt in duplicate_intervals.values():
-                self.add_message(
-                    "no-duplicates",
-                    node=lt,
-                    args=(lt.fromlineno, lt.tolineno, rt.fromlineno, rt.tolineno),
+        def candidate_lt():
+            for to_check_in_file in self.to_check.values():
+                for to_check_of_type in to_check_in_file.values():
+                    to_check_of_type.sort(key=lambda v: (v.fromlineno, v.col_offset))
+                nodes = sorted(
+                    [v for to_check_of_type in to_check_in_file.values() for v in to_check_of_type],
+                    key=lambda v: (v.fromlineno, v.col_offset),
                 )
+                for node in nodes:
+                    yield to_check_in_file, node
+
+        def candidate_rt(to_check_in_file, lt):
+            for rt in to_check_in_file[type(lt)]:
+                if lt.fromlineno < rt.fromlineno:
+                    yield rt
+
+        # for lt, rt in candidate_pairs():
+        for to_check_in_file, lt in candidate_lt():
+            for rt in candidate_rt(to_check_in_file, lt):
+                core, s1, s2 = Antiunify().antiunify(lt, rt)
+                if if_into_similar(lt, rt, core, s1, s2):
+                    self.add_message("if-into-similar", node=lt)
+                    break
+                elif similar_to_function(lt, rt, core, s1, s2):
+                    self.add_message("similar-to-function", node=lt)
+                    break
+
+    # Interval = Tuple[int, int]
+    # DuplicateIntervals = Dict[Tuple[Interval, Interval], Tuple[nodes.NodeNG, nodes.NodeNG]]
+
+    # @staticmethod
+    # def _in_interval(i: int, j: int, intervals: DuplicateIntervals) -> bool:
+    #     return any(
+    #         lt_f <= i <= lt_t and rt_f <= j <= rt_t for ((lt_f, lt_t), (rt_f, rt_t)) in intervals
+    #     )
+
+    # @staticmethod
+    # def _remove_interval(lt: nodes.NodeNG, rt: nodes.NodeNG, intervals: DuplicateIntervals) -> None:
+    #     for (lt_f, lt_t), (rt_f, rt_t) in intervals:
+    #         if (
+    #             lt.fromlineno <= lt_f
+    #             and lt_t <= lt.tolineno
+    #             and rt.fromlineno <= rt_f
+    #             and rt_t <= rt.tolineno
+    #         ):
+    #             intervals.pop(((lt_f, lt_t), (rt_f, rt_t)))
+    #             return
+
+    # @staticmethod
+    # def _add_interval(lt: nodes.NodeNG, rt: nodes.NodeNG, intervals: DuplicateIntervals) -> None:
+    #     intervals[((lt.fromlineno, lt.tolineno), (rt.fromlineno, rt.tolineno))] = (lt, rt)
+
+    # def close(self) -> None:
+    #     for fn, to_check_in_file in self.to_check.items():
+    #         duplicate_intervals = {}
+    #         for candidate_nodes in to_check_in_file.values():
+    #             for i in range(len(candidate_nodes)):
+    #                 for j in range(i + 1, len(candidate_nodes)):
+    #                     lt = candidate_nodes[i]
+    #                     rt = candidate_nodes[j]
+    #                     if is_duplicate_block(lt, rt) and not BigNoDuplicateCode._in_interval(
+    #                         lt.fromlineno, rt.fromlineno, duplicate_intervals
+    #                     ):
+    #                         BigNoDuplicateCode._remove_interval(lt, rt, duplicate_intervals)
+    #                         BigNoDuplicateCode._add_interval(lt, rt, duplicate_intervals)
+    #                         break
+
+    #         for lt, rt in duplicate_intervals.values():
+    #             self.add_message(
+    #                 "no-duplicates",
+    #                 node=lt,
+    #                 args=(lt.fromlineno, lt.tolineno, rt.fromlineno, rt.tolineno),
+    #             )
 
 
 def register(linter: "PyLinter") -> None:
