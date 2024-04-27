@@ -1,4 +1,4 @@
-from typing import Dict, Union, Tuple, List, Any, Iterator, List
+from typing import Dict, Union, Tuple, List, Any, Iterator
 import copy
 
 from astroid import nodes
