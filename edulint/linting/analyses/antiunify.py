@@ -242,7 +242,7 @@ class Antiunify:
         return self._aunify_by_attrs(to_aunify, ["modname", "names"], [])
 
     def _aunify_import(self, to_aunify: List[nodes.Import]):
-        return self._aunify_by_attrs(to_aunify, [], ["modname", "names"])
+        return self._aunify_by_attrs(to_aunify, [], ["names"])
 
 
 ASTROID_FIELDS = {
@@ -259,7 +259,7 @@ ASTROID_FIELDS = {
     nodes.Nonlocal: ["names"],
     nodes.Global: ["names"],
     nodes.ImportFrom: ["modname", "names"],
-    nodes.Import: ["modname", "names"],
+    nodes.Import: ["names"],
 }
 
 
