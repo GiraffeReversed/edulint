@@ -71,6 +71,6 @@ Are you interested in sponsoring this project, want to collaborate on an academi
 
 Supported: Python 3.8 - 3.11
 
-Python 3.12 is not yet supported by all our dependencies.
+- Python 3.7 is no longer supported as it is not supported by some of our dependencies.
+- Python 3.12 is not yet supported by all our dependencies.
 
-Python 3.7 mostly works, but can fail in edge cases due to different parsing between package `typed-ast` (<=3.7) and Python's native `ast` (>=3.8). We discovered those using the existing [compatibility test suite](https://github.com/GiraffeReversed/edulint/actions/workflows/test-compatibility.yaml).
