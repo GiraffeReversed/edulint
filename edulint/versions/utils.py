@@ -1,7 +1,6 @@
 # Copied from https://github.com/GiraffeReversed/edulint-web/blob/main/utils.py
 
-import os
-from typing import Tuple, Dict, List, Optional
+from typing import List, Optional
 from dataclasses import dataclass
 import functools
 
@@ -14,7 +13,7 @@ class Version(packaging_version.Version):
         super().__init__(version)
 
     def is_not_full_release(self) -> bool:
-        return not(self.is_prerelease or self.is_postrelease or self.is_devrelease)
+        return not (self.is_prerelease or self.is_postrelease or self.is_devrelease)
 
     def name(self) -> str:
         return str(self).replace(".", "_")
@@ -36,7 +35,6 @@ class Version(packaging_version.Version):
             return None
 
 
-@functools.lru_cache
+@functools.lru_cache()
 def get_available_versions(versions_raw: List[str]) -> List[Version]:
     return [Version(v) for v in versions_raw]
-
