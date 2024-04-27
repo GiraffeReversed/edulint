@@ -5,6 +5,7 @@
 
 from pylint.lint import PyLinter
 
+from edulint.linting.analyses.variable_modification import VarModificationAnalysis
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 
 
@@ -16,6 +17,7 @@ def patch_ast_transforms():
         if ast is not None:
             try:
                 ast.accept(CFGVisitor())
+                VarModificationAnalysis().collect(ast)
             except Exception:
                 pass
         return ast
