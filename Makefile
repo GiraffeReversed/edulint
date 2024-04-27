@@ -36,7 +36,13 @@ check: mypy test
 
 run:
 	export PYTHONPATH=${EDULINT_PATH} && \
-		python3 -m edulint --disable-version-check ${ARGS}
+		python3 -m edulint --disable-version-check --disable-explanations-update ${ARGS}
+
+perf:
+	export PYTHONPATH=${EDULINT_PATH} && \
+		time py-spy record -s -n -r1000 -o profile.ss -f speedscope -- \
+		python3 -m edulint --disable-version-check --disable-explanations-update ${ARGS} > /dev/null \
+		&& code profile.ss
 
 lint_data:
 	DATA_DIR=${DATA_PATH}/${YEAR}; \

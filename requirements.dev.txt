@@ -3,4 +3,5 @@ tqdm~=4.64.1  # 4.64.1 is tested to be compatible
 build
 mypy
 packaging
+py-spy
 # additional in test/requirements.txt

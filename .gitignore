@@ -133,6 +133,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Profiler output
+*.ss
+
 .vscode/
 .idea/
 
