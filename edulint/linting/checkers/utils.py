@@ -3,6 +3,7 @@ from astroid import nodes, Uninferable  # type: ignore
 import sys
 import inspect
 from pylint.checkers import utils  # type: ignore
+from functools import lru_cache
 
 
 def eprint(*args: Any, **kwargs: Any) -> None:
@@ -227,6 +228,11 @@ def get_statements_count(
 class TokenCountingVisitor(BaseVisitor[int]):
     default = 0
 
+    def __new__(cls):
+        if not hasattr(cls, "instance"):
+            cls.instance = super(TokenCountingVisitor, cls).__new__(cls)
+        return cls.instance
+
     @classmethod
     def combine(cls, results: List[int]) -> int:
         return sum(results) + 1
@@ -245,6 +251,10 @@ class TokenCountingVisitor(BaseVisitor[int]):
 
     def visit_ifexp(self, node: nodes.IfExp) -> int:
         return self._visit_with_else(node)
+
+    @lru_cache(maxsize=None)
+    def visit(self, node: nodes.NodeNG) -> int:
+        return super().visit(node)
 
 
 def get_token_count(node: Union[nodes.NodeNG, List[nodes.NodeNG]]) -> int:

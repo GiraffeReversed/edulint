@@ -35,6 +35,7 @@ from edulint.linting.checkers.utils import (
     cformat,  # noqa: F401
     get_token_count,
     has_else_block,
+    TokenCountingVisitor,
 )
 
 
@@ -1726,6 +1727,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 pass  # TODO hint use common helper function
             else:
                 similar_to_function(self, to_aunify, core, avars)
+
+        TokenCountingVisitor.visit.cache_clear()  # may impact multithread performance
 
 
 def register(linter: "PyLinter") -> None:
