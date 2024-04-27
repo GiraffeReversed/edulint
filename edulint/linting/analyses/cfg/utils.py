@@ -1,4 +1,4 @@
-from typing import Generator, Optional, Callable, List
+from typing import Generator, Optional, Callable, List, Tuple
 from enum import Enum
 
 from astroid import nodes
@@ -126,6 +126,20 @@ def get_cfg_loc(in_stmt: nodes.NodeNG) -> CFGLoc:
         assert in_stmt is not None
 
     return in_stmt.cfg_loc
+
+
+def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
+    parent = loc.node.parent
+
+    if (isinstance(parent, (nodes.If, nodes.While)) and loc.node == parent.test) or (
+        isinstance(parent, nodes.For) and loc.node in (parent.target, parent.iter)
+    ):
+        return None, parent.cfg_loc
+
+    if isinstance(parent, (nodes.TryExcept, nodes.ExceptHandler)) and loc.node == parent.body[0]:
+        return loc, parent.cfg_loc
+
+    return loc, None
 
 
 def syntactic_children_locs_from(
