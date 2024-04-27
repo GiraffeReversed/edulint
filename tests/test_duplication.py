@@ -187,7 +187,8 @@ def test_duplicate_sequence(filename: str, expected_output: List[Problem]) -> No
 
 
 @pytest.mark.parametrize("filename,expected_output", [
-    ("c69c0646b0-p4_triangle.py", [])
+    ("c69c0646b0-p4_triangle.py", []),
+    ("hw34406.py", []),
 ])
 def test_similar_to_function(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
