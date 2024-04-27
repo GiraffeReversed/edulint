@@ -124,3 +124,41 @@ def get_cfg_loc(in_stmt: nodes.NodeNG) -> CFGLoc:
         assert in_stmt is not None
 
     return in_stmt.cfg_loc
+
+
+def syntactic_children_locs_from(
+    loc: CFGLoc,
+    syntactic: nodes.NodeNG,
+) -> Generator[CFGLoc, None, None]:
+    if isinstance(syntactic, list):
+        stop_on = lambda loc: all(  # noqa: E731
+            s not in loc.node.node_ancestors() for s in syntactic
+        )
+    else:
+        stop_on = lambda loc: syntactic not in loc.node.node_ancestors()  # noqa: E731
+
+    for succ in successors_from_loc(
+        loc,
+        stop_on=stop_on,
+        include_start=True,
+        include_end=False,
+    ):
+        yield succ
+
+
+def get_first_locs_after(loc):
+    if isinstance(loc, list):
+        stop_on = lambda succ: all(  # noqa: E731
+            s.node not in succ.node.node_ancestors() for s in loc
+        )
+    else:
+        stop_on = lambda succ: loc.node not in succ.node.node_ancestors()  # noqa: E731
+
+    for succ in (successors_from_locs if isinstance(loc, list) else successors_from_loc)(
+        loc,
+        stop_on=stop_on,
+        include_start=False,
+        include_end=True,
+    ):
+        if stop_on(succ):
+            yield succ
