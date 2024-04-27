@@ -5,6 +5,6 @@ flake8-json~=21.7.0 # 21.7.0 is tested to be compatible
 pylint>=2.15.10,<3  # 3 is tested to be incompatible
 dataclasses-json~=0.5.7  # 0.5.7 is tested to be compatible
 tomli~=2.0.1  # 2.0.1 is tested to be compatible. In Python 3.11+ it's included as a standard library tomllib. 
-requests>=2.28.2 # 2.28.2 is tested to be compatible
+requests>=2.31.0 # versions lower than 2.31.0 had CVE-2023-32681
 platformdirs
 loguru
