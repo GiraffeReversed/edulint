@@ -8,7 +8,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, AunifyVar, core_as_string
+from edulint.linting.analyses.antiunify import antiunify, AunifyVar, Antiunify, core_as_string
 from edulint.linting.analyses.variable_modification import VarEventType
 from edulint.linting.analyses.reaching_definitions import (
     vars_in,
@@ -1728,6 +1728,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             else:
                 similar_to_function(self, to_aunify, core, avars)
 
+        Antiunify().antiunify_cachable.cache_clear()  # may impact multithread performance
         TokenCountingVisitor.visit.cache_clear()  # may impact multithread performance
 
 

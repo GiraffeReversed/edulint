@@ -1,12 +1,13 @@
 from typing import Dict, Union, Tuple, List, Any, Iterator
 import copy
+from functools import lru_cache
 
 from astroid import nodes
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs_from, get_cfg_loc
 from edulint.linting.analyses.reaching_definitions import get_scope, get_vars_used_after
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
-from edulint.linting.checkers.utils import eprint, cformat
+from edulint.linting.checkers.utils import list_to_tuple, eprint, cformat
 
 
 subitution = Dict[str, Union[nodes.NodeNG, Tuple[str, nodes.NodeNG]]]
@@ -52,13 +53,18 @@ def _to_list(val):
 class Antiunify:
     __num = 0
 
+    def __new__(cls):
+        if not hasattr(cls, "instance"):
+            cls.instance = super(Antiunify, cls).__new__(cls)
+        return cls.instance
+
     def _get_new_avar(self, extra: str = None):
         self.__num += 1
         return AunifyVar(f"id_{self.__num}{('_' + extra) if extra is not None else ''}")
 
     def _new_aunifier(self, to_aunify: List[Any], extra: str = None):
         avar = self._get_new_avar(extra)
-        avar.subs = to_aunify.copy()
+        avar.subs = list(to_aunify)
         avar.sub_locs = [n.cfg_loc for n in to_aunify if hasattr(n, "cfg_loc")]
         return avar, [avar]
 
@@ -83,15 +89,20 @@ class Antiunify:
         return core, [core]
 
     def antiunify(self, to_aunify: List[Any]) -> Tuple[Any, List[AunifyVar]]:
-        if any(isinstance(n, AunifyVar) for n in to_aunify):
-            return self._aunify_avars(to_aunify)
+        if not any(isinstance(n, (nodes.NodeNG, list, tuple)) for n in to_aunify):
+            return self._aunify_consts(to_aunify)
+
+        return self.antiunify_cachable(to_aunify)
+
+    @list_to_tuple
+    @lru_cache(maxsize=None)
+    def antiunify_cachable(self, to_aunify: Tuple[Any, ...]) -> Tuple[Any, List[AunifyVar]]:
+        assert any(isinstance(n, (nodes.NodeNG, list, tuple)) for n in to_aunify)
+        assert not any(isinstance(n, AunifyVar) for n in to_aunify)
 
         if isinstance(to_aunify[0], (list, tuple)):
-            assert all(isinstance(n, (list, tuple)) for n in to_aunify)
+            assert all(isinstance(ns, (list, tuple)) for ns in to_aunify)
             return self._antiunify_lists(to_aunify)
-
-        if not any(isinstance(n, nodes.NodeNG) for n in to_aunify):
-            return self._aunify_consts(to_aunify)
 
         if not all(isinstance(n, type(to_aunify[0])) for n in to_aunify):
             return self._new_aunifier(

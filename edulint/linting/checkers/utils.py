@@ -3,7 +3,7 @@ from astroid import nodes, Uninferable  # type: ignore
 import sys
 import inspect
 from pylint.checkers import utils  # type: ignore
-from functools import lru_cache
+from functools import wraps, lru_cache
 
 
 def eprint(*args: Any, **kwargs: Any) -> None:
@@ -223,6 +223,17 @@ def get_statements_count(
         return 1 + count(node.body)
 
     return 1
+
+
+def list_to_tuple(func):
+    @wraps(func)
+    def inner(self, to_aunify):
+        as_tuple = tuple(tuple(arg) if isinstance(arg, list) else arg for arg in to_aunify)
+        return func(self, as_tuple)
+
+    inner.cache_clear = lambda: func.cache_clear()
+    inner.cache_info = lambda: func.cache_info()
+    return inner
 
 
 class TokenCountingVisitor(BaseVisitor[int]):
