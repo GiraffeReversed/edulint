@@ -50,93 +50,91 @@ class Antiunify:
         self.__num += 1
         return AunifyVar(f"id_{self.__num}{('_' + extra) if extra is not None else ''}")
 
-    def _new_aunifier(self, lt: nodes.NodeNG, rt: nodes.NodeNG, extra: str = None):
+    def _new_aunifier(self, to_aunify: List[Any], extra: str = None):
         avar = self._get_new_avar(extra)
-        avar.subs = [lt, rt]
-        if hasattr(lt, "cfg_loc"):
-            avar.sub_locs.append(lt.cfg_loc)
-        if hasattr(rt, "cfg_loc"):
-            avar.sub_locs.append(rt.cfg_loc)
+        avar.subs = to_aunify.copy()
+        avar.sub_locs = [n.cfg_loc for n in to_aunify if hasattr(n, "cfg_loc")]
         return avar, [avar]
 
-    def _aunify_consts(self, lt: Any, rt: Any):
-        if lt == rt:
-            return lt, []
+    def _aunify_consts(self, vals: List[Any]):
+        if all(v == vals[0] for v in vals):
+            return vals[0], []
 
-        return self._new_aunifier(lt, rt)
+        return self._new_aunifier(vals)
 
-    def antiunify(self, lt, rt) -> Tuple[Any, List[AunifyVar]]:
-        if isinstance(lt, AunifyVar):
-            if isinstance(rt, AunifyVar):
-                lt.subs.extend(rt.subs)
+    def _aunify_avars(self, to_aunify: List[Any]):
+        core = self._get_new_avar()
+
+        for node in to_aunify:
+            if isinstance(node, AunifyVar):
+                core.subs.extend(node.subs)
+                core.sub_locs.extend(node.sub_locs)
             else:
-                lt.subs.append(rt)
-            return lt, [lt]
+                core.subs.append(node)
+                if hasattr(node, "cfg_loc"):
+                    core.subs.append(node.cfg_loc)
 
-        if isinstance(rt, AunifyVar):
-            rt.subs = [lt] + rt.subs
-            return rt, [rt]
+        return core, [core]
 
-        if isinstance(lt, (list, tuple)):
-            assert isinstance(rt, (list, tuple))
-            return self._antiunify_lists(lt, rt)
+    def antiunify(self, to_aunify: List[Any]) -> Tuple[Any, List[AunifyVar]]:
+        if any(isinstance(n, AunifyVar) for n in to_aunify):
+            return self._aunify_avars(to_aunify)
 
-        if not isinstance(lt, nodes.NodeNG) and not isinstance(rt, nodes.NodeNG):
-            return self._aunify_consts(lt, rt)
+        if isinstance(to_aunify[0], (list, tuple)):
+            assert all(isinstance(n, (list, tuple)) for n in to_aunify)
+            return self._antiunify_lists(to_aunify)
 
-        if not isinstance(lt, type(rt)):
-            return self._new_aunifier(lt, rt, extra=f"{type(lt).__name__}-{type(rt).__name__}")
+        if not any(isinstance(n, nodes.NodeNG) for n in to_aunify):
+            return self._aunify_consts(to_aunify)
+
+        if not all(isinstance(n, type(to_aunify[0])) for n in to_aunify):
+            return self._new_aunifier(
+                to_aunify, extra="-".join(type(n).__name__ for n in to_aunify)
+            )
 
         # astroid.nodes of same type
-        aunify_funcname = f"_aunify_{type(lt).__name__.lower()}"
+        aunify_funcname = f"_aunify_{type(to_aunify[0]).__name__.lower()}"
         if hasattr(self, aunify_funcname):
-            return getattr(self, aunify_funcname)(lt, rt)
+            return getattr(self, aunify_funcname)(to_aunify)
 
-        return self._aunify_by_attrs(lt, rt, [], lt._astroid_fields)
+        return self._aunify_by_attrs(to_aunify, [], to_aunify[0]._astroid_fields)
 
-    def _antiunify_lists(
-        self, lts: List[nodes.NodeNG], rts: List[nodes.NodeNG], attr: str = "<none>"
-    ):
-        if len(lts) != len(rts):
+    def _antiunify_lists(self, to_aunify: List[List[Any]], attr: str = "<none>"):
+        if not all(len(n) == len(to_aunify[0]) for n in to_aunify):
             attr_core, attr_avars = self._new_aunifier(
-                lts,
-                rts,
-                extra=f"{attr}-{len(lts)}-{len(rts)}",
+                to_aunify,
+                extra=f"{attr}-" + "-".join(str(len(n)) for n in to_aunify),
             )
             return [attr_core], attr_avars
 
         core = []
         avars = []
-        for i in range(len(lts)):
-            lt_child, rt_child = lts[i], rts[i]
+        for i in range(len(to_aunify[0])):
+            children = [n[i] for n in to_aunify]
 
-            child_core, child_avars = self.antiunify(lt_child, rt_child)
-            child_core = tuple(child_core) if isinstance(lt_child, tuple) else child_core
+            child_core, child_avars = self.antiunify(children)
+            child_core = tuple(child_core) if isinstance(children[0], tuple) else child_core
 
             core.append(child_core)
             avars.extend(child_avars)
 
         return core, avars
 
-    def _aunify_many_attrs(self, attrs, lt, rt):
+    def _aunify_many_attrs(self, attrs: List[str], to_aunify: List[Any]):
         avars = []
         attr_cores = {}
 
         for attr in attrs:
-            assert hasattr(lt, attr), f"{type(lt).__name__} does not have '{attr}'"
-            assert hasattr(rt, attr), f"{type(rt).__name__} does not have '{attr}'"
+            attr_vals = [getattr(n, attr) for n in to_aunify]
 
-            lt_attr_val = getattr(lt, attr)
-            rt_attr_val = getattr(rt, attr)
-
-            attr_core, attr_avars = self.antiunify(lt_attr_val, rt_attr_val)
+            attr_core, attr_avars = self.antiunify(attr_vals)
             attr_cores[attr] = attr_core
 
             avars.extend(attr_avars)
 
         return attr_cores, avars
 
-    def _set_parents(self, core, node):
+    def _set_parents(self, core: nodes.NodeNG, node: Any):
         if isinstance(node, nodes.NodeNG):
             node.parent = core
         elif isinstance(node, (list, tuple)):
@@ -145,79 +143,86 @@ class Antiunify:
         elif node is not None and not isinstance(node, (str, bool, int, float, bytes)):
             assert False, f"unreachable, but {type(node)}"
 
-    def _aunify_by_attrs(self, lt, rt, attrs_before: List[str], attrs_after: List[str]):
-        assert isinstance(
-            lt, type(rt)
-        ), f"lt type: {type(lt).__name__}, rt type: {type(rt).__name__}"
+    def _aunify_by_attrs(self, to_aunify, attrs_before: List[str], attrs_after: List[str]):
+        some = to_aunify[0]
+        assert all(isinstance(n, type(some)) for n in to_aunify)
 
-        attr_cores_before, avars_before = self._aunify_many_attrs(attrs_before, lt, rt)
+        attr_cores_before, avars_before = self._aunify_many_attrs(attrs_before, to_aunify)
 
-        if isinstance(lt, (nodes.Arguments, nodes.Comprehension)):
-            core = type(lt)()
+        if isinstance(some, (nodes.Arguments, nodes.Comprehension)):
+            core = type(some)()
         else:
-            core = type(lt)(lineno=0, **attr_cores_before)
+            core = type(some)(lineno=0, **attr_cores_before)
 
         # pylint overloads __getitem__ on nodes, so hasattr fails
-        if not isinstance(lt, nodes.Const) and (hasattr(lt, "cfg_loc") or hasattr(lt, "sub_locs")):
-            assert hasattr(rt, "cfg_loc") or hasattr(rt, "sub_locs")
-            core.sub_locs = (
-                [getattr(lt, "cfg_loc")] if hasattr(lt, "cfg_loc") else getattr(lt, "sub_locs")
-            ) + ([getattr(rt, "cfg_loc")] if hasattr(rt, "cfg_loc") else getattr(rt, "sub_locs"))
+        if not isinstance(some, nodes.Const) and (
+            hasattr(some, "cfg_loc") or hasattr(some, "sub_locs")
+        ):
+            assert all(hasattr(n, "cfg_loc") or hasattr(n, "sub_locs") for n in to_aunify)
+            core.sub_locs = [
+                loc
+                for node in to_aunify
+                for loc in (
+                    [getattr(node, "cfg_loc")]
+                    if hasattr(node, "cfg_loc")
+                    else getattr(node, "sub_locs")
+                )
+            ]
 
         for attr_core_before in attr_cores_before.values():
             self._set_parents(core, attr_core_before)
 
-        attr_cores_after, avars_after = self._aunify_many_attrs(attrs_after, lt, rt)
+        attr_cores_after, avars_after = self._aunify_many_attrs(attrs_after, to_aunify)
         for attr, attr_core_after in attr_cores_after.items():
             setattr(core, attr, attr_core_after)
             self._set_parents(core, attr_core_after)
 
         return core, avars_before + avars_after
 
-    def _aunify_by_attr(self, lt, rt, attr: str):
-        return self._aunify_by_attrs(lt, rt, [], [attr])
+    def _aunify_by_attr(self, to_aunify, attr: str):
+        return self._aunify_by_attrs(to_aunify, [], [attr])
 
-    def _aunify_name(self, lt: nodes.Name, rt: nodes.Name):
-        return self._aunify_by_attr(lt, rt, "name")
+    def _aunify_name(self, to_aunify: List[nodes.Name]):
+        return self._aunify_by_attr(to_aunify, "name")
 
-    def _aunify_assignname(self, lt: nodes.AssignName, rt: nodes.AssignName):
-        return self._aunify_by_attr(lt, rt, "name")
+    def _aunify_assignname(self, to_aunify: List[nodes.AssignName]):
+        return self._aunify_by_attr(to_aunify, "name")
 
-    def _aunify_attribute(self, lt: nodes.Attribute, rt: nodes.Attribute):
-        return self._aunify_by_attrs(lt, rt, [], ["expr", "attrname"])
+    def _aunify_attribute(self, to_aunify: List[nodes.Attribute]):
+        return self._aunify_by_attrs(to_aunify, [], ["expr", "attrname"])
 
-    def _aunify_assignattr(self, lt: nodes.AssignAttr, rt: nodes.AssignAttr):
-        return self._aunify_by_attrs(lt, rt, [], ["expr", "attrname"])
+    def _aunify_assignattr(self, to_aunify: List[nodes.AssignAttr]):
+        return self._aunify_by_attrs(to_aunify, [], ["expr", "attrname"])
 
-    def _aunify_boolop(self, lt: nodes.BoolOp, rt: nodes.BoolOp):
-        return self._aunify_by_attrs(lt, rt, [], ["op", "values"])
+    def _aunify_boolop(self, to_aunify: List[nodes.BoolOp]):
+        return self._aunify_by_attrs(to_aunify, [], ["op", "values"])
 
-    def _aunify_binop(self, lt: nodes.BinOp, rt: nodes.BinOp):
-        return self._aunify_by_attrs(lt, rt, [], ["left", "op", "right"])
+    def _aunify_binop(self, to_aunify: List[nodes.BinOp]):
+        return self._aunify_by_attrs(to_aunify, [], ["left", "op", "right"])
 
-    def _aunify_unaryop(self, lt: nodes.UnaryOp, rt: nodes.UnaryOp):
-        return self._aunify_by_attrs(lt, rt, [], ["op", "operand"])
+    def _aunify_unaryop(self, to_aunify: List[nodes.UnaryOp]):
+        return self._aunify_by_attrs(to_aunify, [], ["op", "operand"])
 
-    def _aunify_augassign(self, lt: nodes.AugAssign, rt: nodes.AugAssign):
-        return self._aunify_by_attrs(lt, rt, [], ["target", "op", "value"])
+    def _aunify_augassign(self, to_aunify: List[nodes.AugAssign]):
+        return self._aunify_by_attrs(to_aunify, [], ["target", "op", "value"])
 
-    def _aunify_functiondef(self, lt: nodes.FunctionDef, rt: nodes.FunctionDef):
-        return self._aunify_by_attrs(lt, rt, [], lt._astroid_fields + ("name",))
+    def _aunify_functiondef(self, to_aunify: List[nodes.FunctionDef]):
+        return self._aunify_by_attrs(to_aunify, [], to_aunify[0]._astroid_fields + ("name",))
 
-    def _aunify_const(self, lt: nodes.Const, rt: nodes.Const):
-        return self._aunify_by_attrs(lt, rt, ["value"], [])
+    def _aunify_const(self, to_aunify: List[nodes.Const]):
+        return self._aunify_by_attrs(to_aunify, ["value"], [])
 
-    def _aunify_nonlocal(self, lt: nodes.Nonlocal, rt: nodes.Nonlocal):
-        return self._aunify_by_attrs(lt, rt, ["names"], [])
+    def _aunify_nonlocal(self, to_aunify: List[nodes.Nonlocal]):
+        return self._aunify_by_attrs(to_aunify, ["names"], [])
 
-    def _aunify_global(self, lt: nodes.Global, rt: nodes.Global):
-        return self._aunify_by_attrs(lt, rt, ["names"], [])
+    def _aunify_global(self, to_aunify: List[nodes.Global]):
+        return self._aunify_by_attrs(to_aunify, ["names"], [])
 
-    def _aunify_importfrom(self, lt: nodes.ImportFrom, rt: nodes.ImportFrom):
-        return self._aunify_by_attrs(lt, rt, ["modname", "names"], [])
+    def _aunify_importfrom(self, to_aunify: List[nodes.ImportFrom]):
+        return self._aunify_by_attrs(to_aunify, ["modname", "names"], [])
 
-    def _aunify_import(self, lt: nodes.Import, rt: nodes.Import):
-        return self._aunify_by_attrs(lt, rt, [], ["modname", "names"])
+    def _aunify_import(self, to_aunify: List[nodes.Import]):
+        return self._aunify_by_attrs(to_aunify, [], ["modname", "names"])
 
 
 ASTROID_FIELDS = {
@@ -294,8 +299,10 @@ def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
     return core, get_avars(core)
 
 
-def antiunify(lt: nodes.NodeNG, rt: nodes.NodeNG) -> Tuple[Any, List[AunifyVar]]:
-    core, avars = Antiunify().antiunify(lt, rt)
+def antiunify(
+    to_aunify: List[Union[nodes.NodeNG, List[nodes.NodeNG]]]
+) -> Tuple[Any, List[AunifyVar]]:
+    core, avars = Antiunify().antiunify(to_aunify)
     wrapper = nodes.Module("tmp")
     wrapper.id = "tmp"
     wrapper.body = core if isinstance(core, list) else [core]

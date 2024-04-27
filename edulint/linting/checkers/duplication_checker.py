@@ -903,14 +903,6 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
                 result.append(if_.orelse)
         return result
 
-    def get_core(if_bodies: List[List[nodes.NodeNG]]):
-        core, avars = antiunify(if_bodies[0], if_bodies[1])
-        for i in range(2, len(if_bodies)):
-            core, new_avars = antiunify(core, if_bodies[i])
-            avars.extend(new_avars)
-
-        return core, avars
-
     def to_node(val, avar=None) -> nodes.NodeNG:
         if isinstance(val, nodes.NodeNG):
             return val
@@ -1195,7 +1187,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
     if_bodies = get_bodies(ifs)
     assert len(if_bodies) >= 2
-    core, avars = get_core(if_bodies)
+    core, avars = antiunify(if_bodies)
 
     if length_or_type_mismatch(avars) or assignment_to_aunify_var(avars):
         return False
