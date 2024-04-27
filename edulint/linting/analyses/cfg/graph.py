@@ -198,7 +198,7 @@ class CFGBlock:
             pos = 0
             assert self.locs[pos].node == statement.test
         elif isinstance(statement, nodes.For):
-            pos = 0
+            pos = len(self.locs) - 1
             assert self.locs[pos].node == statement.iter
         elif isinstance(statement, nodes.TryExcept):
             pos = 0
