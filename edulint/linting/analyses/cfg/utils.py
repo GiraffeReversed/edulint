@@ -1,4 +1,4 @@
-from typing import Generator, Optional, Callable
+from typing import Generator, Optional, Callable, List, Union
 from enum import Enum
 
 from astroid import nodes
@@ -25,8 +25,8 @@ class Direction(Enum):
             yield getattr(edge, "target" if direction == Direction.SUCCESSORS else "source")
 
 
-def essors_from_loc(
-    loc: CFGLoc,
+def essors_from_locs(
+    locs: List[CFGLoc],
     direction: Direction,
     stop_on: Optional[Callable[[CFGLoc], bool]],
     include_start: bool,
@@ -46,6 +46,10 @@ def essors_from_loc(
             i = Direction.to_index(nth, direction)
             current_loc = current_block.locs[i]
 
+            if current_loc in visited:
+                return
+            visited.add(current_loc)
+
             stop = stop_on(current_loc)
             if not stop or include_end:
                 yield current_loc
@@ -54,19 +58,28 @@ def essors_from_loc(
                 return
 
         for essor in Direction.get_essors(current_block, direction):
-            if essor in visited:
+            i = Direction.to_index(0, direction)
+            if len(essor.locs) == 0 or essor.locs[i] in visited:
                 continue
 
-            visited.add(essor)
             yield from dfs_rec(essor)
-
-    if include_start:
-        yield loc
-    yield from try_explore_function(loc)
 
     stop_on = stop_on if stop_on is not None else lambda _v: False
     visited = set()
-    yield from dfs_rec(loc.block, loc.pos + 1)
+    for loc in locs:
+        if loc in visited:
+            continue
+        visited.add(loc)
+
+        if include_start:
+            stop = stop_on(loc)
+            yield loc
+            if stop:
+                continue
+
+        yield from try_explore_function(loc)
+
+        yield from dfs_rec(loc.block, loc.pos + 1)
 
 
 def successors_from_loc(
@@ -76,8 +89,20 @@ def successors_from_loc(
     include_end: bool = False,
     explore_functions: bool = False,
 ) -> Generator[CFGLoc, None, None]:
-    yield from essors_from_loc(
-        loc, Direction.SUCCESSORS, stop_on, include_start, include_end, explore_functions
+    yield from essors_from_locs(
+        [loc], Direction.SUCCESSORS, stop_on, include_start, include_end, explore_functions
+    )
+
+
+def successors_from_locs(
+    locs: List[CFGLoc],
+    stop_on: Optional[Callable[[CFGLoc], bool]] = None,
+    include_start: bool = False,
+    include_end: bool = False,
+    explore_functions: bool = False,
+) -> Generator[CFGLoc, None, None]:
+    yield from essors_from_locs(
+        locs, Direction.SUCCESSORS, stop_on, include_start, include_end, explore_functions
     )
 
 
@@ -88,8 +113,8 @@ def predecessors_from_loc(
     include_end: bool = False,
     explore_functions: bool = False,
 ) -> Generator[CFGLoc, None, None]:
-    yield from essors_from_loc(
-        loc, Direction.PREDECESSORS, stop_on, include_start, include_end, explore_functions
+    yield from essors_from_locs(
+        [loc], Direction.PREDECESSORS, stop_on, include_start, include_end, explore_functions
     )
 
 
