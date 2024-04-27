@@ -17,7 +17,11 @@ from edulint.linting.analyses.reaching_definitions import (
     get_vars_used_after,
     get_control_statements,
 )
-from edulint.linting.analyses.cfg.utils import get_cfg_loc
+from edulint.linting.analyses.cfg.utils import (
+    get_cfg_loc,
+    get_stmt_locs,
+    syntactic_children_locs_from,
+)
 from edulint.linting.checkers.utils import (
     is_parents_elif,
     BaseVisitor,
@@ -895,6 +899,15 @@ def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
 Fixed = namedtuple("Fixed", ["symbol", "tokens", "statements", "message_args"])
 
 
+def to_node(val, avar=None) -> nodes.NodeNG:
+    assert not isinstance(val, list)
+    if isinstance(val, nodes.NodeNG):
+        return val
+    if avar is not None:
+        return type(avar.parent)(val)
+    return nodes.Const(val)
+
+
 def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
     def get_bodies(ifs: List[nodes.If]) -> List[List[nodes.NodeNG]]:
@@ -904,13 +917,6 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             if i == len(ifs) - 1:
                 result.append(if_.orelse)
         return result
-
-    def to_node(val, avar=None) -> nodes.NodeNG:
-        if isinstance(val, nodes.NodeNG):
-            return val
-        if avar is not None:
-            return type(avar.parent)(val)
-        return nodes.Const(val)
 
     def to_parent(val: AunifyVar) -> nodes.NodeNG:
         parent = val.parent
@@ -1480,32 +1486,99 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             i += count
         return any_message
 
-    def close(self) -> None:
-        def candidate_lt():
-            for to_check_in_file in self.to_check.values():
-                for to_check_of_type in to_check_in_file.values():
-                    to_check_of_type.sort(key=lambda v: (v.fromlineno, v.col_offset))
-                nodes = sorted(
-                    [v for to_check_of_type in to_check_in_file.values() for v in to_check_of_type],
-                    key=lambda v: (v.fromlineno, v.col_offset),
+    def visit_module(self, node: nodes.Module):
+        def candidate_fst(nodes):
+            yield from enumerate(nodes)
+
+        def candidate_snd(nodes, i):
+            for j in range(i + 1, len(nodes)):
+                fst = nodes[i]
+                snd = nodes[j]
+
+                if fst not in snd.node_ancestors():
+                    yield j, snd
+
+        def get_siblings(node):
+            siblings = []
+            sibling = node
+            while sibling is not None:
+                siblings.append(sibling)
+                sibling = sibling.next_sibling()
+            return siblings
+
+        def overlap(stmt_nodes, i, j, to_aunify) -> bool:
+            if i + len(to_aunify[0]) - 1 >= j:
+                return True
+
+            fsts, snds = to_aunify
+            return stmt_nodes.index(fsts[-1], i) >= stmt_nodes.index(snds[-1], j)
+
+        def is_candidate_core(to_aunify, core, avars) -> bool:
+            tokens_before = sum(get_token_count(n) for n in to_aunify)
+            tokens_after = get_token_count(core) + sum(
+                (
+                    get_token_count(to_node(sub))
+                    if not isinstance(sub, list)
+                    else sum(get_token_count(to_node(s)) for s in sub)
                 )
-                for node in nodes:
-                    yield to_check_in_file, node
+                for avar in avars
+                for sub in avar.subs
+            )
+            return tokens_after < 0.8 * tokens_before
 
-        def candidate_rt(to_check_in_file, lt):
-            for rt in to_check_in_file[type(lt)]:
-                if lt.fromlineno < rt.fromlineno:
-                    yield rt
+        stmt_nodes = sorted(
+            (
+                stmt_loc.node
+                for loc in syntactic_children_locs_from(node.cfg_loc, node)
+                for stmt_loc in get_stmt_locs(loc)
+                if stmt_loc is not None
+            ),
+            key=lambda node: (node.fromlineno, node.col_offset),
+        )
 
-        for to_check_in_file, lt in candidate_lt():
-            if isinstance(lt, nodes.If) and duplicate_blocks_in_if(self, lt):
+        duplicate = set()
+        candidates = {}
+        break_snd_loop = False
+        for i, fst in candidate_fst(stmt_nodes):
+            if fst in duplicate:
                 continue
 
-            for rt in candidate_rt(to_check_in_file, lt):
-                core, avars = antiunify(lt, rt)
-                if similar_to_function(lt, rt, core, avars):
-                    self.add_message("similar-to-function", node=lt)
+            if isinstance(fst, nodes.If):
+                any_message1 = self.identical_before_after_branch(fst)
+                any_message2 = self.identical_seq_ifs(fst)
+                any_message3 = duplicate_blocks_in_if(self, fst)
+
+                if any_message1 or any_message2 or any_message3:
+                    duplicate.update({syntactic_children_locs_from(fst.cfg_loc, fst)})
+                    continue
+
+            for j, snd in candidate_snd(stmt_nodes, i):
+                if break_snd_loop:
+                    break_snd_loop = False
                     break
+                fst_siblings = get_siblings(fst)
+                snd_siblings = get_siblings(snd)
+
+                for length in range(min(len(fst_siblings), len(snd_siblings)), 0, -1):
+                    to_aunify = [fst_siblings[:length], snd_siblings[:length]]
+                    core, avars = antiunify(to_aunify)
+
+                    if not overlap(stmt_nodes, i, j, to_aunify) and is_candidate_core(
+                        to_aunify, core, avars
+                    ):
+                        # TODO or larger?
+                        eprint(core_as_string(core))
+                        id_, ccore, cavars = candidates.get(
+                            (fst, length), (len(candidates), None, None)
+                        )
+                        candidates[(fst, length)] = id_, ccore, cavars
+                        candidates[(snd, length)] = id_, core, avars
+
+                        # duplicate.update({syntactic_children_locs_from(fst.cfg_loc, fst)})
+                        break_snd_loop = True
+                        break
+
+        eprint(candidates)
 
     # Interval = Tuple[int, int]
     # DuplicateIntervals = Dict[Tuple[Interval, Interval], Tuple[nodes.NodeNG, nodes.NodeNG]]
