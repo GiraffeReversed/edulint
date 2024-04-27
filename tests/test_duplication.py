@@ -1,5 +1,6 @@
 import pytest
 from edulint.options import Option
+from edulint.linters import Linter
 from edulint.config.arg import Arg
 from edulint.linting.problem import Problem
 from utils import lazy_problem, apply_and_lint
@@ -198,11 +199,43 @@ def test_similar_to_function(filename: str, expected_output: List[Problem]) -> N
 @pytest.mark.parametrize("filename,expected_output", [
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
     ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11)]),
+    ("ut_98_8463_20_35.py", [lazy_problem().set_source(Linter.PYLINT)]),
+    ("ut_80_2230_13_11.py", []),
+    ("ut_80_8916_12_20.py", [lazy_problem().set_source(Linter.PYLINT)]),
 ])
 def test_similar_to_loop(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
         [Arg(Option.PYLINT, "--enable=similar-to-loop")],
+        expected_output
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("ut_80_2861_19_63.py", [lazy_problem().set_line(3).set_end_line(10)]),
+])
+def test_similar_to_loop_merge(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=similar-to-loop-merge")],
+        expected_output
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("ut_80_0402_13_19.py", [
+        lazy_problem().set_line(8),
+        lazy_problem().set_line(12),
+        lazy_problem().set_line(16),
+        lazy_problem().set_line(20),
+        lazy_problem().set_line(24),
+        lazy_problem().set_line(28),
+    ])
+])
+def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=similar-to-call")],
         expected_output
     )
 
