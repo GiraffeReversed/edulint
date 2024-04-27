@@ -31,6 +31,10 @@ class AunifyVar(nodes.Name):
         return self.name
 
 
+def _to_list(val):
+    return val if isinstance(val, list) else [val]
+
+
 class Antiunify:
     __num = 0
 
@@ -143,6 +147,11 @@ class Antiunify:
             core = type(lt)()
         else:
             core = type(lt)(lineno=0, **attr_cores_before)
+
+        # pylint overloads __getitem__ on nodes, so hasattr fails
+        if not isinstance(lt, nodes.Const) and hasattr(lt, "cfg_loc"):
+            assert hasattr(rt, "cfg_loc")
+            core.cfg_loc = _to_list(lt.cfg_loc) + _to_list(rt.cfg_loc)
 
         for attr_core_before in attr_cores_before.values():
             self._set_parents(core, attr_core_before)
