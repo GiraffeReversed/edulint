@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Dict, Tuple, List, Union, Optional
+from typing import Union, Optional
 from enum import Enum, auto
 import re
 
@@ -25,9 +25,6 @@ VarEvent = namedtuple("VarEvent", ["varname", "scope", "event"])
 
 
 class VarModificationAnalysis:
-    def __init__(self, events: Dict[ScopeNode, Dict[VarName, List[Tuple[CFGLoc, VarEventType]]]]):
-        self.var_events = events
-
     @staticmethod
     def collect(node: nodes.NodeNG):
         VarEventListener().visit(node)
@@ -45,7 +42,13 @@ class VarEventListener(ScopeListener[None]):
         scope = self._get_var_scope(name)
         assert (
             scope is not None
+            or name.startswith("__")
             or (isinstance(loc.node, nodes.Call) and is_builtin(loc.node.func, name))
+            or (
+                isinstance(loc.node, (nodes.Expr, nodes.Assign))
+                and isinstance(loc.node.value, nodes.Call)
+                and is_builtin(loc.node.value.func, name)
+            )
             or (
                 isinstance(loc.node, nodes.ExceptHandler)
                 and loc.node.type is not None
