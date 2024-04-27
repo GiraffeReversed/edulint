@@ -3,7 +3,10 @@ import copy
 
 from astroid import nodes
 
-from edulint.linting.checkers.utils import eprint
+from edulint.linting.analyses.cfg.utils import syntactic_children_locs_from, get_cfg_loc
+from edulint.linting.analyses.reaching_definitions import get_scope, get_vars_used_after
+from edulint.linting.analyses.cfg.visitor import CFGVisitor
+from edulint.linting.checkers.utils import eprint, cformat
 
 
 subitution = Dict[str, Union[nodes.NodeNG, Tuple[str, nodes.NodeNG]]]
@@ -217,8 +220,87 @@ class Antiunify:
         return self._aunify_by_attrs(lt, rt, [], ["modname", "names"])
 
 
+ASTROID_FIELDS = {
+    nodes.Name: ["name"],
+    nodes.AssignName: ["name"],
+    nodes.Attribute: ["expr", "attrname"],
+    nodes.AssignAttr: ["expr", "attrname"],
+    nodes.BoolOp: ["op", "values"],
+    nodes.BinOp: ["left", "op", "right"],
+    nodes.UnaryOp: ["op", "operand"],
+    nodes.AugAssign: ["target", "op", "value"],
+    nodes.FunctionDef: ("name",) + nodes.FunctionDef._astroid_fields,
+    nodes.Const: ["value"],
+    nodes.Nonlocal: ["names"],
+    nodes.Global: ["names"],
+    nodes.ImportFrom: ["modname", "names"],
+    nodes.Import: ["modname", "names"],
+}
+
+
+def get_avars(core: nodes.NodeNG, result: List[AunifyVar] = None) -> List[AunifyVar]:
+    result = result if result is not None else []
+
+    if isinstance(core, AunifyVar):
+        result.append(core)
+
+    elif isinstance(core, nodes.NodeNG):
+        attrs = ASTROID_FIELDS.get(type(core), type(core)._astroid_fields)
+        for attr in attrs:
+            get_avars(getattr(core, attr), result)
+
+    elif isinstance(core, (tuple, list)):
+        for n in core:
+            get_avars(n, result)
+
+    return result
+
+
+def can_be_removed(core, avar) -> bool:
+    avar_loc = get_cfg_loc(avar)
+    avar_sub_locs = avar_loc.node.sub_locs
+    assert len(avar_sub_locs) == len(avar.subs)
+    avar_scopes = [get_scope(sub, loc) for sub, loc in zip(avar.subs, avar_sub_locs)]
+
+    to_remove = [avar]
+
+    for core_loc in syntactic_children_locs_from(avar_loc, core):
+        for i, loc in enumerate(core_loc.node.sub_locs):
+            for loc_varname, loc_scope, _event in loc.var_events:
+                if loc_varname == avar.subs[i] and loc_scope == avar_scopes[i]:
+                    for loc_avar in get_avars(core_loc.node):
+                        assert len(avar.subs) == len(loc_avar.subs)
+                        if any(asub != lasub for asub, lasub in zip(avar.subs, loc_avar.subs)):
+                            return False, to_remove
+                        to_remove.append(loc_avar)
+    return True, to_remove
+
+
+def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
+    for avar in avars:
+        vars_used_after = get_vars_used_after(core)
+        if not isinstance(avar.parent, nodes.AssignName) or any(
+            (sub, get_scope(sub, get_cfg_loc(avar).node.sub_locs[i])) in vars_used_after
+            for i, sub in enumerate(avar.subs)
+        ):
+            continue
+
+        remove, to_remove = can_be_removed(core, avar)
+        if remove:
+            for to_remove_avar in to_remove:
+                if all(asub == trsub for asub, trsub in zip(avar.subs, to_remove_avar.subs)):
+                    to_remove_avar.parent.name = avar.subs[0]
+
+    return core, get_avars(core)
+
+
 def antiunify(lt: nodes.NodeNG, rt: nodes.NodeNG) -> Tuple[Any, List[AunifyVar]]:
-    return Antiunify().antiunify(lt, rt)
+    core, avars = Antiunify().antiunify(lt, rt)
+    wrapper = nodes.Module("tmp")
+    wrapper.id = "tmp"
+    wrapper.body = core if isinstance(core, list) else [core]
+    wrapper.accept(CFGVisitor())
+    return remove_renamed_identical_vars(core, avars)
 
 
 ##############################################################################
