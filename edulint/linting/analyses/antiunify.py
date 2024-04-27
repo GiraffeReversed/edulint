@@ -35,6 +35,12 @@ class AunifyVar(nodes.Name):
     def __str__(self):
         return self.name
 
+    def __add__(self, other):
+        return str(self) + other
+
+    def __radd__(other, self):
+        return other + str(self)
+
     def replace(self, old, new):
         return self.name.replace(old, new)
 
@@ -105,6 +111,9 @@ class Antiunify:
                 to_aunify,
                 extra=f"{attr}-" + "-".join(str(len(n)) for n in to_aunify),
             )
+            some = [v for n in to_aunify for v in n][0]
+            if isinstance(some, tuple):
+                return [(attr_core, None)], attr_avars
             return [attr_core], attr_avars
 
         core = []
@@ -396,6 +405,22 @@ class AunifyVarAsString(nodes.as_string.AsStringVisitor):
                     yield f"{key}: {value}"
             else:
                 yield pair.name
+
+    def visit_importfrom(self, node) -> str:
+        def _import_string(names) -> str:
+            """return a list of (name, asname) formatted as a string"""
+            _names = []
+            for name, asname in names:
+                if asname is not None:
+                    _names.append(f"{name} as {asname}")
+                else:
+                    _names.append(name)
+            return ", ".join(n if isinstance(n, str) else str(n) for n in _names)
+
+        """return an astroid.ImportFrom node as string"""
+        return "from {} import {}".format(
+            "." * (node.level or 0) + node.modname, _import_string(node.names)
+        )
 
 
 def core_as_string(n) -> str:
