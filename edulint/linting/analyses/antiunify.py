@@ -31,6 +31,9 @@ class AunifyVar(nodes.Name):
     def __str__(self):
         return self.name
 
+    def replace(self, old, new):
+        return self.name.replace(old, new)
+
 
 def _to_list(val):
     return val if isinstance(val, list) else [val]
