@@ -9,8 +9,9 @@ if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
 from edulint.linting.analyses.antiunify import antiunify, AunifyVar
+from edulint.linting.analyses.variable_modification import VarEventType
 from edulint.linting.analyses.reaching_definitions import (
-    extract_varnames,
+    vars_in,
     is_changed_between,
     get_vars_defined_before,
     get_vars_used_after,
@@ -952,12 +953,12 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         return False
 
     def test_variables_change(tests, core, avars):
-        varnames = extract_varnames(tests)
+        vars = vars_in(tests, {VarEventType.READ})
         first_loc = tests[0].cfg_loc
-        avars_locs = [get_cfg_loc(to_parent(avar)) for avar in avars]
+        avars_locs = [get_cfg_loc(to_parent(avar)).node.sub_locs for avar in avars]
         return any(
             is_changed_between(varname, first_loc, avar_locs)
-            for varname in varnames
+            for varname, _scope in vars
             for avar_locs in avars_locs
         )
 

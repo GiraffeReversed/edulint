@@ -6,24 +6,19 @@ from edulint.linting.analyses.cfg.graph import CFGLoc
 from edulint.linting.analyses.cfg.utils import predecessors_from_loc  # , get_cfg_loc
 from edulint.linting.analyses.variable_scope import ScopeNode, VarName
 from edulint.linting.analyses.variable_modification import VarEventType
-from edulint.linting.checkers.utils import BaseVisitor
 
 
-class VarnameExtractor(BaseVisitor[None]):
-    def __init__(self):
-        super().__init__()
-        self.varnames = set()
+def vars_in(
+    node: Union[nodes.NodeNG, List[nodes.NodeNG]], events: Optional[Set[VarEventType]] = None
+) -> Set[Tuple[str, ScopeNode]]:
+    result = set()
 
-    def visit_name(self, node: nodes.Name) -> None:
-        self.varnames.add(node.name)
-
-
-def extract_varnames(node: Union[nodes.NodeNG, List[nodes.NodeNG]]) -> Set[str]:
-    # alternatively implement using CFGLocs and related var_events
-    nodes = node if isinstance(node, list) else [node]
-    visitor = VarnameExtractor()
-    visitor.visit_many(nodes)
-    return visitor.varnames
+    first = node[0] if isinstance(node, list) else node
+    for loc in syntactic_children_locs_from(get_cfg_loc(first), node):
+        for varname, scope, event in loc.var_events:
+            if events is None or event in events:
+                result.add((varname, scope))
+    return result
 
 
 def get_scope(varname: VarName, loc: CFGLoc) -> ScopeNode:
