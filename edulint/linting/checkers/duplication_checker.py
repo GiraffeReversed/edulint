@@ -1646,8 +1646,10 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
             if isinstance(fst, nodes.If):
                 any_message1 = self.identical_before_after_branch(fst)
-                any_message2 = self.identical_seq_ifs(fst)
-                any_message3 = duplicate_blocks_in_if(self, fst)
+                any_message2 = not any_message1 and self.identical_seq_ifs(fst)
+                any_message3 = (
+                    not any_message1 and not any_message2 and duplicate_blocks_in_if(self, fst)
+                )
 
                 if any_message1 or any_message2 or any_message3:
                     duplicate.update(
