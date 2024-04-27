@@ -834,8 +834,10 @@ def assignment_to_aunify_var(avars) -> bool:
 def called_aunify_var(avars) -> bool:
     for avar in avars:
         node = avar.parent
-        if (isinstance(node, nodes.Compare) and avar in [o for o, n in node.ops]) or (
-            isinstance(node, nodes.AugAssign) and avar == node.op
+        if (
+            (isinstance(node, nodes.Compare) and avar in [o for o, n in node.ops])
+            or (isinstance(node, nodes.BinOp) and avar == node.op)
+            or (isinstance(node, nodes.AugAssign) and avar == node.op)
         ):
             return True
 

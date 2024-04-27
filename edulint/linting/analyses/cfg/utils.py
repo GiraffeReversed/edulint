@@ -1,4 +1,4 @@
-from typing import Generator, Optional, Callable, List, Union
+from typing import Generator, Optional, Callable, List
 from enum import Enum
 
 from astroid import nodes

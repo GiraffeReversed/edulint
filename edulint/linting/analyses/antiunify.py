@@ -154,10 +154,8 @@ class Antiunify:
         else:
             core = type(some)(lineno=0, **attr_cores_before)
 
-        # pylint overloads __getitem__ on nodes, so hasattr fails
-        if not isinstance(some, nodes.Const) and (
-            hasattr(some, "cfg_loc") or hasattr(some, "sub_locs")
-        ):
+        # pylint overloads __getitem__ on constants, so hasattr would fail
+        try:
             assert all(hasattr(n, "cfg_loc") or hasattr(n, "sub_locs") for n in to_aunify)
             core.sub_locs = [
                 loc
@@ -168,6 +166,8 @@ class Antiunify:
                     else getattr(node, "sub_locs")
                 )
             ]
+        except AssertionError:
+            pass
 
         for attr_core_before in attr_cores_before.values():
             self._set_parents(core, attr_core_before)

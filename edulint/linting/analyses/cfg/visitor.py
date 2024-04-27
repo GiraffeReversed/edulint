@@ -369,7 +369,7 @@ class CFGVisitor:
             child.accept(self)
         end_body = self._current_block
 
-        self._current_block.add_CF_statement(node)
+        node_block.add_CF_statement(node)
 
         # Remove each control boundary that we added in this method
         for _ in range(cbs_added):

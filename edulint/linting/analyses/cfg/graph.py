@@ -208,7 +208,8 @@ class CFGBlock:
             assert self.locs[pos].node == statement.iter
         elif isinstance(statement, nodes.TryExcept):
             pos = 0
-            assert self.locs[pos].node == statement.body[0]
+            statement_loc = statement.body[0].cfg_loc
+            assert self.locs[pos].node == statement_loc.block.locs[statement_loc.pos].node
         elif isinstance(statement, nodes.ExceptHandler):
             pos = 0
             assert self.locs[pos].node in (statement.name, statement.body[0])
