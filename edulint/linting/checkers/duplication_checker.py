@@ -7,7 +7,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, antiunify_lists, AunifyVar
+from edulint.linting.analyses.antiunify import antiunify, antiunify_lists
 from edulint.linting.checkers.utils import (
     is_parents_elif,
     BaseVisitor,
@@ -896,6 +896,21 @@ def if_to_variables(self, node: nodes.If) -> bool:
 
         return core, subs
 
+    COMPLEX_EXPRESSION_TYPES = (nodes.BinOp,)
+    # SIMPLE_EXPRESSION_TYPES = (nodes.AugAssign, nodes.Call, nodes.BoolOp, nodes.Compare)
+
+    def is_part_of_complex_expression(subs) -> bool:
+        for avar in subs[0].keys():
+            parent = avar.parent
+            if isinstance(parent, (nodes.Const, nodes.Name)):
+                parent = parent.parent
+            assert parent is not None
+
+            # if not isinstance(parent, SIMPLE_EXPRESSION_TYPES):
+            if isinstance(parent, COMPLEX_EXPRESSION_TYPES):
+                return True
+        return False
+
     if is_parents_elif(node):
         return False
 
@@ -928,10 +943,12 @@ def if_to_variables(self, node: nodes.If) -> bool:
     suggest_ternary = False
 
     # TODO count tokens in values
-    if len(if_bodies) == 2 and self.linter.is_message_enabled("if-to-ternary"):
-        tokens_after_ternary = core_tokens + vars_needed * (
-            test_tokens + 4  # v1 if test else v2
-        )
+    if (
+        len(if_bodies) == 2
+        and not is_part_of_complex_expression(subs)
+        and self.linter.is_message_enabled("if-to-ternary")
+    ):
+        tokens_after_ternary = core_tokens + vars_needed * (test_tokens + 4)  # v1 if test else v2
 
         if tokens_after_ternary < tokens_after:
             tokens_after = tokens_after_ternary
@@ -939,7 +956,7 @@ def if_to_variables(self, node: nodes.If) -> bool:
             suggest_ternary = True
 
     if not (
-        tokens_after < 0.75 * tokens_before  # TODO extract into variable
+        tokens_after < 0.8 * tokens_before  # TODO extract into variable
         and stmts_after <= stmts_before
     ):
         return False
