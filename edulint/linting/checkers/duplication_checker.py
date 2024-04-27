@@ -1,6 +1,6 @@
 from astroid import nodes  # type: ignore
 from collections import namedtuple
-from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Set, Any, Dict
+from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Set, Any, Dict, Generator
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -8,7 +8,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, AunifyVar
+from edulint.linting.analyses.antiunify import antiunify, AunifyVar, core_as_string
 from edulint.linting.analyses.variable_modification import VarEventType
 from edulint.linting.analyses.reaching_definitions import (
     vars_in,
@@ -21,6 +21,7 @@ from edulint.linting.analyses.cfg.utils import (
     get_cfg_loc,
     get_stmt_locs,
     syntactic_children_locs_from,
+    successors_from_loc,
 )
 from edulint.linting.checkers.utils import (
     is_parents_elif,
@@ -30,7 +31,6 @@ from edulint.linting.checkers.utils import (
     is_main_block,
     is_block_comment,
     get_statements_count,
-    var_used_after,
     eprint,
     cformat,  # noqa: F401
     get_token_count,
@@ -750,82 +750,6 @@ OPS = {
     ">>=": 14,
 }
 
-TYPES_MATCH_REQUIRED = (nodes.Return,)
-
-
-def replaceable_with(v1, v2) -> bool:
-    if isinstance(v1, str) and v1 in OPS and isinstance(v2, str) and v2 in OPS:
-        too_different_operators = OPS[v1] == OPS[v2]
-        return too_different_operators
-
-    if isinstance(v1, TYPES_MATCH_REQUIRED):
-        return isinstance(v2, TYPES_MATCH_REQUIRED)
-
-    return True
-
-
-def get_returned_values(lt, rt, core, s1, s2):
-    returned_values = set()
-
-    def find_returned_values(nx):
-        if not isinstance(nx, tuple):
-            assert not isinstance(nx, nodes.NodeNG)
-            return
-
-        n, children = nx
-        # eprint(n, children)
-        if isinstance(n, nodes.Return):
-            assert len(children) <= 1
-            if len(children) == 0:
-                returned_values.add("None")
-            elif isinstance(children[0], tuple):
-                assert isinstance(children[0][0], nodes.NodeNG)
-                returned_values.add(children[0][0].as_string())
-            else:
-                raise Exception()
-
-        if isinstance(n, nodes.AssignName):
-            if len(children) == 0 and var_used_after(lt, n):
-                returned_values.add(n.name)
-            elif len(children) == 1:
-                # eprint(children[0])
-                if var_used_after(lt, s1[children[0][0]]) or var_used_after(rt, s2[children[0][0]]):
-                    returned_values.add(f"{s1[children[0][0]].name}-{s2[children[0][0]].name}")
-
-        for child in children:
-            if child:
-                find_returned_values(child)
-
-    try:
-        find_returned_values(core)
-    except Exception as e:
-        eprint(e)
-        return None
-    # find_returned_values(core)
-    return returned_values
-
-
-def similar_to_function(lt: nodes.NodeNG, rt: nodes.NodeNG, core, avars) -> bool:
-    if length_or_type_mismatch(avars) or not all(
-        replaceable_with(avar.subs[0], avar.subs[1]) for avar in avars
-    ):
-        return False
-
-    size_before_decomposition = get_statements_count(
-        lt, include_defs=False, include_name_main=True
-    ) + get_statements_count(rt, include_defs=False, include_name_main=True)
-    size_after_decomposition = (
-        # function header
-        1
-        # implementation
-        + get_statements_count(core, include_defs=False, include_name_main=True)
-        + 1  # return
-        # calls
-        + 2
-    )
-
-    return size_after_decomposition < size_before_decomposition
-
 
 def length_or_type_mismatch(avars) -> bool:
     return any("-" in id_.name for id_ in avars)
@@ -904,8 +828,13 @@ def to_node(val, avar=None) -> nodes.NodeNG:
     if isinstance(val, nodes.NodeNG):
         return val
     if avar is not None:
+        assert not isinstance(avar.parent, nodes.FunctionDef)
         return type(avar.parent)(val)
     return nodes.Const(val)
+
+
+def saves_enough_tokens(tokens_before: int, stmts_before: int, fixed: Fixed):
+    return fixed.statements <= stmts_before and fixed.tokens < 0.8 * tokens_before
 
 
 def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
@@ -1214,9 +1143,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     ]
 
     fixed = [
-        f
-        for f in fixed
-        if f is not None and f.statements <= stmts_before and f.tokens < 0.8 * tokens_before
+        f for f in fixed if f is not None and saves_enough_tokens(tokens_before, stmts_before, f)
     ]
     if len(fixed) == 0:
         return False
@@ -1228,30 +1155,215 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     return True
 
 
-def if_into_similar(lt: nodes.If, rt: nodes.If, core, s1, s2) -> bool:
+def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> bool:
+    def get_fixed_by_function(to_aunify, core, avars):
+        # compute necessary arguments from different values
+        seen = {}
+        for avar in avars:
+            var_vals = tuple(avar.subs)
+            old_avar = seen.get(var_vals, avar)
+
+            if old_avar != avar:
+                continue
+            seen[var_vals] = avar
+
+        # compute extras
+        extra_args = get_vars_defined_before(core)
+        return_vals_needed = len(get_vars_used_after(core))
+        control_needed = len(get_control_statements(core))
+
+        # generate calls in ifs
+        calls = []
+        for i in range(len(to_aunify)):
+            params = [s[i] for s in seen]
+            call = nodes.Call()
+            call.func = nodes.Name("AUX")
+            call.args = [to_node(param) for param in params] + [
+                nodes.Name(varname) for varname, _scope in extra_args
+            ]
+            if return_vals_needed + control_needed == 0:
+                calls.append(call)
+            else:
+                assign = nodes.Assign()
+                assign.targets = [
+                    nodes.AssignName(f"<r{i}>") for i in range(control_needed + return_vals_needed)
+                ]
+                assign.value = call
+                calls.append(assign)
+
+                # generate management for returned control flow
+                for i in range(control_needed):
+                    test = nodes.BinOp("is")
+                    test.postinit(left=nodes.Name(f"<r{i}>"), right=nodes.Const(None))
+                    if_ = nodes.If()
+                    if_.test = test
+                    if_.body = [nodes.Return()]  # placeholder for a control
+                    calls.append(if_)
+
+        # generate function
+        fun_def = nodes.FunctionDef(name="AUX")
+        fun_def.args = nodes.Arguments()
+        fun_def.args.postinit(
+            args=[nodes.AssignName(avar.name) for avar in seen.values()]
+            + [nodes.AssignName(varname) for varname, _scope in extra_args],
+            defaults=None,
+            kwonlyargs=[],
+            kw_defaults=None,
+            annotations=[],
+        )
+        fun_def.body = core if isinstance(core, list) else [core]
+
+        return Fixed(
+            "similar-to-function",
+            get_token_count(calls) + get_token_count(fun_def),
+            get_statements_count(calls, include_defs=False, include_name_main=True)
+            + get_statements_count(fun_def, include_defs=False, include_name_main=True),
+            (),
+        )
+
+    tokens_before = sum(get_token_count(node) for node in to_aunify)
+    stmts_before = sum(
+        get_statements_count(node, include_defs=False, include_name_main=True) for node in to_aunify
+    )
+
+    fixed = get_fixed_by_function(to_aunify, core, avars)
+    if not saves_enough_tokens(tokens_before, stmts_before, fixed):
+        return False
+
+    message_id, _tokens, _statements, message_args = fixed
+
+    first = to_aunify[0][0]
+    last = to_aunify[0][-1]
+    self.add_message(
+        message_id,
+        line=first.fromlineno,
+        col_offset=first.col_offset,
+        end_lineno=last.tolineno,
+        end_col_offset=last.col_offset,
+        args=message_args,
+    )
+    return True
+
+
+def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> bool:
+    def to_range_node(sequence):
+        start = None
+        step = None
+        previous = None
+        for s in sequence:
+            if not isinstance(s, int):
+                return None
+            if start is None:
+                start = s
+            elif step is None:
+                step = s - start
+            else:
+                assert previous is not None
+                if s - previous != step:
+                    return None
+            previous = s
+
+        range = nodes.Call()
+        range.func = nodes.Name("range")
+        start_node = nodes.Const(start)
+        stop_node = nodes.Const(previous + 1)
+        step_node = nodes.Const(step)
+        if step != 1:
+            range.args = [start_node, stop_node, step_node]
+        elif start != 0:
+            range.args = [start_node, stop_node]
+        else:
+            range.args = [stop_node]
+        return range
+
+    def get_iter(to_aunify, sequences):
+        if len(sequences) == 0:
+            range_node = nodes.Call()
+            range_node.func = nodes.Name("range")
+            range_node.args = [nodes.Const(len(to_aunify))]
+            return range_node
+
+        if len(sequences) == 1:
+            range_node = to_range_node(sequences[0])
+            if range_node is not None:
+                return range_node
+
+            iter = nodes.Tuple()
+            iter.elts = [to_node(s, avars[0]) for s in sequences[0]]
+            return iter
+
+        ranges = [to_range_node(sequence) for sequence in sequences]
+        if all(range is not None for range in ranges):
+            iter = nodes.Call()
+            iter.func = nodes.Name("zip")
+            iter.args = ranges
+            return iter
+
+        tuples = []
+        for i in range(len(sequences[0])):
+            tuple_node = nodes.Tuple()
+            tuple_node.elts = [to_node(sequences[j][i], avars[j]) for j in range(len(avars))]
+            tuples.append(tuple_node)
+
+        iter = nodes.List()
+        iter.elts = tuples
+        return iter
+
+    def get_target(avars, sequences):
+        if len(sequences) == 0:
+            return nodes.Name("_")
+
+        if len(sequences) == 1:
+            return avars[0]
+
+        target = nodes.Tuple()
+        target.elts = avars
+        return target
+
+    def get_fixed_by_function(to_aunify, core, avars):
+        sequences = [avar.subs for avar in avars]
+
+        for_ = nodes.For()
+        for_.iter = get_iter(to_aunify, sequences)
+        for_.target = get_target(avars, sequences)
+        for_.body = core
+
+        return Fixed(
+            "similar-to-loop",
+            get_token_count(for_),
+            get_statements_count(for_, include_defs=False, include_name_main=True),
+            (),
+        )
 
     if (
-        not isinstance(lt.parent, nodes.If)
-        or lt.parent != rt.parent
-        or len(lt.parent.body) != 1
-        or lt.parent.body[0] != lt
-        or len(rt.parent.body) != 1
-        or rt.parent.orelse[0] != rt
+        length_or_type_mismatch(avars)
+        or assignment_to_aunify_var(avars)
+        or called_aunify_var(avars)
     ):
         return False
 
-    if length_or_type_mismatch([s1, s2]):
-        return False
-
-    if len(set(s1.values()) | set(s2.values())) != 2:
-        return False
-
-    size_before_decomposition = get_token_count(lt.parent)
-    size_after_decomposition = get_token_count(core) + len(s1) * (
-        4 + get_token_count(lt.parent.test)  # V1 if ... else V2
+    tokens_before = sum(get_token_count(node) for node in to_aunify)
+    stmts_before = sum(
+        get_statements_count(node, include_defs=False, include_name_main=True) for node in to_aunify
     )
 
-    return size_after_decomposition < size_before_decomposition
+    fixed = get_fixed_by_function(to_aunify, core, avars)
+    if not saves_enough_tokens(tokens_before, stmts_before, fixed):
+        return False
+
+    message_id, _tokens, _statements, message_args = fixed
+
+    first = to_aunify[0][0]
+    last = to_aunify[-1][-1]
+    self.add_message(
+        message_id,
+        line=first.fromlineno,
+        col_offset=first.col_offset,
+        end_lineno=last.tolineno,
+        end_col_offset=last.col_offset,
+        args=message_args,
+    )
+    return True
 
 
 class BigNoDuplicateCode(BaseChecker):  # type: ignore
@@ -1315,37 +1427,6 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             "Emitted when an overly complex expression is used multiple times.",
         ),
     }
-
-    def __init__(self, linter: "PyLinter"):
-        super().__init__(linter)
-        self.to_check = {}
-
-    def _add_to_check(self, node: nodes.NodeNG) -> None:
-        fn = node.root().name
-        if fn not in self.to_check:
-            self.to_check[fn] = {
-                nodes.FunctionDef: [],
-                nodes.If: [],
-                nodes.While: [],
-                nodes.For: [],
-            }
-        self.to_check[fn][type(node)].append(node)
-
-    def visit_if(self, node: nodes.If) -> None:
-        any_message1 = self.identical_before_after_branch(node)
-        any_message2 = self.identical_seq_ifs(node)
-
-        if not any_message1 and not any_message2:
-            self._add_to_check(node)
-
-    def visit_while(self, node: nodes.While) -> None:
-        self._add_to_check(node)
-
-    def visit_for(self, node: nodes.For) -> None:
-        self._add_to_check(node)
-
-    def visit_functiondef(self, node: nodes.FunctionDef) -> None:
-        self._add_to_check(node)
 
     def identical_before_after_branch(self, node: nodes.If) -> bool:
         def extract_branch_bodies(node: nodes.If) -> Optional[List[nodes.NodeNG]]:
@@ -1526,14 +1607,29 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             )
             return tokens_after < 0.8 * tokens_before
 
+        def get_loop_repetitions(
+            block: List[nodes.NodeNG], start: int
+        ) -> Generator[Tuple[int, List[List[nodes.NodeNG]]], None, None]:
+            for end in range(len(fst_siblings), start, -1):
+                for subblock_len in range(1, (end - start) // 2 + 1):
+                    yield (
+                        start + ((end - start) // subblock_len) * subblock_len,
+                        [block[i : i + subblock_len] for i in range(start, end, subblock_len)],
+                    )
+
         stmt_nodes = sorted(
             (
                 stmt_loc.node
-                for loc in syntactic_children_locs_from(node.cfg_loc, node)
+                for loc in successors_from_loc(
+                    node.cfg_loc, include_start=True, explore_functions=True
+                )
                 for stmt_loc in get_stmt_locs(loc)
                 if stmt_loc is not None
             ),
-            key=lambda node: (node.fromlineno, node.col_offset),
+            key=lambda node: (
+                node.fromlineno,
+                node.col_offset if node.col_offset is not None else float("inf"),
+            ),
         )
 
         duplicate = set()
@@ -1549,7 +1645,30 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 any_message3 = duplicate_blocks_in_if(self, fst)
 
                 if any_message1 or any_message2 or any_message3:
-                    duplicate.update({syntactic_children_locs_from(fst.cfg_loc, fst)})
+                    duplicate.update(
+                        {loc.node for loc in syntactic_children_locs_from(fst.cfg_loc, fst)}
+                    )
+                    continue
+
+            fst_siblings = get_siblings(fst)
+            if len(fst_siblings) >= 3 and not any(
+                isinstance(node, nodes.FunctionDef) for node in fst_siblings
+            ):
+                for end, to_aunify in get_loop_repetitions(fst_siblings, 0):
+                    core, avars = antiunify(to_aunify)
+                    if similar_to_loop(self, to_aunify, core, avars):
+                        duplicate.update(
+                            {
+                                loc.node
+                                for loc in syntactic_children_locs_from(
+                                    get_cfg_loc(to_aunify[0][0]),
+                                    [n for ns in to_aunify for n in ns],
+                                )
+                            }
+                        )
+                        break
+
+                if fst in duplicate:
                     continue
 
             for j, snd in candidate_snd(stmt_nodes, i):
@@ -1567,65 +1686,40 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                         to_aunify, core, avars
                     ):
                         # TODO or larger?
-                        eprint(core_as_string(core))
                         id_, ccore, cavars = candidates.get(
                             (fst, length), (len(candidates), None, None)
                         )
                         candidates[(fst, length)] = id_, ccore, cavars
                         candidates[(snd, length)] = id_, core, avars
 
-                        # duplicate.update({syntactic_children_locs_from(fst.cfg_loc, fst)})
+                        # duplicate.update(
+                        #     {loc.node for loc in syntactic_children_locs_from(fst.cfg_loc, fst)}
+                        # )
                         break_snd_loop = True
                         break
 
-        eprint(candidates)
+        for this_id in {id_ for id_, _, _ in candidates.values()}:
+            to_aunify = [
+                get_siblings(node)[:length]
+                for (node, length), (id_, _, _) in candidates.items()
+                if id_ == this_id
+            ]
+            # if any(n in duplicate for ns in to_aunify for n in ns):
+            #     continue
 
-    # Interval = Tuple[int, int]
-    # DuplicateIntervals = Dict[Tuple[Interval, Interval], Tuple[nodes.NodeNG, nodes.NodeNG]]
+            core, avars = antiunify(to_aunify)
 
-    # @staticmethod
-    # def _in_interval(i: int, j: int, intervals: DuplicateIntervals) -> bool:
-    #     return any(
-    #         lt_f <= i <= lt_t and rt_f <= j <= rt_t for ((lt_f, lt_t), (rt_f, rt_t)) in intervals
-    #     )
+            if (
+                length_or_type_mismatch(avars)
+                or assignment_to_aunify_var(avars)
+                or called_aunify_var(avars)
+            ):
+                continue
 
-    # @staticmethod
-    # def _remove_interval(lt: nodes.NodeNG, rt: nodes.NodeNG, intervals: DuplicateIntervals) -> None:
-    #     for (lt_f, lt_t), (rt_f, rt_t) in intervals:
-    #         if (
-    #             lt.fromlineno <= lt_f
-    #             and lt_t <= lt.tolineno
-    #             and rt.fromlineno <= rt_f
-    #             and rt_t <= rt.tolineno
-    #         ):
-    #             intervals.pop(((lt_f, lt_t), (rt_f, rt_t)))
-    #             return
-
-    # @staticmethod
-    # def _add_interval(lt: nodes.NodeNG, rt: nodes.NodeNG, intervals: DuplicateIntervals) -> None:
-    #     intervals[((lt.fromlineno, lt.tolineno), (rt.fromlineno, rt.tolineno))] = (lt, rt)
-
-    # def close(self) -> None:
-    #     for fn, to_check_in_file in self.to_check.items():
-    #         duplicate_intervals = {}
-    #         for candidate_nodes in to_check_in_file.values():
-    #             for i in range(len(candidate_nodes)):
-    #                 for j in range(i + 1, len(candidate_nodes)):
-    #                     lt = candidate_nodes[i]
-    #                     rt = candidate_nodes[j]
-    #                     if is_duplicate_block(lt, rt) and not BigNoDuplicateCode._in_interval(
-    #                         lt.fromlineno, rt.fromlineno, duplicate_intervals
-    #                     ):
-    #                         BigNoDuplicateCode._remove_interval(lt, rt, duplicate_intervals)
-    #                         BigNoDuplicateCode._add_interval(lt, rt, duplicate_intervals)
-    #                         break
-
-    #         for lt, rt in duplicate_intervals.values():
-    #             self.add_message(
-    #                 "no-duplicates",
-    #                 node=lt,
-    #                 args=(lt.fromlineno, lt.tolineno, rt.fromlineno, rt.tolineno),
-    #             )
+            if all(isinstance(vals[0], nodes.FunctionDef) for vals in to_aunify):
+                pass  # TODO hint use common helper function
+            else:
+                similar_to_function(self, to_aunify, core, avars)
 
 
 def register(linter: "PyLinter") -> None:
