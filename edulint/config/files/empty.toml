@@ -2,6 +2,7 @@ export-groups = ["python-specific", "enhancement", "complexity"]
 
 [pylint]
 load-plugins = [
+    "edulint.linting.analyses.patcher",
     "edulint.linting.checkers.basic_checker",
     "edulint.linting.checkers.short_problems",
     "edulint.linting.checkers.improper_loop",
