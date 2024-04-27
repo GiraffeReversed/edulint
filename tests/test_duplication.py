@@ -196,6 +196,17 @@ def test_similar_to_function(filename: str, expected_output: List[Problem]) -> N
     )
 
 @pytest.mark.parametrize("filename,expected_output", [
+    ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
+    ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11)]),
+])
+def test_similar_to_loop(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=similar-to-loop")],
+        expected_output
+    )
+
+@pytest.mark.parametrize("filename,expected_output", [
     ("0bf69cc1a5-p4_geometry.py", []),
     ("163aadb1dd-p4_geometry.py", []),  # dubious
     ("5ce8692f42-p5_fibsum.py", []),
