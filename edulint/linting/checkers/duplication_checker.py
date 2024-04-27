@@ -35,6 +35,8 @@ from edulint.linting.checkers.utils import (
     cformat,  # noqa: F401
     get_token_count,
     has_else_block,
+    get_range_params,
+    get_const_value,
 )
 
 
@@ -1321,6 +1323,44 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         target.elts = avars
         return target
 
+    def get_fixed_by_merging_with_parent_loop(to_aunify, core, avars):
+        parent = to_aunify[0][0].parent
+        if len(avars) > 0 or not isinstance(parent, nodes.For):
+            return None
+
+        first = to_aunify[0][0]
+        last = to_aunify[-1][-1]
+
+        if first != parent.body[0] or last != parent.body[-1]:
+            return None
+
+        range_params = get_range_params(parent.iter)
+        if range_params is None:
+            return None
+
+        start, stop, step = range_params
+        if get_const_value(start) != 0 or get_const_value(step) != 1:
+            return None
+
+        used_vars = vars_in([n for ns in to_aunify for n in ns])
+        target = parent.target
+        # TODO can be weakened -- use div to get i's original value
+        if not isinstance(target, nodes.AssignName) or (target.name, parent.scope()) in used_vars:
+            return None
+
+        const_stop = get_const_value(stop)
+        new_iter = (
+            f"{const_stop * len(to_aunify)}"
+            if isinstance(stop, nodes.Const)
+            else f"{stop.as_string()} * {len(to_aunify)}"
+        )
+        return Fixed(
+            "similar-to-loop-merge",
+            get_token_count(core),
+            get_statements_count(core, include_defs=False, include_name_main=True),
+            (new_iter,),
+        )
+
     def get_fixed_by_loop(to_aunify, core, avars):
         sequences = [avar.subs for avar in avars]
 
@@ -1352,7 +1392,12 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         get_statements_count(node, include_defs=False, include_name_main=True) for node in to_aunify
     )
 
-    fixed = get_fixed_by_loop(to_aunify, core, avars)
+    fixed_by_merge = get_fixed_by_merging_with_parent_loop(to_aunify, core, avars)
+    if fixed_by_merge is not None:
+        fixed = fixed_by_merge
+    else:
+        fixed = get_fixed_by_loop(to_aunify, core, avars)
+
     if not saves_enough_tokens(tokens_before, stmts_before, fixed):
         return False
 
@@ -1408,6 +1453,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         "R6807": (
             "Move if into block",
             "if-into-block",
+            "",
+        ),
+        "R6808": (
+            "Merge with parent loop %s",
+            "similar-to-loop-merge",
             "",
         ),
         "R6851": (
