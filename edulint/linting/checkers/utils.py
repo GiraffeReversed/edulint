@@ -147,7 +147,9 @@ def is_parents_elif(node: nodes.If) -> bool:
     return isinstance(parent, nodes.If) and parent.has_elif_block() and parent.orelse[0] == node
 
 
-def has_else_block(node: Union[nodes.For, nodes.While, nodes.If]):
+def has_else_block(node: Union[nodes.For, nodes.While, nodes.If, nodes.IfExp]):
+    if isinstance(node, nodes.IfExp):
+        return True
     return len(node.orelse) > 0 and (not isinstance(node, nodes.If) or not node.has_elif_block())
 
 
@@ -225,6 +227,21 @@ class TokenCountingVisitor(BaseVisitor[int]):
     @classmethod
     def combine(cls, results: List[int]) -> int:
         return sum(results) + 1
+
+    def _visit_with_else(self, node: Union[nodes.If, nodes.For, nodes.While]) -> int:
+        return self.visit_many(node.get_children()) + (1 if has_else_block(node) else 0)
+
+    def visit_if(self, node: nodes.If) -> int:
+        return self._visit_with_else(node)
+
+    def visit_for(self, node: nodes.For) -> int:
+        return self._visit_with_else(node)
+
+    def visit_while(self, node: nodes.While) -> int:
+        return self._visit_with_else(node)
+
+    def visit_ifexp(self, node: nodes.IfExp) -> int:
+        return self._visit_with_else(node)
 
 
 def get_token_count(node: Union[nodes.NodeNG, List[nodes.NodeNG]]) -> int:

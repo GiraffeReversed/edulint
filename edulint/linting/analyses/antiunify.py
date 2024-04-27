@@ -44,6 +44,12 @@ class Antiunify:
     def _aunify_consts(self, lt: Any, rt: Any):
         if lt == rt:
             return lt, {}, {}
+
+        if isinstance(lt, AunifyVar):
+            return lt, {}, {lt.name: rt}
+        if isinstance(rt, AunifyVar):
+            return rt, {rt.name: lt}, {}
+
         id_ = self._get_new_varname()
         return id_, {id_: lt}, {id_: rt}
 
@@ -218,7 +224,7 @@ class Antiunify:
     ):
         if len(lt.names) != len(rt.names):
             names_core, names_lt_subst, names_rt_subst = self._new_aunifier(
-                lt.names, rt.names, extra=f"names-{len(lt.names)}-"
+                lt.names, rt.names, extra=f"names-{len(lt.names)}-{len(rt.names)}"
             )
         else:
             names_core = []
@@ -241,7 +247,7 @@ class Antiunify:
         modname_core, modname_lt_subst, modname_rt_subst = self._aunify_strs(lt.modname, rt.modname)
         if len(lt.names) != len(rt.names):
             names_core, names_lt_subst, names_rt_subst = self._new_aunifier(
-                lt.names, rt.names, extra=f"names-{len(lt.names)}-"
+                lt.names, rt.names, extra=f"names-{len(lt.names)}-{len(rt.names)}"
             )
         else:
             names_core = []

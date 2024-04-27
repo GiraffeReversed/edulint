@@ -894,7 +894,7 @@ def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
         sibling = sibling.next_sibling()
 
 
-def if_to_variables(node: nodes.If) -> bool:
+def if_to_variables(self, node: nodes.If) -> bool:
 
     def get_bodies(ifs: List[nodes.If]) -> List[List[nodes.NodeNG]]:
         result = []
@@ -930,28 +930,44 @@ def if_to_variables(node: nodes.If) -> bool:
     if length_or_type_mismatch(subs) or assignment_to_aunify_var(core) or called_aunify_var(core):
         return False
 
-    max_unique_vals = max(len(set(sub.values())) for sub in subs)
+    tokens_before = get_token_count(node)
+    stmts_before = get_statements_count(node, include_defs=False, include_name_main=True)
 
-    tokens_before_decomposition = get_token_count(node)
-    tokens_after_decomposition = (
-        get_token_count(core)
-        + sum(get_token_count(if_.test) + 1 for if_ in ifs)  # if
-        + len(if_bodies) * max_unique_vals * 3  # var = val
-    )
+    core_tokens = get_token_count(core)
+    test_tokens = sum(get_token_count(if_.test) for if_ in ifs)
+    core_stmts = get_statements_count(core, include_defs=False, include_name_main=True)
 
-    stmts_before_decomposition = get_statements_count(
-        node, include_defs=False, include_name_main=True
-    )
-    stmts_after_decomposition = get_statements_count(
-        core, include_defs=False, include_name_main=True
-    ) + (len(if_bodies)) * (
-        max_unique_vals + 1  # + tests
-    )
+    vars_needed = len(subs[0])  # TODO may be lower
 
-    return (
-        tokens_after_decomposition < 0.8 * tokens_before_decomposition  # TODO extract into variable
-        and stmts_after_decomposition < stmts_before_decomposition
+    tokens_after = (
+        core_tokens
+        + (test_tokens + len(if_bodies))  # if test ... else
+        + len(if_bodies) * vars_needed * 3  # var = val
     )
+    stmts_after = core_stmts + (len(if_bodies)) * (vars_needed + 1)  # + tests
+    suggest_ternary = False
+
+    # TODO count tokens in values
+    if len(if_bodies) == 2 and self.linter.is_message_enabled("if-to-ternary"):
+        tokens_after_ternary = core_tokens + vars_needed * (
+            test_tokens + 4  # v1 if test else v2
+        )
+
+        if tokens_after_ternary < tokens_after:
+            tokens_after = tokens_after_ternary
+            stmts_after = core_stmts
+            suggest_ternary = True
+
+    if not (
+        tokens_after < 0.75 * tokens_before  # TODO extract into variable
+        and stmts_after <= stmts_before
+    ):
+        return False
+
+    if suggest_ternary:
+        self.add_message("if-to-ternary", node=node)
+    else:
+        self.add_message("if-to-variables", node=node)
 
 
 def if_into_similar(lt: nodes.If, rt: nodes.If, core, s1, s2) -> bool:
@@ -1224,8 +1240,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     yield rt
 
         for to_check_in_file, lt in candidate_lt():
-            if isinstance(lt, nodes.If) and if_to_variables(lt):
-                self.add_message("if-to-variables", node=lt)
+            if isinstance(lt, nodes.If) and if_to_variables(self, lt):
                 continue
 
             for rt in candidate_rt(to_check_in_file, lt):
