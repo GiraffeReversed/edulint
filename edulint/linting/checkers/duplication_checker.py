@@ -1663,6 +1663,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 isinstance(node, nodes.FunctionDef) for node in fst_siblings
             ):
                 for end, to_aunify in get_loop_repetitions(fst_siblings):
+                    if not is_duplication_candidate(to_aunify):
+                        continue
                     core, avars = antiunify(to_aunify)
                     if similar_to_loop(self, to_aunify, core, avars):
                         duplicate.update(
