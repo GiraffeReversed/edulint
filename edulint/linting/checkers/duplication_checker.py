@@ -1,4 +1,5 @@
 from astroid import nodes  # type: ignore
+from collections import namedtuple
 from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Set, Any, Dict
 
 from pylint.checkers import BaseChecker  # type: ignore
@@ -7,7 +8,15 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, antiunify_lists
+from edulint.linting.analyses.antiunify import antiunify, AunifyVar
+from edulint.linting.analyses.reaching_definitions import (
+    extract_varnames,
+    is_changed_between,
+    get_vars_defined_before,
+    get_vars_used_after,
+    get_control_statements,
+)
+from edulint.linting.analyses.cfg.utils import get_cfg_loc
 from edulint.linting.checkers.utils import (
     is_parents_elif,
     BaseVisitor,
@@ -874,7 +883,10 @@ def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
         sibling = sibling.next_sibling()
 
 
-def if_to_variables(self, node: nodes.If) -> bool:
+Fixed = namedtuple("Fixed", ["symbol", "tokens", "statements", "message_args"])
+
+
+def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
     def get_bodies(ifs: List[nodes.If]) -> List[List[nodes.NodeNG]]:
         result = []
@@ -896,20 +908,193 @@ def if_to_variables(self, node: nodes.If) -> bool:
 
         return core, subs
 
+    def to_node(val, avar=None) -> nodes.NodeNG:
+        if isinstance(val, nodes.NodeNG):
+            return val
+        if avar is not None:
+            return type(avar.parent)(val)
+        return nodes.Const(val)
+
+    def to_parent(val: AunifyVar) -> nodes.NodeNG:
+        parent = val.parent
+        if isinstance(parent, (nodes.Const, nodes.Name)):
+            parent = parent.parent
+        assert parent is not None
+        return parent
+
+    def check_enabled(message_id: str):
+        def middle(func):
+            def inner(*args, **kwargs):
+                if not self.linter.is_message_enabled(message_id):
+                    return None
+                result = func(*args, **kwargs)
+                if result is None:
+                    return result
+                return Fixed(message_id, *result)
+
+            return inner
+
+        return middle
+
     COMPLEX_EXPRESSION_TYPES = (nodes.BinOp,)
     # SIMPLE_EXPRESSION_TYPES = (nodes.AugAssign, nodes.Call, nodes.BoolOp, nodes.Compare)
 
     def is_part_of_complex_expression(subs) -> bool:
         for avar in subs[0].keys():
-            parent = avar.parent
-            if isinstance(parent, (nodes.Const, nodes.Name)):
-                parent = parent.parent
+            parent = to_parent(avar)
             assert parent is not None
 
             # if not isinstance(parent, SIMPLE_EXPRESSION_TYPES):
             if isinstance(parent, COMPLEX_EXPRESSION_TYPES):
                 return True
         return False
+
+    def variables_change(tests, core, subs):
+        varnames = extract_varnames(tests)
+        first_loc = tests[0].cfg_loc
+        avars_locs = [get_cfg_loc(to_parent(avar)) for avar in subs[0].keys()]
+        return any(
+            is_changed_between(varname, first_loc, avar_locs)
+            for varname in varnames
+            for avar_locs in avars_locs
+        )
+
+    @check_enabled("if-to-ternary")
+    def get_fixed_by_ternary(tests, core, subs):
+        if len(tests) > 2:
+            return None
+        if is_part_of_complex_expression(subs):
+            return None
+        if variables_change(tests, core, subs):
+            return None
+
+        # generate exprs
+        exprs = []
+        for avar in subs[0].keys():
+            assert len(subs) == len(tests) + 1
+            expr = to_node(subs[-1][avar], avar)
+            for test, sub in reversed(list(zip(tests, subs))):
+                new = nodes.IfExp()
+                new.postinit(test=test, body=to_node(sub[avar], avar), orelse=expr)
+                expr = new
+
+            exprs.append(expr)
+
+        return (
+            get_token_count(core)
+            - len(subs[0].keys())  # subtract aunify vars
+            + get_token_count(exprs),
+            get_statements_count(core, include_defs=False, include_name_main=True),
+            (),
+        )
+
+    def create_ifs(tests: List[nodes.NodeNG]) -> nodes.If:
+        root = nodes.If()
+        if_ = root
+        if_bodies = []
+        for i, test in enumerate(tests):
+            if_.test = test
+            if_bodies.append(if_.body)
+            if i != len(tests) - 1:
+                elif_ = nodes.If()
+                if_.orelse = [elif_]
+                # elif_.parent = if_
+                if_ = elif_
+            else:
+                if_bodies.append(if_.orelse)
+        return root, if_bodies
+
+    @check_enabled("if-into-block")
+    def get_fixed_by_moving_if(tests, core, subs):
+        if variables_change(tests, core, subs):
+            return None
+
+        # return 0, 0, ()
+        return None
+
+    @check_enabled("if-to-variables")
+    def get_fixed_by_vars(tests, core, subs):
+        root, if_bodies = create_ifs(tests)
+        seen = {}
+        for avar in subs[0].keys():
+            var_vals = tuple(sub[avar] for sub in subs)
+            varname = seen.get(var_vals, avar.name)
+
+            if varname != avar.name:
+                continue
+            seen[var_vals] = avar.name
+
+            for val, body in zip(var_vals, if_bodies):
+                assign = nodes.Assign()
+                assign.targets = [nodes.AssignName(avar.name)]
+                assign.value = to_node(val, avar)
+                body.append(assign)
+
+        return (
+            get_token_count(root) + get_token_count(core),
+            get_statements_count(root, include_defs=False, include_name_main=True)
+            + get_statements_count(core, include_defs=False, include_name_main=True),
+            (),
+        )
+
+    @check_enabled("similar-to-function")
+    def get_fixed_by_function(tests, core, subs):
+        root, if_bodies = create_ifs(tests)
+
+        # compute necessary arguments from different values
+        seen = {}
+        for avar in subs[0].keys():
+            var_vals = tuple(sub[avar] for sub in subs)
+            varname = seen.get(var_vals, avar.name)
+
+            if varname != avar.name:
+                continue
+            seen[var_vals] = avar.name
+
+        # compute extras
+        extra_args_needed = len(get_vars_defined_before(core))
+        return_vals_needed = len(get_vars_used_after(core))
+        control_needed = len(get_control_statements(core))
+
+        # generate calls in ifs
+        vals = [[s[i] for s in seen] for i in range(len(subs))]
+        for if_vals, body in zip(vals, if_bodies):
+            call = nodes.Call()
+            call.func = nodes.Name("<placeholder>")
+            call.args = [to_node(val) for val in if_vals] + [
+                f"<v{i}>" for i in range(extra_args_needed)
+            ]
+            if return_vals_needed + control_needed == 0:
+                body.append(call)
+            else:
+                assign = nodes.Assign()
+                assign.targets = [
+                    nodes.AsssignName(f"<r{i}>") for i in range(control_needed + return_vals_needed)
+                ]
+                assign.value = call
+                body.append(assign)
+
+        # generate function
+        fun_def = nodes.FunctionDef(name=nodes.Name("<placeholder>"))
+        fun_def.args = [nodes.Name(f"<v{i}>") for i in range(len(seen))]
+        fun_def.body = core if isinstance(core, list) else [core]
+
+        # generate management for returned values
+        if control_needed > 0:
+            root = [root]
+            for i in control_needed:
+                test = nodes.BinOp("is")
+                test.postinit(left=f"<r{i}>", right=nodes.Const(None))
+                if_ = nodes.If()
+                if_.test = test
+                if_.body = [nodes.Return()]  # placeholder for a control
+                root.append(if_)
+
+        return (
+            get_token_count(root) + get_token_count(fun_def),
+            get_statements_count(root) + get_statements_count(fun_def),
+            (),
+        )
 
     if is_parents_elif(node):
         return False
@@ -928,43 +1113,27 @@ def if_to_variables(self, node: nodes.If) -> bool:
     tokens_before = get_token_count(node)
     stmts_before = get_statements_count(node, include_defs=False, include_name_main=True)
 
-    core_tokens = get_token_count(core)
-    test_tokens = sum(get_token_count(if_.test) for if_ in ifs)
-    core_stmts = get_statements_count(core, include_defs=False, include_name_main=True)
+    tests = [if_.test for if_ in ifs]
+    fixed = [
+        get_fixed_by_ternary(tests, core, subs),
+        get_fixed_by_moving_if(tests, core, subs),
+        get_fixed_by_vars(tests, core, subs),
+        get_fixed_by_function(tests, core, subs),
+    ]
 
-    vars_needed = len(subs[0])  # TODO may be lower
-
-    tokens_after = (
-        core_tokens
-        + (test_tokens + len(if_bodies))  # if test ... else
-        + len(if_bodies) * vars_needed * 3  # var = val
-    )
-    stmts_after = core_stmts + (len(if_bodies)) * (vars_needed + 1)  # + tests
-    suggest_ternary = False
-
-    # TODO count tokens in values
-    if (
-        len(if_bodies) == 2
-        and not is_part_of_complex_expression(subs)
-        and self.linter.is_message_enabled("if-to-ternary")
-    ):
-        tokens_after_ternary = core_tokens + vars_needed * (test_tokens + 4)  # v1 if test else v2
-
-        if tokens_after_ternary < tokens_after:
-            tokens_after = tokens_after_ternary
-            stmts_after = core_stmts
-            suggest_ternary = True
-
-    if not (
-        tokens_after < 0.8 * tokens_before  # TODO extract into variable
-        and stmts_after <= stmts_before
-    ):
+    fixed = [
+        f
+        for f in fixed
+        if f is not None and f.statements <= stmts_before and f.tokens < 0.8 * tokens_before
+    ]
+    if len(fixed) == 0:
         return False
 
-    if suggest_ternary:
-        self.add_message("if-to-ternary", node=node)
-    else:
-        self.add_message("if-to-variables", node=node)
+    suggestion = min(fixed, key=lambda f: f.tokens)
+
+    message_id, _tokens, _statements, message_args = suggestion
+    self.add_message(message_id, node=node, args=message_args)
+    return True
 
 
 def if_into_similar(lt: nodes.If, rt: nodes.If, core, s1, s2) -> bool:
@@ -1024,6 +1193,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         "R6806": (
             "Extract ifs",
             "if-to-variables",
+            "",
+        ),
+        "R6807": (
+            "Extract ifs",
+            "if-into-block",
             "",
         ),
         "R6851": (
@@ -1237,7 +1411,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     yield rt
 
         for to_check_in_file, lt in candidate_lt():
-            if isinstance(lt, nodes.If) and if_to_variables(self, lt):
+            if isinstance(lt, nodes.If) and duplicate_blocks_in_if(self, lt):
                 continue
 
             for rt in candidate_rt(to_check_in_file, lt):
