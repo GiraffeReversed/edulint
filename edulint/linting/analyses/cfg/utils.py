@@ -293,7 +293,9 @@ def get_cfg_loc(in_stmt: nodes.NodeNG) -> CFGLoc:
 def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
     parent = loc.node.parent
 
-    if isinstance(loc.node, nodes.Arguments):
+    if isinstance(loc.node, nodes.Arguments) or (
+        isinstance(parent, nodes.For) and loc.node == parent.target
+    ):
         return None, None
 
     if isinstance(parent, nodes.With):
@@ -304,7 +306,7 @@ def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
         return loc, None
 
     if (isinstance(parent, (nodes.If, nodes.While)) and loc.node == parent.test) or (
-        isinstance(parent, nodes.For) and loc.node in (parent.target, parent.iter)
+        isinstance(parent, nodes.For) and loc.node == parent.iter
     ):
         return None, parent.cfg_loc
 
