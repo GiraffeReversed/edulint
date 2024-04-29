@@ -146,6 +146,30 @@ def essor_blocks_from_locs(
             yield from dfs_rec(loc.block, from_pos, to_pos, is_first=True)
 
 
+def successor_blocks_from_locs(
+    locs: List[CFGLoc],
+    stop_on_loc: Optional[Callable[[CFGLoc], bool]] = None,
+    stop_on_block: Optional[Callable[[CFGBlock, int, int], bool]] = None,
+    include_start: bool = False,
+    include_end: bool = False,
+):
+    return essor_blocks_from_locs(
+        locs, Direction.SUCCESSORS, stop_on_loc, stop_on_block, include_start, include_end
+    )
+
+
+def predecessor_blocks_from_locs(
+    locs: List[CFGLoc],
+    stop_on_loc: Optional[Callable[[CFGLoc], bool]] = None,
+    stop_on_block: Optional[Callable[[CFGBlock, int, int], bool]] = None,
+    include_start: bool = False,
+    include_end: bool = False,
+):
+    return essor_blocks_from_locs(
+        locs, Direction.PREDECESSORS, stop_on_loc, stop_on_block, include_start, include_end
+    )
+
+
 def essor_locs_from_locs(
     locs: List[CFGLoc],
     direction: Direction,
@@ -290,7 +314,7 @@ def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
     return loc, None
 
 
-def syntactic_children_locs_from(
+def syntactic_children_locs_from_old(
     loc: CFGLoc,
     syntactic: nodes.NodeNG,
 ) -> Generator[CFGLoc, None, None]:
@@ -317,12 +341,40 @@ def syntactic_children_locs_from(
         yield succ
 
 
+def syntactic_children_locs_from(
+    loc: CFGLoc,
+    syntactic: nodes.NodeNG,
+) -> Generator[CFGLoc, None, None]:
+
+    if isinstance(loc, CFGLoc):
+        loc = [loc]
+    if isinstance(syntactic, nodes.NodeNG):
+        syntactic = [syntactic]
+
+    syntactic = [n.cfg_loc for n in syntactic]
+
+    for is_in, block, from_pos, to_pos in get_locs_in_and_after_from(loc, syntactic):
+        if is_in:
+            for i in range(from_pos, to_pos):
+                yield block.locs[i]
+
+
 def get_first_locs_after(locs: List[CFGLoc]):
-    if isinstance(locs, list):
-        loc_node_set = set(s.node for s in locs)
-    else:
-        locs = [locs]
-        loc_node_set = {locs.node}
+    for is_in, block, from_pos, to_pos in get_locs_in_and_after(locs):
+        if not is_in:
+            yield block.locs[from_pos]
+
+
+def get_locs_in_and_after(locs: List[CFGLoc]) -> Iterator[Tuple[bool, CFGBlock, int, int]]:
+    yield from get_locs_in_and_after_from(locs, locs)
+
+
+def get_locs_in_and_after_from(
+    froms: List[CFGLoc], locs: List[CFGLoc]
+) -> Iterator[Tuple[bool, CFGBlock, int, int]]:
+    assert isinstance(locs, list)
+
+    loc_node_set = set(s.node for s in locs)
 
     def stop_on(block, from_pos, to_pos):
         # it is enough to check last; locs_after inside a loc's block
@@ -334,24 +386,38 @@ def get_first_locs_after(locs: List[CFGLoc]):
     for loc in sorted(locs, key=lambda loc: loc.pos):
         block_locs[loc.block].append(loc)
 
-    for block, same_block_locs in list(block_locs.items()):
-        for i in range(len(same_block_locs) - 1):
-            lt = same_block_locs[i]
-            rt = same_block_locs[i + 1]
-
-            if lt.pos + 1 != rt.pos:
-                yield block.locs[lt.pos + 1]
-                block_locs.pop(block)
-                break
-
-    for succ_block, from_pos, to_pos in essor_blocks_from_locs(
+    for succ_block, from_pos, to_pos in successor_blocks_from_locs(
         [same_block_locs[-1] for same_block_locs in block_locs.values()],
-        Direction.SUCCESSORS,
         stop_on_block=stop_on,
-        stop_on_loc=None,
-        include_start=False,
+        include_start=True,
         include_end=True,
     ):
-        if stop_on(succ_block, from_pos, to_pos):
-            same_block_poses = [loc.pos for loc in locs if loc.block == succ_block]
-            yield succ_block.locs[max(same_block_poses, default=-1) + 1]
+        stop = stop_on(succ_block, from_pos, to_pos)
+        if succ_block not in block_locs:
+            yield not stop, succ_block, from_pos, to_pos
+            continue
+
+        same_block_locs = block_locs[succ_block]
+
+        conseqs = []
+        conseq = []
+
+        for loc in same_block_locs:
+            if len(conseq) == 0 or conseq[-1].pos + 1 == loc.pos:
+                conseq.append(loc)
+            else:
+                conseqs.append(conseq)
+                conseq = [loc]
+
+        if len(conseq) > 0:
+            conseqs.append(conseq)
+
+        for i in range(len(conseqs)):
+            conseq = conseqs[i]
+            yield True, succ_block, conseq[0].pos, conseq[-1].pos + 1
+
+            if i < len(conseqs) - 1:
+                next = conseqs[i + 1]
+                yield False, succ_block, conseq[-1].pos + 1, next[0].pos
+            if i == len(conseqs) - 1 and conseq[-1].pos + 1 < len(succ_block.locs):
+                yield False, succ_block, conseq[-1].pos + 1, len(succ_block.locs)
