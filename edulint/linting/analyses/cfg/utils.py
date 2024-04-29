@@ -1,4 +1,5 @@
 from typing import Generator, Optional, Callable, List, Tuple, Iterator
+from collections import defaultdict
 from enum import Enum
 
 from astroid import nodes
@@ -37,19 +38,26 @@ def essor_blocks_from_locs(
     locs: List[CFGLoc],
     direction: Direction,
     stop_on_loc: Optional[Callable[[CFGLoc], bool]],
-    stop_on_block: Optional[Callable[[CFGBlock], bool]],
+    stop_on_block: Optional[Callable[[CFGBlock, int, int], bool]],
     include_start: bool,
     include_end: bool,
 ) -> Iterator[Tuple[CFGBlock, int, int]]:
     def dfs_rec(
-        current_block: CFGBlock, from_pos: int, to_pos: int
+        current_block: CFGBlock, from_pos: int, to_pos: int, is_first: bool
     ) -> Iterator[Tuple[CFGBlock, int, int]]:
 
-        stop_on_current_block = stop_on_block is not None and stop_on_block(current_block)
-        if stop_on_current_block and not include_end:
+        stop_on_current_block = stop_on_block is not None and stop_on_block(
+            current_block, from_pos, to_pos
+        )
+        if (
+            stop_on_current_block
+            and not include_end
+            and (not include_start or not is_first)
+            and stop_on_loc is None
+        ):
             return
 
-        if stop_on_loc is not None:
+        if (stop_on_block is None or stop_on_current_block) and stop_on_loc is not None:
             if direction == Direction.SUCCESSORS:
                 rng = range(from_pos, to_pos)
             else:
@@ -86,7 +94,7 @@ def essor_blocks_from_locs(
 
                 elif essor not in visited:
                     visited[essor] = 0, len(essor.locs)
-                    yield from dfs_rec(essor, 0, len(essor.locs))
+                    yield from dfs_rec(essor, 0, len(essor.locs), is_first=False)
 
                 else:
                     vfrom, vto = visited[essor]
@@ -103,9 +111,8 @@ def essor_blocks_from_locs(
                         new_to_pos = len(essor.locs)
 
                     visited[essor] = 0, len(essor.locs)
-                    yield from dfs_rec(essor, new_from_pos, new_to_pos)
+                    yield from dfs_rec(essor, new_from_pos, new_to_pos, is_first=False)
 
-    assert stop_on_block is None or stop_on_loc is None
     visited = {}
     for loc in locs:
         # to unwrap nodes that are not part of the CFG (for, if, while, ...)
@@ -121,7 +128,7 @@ def essor_blocks_from_locs(
                 to_pos = loc.pos + 1 if include_start else loc.pos
 
             visited[loc.block] = from_pos, to_pos
-            yield from dfs_rec(loc.block, from_pos, to_pos)
+            yield from dfs_rec(loc.block, from_pos, to_pos, is_first=True)
         else:
             vfrom, vto = vblock
             if vfrom <= loc.pos < vto:
@@ -138,7 +145,7 @@ def essor_blocks_from_locs(
                 to_pos = loc.pos + 1 if include_start else loc.pos
                 visited[loc.block] = vfrom, to_pos
 
-            yield from dfs_rec(loc.block, from_pos, to_pos)
+            yield from dfs_rec(loc.block, from_pos, to_pos, is_first=True)
 
 
 def essor_locs_from_locs(
@@ -285,7 +292,7 @@ def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
     return loc, None
 
 
-def syntactic_children_locs_from(
+def syntactic_children_locs_from_old(
     loc: CFGLoc,
     syntactic: nodes.NodeNG,
 ) -> Generator[CFGLoc, None, None]:
@@ -312,24 +319,68 @@ def syntactic_children_locs_from(
         yield succ
 
 
-def get_first_locs_after(loc):
-    if isinstance(loc, list):
-        # stop_on = lambda succ: all(  # noqa: E731
-        #     s.node not in succ.node.node_ancestors() for s in loc
-        # )
-        loc_node_set = set(s.node for s in loc)
-
-        def stop_on(loc):
-            return len(loc_node_set & (set(loc.node.node_ancestors()) | {loc.node})) == 0
-
+def syntactic_children_locs_from(
+    loc: CFGLoc,
+    syntactic: nodes.NodeNG,
+) -> Generator[CFGLoc, None, None]:
+    if isinstance(syntactic, list):
+        syntactic_set = set(syntactic)
     else:
-        stop_on = lambda succ: loc.node not in succ.node.node_ancestors()  # noqa: E731
+        syntactic_set = {syntactic}
 
-    for succ in (successors_from_locs if isinstance(loc, list) else successors_from_loc)(
+    def stop_on_block(block, from_pos, to_pos):
+        # if last is not nested, then none exectued after will be nested
+        last = block.locs[to_pos - 1].node
+        return len(syntactic_set & (set(last.node_ancestors()) | {last})) == 0
+
+    def stop_on_loc(loc):
+        return len(syntactic_set & (set(loc.node.node_ancestors()) | {loc.node})) == 0
+
+    for succ in successors_from_loc(
         loc,
-        stop_on_loc=stop_on,
+        stop_on_block=stop_on_block,
+        stop_on_loc=stop_on_loc,
+        include_start=True,
+        include_end=False,
+    ):
+        yield succ
+
+
+def get_first_locs_after(locs: List[CFGLoc]):
+    if isinstance(locs, list):
+        loc_node_set = set(s.node for s in locs)
+    else:
+        locs = [locs]
+        loc_node_set = {locs.node}
+
+    def stop_on(block, from_pos, to_pos):
+        # it is enough to check last; locs_after inside a loc's block
+        # are handled separately
+        last = block.locs[to_pos - 1].node
+        return len(loc_node_set & (set(last.node_ancestors()) | {last})) == 0
+
+    block_locs = defaultdict(list)
+    for loc in sorted(locs, key=lambda loc: loc.pos):
+        block_locs[loc.block].append(loc)
+
+    for block, same_block_locs in list(block_locs.items()):
+        for i in range(len(same_block_locs) - 1):
+            lt = same_block_locs[i]
+            rt = same_block_locs[i + 1]
+
+            if lt.pos + 1 != rt.pos:
+                yield block.locs[lt.pos + 1]
+                block_locs.pop(block)
+                break
+
+    for succ_block, from_pos, to_pos in essor_blocks_from_locs(
+        [same_block_locs[-1] for same_block_locs in block_locs.values()],
+        Direction.SUCCESSORS,
+        stop_on_block=stop_on,
+        stop_on_loc=None,
         include_start=False,
         include_end=True,
     ):
-        if stop_on(succ):
-            yield succ
+        if stop_on(succ_block, from_pos, to_pos):
+            same_block_poses = [loc.pos for loc in locs if loc.block == succ_block]
+            yield succ_block.locs[max(same_block_poses, default=-1) + 1]
