@@ -290,33 +290,6 @@ def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
     return loc, None
 
 
-def syntactic_children_locs_from_old(
-    loc: CFGLoc,
-    syntactic: nodes.NodeNG,
-) -> Generator[CFGLoc, None, None]:
-    if isinstance(syntactic, list):
-        # stop_on = lambda loc: all(  # noqa: E731
-        #     s != loc.node and s not in loc.node.node_ancestors() for s in syntactic
-        # )
-        syntactic_set = set(syntactic)
-
-        def stop_on(loc):
-            return len(syntactic_set & (set(loc.node.node_ancestors()) | {loc.node})) == 0
-
-    else:
-        stop_on = (  # noqa: E731
-            lambda loc: syntactic != loc.node and syntactic not in loc.node.node_ancestors()
-        )
-
-    for succ in successors_from_loc(
-        loc,
-        stop_on_loc=stop_on,
-        include_start=True,
-        include_end=False,
-    ):
-        yield succ
-
-
 def syntactic_children_locs_from(
     loc: CFGLoc,
     syntactic: nodes.NodeNG,
