@@ -161,6 +161,9 @@ class CFGLoc:
     def __hash__(self):
         return hash((self.block, self.pos, self.node))
 
+    def __repr__(self):
+        return f"CFGLoc(node={self.node!r})"
+
 
 class CFGBlock:
     """A node in a control flow graph.
@@ -186,6 +189,9 @@ class CFGBlock:
         self.predecessors = []
         self.successors = []
         self.reachable = False
+
+    def __repr__(self):
+        return f"CFGBlock(len={len(self.locs)}, fst={self.locs[0].node!r})"
 
     def add_statement(self, statement: nodes.NodeNG) -> None:
         if not self.is_jump():
