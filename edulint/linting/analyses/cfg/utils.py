@@ -1,4 +1,4 @@
-from typing import Generator, Optional, Callable, List, Tuple
+from typing import Generator, Optional, Callable, List, Tuple, Iterator
 from enum import Enum
 
 from astroid import nodes
@@ -19,95 +19,191 @@ class Direction(Enum):
         assert False, "unreachable"
 
     @staticmethod
+    def to_range(i: int, block_len: int, direction: "Direction") -> Iterator[int]:
+        if direction == Direction.SUCCESSORS:
+            return range(i, block_len)
+        if direction == Direction.PREDECESSORS:
+            return range(i, -1, -1)
+        assert False, "unreachable"
+
+    @staticmethod
     def get_essors(block: CFGBlock, direction: "Direction") -> Generator[CFGBlock, None, None]:
         attr = direction.name.lower()
         for edge in getattr(block, attr):
             yield getattr(edge, "target" if direction == Direction.SUCCESSORS else "source")
 
 
-def essors_from_locs(
+def essor_blocks_from_locs(
     locs: List[CFGLoc],
     direction: Direction,
-    stop_on: Optional[Callable[[CFGLoc], bool]],
+    stop_on_loc: Optional[Callable[[CFGLoc], bool]],
+    stop_on_block: Optional[Callable[[CFGBlock], bool]],
+    include_start: bool,
+    include_end: bool,
+) -> Iterator[Tuple[CFGBlock, int, int]]:
+    def dfs_rec(
+        current_block: CFGBlock, from_pos: int, to_pos: int
+    ) -> Iterator[Tuple[CFGBlock, int, int]]:
+
+        stop_on_current_block = stop_on_block is not None and stop_on_block(current_block)
+        if stop_on_current_block and not include_end:
+            return
+
+        if stop_on_loc is not None:
+            if direction == Direction.SUCCESSORS:
+                rng = range(from_pos, to_pos)
+            else:
+                rng = range(to_pos - 1, from_pos - 1, -1)
+
+            for i in rng:
+                current_loc = current_block.locs[i]
+                if stop_on_loc is not None and stop_on_loc(current_loc):
+                    if include_end:
+                        if direction == Direction.SUCCESSORS:
+                            yield current_block, from_pos, i + 1
+                        else:
+                            yield current_block, i, to_pos
+                    else:
+                        if direction == Direction.SUCCESSORS:
+                            yield current_block, from_pos, i
+                        else:
+                            yield current_block, i + 1, to_pos
+                    return
+
+        # stop_on_loc is None or no stop in this block
+        if from_pos != to_pos:
+            yield current_block, from_pos, to_pos
+
+        if stop_on_current_block:
+            return
+
+        if (direction == Direction.SUCCESSORS and to_pos == len(current_block.locs)) or (
+            direction == Direction.PREDECESSORS and from_pos == 0
+        ):
+            for essor in Direction.get_essors(current_block, direction):
+                if len(essor.locs) == 0:
+                    continue
+
+                elif essor not in visited:
+                    visited[essor] = 0, len(essor.locs)
+                    yield from dfs_rec(essor, 0, len(essor.locs))
+
+                else:
+                    vfrom, vto = visited[essor]
+                    if vfrom == 0 and vto == len(essor.locs):
+                        continue
+
+                    if direction == Direction.SUCCESSORS:
+                        assert vto == len(essor.locs)
+                        new_from_pos = 0
+                        new_to_pos = vfrom
+                    else:
+                        assert vfrom == 0
+                        new_from_pos = vto
+                        new_to_pos = len(essor.locs)
+
+                    visited[essor] = 0, len(essor.locs)
+                    yield from dfs_rec(essor, new_from_pos, new_to_pos)
+
+    assert stop_on_block is None or stop_on_loc is None
+    visited = {}
+    for loc in locs:
+        # to unwrap nodes that are not part of the CFG (for, if, while, ...)
+        loc = loc.block.locs[loc.pos]
+        vblock = visited.get(loc.block)
+
+        if vblock is None:
+            if direction == Direction.SUCCESSORS:
+                from_pos = loc.pos if include_start else loc.pos + 1
+                to_pos = len(loc.block.locs)
+            else:
+                from_pos = 0
+                to_pos = loc.pos + 1 if include_start else loc.pos
+
+            visited[loc.block] = from_pos, to_pos
+            yield from dfs_rec(loc.block, from_pos, to_pos)
+        else:
+            vfrom, vto = vblock
+            if vfrom <= loc.pos < vto:
+                continue
+
+            if direction == Direction.SUCCESSORS:
+                assert vto == len(loc.block.locs)
+                from_pos = loc.pos if include_start else loc.pos + 1
+                to_pos = vfrom
+                visited[loc.block] = from_pos, vto
+            else:
+                assert vfrom == 0
+                from_pos = vto
+                to_pos = loc.pos + 1 if include_start else loc.pos
+                visited[loc.block] = vfrom, to_pos
+
+            yield from dfs_rec(loc.block, from_pos, to_pos)
+
+
+def essor_locs_from_locs(
+    locs: List[CFGLoc],
+    direction: Direction,
+    stop_on_loc: Optional[Callable[[CFGLoc], bool]],
+    stop_on_block: Optional[Callable[[CFGBlock], bool]],
     include_start: bool,
     include_end: bool,
     explore_functions: bool,
     explore_classes: bool,
-) -> Generator[CFGLoc, None, None]:
-    def explore_function(node: nodes.FunctionDef) -> Generator[CFGLoc, None, None]:
+):
+    def explore_function(node: nodes.FunctionDef) -> Iterator[Tuple[CFGBlock, int, int]]:
         assert direction == Direction.SUCCESSORS
-        yield from dfs_rec(node.args.cfg_loc.block, 0)
+        yield from essor_locs_from_locs(
+            [node.args.cfg_loc],
+            direction,
+            stop_on_loc,
+            stop_on_block,
+            include_start,
+            include_end,
+            explore_functions,
+            explore_classes,
+        )
 
-    def try_explore_function(loc: CFGLoc) -> Generator[CFGLoc, None, None]:
+    def try_explore_function(loc: CFGLoc) -> Iterator[Tuple[CFGBlock, int, int]]:
         if explore_functions and isinstance(loc.node, nodes.FunctionDef):
             yield from explore_function(loc.node)
 
-    def explore_class(node: nodes.ClassDef) -> Generator[CFGLoc, None, None]:
+    def explore_class(node: nodes.ClassDef) -> Iterator[Tuple[CFGBlock, int, int]]:
         assert direction == Direction.SUCCESSORS
         for child in node.body:
             yield from try_explore_function(child.cfg_loc)
 
-    def try_explore_class(loc: CFGLoc) -> Generator[CFGLoc, None, None]:
+    def try_explore_class(loc: CFGLoc) -> Iterator[Tuple[CFGBlock, int, int]]:
         if explore_classes and isinstance(loc.node, nodes.ClassDef):
             yield from explore_class(loc.node)
 
-    def dfs_rec(current_block: CFGBlock, from_pos: int = 0) -> Generator[CFGLoc, None, None]:
-        for nth in range(from_pos, len(current_block.locs)):
-            i = Direction.to_index(nth, direction)
-            current_loc = current_block.locs[i]
-
-            if current_loc in visited:
-                return
-            visited.add(current_loc)
-
-            stop = stop_on(current_loc)
-            if not stop or include_end:
-                yield current_loc
-                yield from try_explore_function(current_loc)
-                yield from try_explore_class(current_loc)
-            if stop:
-                return
-
-        for essor in Direction.get_essors(current_block, direction):
-            i = Direction.to_index(0, direction)
-            if len(essor.locs) == 0 or essor.locs[i] in visited:
-                continue
-
-            yield from dfs_rec(essor)
-
-    stop_on = stop_on if stop_on is not None else lambda _v: False
-    visited = set()
-    for loc in locs:
-        # to unwrap nodes that are not part of the CFG (for, if, while, ...)
-        loc = loc.block.locs[loc.pos]
-        if loc in visited:
-            continue
-        visited.add(loc)
-
-        if include_start:
-            stop = stop_on(loc)
-            yield loc
-            if stop:
-                continue
-
-        yield from try_explore_function(loc)
-        yield from try_explore_class(loc)
-
-        yield from dfs_rec(loc.block, loc.pos + 1)
+    for block, from_pos, to_pos in essor_blocks_from_locs(
+        locs, direction, stop_on_loc, stop_on_block, include_start, include_end
+    ):
+        if direction == Direction.SUCCESSORS:
+            rng = range(from_pos, to_pos)
+        else:
+            rng = range(to_pos - 1, from_pos - 1, -1)
+        for i in rng:
+            yield block.locs[i]
+            yield from try_explore_function(block.locs[i])
+            yield from try_explore_class(block.locs[i])
 
 
 def successors_from_loc(
     loc: CFGLoc,
-    stop_on: Optional[Callable[[CFGLoc], bool]] = None,
+    stop_on_loc: Optional[Callable[[CFGLoc], bool]] = None,
+    stop_on_block: Optional[Callable[[CFGBlock], bool]] = None,
     include_start: bool = False,
     include_end: bool = False,
     explore_functions: bool = False,
     explore_classes: bool = False,
 ) -> Generator[CFGLoc, None, None]:
-    yield from essors_from_locs(
+    yield from essor_locs_from_locs(
         [loc],
         Direction.SUCCESSORS,
-        stop_on,
+        stop_on_loc,
+        stop_on_block,
         include_start,
         include_end,
         explore_functions,
@@ -117,16 +213,18 @@ def successors_from_loc(
 
 def successors_from_locs(
     locs: List[CFGLoc],
-    stop_on: Optional[Callable[[CFGLoc], bool]] = None,
+    stop_on_loc: Optional[Callable[[CFGLoc], bool]] = None,
+    stop_on_block: Optional[Callable[[CFGBlock], bool]] = None,
     include_start: bool = False,
     include_end: bool = False,
     explore_functions: bool = False,
     explore_classes: bool = False,
 ) -> Generator[CFGLoc, None, None]:
-    yield from essors_from_locs(
+    yield from essor_locs_from_locs(
         locs,
         Direction.SUCCESSORS,
-        stop_on,
+        stop_on_loc,
+        stop_on_block,
         include_start,
         include_end,
         explore_functions,
@@ -136,16 +234,18 @@ def successors_from_locs(
 
 def predecessors_from_loc(
     loc: CFGLoc,
-    stop_on: Optional[Callable[[CFGLoc], bool]] = None,
+    stop_on_loc: Optional[Callable[[CFGLoc], bool]] = None,
+    stop_on_block: Optional[Callable[[CFGBlock], bool]] = None,
     include_start: bool = False,
     include_end: bool = False,
     explore_functions: bool = False,
     explore_classes: bool = False,
 ) -> Generator[CFGLoc, None, None]:
-    yield from essors_from_locs(
+    yield from essor_locs_from_locs(
         [loc],
         Direction.PREDECESSORS,
-        stop_on,
+        stop_on_loc,
+        stop_on_block,
         include_start,
         include_end,
         explore_functions,
@@ -205,7 +305,7 @@ def syntactic_children_locs_from(
 
     for succ in successors_from_loc(
         loc,
-        stop_on=stop_on,
+        stop_on_loc=stop_on,
         include_start=True,
         include_end=False,
     ):
@@ -227,7 +327,7 @@ def get_first_locs_after(loc):
 
     for succ in (successors_from_locs if isinstance(loc, list) else successors_from_loc)(
         loc,
-        stop_on=stop_on,
+        stop_on_loc=stop_on,
         include_start=False,
         include_end=True,
     ):

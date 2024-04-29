@@ -51,7 +51,7 @@ def is_changed_between(varname: str, before_loc: CFGLoc, after_locs: List[CFGLoc
 
     for after_loc in after_locs:
         for loc in predecessors_from_loc(
-            after_loc, stop_on=lambda loc: loc == before_loc, include_start=True
+            after_loc, stop_on_loc=lambda loc: loc == before_loc, include_start=True
         ):
             for loc_varname, loc_scope, event in loc.var_events:
                 if loc_varname == varname and (loc_scope != scope or event != VarEventType.READ):
@@ -76,7 +76,7 @@ def get_vars_defined_before(core):
     for varname, scope in vars:
         for loc in successors_from_loc(
             first_loc,
-            stop_on=lambda loc: all(
+            stop_on_loc=lambda loc: all(
                 varname != loc_varname
                 or scope != loc_scope
                 or event in {VarEventType.ASSIGN, VarEventType.REASSIGN}
@@ -115,7 +115,7 @@ def get_vars_used_after(core) -> Set[Tuple[str, ScopeNode]]:
     for varname, scope in vars:
         for loc in successors_from_locs(
             first_locs_after,
-            stop_on=lambda loc: any(
+            stop_on_loc=lambda loc: any(
                 varname == loc_vn
                 and scope == loc_scope
                 and event in {VarEventType.ASSIGN, VarEventType.REASSIGN}
