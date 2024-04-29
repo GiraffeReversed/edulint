@@ -42,9 +42,7 @@ def essor_blocks_from_locs(
     include_start: bool,
     include_end: bool,
 ) -> Iterator[Tuple[CFGBlock, int, int]]:
-    def dfs_rec(
-        current_block: CFGBlock, from_pos: int, to_pos: int, is_first: bool
-    ) -> Iterator[Tuple[CFGBlock, int, int]]:
+    def dfs_rec(current_block: CFGBlock, from_pos: int, to_pos: int, is_first: bool):
 
         stop_on_current_block = stop_on_block is not None and stop_on_block(
             current_block, from_pos, to_pos
@@ -158,7 +156,7 @@ def essor_locs_from_locs(
     explore_functions: bool,
     explore_classes: bool,
 ):
-    def explore_function(node: nodes.FunctionDef) -> Iterator[Tuple[CFGBlock, int, int]]:
+    def explore_function(node: nodes.FunctionDef):
         assert direction == Direction.SUCCESSORS
         yield from essor_locs_from_locs(
             [node.args.cfg_loc],
@@ -171,16 +169,16 @@ def essor_locs_from_locs(
             explore_classes,
         )
 
-    def try_explore_function(loc: CFGLoc) -> Iterator[Tuple[CFGBlock, int, int]]:
+    def try_explore_function(loc: CFGLoc):
         if explore_functions and isinstance(loc.node, nodes.FunctionDef):
             yield from explore_function(loc.node)
 
-    def explore_class(node: nodes.ClassDef) -> Iterator[Tuple[CFGBlock, int, int]]:
+    def explore_class(node: nodes.ClassDef):
         assert direction == Direction.SUCCESSORS
         for child in node.body:
             yield from try_explore_function(child.cfg_loc)
 
-    def try_explore_class(loc: CFGLoc) -> Iterator[Tuple[CFGBlock, int, int]]:
+    def try_explore_class(loc: CFGLoc):
         if explore_classes and isinstance(loc.node, nodes.ClassDef):
             yield from explore_class(loc.node)
 
