@@ -9,7 +9,7 @@ from edulint.linting.analyses.cfg.utils import (
     successors_from_locs,
     syntactic_children_locs_from,
     get_cfg_loc,
-    get_first_locs_after,
+    get_locs_in_and_after,
 )
 from edulint.linting.analyses.variable_scope import ScopeNode, VarName
 from edulint.linting.analyses.variable_modification import VarEventType
@@ -94,6 +94,9 @@ def get_vars_defined_before(core):
     return result
 
 
+MODIFYING_EVENTS = (VarEventType.ASSIGN, VarEventType.REASSIGN, VarEventType.MODIFY)
+
+
 def get_vars_used_after(core) -> Set[Tuple[str, ScopeNode]]:
     result = set()
     core_subs = (
@@ -102,16 +105,19 @@ def get_vars_used_after(core) -> Set[Tuple[str, ScopeNode]]:
         else core.sub_locs
     )
 
-    first_locs_after = [loc for core_sub in core_subs for loc in get_first_locs_after(core_sub)]
+    vars = set()
+    first_locs_after = set()
+    for core_sub in core_subs:
+        for is_in, block, from_pos, to_pos in get_locs_in_and_after(core_sub):
+            if is_in:
+                for i in range(from_pos, to_pos):
+                    loc = block.locs[i]
+                    for varname, scope, event in loc.var_events:
+                        if event in MODIFYING_EVENTS:
+                            vars.add((varname, scope))
+            else:
+                first_locs_after.add(block.locs[from_pos])
 
-    vars = {
-        var
-        for core_sub in core_subs
-        for var in vars_in(
-            [c.node for c in core_sub] if isinstance(core_sub, list) else core_sub.node,
-            {VarEventType.ASSIGN, VarEventType.REASSIGN, VarEventType.MODIFY},
-        )
-    }
     for varname, scope in vars:
         for loc in successors_from_locs(
             first_locs_after,

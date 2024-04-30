@@ -372,8 +372,6 @@ def get_locs_in_and_after(locs: List[CFGLoc]) -> Iterator[Tuple[bool, CFGBlock, 
 def get_locs_in_and_after_from(
     froms: List[CFGLoc], locs: List[CFGLoc]
 ) -> Iterator[Tuple[bool, CFGBlock, int, int]]:
-    assert isinstance(locs, list)
-
     loc_node_set = set(s.node for s in locs)
 
     def stop_on(block, from_pos, to_pos):
