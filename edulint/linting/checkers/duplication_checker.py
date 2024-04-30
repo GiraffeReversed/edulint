@@ -1588,9 +1588,13 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             siblings = []
             sibling = node
             while sibling is not None:
-                if include_in_stmts(sibling):
+                if break_on_stmt(sibling):
+                    break
+                if not skip_stmt(sibling):
                     siblings.append(sibling)
                 sibling = sibling.next_sibling()
+
+            assert len(siblings) > 0
             return siblings
 
         def overlap(stmt_nodes, i, j, to_aunify) -> bool:
@@ -1614,10 +1618,14 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     subblocks = [block[i : i + subblock_len] for i in range(0, end, subblock_len)]
                     yield ((end // subblock_len) * subblock_len, subblocks)
 
+        def break_on_stmt(node):
+            return isinstance(node, (nodes.Assert, nodes.ClassDef))
+
+        def skip_stmt(node):
+            return is_block_comment(node) or isinstance(node, nodes.Pass)
+
         def include_in_stmts(node):
-            return not is_block_comment(node) and not isinstance(
-                node, (nodes.Pass, nodes.Assert, nodes.ClassDef)
-            )
+            return not break_on_stmt(node) and not skip_stmt(node)
 
         if len(node.body) == 0:
             return
