@@ -1622,7 +1622,14 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             return isinstance(node, (nodes.Assert, nodes.ClassDef))
 
         def skip_stmt(node):
-            return is_block_comment(node) or isinstance(node, nodes.Pass)
+            return (
+                is_block_comment(node)
+                or isinstance(node, nodes.Pass)
+                or (
+                    isinstance(node, (nodes.Import, nodes.ImportFrom))
+                    and node.parent == node.root()
+                )
+            )
 
         def include_in_stmts(node):
             return not break_on_stmt(node) and not skip_stmt(node)
