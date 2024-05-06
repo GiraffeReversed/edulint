@@ -1826,6 +1826,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             to_aunify = [
                 sub_aunify for (_, sub_aunify), id_ in candidates.items() if id_ == this_id
             ]
+            if to_aunify[0][0] in duplicate:
+                continue
             core, avars = antiunify(to_aunify)
 
             if (
@@ -1838,6 +1840,16 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             if all(isinstance(vals[0], nodes.FunctionDef) for vals in to_aunify):
                 continue  # TODO hint use common helper function
             similar_to_function(self, to_aunify, core, avars)
+
+            duplicate.update(
+                {
+                    stmt_loc.node
+                    for sub_aunify in to_aunify
+                    for loc in syntactic_children_locs_from(sub_aunify[0].cfg_loc, sub_aunify)
+                    for stmt_loc in get_stmt_locs(loc)
+                    if stmt_loc is not None
+                }
+            )
 
 
 def register(linter: "PyLinter") -> None:
