@@ -218,7 +218,9 @@ class CFGBlock:
             assert self.locs[pos].node == statement_loc.block.locs[statement_loc.pos].node
         elif isinstance(statement, nodes.ExceptHandler):
             pos = 0
-            assert self.locs[pos].node in (statement.name, statement.body[0])
+            first_body_loc = statement.body[0].cfg_loc
+            first_body_node = first_body_loc.block.locs[first_body_loc.pos].node
+            assert self.locs[pos].node in (statement.name, first_body_node)
         elif isinstance(statement, nodes.With):
             pos = len(self.locs)
         else:
