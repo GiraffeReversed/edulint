@@ -1050,7 +1050,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             (),
         )
 
-    @check_enabled("similar-to-function")
+    @check_enabled("similar-to-function-in-if")
     def get_fixed_by_function(tests, core, avars):
         root, if_bodies = create_ifs(tests)
 
@@ -1464,6 +1464,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         "R6808": (
             "Merge with parent loop %s",
             "similar-to-loop-merge",
+            "",
+        ),
+        "R6809": (
+            "Extract to a common function (%d repetitions of %d statements).",
+            "similar-to-function-in-if",
             "",
         ),
         "R6851": (
