@@ -1728,7 +1728,12 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
                 if any_message1 or any_message2:
                     duplicate.update(
-                        {loc.node for loc in syntactic_children_locs_from(fst.cfg_loc, fst)}
+                        {
+                            stmt_loc.node
+                            for loc in syntactic_children_locs_from(fst.cfg_loc, fst)
+                            for stmt_loc in get_stmt_locs(loc)
+                            if stmt_loc is not None
+                        }
                     )
                     continue
 
