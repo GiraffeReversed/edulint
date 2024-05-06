@@ -185,9 +185,13 @@ def test_duplicate_sequence(filename: str, expected_output: List[Problem]) -> No
 
 
 @pytest.mark.parametrize("filename,expected_output", [
+    ("0ba2fdc810-p6_cellular.py", []),  # not good advice
+    ("730a1a0d05-p6_workdays.py", []),  # not good advice
     ("7e1dd5c338-p2_tortoise.py", []),
     ("c69c0646b0-p4_triangle.py", []),
-    ("hw34406.py", []),
+    ("d8b80cabe6-p6_workdays.py", []),  # is in if
+    ("fdc1570861-p6_workdays.py", []),  # is in if
+    ("hw34406.py", []),  # is in if
     ("uc_4_2117_13_17.py", []),
 ])
 def test_similar_to_function(filename: str, expected_output: List[Problem]) -> None:
@@ -199,6 +203,21 @@ def test_similar_to_function(filename: str, expected_output: List[Problem]) -> N
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("7e1dd5c338-p2_tortoise.py", []),
+    ("c69c0646b0-p4_triangle.py", []),
+    ("fdc1570861-p6_workdays.py", [lazy_problem().set_line(47)]),
+    ("hw34406.py", []),
+    ("uc_4_2117_13_17.py", []),
+])
+def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=similar-to-function-in-if")],
+        expected_output
+    )
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("7e1dd5c338-p2_tortoise.py", []),
+    ("b3b13aa3f7-p5_merge.py", [lazy_problem().set_line(37)]),
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
     ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11)]),
     ("ut_98_8463_20_35.py", [lazy_problem().set_source(Linter.PYLINT)]),
