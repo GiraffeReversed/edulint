@@ -1653,15 +1653,22 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             assert len(siblings) > 0
             return siblings
 
-        def overlap(stmt_nodes, i, j, to_aunify) -> bool:
-            if i + len(to_aunify[0]) - 1 >= j:
-                return True
+        def get_stmt_range(stmt_nodes, i, nodes):
+            j = i + 1
+            while j < len(stmt_nodes):
+                ancestors = set(stmt_nodes[j].node_ancestors())
+                if not any(n == stmt_nodes[j] or n in ancestors for n in nodes):
+                    break
+                j += 1
+            return i, j
 
-            fsts, snds = to_aunify
-            return stmt_nodes.index(fsts[-1], i) >= stmt_nodes.index(snds[-1], j)
+        def overlap(range1, range2) -> bool:
+            _, last1 = range1
+            first1, _ = range2
+            return last1 > first1
 
-        def is_duplication_candidate(to_aunify) -> bool:
-            for ns in zip(*to_aunify):
+        def is_duplication_candidate(stmtss) -> bool:
+            for ns in zip(*stmtss):
                 if not all(isinstance(n, type(ns[0])) for n in ns):
                     return False
             return True
@@ -1769,31 +1776,31 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 snd_siblings = get_siblings(snd)
 
                 for length in range(min(len(fst_siblings), len(snd_siblings)), 0, -1):
-                    to_aunify = [fst_siblings[:length], snd_siblings[:length]]
+                    to_aunify1 = tuple(fst_siblings[:length])
+                    to_aunify2 = tuple(snd_siblings[:length])
 
-                    if not overlap(stmt_nodes, i, j, to_aunify) and is_duplication_candidate(
-                        to_aunify
+                    range1 = get_stmt_range(stmt_nodes, i, to_aunify1)
+                    range2 = get_stmt_range(stmt_nodes, j, to_aunify2)
+
+                    if not overlap(range1, range2) and is_duplication_candidate(
+                        (stmt_nodes[range1[0] : range1[1]], stmt_nodes[range2[0] : range2[1]])
                     ):
                         # TODO or larger?
-                        id_ = candidates.get((fst, length), len(candidates))
-                        candidates[(fst, length)] = id_
-                        candidates[(snd, length)] = id_
+                        id_ = candidates.get((range1, to_aunify1), len(candidates))
+                        candidates[(range1, to_aunify1)] = id_
+                        candidates[(range2, to_aunify2)] = id_
 
-                        # duplicate.update(
-                        #     {loc.node for loc in syntactic_children_locs_from(fst.cfg_loc, fst)}
-                        # )
                         break_snd_loop = True
                         break
 
         for this_id in set(candidates.values()):
-            to_aunify = [
-                get_siblings(node)[:length]
-                for (node, length), id_ in candidates.items()
-                if id_ == this_id
-            ]
-            # if any(n in duplicate for ns in to_aunify for n in ns):
-            #     continue
+            ranges = [range for (range, _), id_ in candidates.items() if id_ == this_id]
+            if all(last == first for ((_, last), (first, _)) in zip(ranges, ranges[1:])):
+                continue
 
+            to_aunify = [
+                sub_aunify for (_, sub_aunify), id_ in candidates.items() if id_ == this_id
+            ]
             core, avars = antiunify(to_aunify)
 
             if (
@@ -1804,9 +1811,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 continue
 
             if all(isinstance(vals[0], nodes.FunctionDef) for vals in to_aunify):
-                pass  # TODO hint use common helper function
-            else:
-                similar_to_function(self, to_aunify, core, avars)
+                continue  # TODO hint use common helper function
+            similar_to_function(self, to_aunify, core, avars)
 
 
 def register(linter: "PyLinter") -> None:

@@ -249,7 +249,7 @@ class TokenCountingVisitor(BaseVisitor[int]):
 
 def get_token_count(node: Union[nodes.NodeNG, List[nodes.NodeNG]]) -> int:
     visitor = TokenCountingVisitor()
-    if isinstance(node, list):
+    if isinstance(node, (list, tuple)):
         return visitor.visit_many(node)
     else:
         return visitor.visit(node)
