@@ -1115,7 +1115,10 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             get_token_count(root) + get_token_count(fun_def),
             get_statements_count(root, include_defs=False, include_name_main=True)
             + get_statements_count(fun_def, include_defs=False, include_name_main=True),
-            (),
+            (
+                len(tests) + 1,
+                get_statements_count(core, include_defs=False, include_name_main=True),
+            ),
         )
 
     if is_parents_elif(node):
@@ -1221,7 +1224,10 @@ def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) 
             get_token_count(calls) + get_token_count(fun_def),
             get_statements_count(calls, include_defs=False, include_name_main=True)
             + get_statements_count(fun_def, include_defs=False, include_name_main=True),
-            (),
+            (
+                len(to_aunify),
+                get_statements_count(core, include_defs=False, include_name_main=True),
+            ),
         )
 
     tokens_before = sum(get_token_count(node) for node in to_aunify)
@@ -1421,7 +1427,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
     msgs = {
         "R6801": (
             # "Lines %i to %i are similar to lines %i through %i. Extract them to a common function.",
-            "Extract to a common function.",
+            "Extract to a common function (%d repetitions of %d statements).",
             "similar-to-function",
             "",
         ),
