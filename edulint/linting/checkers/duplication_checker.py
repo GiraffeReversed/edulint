@@ -1834,6 +1834,25 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             ]
             if to_aunify[0][0] in duplicate:
                 continue
+
+            all_children_of_one_if = False
+            last_ancestors = set(to_aunify[0][-1].node_ancestors())
+            for parent in to_aunify[0][0].node_ancestors():
+                if parent in last_ancestors:
+                    last_same_type_sibling = parent
+                    while isinstance(last_same_type_sibling.next_sibling(), type(parent)):
+                        last_same_type_sibling = last_same_type_sibling.next_sibling()
+                    from_ = parent.fromlineno
+                    to_ = last_same_type_sibling.tolineno
+                    if all(
+                        from_ <= sub_aunify[0].fromlineno and sub_aunify[-1].tolineno <= to_
+                        for sub_aunify in to_aunify
+                    ):
+                        all_children_of_one_if = True
+                        break
+            if all_children_of_one_if:
+                continue
+
             core, avars = antiunify(to_aunify)
 
             if (
@@ -1845,17 +1864,18 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
             if all(isinstance(vals[0], nodes.FunctionDef) for vals in to_aunify):
                 continue  # TODO hint use common helper function
-            similar_to_function(self, to_aunify, core, avars)
+            any_message = similar_to_function(self, to_aunify, core, avars)
 
-            duplicate.update(
-                {
-                    stmt_loc.node
-                    for sub_aunify in to_aunify
-                    for loc in syntactic_children_locs_from(sub_aunify[0].cfg_loc, sub_aunify)
-                    for stmt_loc in get_stmt_locs(loc)
-                    if stmt_loc is not None
-                }
-            )
+            if any_message:
+                duplicate.update(
+                    {
+                        stmt_loc.node
+                        for sub_aunify in to_aunify
+                        for loc in syntactic_children_locs_from(sub_aunify[0].cfg_loc, sub_aunify)
+                        for stmt_loc in get_stmt_locs(loc)
+                        if stmt_loc is not None
+                    }
+                )
 
 
 def register(linter: "PyLinter") -> None:
