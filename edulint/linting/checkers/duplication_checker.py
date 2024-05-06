@@ -1576,7 +1576,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             any_message = True
         return any_message
 
-    def identical_seq_ifs(self, node: nodes.If) -> bool:
+    def identical_seq_ifs(self, node: nodes.If) -> Tuple[bool, Optional[nodes.NodeNG]]:
 
         def same_ifs_count(seq_ifs: List[nodes.NodeNG], start: int) -> int:
             reference = seq_ifs[start].body
@@ -1597,18 +1597,18 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         if is_parents_elif(node) or (
             isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]
         ):
-            return False
+            return False, None
 
         ends_with_else, seq_ifs = extract_from_elif(node)
         if ends_with_else:
-            return False
+            return False, None
         extract_from_siblings(node, seq_ifs)
 
         if len(seq_ifs) == 1:
-            return False
+            return False, None
 
         i = 0
-        any_message = False
+        last = None
         while i < len(seq_ifs) - 1:
             count = same_ifs_count(seq_ifs, i)
             if count > 1:
@@ -1624,9 +1624,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     end_col_offset=last.end_col_offset,
                     args=(count,),
                 )
-                any_message = True
             i += count
-        return any_message
+
+        if last is None:
+            return False, None
+        return True, last.parent
 
     def visit_module(self, node: nodes.Module):
         def candidate_fst(nodes):
@@ -1724,12 +1726,9 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
             if isinstance(fst, nodes.If):
                 any_message1 = self.identical_before_after_branch(fst)
-                any_message2 = not any_message1 and self.identical_seq_ifs(fst)
-                any_message3 = (
-                    not any_message1 and not any_message2 and duplicate_blocks_in_if(self, fst)
-                )
+                any_message2 = not any_message1 and duplicate_blocks_in_if(self, fst)
 
-                if any_message1 or any_message2 or any_message3:
+                if any_message1 or any_message2:
                     duplicate.update(
                         {loc.node for loc in syntactic_children_locs_from(fst.cfg_loc, fst)}
                     )
@@ -1764,6 +1763,24 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                         break
 
                 if fst in duplicate:
+                    continue
+
+            if isinstance(fst, nodes.If):
+                # TODO only if similar-to-loop would detect nothing?
+                any_message, last_if = self.identical_seq_ifs(fst)
+
+                if any_message:
+                    for sibling in fst_siblings:
+                        duplicate.update(
+                            {
+                                stmt_loc.node
+                                for loc in syntactic_children_locs_from(sibling.cfg_loc, sibling)
+                                for stmt_loc in get_stmt_locs(loc)
+                                if stmt_loc is not None
+                            }
+                        )
+                        if sibling == last_if or sibling in last_if.node_ancestors():
+                            break
                     continue
 
             if not self.linter.is_message_enabled("similar-to-function"):

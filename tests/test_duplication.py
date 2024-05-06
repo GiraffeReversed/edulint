@@ -187,8 +187,10 @@ def test_duplicate_sequence(filename: str, expected_output: List[Problem]) -> No
 
 
 @pytest.mark.parametrize("filename,expected_output", [
+    ("7e1dd5c338-p2_tortoise.py", []),
     ("c69c0646b0-p4_triangle.py", []),
     ("hw34406.py", []),
+    ("uc_4_2117_13_17.py", []),
 ])
 def test_similar_to_function(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
@@ -198,6 +200,7 @@ def test_similar_to_function(filename: str, expected_output: List[Problem]) -> N
     )
 
 @pytest.mark.parametrize("filename,expected_output", [
+    ("7e1dd5c338-p2_tortoise.py", []),
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
     ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11)]),
     ("ut_98_8463_20_35.py", [lazy_problem().set_source(Linter.PYLINT)]),
@@ -326,5 +329,16 @@ def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
         [Arg(Option.PYLINT, "--enable=if-into-block")],
+        expected_output
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("0379f32d24-p6_workdays.py", [lazy_problem().set_code("R6802").set_line(75)])
+])
+def test_interactions(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=big-no-duplicate-code")],
         expected_output
     )
