@@ -991,7 +991,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         # too restrictive -- the change may be before the avar but after the place
         # where the if would be inserted
         if (not isinstance(core, list) and not if_can_be_moved(core, avars)) or (
-            isinstance(core, list) and len(core) == 1 and not if_can_be_moved(core[0], avars)
+            isinstance(core, list) and not if_can_be_moved(core[0], avars)
         ):
             return None
 
