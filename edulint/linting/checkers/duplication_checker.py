@@ -1724,8 +1724,13 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
             fst_siblings = get_siblings(fst)
 
-            if len(fst_siblings) >= 3 and not any(
-                isinstance(node, nodes.FunctionDef) for node in fst_siblings
+            if (
+                (
+                    self.linter.is_message_enabled("similar-to-loop")
+                    or self.linter.is_message_enabled("similar-to-loop-merge")
+                )
+                and len(fst_siblings) >= 3
+                and not any(isinstance(node, nodes.FunctionDef) for node in fst_siblings)
             ):
                 for end, to_aunify in get_loop_repetitions(fst_siblings):
                     if not is_duplication_candidate(to_aunify):
@@ -1747,6 +1752,9 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
                 if fst in duplicate:
                     continue
+
+            if not self.linter.is_message_enabled("similar-to-function"):
+                continue
 
             for j, snd in candidate_snd(stmt_nodes, i):
                 if break_snd_loop:
