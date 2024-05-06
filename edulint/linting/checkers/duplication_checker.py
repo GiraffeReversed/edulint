@@ -1657,10 +1657,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
         def get_stmt_range(stmt_nodes, i, nodes):
             j = i + 1
-            while j < len(stmt_nodes):
-                ancestors = set(stmt_nodes[j].node_ancestors())
-                if not any(n == stmt_nodes[j] or n in ancestors for n in nodes):
-                    break
+            last_line = nodes[-1].tolineno
+            while j < len(stmt_nodes) and stmt_nodes[j].tolineno <= last_line:
                 j += 1
             return i, j
 
