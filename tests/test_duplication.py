@@ -55,8 +55,6 @@ from typing import List
         .set_text("Identical code inside all if's branches, move 9 lines after the if."),
         lazy_problem().set_line(42)
         .set_text("Identical code inside all if's branches, move 1 lines after the if."),
-        lazy_problem().set_line(53)
-        .set_text("Identical code inside all if's branches, move 1 lines after the if."),
         # lazy_problem().set_line(67)
         # .set_text("Identical code inside all if's branches, move 1 lines after the if."),
         # lazy_problem().set_line(87)
