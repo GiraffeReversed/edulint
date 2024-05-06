@@ -41,7 +41,11 @@ run:
 perf:
 	export PYTHONPATH=${EDULINT_PATH} && \
 		time py-spy record -s -n -r1000 -o profile.ss -f speedscope -- \
-		python3 -m edulint --disable-version-check --disable-explanations-update ${ARGS} > /dev/null \
+		python3 -m edulint \
+		--disable-version-check --disable-explanations-update \
+		-o ignore-infile-config-for=edulint \
+		${ARGS} \
+		> /dev/null \
 		&& code profile.ss
 
 lint_data:
