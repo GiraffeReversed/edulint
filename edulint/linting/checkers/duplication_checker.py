@@ -1836,7 +1836,12 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     break
                 snd_siblings = get_memoized_siblings(snd)
 
-                for length in range(min(len(fst_siblings), len(snd_siblings)), 0, -1):
+                for length in range(min(len(fst_siblings), len(snd_siblings), j - i), 0, -1):
+                    if length == 1 and any(
+                        isinstance(node, (nodes.Assign, nodes.Expr)) for node in (fst, snd)
+                    ):
+                        break
+
                     to_aunify1 = tuple(fst_siblings[:length])
                     to_aunify2 = tuple(snd_siblings[:length])
 
