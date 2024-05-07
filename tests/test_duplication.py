@@ -3,7 +3,7 @@ from edulint.options import Option
 from edulint.linters import Linter
 from edulint.config.arg import Arg
 from edulint.linting.problem import Problem
-from utils import lazy_problem, apply_and_lint
+from utils import lazy_problem, apply_and_lint, create_apply_and_lint
 from typing import List
 
 
@@ -220,9 +220,13 @@ def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]
     ("b3b13aa3f7-p5_merge.py", [lazy_problem().set_line(37)]),
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
     ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11)]),
-    ("ut_98_8463_20_35.py", [lazy_problem().set_source(Linter.PYLINT)]),
+    ("ut_57_4473_30_10.py", [lazy_problem().set_line(2)]),
+    ("ut_57_5508_21_10.py", [lazy_problem().set_line(1)]),
+    ("ut_57_9336_15_20.py", [lazy_problem().set_line(1)]),
     ("ut_80_2230_13_11.py", []),
+    ("ut_80_3906_24_11.py", [lazy_problem().set_source(Linter.PYLINT)]),  # report only one missing loop, others are misshapen
     ("ut_80_8916_12_20.py", [lazy_problem().set_source(Linter.PYLINT)]),
+    ("ut_98_8463_20_35.py", [lazy_problem().set_source(Linter.PYLINT)]),
 ])
 def test_similar_to_loop(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
@@ -242,16 +246,17 @@ def test_similar_to_loop_merge(filename: str, expected_output: List[Problem]) ->
         expected_output
     )
 
-
 @pytest.mark.parametrize("filename,expected_output", [
+    ("051746-gps.py", [lazy_problem().set_line(71)]),
     ("ut_80_0402_13_19.py", [
-        lazy_problem().set_line(8),
-        lazy_problem().set_line(12),
-        lazy_problem().set_line(16),
-        lazy_problem().set_line(20),
-        lazy_problem().set_line(24),
-        lazy_problem().set_line(28),
-    ])
+        lazy_problem().set_line(8).set_end_line(10),
+        # remaining are also true, but currently overriden by loop suggestion
+        # lazy_problem().set_line(12),
+        # lazy_problem().set_line(16),
+        # lazy_problem().set_line(20),
+        # lazy_problem().set_line(24),
+        # lazy_problem().set_line(28),
+    ]),
 ])
 def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
@@ -259,6 +264,85 @@ def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
         [Arg(Option.PYLINT, "--enable=similar-to-call")],
         expected_output
     )
+
+
+# TODO later, currently too ambitions but probably too rare
+# @pytest.mark.parametrize("lines,expected_output", [
+#     ([  # 0
+#         "def fun(x):",
+#         "    a(x)",
+#         "    b(x)",
+#         "x = 5",
+#         "a(x)",
+#         "b(x)"
+#     ], [lazy_problem().set_line(5)]),
+#     ([  # 1
+#         "def fun(x):",
+#         "    a(x)",
+#         "    b(x)",
+#         "a(5)",
+#         "b(5)"
+#     ], [lazy_problem().set_line(4)]),
+#     ([  # 2
+#         "def fun(x):",
+#         "    a(x)",
+#         "    b(x)",
+#         "lst = []",
+#         "a(lst[0])",
+#         "b(lst[0])"
+#     ], [lazy_problem().set_line(5)]),
+#     ([  # 3
+#         "def fun(x):",
+#         "    a(x)",
+#         "    b(x)",
+#         "lst = []",
+#         "a(lst[0])",
+#         "b(lst[1])"
+#     ], []),
+#     ([  # 4
+#         "def fun(x):",
+#         "    y = a(x)",
+#         "    z = b(y)",
+#         "    return z"
+#         "p = a(5)",
+#         "q = b(p)",
+#         "print(q)"
+#     ], [lazy_problem().set_line(5)]),
+#     ([  # 5
+#         "def fun(x):",
+#         "    y = a(x)",
+#         "    z = b(y)",
+#         "    return int(z)"
+#         "p = a(5)",
+#         "q = b(p)",
+#         "print(int(q))"
+#     ], [lazy_problem().set_line(5)]),
+#     ([  # 6
+#         "def fun(x):",
+#         "    y = a(x)",
+#         "    z = b(y)",
+#         "    return int(z) + 1"
+#         "p = a(5)",
+#         "q = b(p)",
+#         "print(int(q))"
+#     ], []),
+#     ([  # 7
+#         "def fun(x):",
+#         "    y = a(x)",
+#         "    z = b(y)",
+#         "    return z",
+#         "x = 5",
+#         "y = a(x)",
+#         "z = b(y)",
+#         "print(z)"
+#     ], [lazy_problem().set_line(6)]),
+# ])
+# def test_similar_to_call_custom(lines: List[str], expected_output: List[Problem]) -> None:
+#     create_apply_and_lint(
+#         lines,
+#         [Arg(Option.PYLINT, "--enable=similar-to-call")],
+#         expected_output
+#     )
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("0bf69cc1a5-p4_geometry.py", []),
