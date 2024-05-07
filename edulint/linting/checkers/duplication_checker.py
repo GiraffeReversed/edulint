@@ -1828,9 +1828,10 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
         duplicate = set()
         candidates = {}
+        candidate_duplicate = set()
         siblings = {}
         for i, fst in candidate_fst(stmt_nodes):
-            if fst in duplicate:
+            if fst in duplicate or fst in candidate_duplicate:
                 continue
 
             if isinstance(fst, nodes.If):
@@ -1916,19 +1917,21 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     ):
                         break
 
-                    to_aunify1 = tuple(fst_siblings[:length])
-                    to_aunify2 = tuple(snd_siblings[:length])
+                    to_aunify = [tuple(fst_siblings[:length]), tuple(snd_siblings[:length])]
+                    ranges = [
+                        get_stmt_range(stmt_to_index, to_aunify[0]),
+                        get_stmt_range(stmt_to_index, to_aunify[1]),
+                    ]
 
-                    range1 = get_stmt_range(stmt_to_index, to_aunify1)
-                    range2 = get_stmt_range(stmt_to_index, to_aunify2)
-
-                    if not overlap(range1, range2) and is_duplication_candidate(
-                        (stmt_nodes[range1[0] : range1[1]], stmt_nodes[range2[0] : range2[1]])
+                    if not overlap(ranges[0], ranges[1]) and is_duplication_candidate(
+                        [stmt_nodes[r1:r2] for r1, r2 in ranges]
                     ):
                         # TODO or larger?
-                        id_ = candidates.get((range1, to_aunify1), len(candidates))
-                        candidates[(range1, to_aunify1)] = id_
-                        candidates[(range2, to_aunify2)] = id_
+                        id_ = candidates.get((ranges[0], to_aunify[0]), len(candidates))
+                        candidates[(ranges[0], to_aunify[0])] = id_
+                        candidates[(ranges[1], to_aunify[1])] = id_
+
+                        candidate_duplicate.update(to_aunify[0])
 
                         break
 
