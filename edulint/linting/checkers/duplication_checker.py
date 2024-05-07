@@ -1838,9 +1838,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             all_children_of_one_if = False
             last_ancestors = set(to_aunify[0][-1].node_ancestors())
             for parent in to_aunify[0][0].node_ancestors():
-                if parent in last_ancestors:
+                if not isinstance(parent, nodes.Module) and parent in last_ancestors:
                     last_same_type_sibling = parent
-                    while isinstance(last_same_type_sibling.next_sibling(), type(parent)):
+                    while not isinstance(parent, nodes.FunctionDef) and isinstance(
+                        last_same_type_sibling.next_sibling(), type(parent)
+                    ):
                         last_same_type_sibling = last_same_type_sibling.next_sibling()
                     from_ = parent.fromlineno
                     to_ = last_same_type_sibling.tolineno
