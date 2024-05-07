@@ -14,6 +14,7 @@ from edulint.linting.checkers.utils import (
     is_parents_elif,
     get_statements_count,
     is_negation,
+    get_name,
 )
 
 
@@ -101,6 +102,33 @@ class Short(BaseChecker):
             "Use early return.",
             "use-early-return",
             "Emitted when a long block of code is followed by an else that just returns, breaks or continues.",
+        ),
+        "R6617": (
+            "The and operation can be replaced with '%s'",
+            "simplifiable-single-and-with-abs",
+            "Emitted when there is a problem like x < 4 and x > -4 and suggests abs(x) < 4.",
+        ),
+        "R6618": (
+            "The or operation can be replaced with '%s'",
+            "simplifiable-single-or-with-abs",
+            "Emitted when there is a problem like x > 4 or x < -4 and suggests abs(x) > 4.",
+        ),
+        "R6619": (
+            "The and operation can be replaced with '%s'",
+            "simplifiable-and-with-abs",
+            "Emitted when there is a problem like x < 4 and x > -4 and suggests abs(x) < 4."
+            "But works with multiple and-s. (but is possibly slower than simplifiable-single-and-with-abs).",
+        ),
+        "R6620": (
+            "The or operation can be replaced with '%s'",
+            "simplifiable-or-with-abs",
+            "Emitted when there is a problem like x > 4 or x < -4 and suggests abs(x) > 4."
+            "But works with multiple and-s. (but is possibly slower than simplifiable-single-and-with-abs).",
+        ),
+        "R6621": (
+            "The condition can be replaced with '%s'",
+            "redundant-compare-in-condition",
+            "Emitted when there is a problem like x > 4 or x > 3 and suggests x > 3. (ie min{4, 3})",
         ),
     }
 
@@ -503,6 +531,144 @@ class Short(BaseChecker):
             and get_statements_count(node.body, include_defs=True, include_name_main=True) > 3
         ):
             self.add_message("use-early-return", node=node)
+
+    SWITCHED_OP = {
+        ">=": "<=",
+        ">": "<",
+        "<=": ">=",
+        "<": ">",
+    }
+
+    def _get_values_and_comparator(
+        self, node: nodes.Compare
+    ) -> Tuple[nodes.NodeNG, str, nodes.NodeNG]:
+        """
+        This method assumes node is a comparison between just two values.
+        """
+        left, (comp, right) = node.left, node.ops[0]
+        return left, comp, right
+
+    def _is_numeric(self, node: nodes.Const) -> bool:
+        return node.pytype() in {"int", "float"}
+
+    def _get_name_comparator_const(
+        self, node: nodes.NodeNG
+    ) -> Optional[Tuple[nodes.Name, str, nodes.Const]]:
+        """
+        Assumes that node is a child of Bool Op.
+
+        If the extraction was not successful returns None.
+        """
+        if not isinstance(node, nodes.Compare) or len(node.ops) >= 2:
+            return None
+
+        left, comp, right = self._get_values_and_comparator(node)
+
+        if (
+            (isinstance(left, nodes.Const) and isinstance(right, nodes.Const))
+            or (not isinstance(left, nodes.Const) and not isinstance(right, nodes.Const))
+            or comp not in self.SWITCHED_OP
+        ):
+            return None
+
+        if isinstance(left, nodes.Const):
+            left, comp, right = right, self.SWITCHED_OP[comp], left
+
+        if not isinstance(left, nodes.Name) or not self._is_numeric(right):
+            return None
+
+        return left, comp, right
+
+    def _check_for_simplification_of_single_or(self, node: nodes.BoolOp) -> None:
+        """
+        Assumes that node is a BoolOp representation of 'and' operator
+        and that it is just a binary operator (ie not: a or b or c).
+        Checks for problems like 'x >= 4 or x <= -4' and suggests to
+        replace them with 'abs(x) >= 4'.
+        """
+        if node.op != "or" or len(node.values) != 2:
+            return
+
+        operand1 = self._get_name_comparator_const(node.values[0])
+        operand2 = self._get_name_comparator_const(node.values[1])
+
+        if not operand1 or not operand2:
+            return
+
+        var1, cmp1, const1 = operand1
+        var2, cmp2, const2 = operand2
+
+        if var1.name != var2.name:
+            return
+
+        if cmp1 == cmp2:
+            new_expr = var1.name + cmp1
+            if cmp1 == ">" or cmp1 == ">=":
+                new_expr += str(min(const1.value, const2.value))
+            else:
+                new_expr += str(max(const1.value, const2.value))
+
+            self.add_message(
+                "redundant-compare-in-condition",
+                node=node,
+                args=(get_name(), new_expr),
+            )
+            return
+
+        if const1.value != -const2.value or cmp1 != self.SWITCHED_OP[cmp2]:
+            return
+
+        new_expr = "True"
+
+        if const1.value == 0:
+            if cmp1 in {"<", ">"}:
+                new_expr = var1.name + "!= 0"
+            # Note that this case belongs to simplifiable-single-or-with-abs,
+            # but is a bit different. (suggests x != 0)
+
+        elif cmp1 in {">=", ">"}:
+            if const1.value > 0:
+                new_expr = "abs(" + var1.name + ") " + cmp1 + str(const1.value)
+        else:
+            if const1.value < 0:
+                new_expr = "abs(" + var1.name + ") " + cmp1 + str(-const1.value)
+
+        self.add_message(
+            "simplifiable-single-or-with-abs",
+            node=node,
+            args=(get_name(), new_expr),
+        )
+
+    def _check_for_simplification_of_single_and(self, node: nodes.BoolOp) -> None:
+        """
+        Assumes that node is a BoolOp representation of 'and' operator
+        and that it is just a binary operator (ie not: a and b and c).
+        Checks for problems like 'x < 4 and x > -4' and suggests
+        to replace them with 'abs(x) < 4'.
+        """
+        if node.op != "and" or len(node.values) != 2:
+            return
+
+    def _check_for_simplification_of_and(self, node: nodes.BoolOp) -> None:
+        if node.op != "and" or len(node.values) == 2:
+            return
+
+    def _check_for_simplification_of_or(self, node: nodes.BoolOp) -> None:
+        if node.op != "or" or len(node.values) == 2:
+            return
+
+    @only_required_for_messages(
+        "simplifiable-single-and-with-abs",
+        "simplifiable-single-or-with-abs",
+        "simplifiable-and-with-abs",
+        "simplifiable-or-with-abs",
+        "redundant-compare-in-condition",
+    )
+    def visit_boolop(self, node: nodes.BoolOp) -> None:
+        self._check_for_simplification_of_single_or(node)
+        self._check_for_simplification_of_single_and(node)
+        self._check_for_simplification_of_or(node)
+        self._check_for_simplification_of_and(node)
 
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
