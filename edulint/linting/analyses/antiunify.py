@@ -1,4 +1,4 @@
-from typing import Dict, Union, Tuple, List, Any, Iterator
+from typing import Dict, Union, Tuple, List, Any, Iterator, Callable, Optional
 import copy
 
 from astroid import nodes
@@ -49,6 +49,10 @@ def _to_list(val):
     return val if isinstance(val, list) else [val]
 
 
+class DisallowedAntiunification(Exception):
+    pass
+
+
 class Antiunify:
     __num = 0
 
@@ -56,19 +60,25 @@ class Antiunify:
         self.__num += 1
         return AunifyVar(f"id_{self.__num}{('_' + extra) if extra is not None else ''}")
 
-    def _new_aunifier(self, to_aunify: List[Any], extra: str = None):
+    def _new_aunifier(
+        self, to_aunify: List[Any], stop_on: Callable[[List[AunifyVar]], bool], extra: str = None
+    ):
         avar = self._get_new_avar(extra)
         avar.subs = to_aunify.copy()
         avar.sub_locs = [n.cfg_loc for n in to_aunify if hasattr(n, "cfg_loc")]
+
+        if stop_on([avar]):
+            raise DisallowedAntiunification()
+
         return avar, [avar]
 
-    def _aunify_consts(self, vals: List[Any]):
+    def _aunify_consts(self, vals: List[Any], stop_on: Callable[[List[AunifyVar]], bool]):
         if all(v == vals[0] for v in vals):
             return vals[0], []
 
-        return self._new_aunifier(vals)
+        return self._new_aunifier(vals, stop_on)
 
-    def _aunify_avars(self, to_aunify: List[Any]):
+    def _aunify_avars(self, to_aunify: List[Any], stop_on: Callable[[List[AunifyVar]], bool]):
         core = self._get_new_avar()
 
         for node in to_aunify:
@@ -78,37 +88,48 @@ class Antiunify:
             else:
                 core.subs.append(node)
                 if hasattr(node, "cfg_loc"):
-                    core.subs.append(node.cfg_loc)
+                    core.sub_locs.append(node.cfg_loc)
+
+        if stop_on([core]):
+            raise DisallowedAntiunification()
 
         return core, [core]
 
-    def antiunify(self, to_aunify: List[Any]) -> Tuple[Any, List[AunifyVar]]:
+    def antiunify(
+        self, to_aunify: List[Any], stop_on: Callable[[List[AunifyVar]], bool]
+    ) -> Optional[Tuple[Any, List[AunifyVar]]]:
         if any(isinstance(n, AunifyVar) for n in to_aunify):
-            return self._aunify_avars(to_aunify)
+            return self._aunify_avars(to_aunify, stop_on)
 
         if isinstance(to_aunify[0], (list, tuple)):
             assert all(isinstance(n, (list, tuple)) for n in to_aunify)
-            return self._antiunify_lists(to_aunify)
+            return self._antiunify_lists(to_aunify, stop_on)
 
         if not any(isinstance(n, nodes.NodeNG) for n in to_aunify):
-            return self._aunify_consts(to_aunify)
+            return self._aunify_consts(to_aunify, stop_on)
 
         if not all(isinstance(n, type(to_aunify[0])) for n in to_aunify):
             return self._new_aunifier(
-                to_aunify, extra="-".join(type(n).__name__ for n in to_aunify)
+                to_aunify, stop_on, extra="-".join(type(n).__name__ for n in to_aunify)
             )
 
         # astroid.nodes of same type
         aunify_funcname = f"_aunify_{type(to_aunify[0]).__name__.lower()}"
         if hasattr(self, aunify_funcname):
-            return getattr(self, aunify_funcname)(to_aunify)
+            return getattr(self, aunify_funcname)(to_aunify, stop_on)
 
-        return self._aunify_by_attrs(to_aunify, [], to_aunify[0]._astroid_fields)
+        return self._aunify_by_attrs(to_aunify, [], to_aunify[0]._astroid_fields, stop_on)
 
-    def _antiunify_lists(self, to_aunify: List[List[Any]], attr: str = "<none>"):
+    def _antiunify_lists(
+        self,
+        to_aunify: List[List[Any]],
+        stop_on: Callable[[List[AunifyVar]], bool],
+        attr: str = "<none>",
+    ):
         if not all(len(n) == len(to_aunify[0]) for n in to_aunify):
             attr_core, attr_avars = self._new_aunifier(
                 to_aunify,
+                stop_on,
                 extra=f"{attr}-" + "-".join(str(len(n)) for n in to_aunify),
             )
             some = [v for n in to_aunify for v in n][0]
@@ -120,7 +141,7 @@ class Antiunify:
                     return [("", attr_core)], attr_avars
                 elif isinstance(fst, nodes.NodeNG) and isinstance(snd, nodes.NodeNG):
                     other_core, _ = self._new_aunifier(
-                        [], extra=f"{attr}-" + "-".join(str(len(n)) for n in to_aunify)
+                        [], stop_on, extra=f"{attr}-" + "-".join(str(len(n)) for n in to_aunify)
                     )
                     return [(attr_core, other_core)], attr_avars
             return [attr_core], attr_avars
@@ -130,7 +151,7 @@ class Antiunify:
         for i in range(len(to_aunify[0])):
             children = [n[i] for n in to_aunify]
 
-            child_core, child_avars = self.antiunify(children)
+            child_core, child_avars = self.antiunify(children, stop_on)
             child_core = tuple(child_core) if isinstance(children[0], tuple) else child_core
 
             core.append(child_core)
@@ -138,14 +159,16 @@ class Antiunify:
 
         return core, avars
 
-    def _aunify_many_attrs(self, attrs: List[str], to_aunify: List[Any]):
+    def _aunify_many_attrs(
+        self, attrs: List[str], to_aunify: List[Any], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
         avars = []
         attr_cores = {}
 
         for attr in attrs:
             attr_vals = [getattr(n, attr) for n in to_aunify]
 
-            attr_core, attr_avars = self.antiunify(attr_vals)
+            attr_core, attr_avars = self.antiunify(attr_vals, stop_on)
             attr_cores[attr] = attr_core
 
             avars.extend(attr_avars)
@@ -161,11 +184,17 @@ class Antiunify:
         elif node is not None and not isinstance(node, (str, bool, int, float, bytes)):
             assert False, f"unreachable, but {type(node)}"
 
-    def _aunify_by_attrs(self, to_aunify, attrs_before: List[str], attrs_after: List[str]):
+    def _aunify_by_attrs(
+        self,
+        to_aunify,
+        attrs_before: List[str],
+        attrs_after: List[str],
+        stop_on: Callable[[List[AunifyVar]], bool],
+    ):
         some = to_aunify[0]
         assert all(isinstance(n, type(some)) for n in to_aunify)
 
-        attr_cores_before, avars_before = self._aunify_many_attrs(attrs_before, to_aunify)
+        attr_cores_before, avars_before = self._aunify_many_attrs(attrs_before, to_aunify, stop_on)
 
         if isinstance(some, (nodes.Arguments, nodes.Comprehension)):
             core = type(some)()
@@ -192,57 +221,89 @@ class Antiunify:
         for attr_core_before in attr_cores_before.values():
             self._set_parents(core, attr_core_before)
 
-        attr_cores_after, avars_after = self._aunify_many_attrs(attrs_after, to_aunify)
+        attr_cores_after, avars_after = self._aunify_many_attrs(attrs_after, to_aunify, stop_on)
         for attr, attr_core_after in attr_cores_after.items():
             setattr(core, attr, attr_core_after)
             self._set_parents(core, attr_core_after)
 
-        return core, avars_before + avars_after
+        avars = avars_before + avars_after
+        if stop_on(avars):
+            raise DisallowedAntiunification()
 
-    def _aunify_by_attr(self, to_aunify, attr: str):
-        return self._aunify_by_attrs(to_aunify, [], [attr])
+        return core, avars
 
-    def _aunify_name(self, to_aunify: List[nodes.Name]):
-        return self._aunify_by_attr(to_aunify, "name")
+    def _aunify_by_attr(self, to_aunify, attr: str, stop_on: Callable[[List[AunifyVar]], bool]):
+        return self._aunify_by_attrs(to_aunify, [], [attr], stop_on)
 
-    def _aunify_assignname(self, to_aunify: List[nodes.AssignName]):
-        return self._aunify_by_attr(to_aunify, "name")
+    def _aunify_name(self, to_aunify: List[nodes.Name], stop_on: Callable[[List[AunifyVar]], bool]):
+        return self._aunify_by_attr(to_aunify, "name", stop_on)
 
-    def _aunify_attribute(self, to_aunify: List[nodes.Attribute]):
-        return self._aunify_by_attrs(to_aunify, [], ["expr", "attrname"])
+    def _aunify_assignname(
+        self, to_aunify: List[nodes.AssignName], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attr(to_aunify, "name", stop_on)
 
-    def _aunify_assignattr(self, to_aunify: List[nodes.AssignAttr]):
-        return self._aunify_by_attrs(to_aunify, [], ["expr", "attrname"])
+    def _aunify_attribute(
+        self, to_aunify: List[nodes.Attribute], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, [], ["expr", "attrname"], stop_on)
 
-    def _aunify_boolop(self, to_aunify: List[nodes.BoolOp]):
-        return self._aunify_by_attrs(to_aunify, [], ["op", "values"])
+    def _aunify_assignattr(
+        self, to_aunify: List[nodes.AssignAttr], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, [], ["expr", "attrname"], stop_on)
 
-    def _aunify_binop(self, to_aunify: List[nodes.BinOp]):
-        return self._aunify_by_attrs(to_aunify, [], ["left", "op", "right"])
+    def _aunify_boolop(
+        self, to_aunify: List[nodes.BoolOp], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, [], ["op", "values"], stop_on)
 
-    def _aunify_unaryop(self, to_aunify: List[nodes.UnaryOp]):
-        return self._aunify_by_attrs(to_aunify, [], ["op", "operand"])
+    def _aunify_binop(
+        self, to_aunify: List[nodes.BinOp], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, [], ["left", "op", "right"], stop_on)
 
-    def _aunify_augassign(self, to_aunify: List[nodes.AugAssign]):
-        return self._aunify_by_attrs(to_aunify, [], ["target", "op", "value"])
+    def _aunify_unaryop(
+        self, to_aunify: List[nodes.UnaryOp], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, [], ["op", "operand"], stop_on)
 
-    def _aunify_functiondef(self, to_aunify: List[nodes.FunctionDef]):
-        return self._aunify_by_attrs(to_aunify, [], to_aunify[0]._astroid_fields + ("name",))
+    def _aunify_augassign(
+        self, to_aunify: List[nodes.AugAssign], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, [], ["target", "op", "value"], stop_on)
 
-    def _aunify_const(self, to_aunify: List[nodes.Const]):
-        return self._aunify_by_attrs(to_aunify, ["value"], [])
+    def _aunify_functiondef(
+        self, to_aunify: List[nodes.FunctionDef], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(
+            to_aunify, [], to_aunify[0]._astroid_fields + ("name",), stop_on
+        )
 
-    def _aunify_nonlocal(self, to_aunify: List[nodes.Nonlocal]):
-        return self._aunify_by_attrs(to_aunify, ["names"], [])
+    def _aunify_const(
+        self, to_aunify: List[nodes.Const], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, ["value"], [], stop_on)
 
-    def _aunify_global(self, to_aunify: List[nodes.Global]):
-        return self._aunify_by_attrs(to_aunify, ["names"], [])
+    def _aunify_nonlocal(
+        self, to_aunify: List[nodes.Nonlocal], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, ["names"], [], stop_on)
 
-    def _aunify_importfrom(self, to_aunify: List[nodes.ImportFrom]):
-        return self._aunify_by_attrs(to_aunify, ["modname", "names"], [])
+    def _aunify_global(
+        self, to_aunify: List[nodes.Global], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, ["names"], [], stop_on)
 
-    def _aunify_import(self, to_aunify: List[nodes.Import]):
-        return self._aunify_by_attrs(to_aunify, [], ["names"])
+    def _aunify_importfrom(
+        self, to_aunify: List[nodes.ImportFrom], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, ["modname", "names"], [], stop_on)
+
+    def _aunify_import(
+        self, to_aunify: List[nodes.Import], stop_on: Callable[[List[AunifyVar]], bool]
+    ):
+        return self._aunify_by_attrs(to_aunify, [], ["names"], stop_on)
 
 
 ASTROID_FIELDS = {
@@ -326,14 +387,24 @@ def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
 
 
 def antiunify(
-    to_aunify: List[Union[nodes.NodeNG, List[nodes.NodeNG]]]
-) -> Tuple[Any, List[AunifyVar]]:
-    core, avars = Antiunify().antiunify(to_aunify)
+    to_aunify: List[Union[nodes.NodeNG, List[nodes.NodeNG]]],
+    stop_on: Callable[[List[AunifyVar]], bool] = lambda _: False,
+    stop_on_after_renamed_identical: Callable[[List[AunifyVar]], bool] = lambda _: False,
+) -> Optional[Tuple[Any, List[AunifyVar]]]:
+    try:
+        core, avars = Antiunify().antiunify(to_aunify, stop_on)
+    except DisallowedAntiunification:
+        return None
+
     wrapper = nodes.Module("tmp")
     wrapper.id = "tmp"
     wrapper.body = core if isinstance(core, list) else [core]
     wrapper.accept(CFGVisitor())
-    return remove_renamed_identical_vars(core, avars)
+
+    core, avars = remove_renamed_identical_vars(core, avars)
+    if stop_on_after_renamed_identical(avars):
+        return None
+    return core, avars
 
 
 ##############################################################################

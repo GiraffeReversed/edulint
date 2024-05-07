@@ -1130,10 +1130,14 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
     if_bodies = get_bodies(ifs)
     assert len(if_bodies) >= 2
-    core, avars = antiunify(if_bodies)
-
-    if length_or_type_mismatch(avars) or assignment_to_aunify_var(avars):
+    result = antiunify(
+        if_bodies,
+        stop_on=lambda avars: length_or_type_mismatch(avars),
+        stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
+    )
+    if result is None:
         return False
+    core, avars = result
 
     tokens_before = get_token_count(node)
     stmts_before = get_statements_count(node, include_defs=False, include_name_main=True)
@@ -1254,7 +1258,7 @@ def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) 
     return True
 
 
-def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> bool:
+def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
     def to_range_node(sequence):
         start = None
         step = None
@@ -1385,13 +1389,17 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
             ),
         )
 
-    if (
-        length_or_type_mismatch(avars)
-        or assignment_to_aunify_var(avars)
-        or called_aunify_var(avars)
-        or max(len(to_aunify), len(to_aunify[0])) <= 2  # TODO parametrize?
-    ):
+    if max(len(to_aunify), len(to_aunify[0])) <= 2:  # TODO parametrize?
         return False
+
+    result = antiunify(
+        to_aunify,
+        stop_on=lambda avars: length_or_type_mismatch(avars) or called_aunify_var(avars),
+        stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
+    )
+    if result is None:
+        return False
+    core, avars = result
 
     tokens_before = sum(get_token_count(node) for node in to_aunify)
     stmts_before = sum(
@@ -1763,8 +1771,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 for end, to_aunify in get_loop_repetitions(fst_siblings):
                     if not is_duplication_candidate(to_aunify):
                         continue
-                    core, avars = antiunify(to_aunify)
-                    if similar_to_loop(self, to_aunify, core, avars):
+                    if similar_to_loop(self, to_aunify):
                         duplicate.update(
                             {
                                 stmt_loc.node
@@ -1857,14 +1864,14 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             if all_children_of_one_if:
                 continue
 
-            core, avars = antiunify(to_aunify)
-
-            if (
-                length_or_type_mismatch(avars)
-                or assignment_to_aunify_var(avars)
-                or called_aunify_var(avars)
-            ):
+            result = antiunify(
+                to_aunify,
+                stop_on=lambda avars: length_or_type_mismatch(avars) or called_aunify_var(avars),
+                stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
+            )
+            if result is None:
                 continue
+            core, avars = result
 
             if all(isinstance(vals[0], nodes.FunctionDef) for vals in to_aunify):
                 continue  # TODO hint use common helper function
