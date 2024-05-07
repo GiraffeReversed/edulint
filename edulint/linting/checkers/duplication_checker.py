@@ -1683,6 +1683,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         ) -> Generator[Tuple[int, List[List[nodes.NodeNG]]], None, None]:
             for end in range(len(fst_siblings), 0, -1):
                 for subblock_len in range(1, end // 2 + 1):
+                    if end % subblock_len != 0:
+                        continue
                     subblocks = [block[i : i + subblock_len] for i in range(0, end, subblock_len)]
                     yield ((end // subblock_len) * subblock_len, subblocks)
 
