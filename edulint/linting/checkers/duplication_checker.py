@@ -1648,12 +1648,14 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             yield from enumerate(nodes)
 
         def candidate_snd(nodes, i):
-            for j in range(i + 1, len(nodes)):
-                fst = nodes[i]
-                snd = nodes[j]
+            fst = nodes[i]
+            j = i + 1
 
-                if fst not in snd.node_ancestors():
-                    yield j, snd
+            while j < len(nodes) and fst.tolineno >= nodes[j].fromlineno:
+                j += 1
+
+            for j in range(j, len(nodes)):
+                yield j, nodes[j]
 
         def get_siblings(node):
             siblings = []
@@ -1668,17 +1670,34 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             assert len(siblings) > 0
             return siblings
 
-        def get_stmt_range(stmt_nodes, i, nodes):
-            j = i + 1
-            last_line = nodes[-1].tolineno
-            while j < len(stmt_nodes) and stmt_nodes[j].tolineno <= last_line:
-                j += 1
-            return i, j
+        def get_memoized_siblings(node):
+            sibs = siblings.get(node)
+            if sibs is not None:
+                return sibs
+
+            sibs = siblings.get(node.previous_sibling())
+            if sibs is not None:
+                sibs = sibs[1:]
+                siblings[node] = sibs
+                return sibs
+
+            sibs = get_siblings(node)
+            siblings[node] = sibs
+            return sibs
+
+        def get_stmt_range(stmt_to_index, nodes):
+            last_i = stmt_to_index.get(nodes[-1])
+            return stmt_to_index[nodes[0]], last_i + 1 if last_i is not None else None
 
         def overlap(range1, range2) -> bool:
-            _, last1 = range1
-            first1, _ = range2
-            return last1 > first1
+            first1, last1 = range1
+            first2, last2 = range2
+            if last1 is None or last2 is None:
+                return True
+
+            last_node = stmt_nodes[last1 - 1]
+            first_node = stmt_nodes[first2]
+            return last_node.tolineno >= first_node.fromlineno
 
         def is_duplication_candidate(stmtss) -> bool:
             for ns in zip(*stmtss):
@@ -1729,9 +1748,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 node.col_offset if node.col_offset is not None else float("inf"),
             ),
         )
+        stmt_to_index = {node: i for i, node in enumerate(stmt_nodes)}
 
         duplicate = set()
         candidates = {}
+        siblings = {}
         break_snd_loop = False
         for i, fst in candidate_fst(stmt_nodes):
             if fst in duplicate:
@@ -1758,7 +1779,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     )
                     continue
 
-            fst_siblings = get_siblings(fst)
+            fst_siblings = get_memoized_siblings(fst)
 
             if (
                 (
@@ -1813,14 +1834,14 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 if break_snd_loop:
                     break_snd_loop = False
                     break
-                snd_siblings = get_siblings(snd)
+                snd_siblings = get_memoized_siblings(snd)
 
                 for length in range(min(len(fst_siblings), len(snd_siblings)), 0, -1):
                     to_aunify1 = tuple(fst_siblings[:length])
                     to_aunify2 = tuple(snd_siblings[:length])
 
-                    range1 = get_stmt_range(stmt_nodes, i, to_aunify1)
-                    range2 = get_stmt_range(stmt_nodes, j, to_aunify2)
+                    range1 = get_stmt_range(stmt_to_index, to_aunify1)
+                    range2 = get_stmt_range(stmt_to_index, to_aunify2)
 
                     if not overlap(range1, range2) and is_duplication_candidate(
                         (stmt_nodes[range1[0] : range1[1]], stmt_nodes[range2[0] : range2[1]])
