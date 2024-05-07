@@ -1769,8 +1769,8 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                             {
                                 stmt_loc.node
                                 for loc in syntactic_children_locs_from(
-                                    get_cfg_loc(to_aunify[0][0]),
-                                    [n for ns in to_aunify for n in ns],
+                                    get_cfg_loc(fst),
+                                    [n for n in fst_siblings],
                                 )
                                 for stmt_loc in get_stmt_locs(loc)
                                 if stmt_loc is not None
