@@ -1,4 +1,5 @@
-from typing import List, Union, Set, Optional, Tuple
+from typing import List, Union, Set, Optional, Tuple, Dict
+from collections import defaultdict
 
 from astroid import nodes
 
@@ -97,8 +98,7 @@ def get_vars_defined_before(core):
 MODIFYING_EVENTS = (VarEventType.ASSIGN, VarEventType.REASSIGN, VarEventType.MODIFY)
 
 
-def get_vars_used_after(core) -> Set[Tuple[str, ScopeNode]]:
-    result = set()
+def get_vars_used_after(core) -> Dict[Tuple[str, ScopeNode], List[nodes.NodeNG]]:
     core_subs = (
         [[c.sub_locs[i] for c in core] for i in range(len(core[0].sub_locs))]
         if isinstance(core, list)
@@ -118,6 +118,7 @@ def get_vars_used_after(core) -> Set[Tuple[str, ScopeNode]]:
             else:
                 first_locs_after.add(block.locs[from_pos])
 
+    result = defaultdict(list)
     for varname, scope in vars:
         for loc in successors_from_locs(
             first_locs_after,
@@ -132,9 +133,9 @@ def get_vars_used_after(core) -> Set[Tuple[str, ScopeNode]]:
         ):
             for loc_varname, loc_scope, event in loc.var_events:
                 if loc_varname == varname and loc_scope == scope and event == VarEventType.READ:
-                    result.add((varname, scope))
+                    result[(varname, scope)].append(loc.node)
 
-    return result
+    return dict(result)
 
 
 def get_control_statements(core):

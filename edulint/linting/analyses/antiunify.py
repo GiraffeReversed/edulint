@@ -372,7 +372,7 @@ def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
     vars_used_after = get_vars_used_after(core)
     for avar in avars:
         if not isinstance(avar.parent, nodes.AssignName) or any(
-            (sub, get_scope(sub, get_cfg_loc(avar).node.sub_locs[i])) in vars_used_after
+            (sub, get_scope(sub, get_cfg_loc(avar).node.sub_locs[i])) in vars_used_after.keys()
             for i, sub in enumerate(avar.subs)
         ):
             continue

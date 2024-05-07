@@ -1258,6 +1258,82 @@ def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) 
     return True
 
 
+def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> bool:
+    def is_possible_callee(function: nodes.FunctionDef, sub_aunify):
+        assert len(sub_aunify) <= len(function.body)
+        if len(sub_aunify) == len(function.body):
+            return True
+
+        return isinstance(function.body[len(sub_aunify)], nodes.Return)
+
+    def get_possible_callees(to_aunify):
+        possible_callees = []
+
+        for i, sub_aunify in enumerate(to_aunify):
+            if not isinstance(sub_aunify[0].parent, nodes.FunctionDef):
+                continue
+            function = sub_aunify[0].parent
+            if is_possible_callee(function, sub_aunify):
+                possible_callees.append((i, function))
+
+        return possible_callees
+
+    def returns_used_value(return_, returned_values, node):
+        # TODO do properly, not by checking for substring
+        if node == return_ or any(r in node.as_string() for r in returned_values):
+            return True
+
+        for parent in node.node_ancestors():
+            if parent == return_:
+                return True
+            if any(r in parent.as_string() for r in returned_values):
+                return True
+
+        return False
+
+    possible_callees = get_possible_callees(to_aunify)
+    if len(possible_callees) != 1:
+        return False
+
+    i, function = possible_callees[0]
+    args = function.args.arguments
+    argnames = {arg.name for arg in args}
+
+    for avar in avars:
+        sub = avar.subs[i]
+        if not isinstance(sub, nodes.Name) or sub.name not in argnames:
+            return False
+
+    vars_used_after = get_vars_used_after(core)
+    if len(vars_used_after) != 0:
+        last = function.body[len(to_aunify[i])]  # handle unreachable code
+        if not isinstance(last, nodes.Return) or last.value is None:
+            return False
+
+        returned_values = (
+            [last.value.as_string()]
+            if not isinstance(last.value, nodes.Tuple)
+            else [e.as_string() for e in last.value.elts]
+        )
+        for (varname, scope), users in vars_used_after.items():
+            for node in users:
+                if not returns_used_value(last, returned_values, node):
+                    return False
+
+    other_body = to_aunify[0] if i != 0 else to_aunify[1]
+    first = other_body[0]
+    last = other_body[-1]
+    self.add_message(
+        "similar-to-call",
+        line=first.fromlineno,
+        col_offset=first.col_offset,
+        end_lineno=last.tolineno,
+        end_col_offset=last.col_offset,
+        args=(function.name),
+    )
+    return True
+
+
 def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
     def to_range_node(sequence):
         start = None
@@ -1445,7 +1521,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             "",
         ),
         "R6803": (
-            "Use existing function",
+            "Use existing function %s",
             "similar-to-call",
             "",
         ),
@@ -1753,7 +1829,6 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         duplicate = set()
         candidates = {}
         siblings = {}
-        break_snd_loop = False
         for i, fst in candidate_fst(stmt_nodes):
             if fst in duplicate:
                 continue
@@ -1827,13 +1902,12 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                             break
                     continue
 
-            if not self.linter.is_message_enabled("similar-to-function"):
+            if not self.linter.is_message_enabled(
+                "similar-to-function"
+            ) and not self.linter.is_message_enabled("similar-to-call"):
                 continue
 
             for j, snd in candidate_snd(stmt_nodes, i):
-                if break_snd_loop:
-                    break_snd_loop = False
-                    break
                 snd_siblings = get_memoized_siblings(snd)
 
                 for length in range(min(len(fst_siblings), len(snd_siblings), j - i), 0, -1):
@@ -1856,7 +1930,6 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                         candidates[(range1, to_aunify1)] = id_
                         candidates[(range2, to_aunify2)] = id_
 
-                        break_snd_loop = True
                         break
 
         for this_id in set(candidates.values()):
@@ -1865,7 +1938,7 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 continue
 
             to_aunify = [
-                sub_aunify for (_, sub_aunify), id_ in candidates.items() if id_ == this_id
+                list(sub_aunify) for (_, sub_aunify), id_ in candidates.items() if id_ == this_id
             ]
             if to_aunify[0][0] in duplicate:
                 continue
@@ -1901,9 +1974,10 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
             if all(isinstance(vals[0], nodes.FunctionDef) for vals in to_aunify):
                 continue  # TODO hint use common helper function
-            any_message = similar_to_function(self, to_aunify, core, avars)
+            any_message1 = similar_to_call(self, to_aunify, core, avars)
+            any_message2 = not any_message1 and similar_to_function(self, to_aunify, core, avars)
 
-            if any_message:
+            if any_message1 or any_message2:
                 duplicate.update(
                     {
                         stmt_loc.node
