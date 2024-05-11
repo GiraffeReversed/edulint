@@ -216,6 +216,9 @@ def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]
     )
 
 @pytest.mark.parametrize("filename,expected_output", [
+    ("0642a5c1d7-hw4.py", []),  # dubious
+    ("117cb0510a-midterm.py", [lazy_problem().set_line(6).set_end_line(17)]),
+    ("1687aeed39-hw4.py", []),
     ("7e1dd5c338-p2_tortoise.py", []),
     ("b3b13aa3f7-p5_merge.py", [lazy_problem().set_line(37)]),
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
@@ -227,6 +230,7 @@ def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]
     ("ut_80_3906_24_11.py", [lazy_problem().set_source(Linter.PYLINT)]),  # report only one missing loop, others are misshapen
     ("ut_80_8916_12_20.py", [lazy_problem().set_source(Linter.PYLINT)]),
     ("ut_98_8463_20_35.py", [lazy_problem().set_source(Linter.PYLINT)]),
+    ("voter_pennant_twirl_mayday.py", [lazy_problem().set_line(36)]),
 ])
 def test_similar_to_loop(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
