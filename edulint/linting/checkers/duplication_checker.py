@@ -753,8 +753,25 @@ OPS = {
 }
 
 
-def length_or_type_mismatch(avars) -> bool:
-    return any("-" in id_.name for id_ in avars)
+def length_mismatch(avars) -> bool:
+    for avar in avars:
+        some = avar.subs[0]
+        if not isinstance(some, list) and any(isinstance(sub, list) for sub in avar.subs):
+            return True
+        if isinstance(some, list) and any(len(sub) != len(some) for sub in avar.subs):
+            return True
+    return False
+
+
+def type_mismatch(avars, allowed_mismatches=None) -> bool:
+    allowed_mismatches = allowed_mismatches if allowed_mismatches is not None else []
+    for avar in avars:
+        sub_types = {type(sub) for sub in avar.subs}
+        if any(sub_types.issubset(am) for am in allowed_mismatches):
+            continue
+        if len(sub_types) > 1:
+            return True
+    return False
 
 
 def assignment_to_aunify_var(avars) -> bool:
@@ -1132,7 +1149,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     assert len(if_bodies) >= 2
     result = antiunify(
         if_bodies,
-        stop_on=lambda avars: length_or_type_mismatch(avars),
+        stop_on=lambda avars: length_mismatch(avars) or type_mismatch(avars),
         stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
     )
     if result is None:
@@ -1335,7 +1352,7 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
 
 
 def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
-    def to_range_node(sequence):
+    def to_range_args(sequence):
         start = None
         step = None
         previous = None
@@ -1352,10 +1369,15 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
                     return None
             previous = s
 
+        return (start, previous + 1, step)
+
+    def to_range_node(range_args):
+        start, step, stop = range_args
+
         range = nodes.Call()
         range.func = nodes.Name("range")
         start_node = nodes.Const(start)
-        stop_node = nodes.Const(previous + 1)
+        stop_node = nodes.Const(step)
         step_node = nodes.Const(step)
         if step != 1:
             range.args = [start_node, stop_node, step_node]
@@ -1365,49 +1387,229 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
             range.args = [stop_node]
         return range
 
-    def get_iter(to_aunify, sequences):
+    def partition_by_type(sequence):
+        result = []
+        current = []
+
+        for n in sequence:
+            if len(current) == 0 or isinstance(n, type(current[-1])):
+                current.append(n)
+            else:
+                result.append(current)
+                current = [n]
+
+        if len(current) > 0:
+            result.append(current)
+
+        return result
+
+    def to_const_sequence(sequence):
+        result = []
+        for v in sequence:
+            c = get_const_value(v)
+            if c is None:
+                return None
+            result.append(c)
+        return result
+
+    def iter_use_from_partition(partition):
+        types = [type(p[0]) for p in partition]
+        # a type repeats
+        if len(types) != len(set(types)):
+            return None
+
+        exclusive = set(types) & {nodes.Name, nodes.Subscript, nodes.Attribute}
+        # different exclusive types or an exclusive type multiple times
+        if len(exclusive) > 1:
+            return None
+
+        type_groups = {type(p[0]): p for p in partition}
+        for t in (nodes.Const, nodes.Name, nodes.Subscript, nodes.Attribute, nodes.BinOp):
+            type_groups[t] = type_groups.get(t, [])
+
+        # multiple constants or no binops
+        if len(type_groups[nodes.Const]) > 1 or len(type_groups[nodes.BinOp]) == 0:
+            return None
+
+        if len(exclusive) == 1:
+            exclusive_type = next(iter(exclusive))
+            # multiple values for an exclusive type
+            if len(type_groups[exclusive_type]) > 1:
+                return None
+            exclusive_value = type_groups[exclusive_type][0]
+        else:
+            exclusive_type = None
+            exclusive_value = None
+
+        if not any(
+            ts
+            in (
+                [nodes.Const, exclusive_type, nodes.BinOp],
+                [exclusive_type, nodes.BinOp],
+                [nodes.Const, nodes.BinOp],
+            )
+            for ts in (types, list(reversed(types)))
+        ):
+            return None
+
+        binop_core, bionp_avars = antiunify(type_groups[nodes.BinOp])
+        assert isinstance(binop_core, nodes.BinOp)
+        # all same binops and binops differing in multiple places break niceness
+        if len(bionp_avars) != 1 or bionp_avars[0] == binop_core.op:
+            return None
+        binop_avar = bionp_avars[0]
+        assert binop_core.left == binop_avar.parent or binop_core.right == binop_avar.parent
+
+        if len(type_groups[nodes.Const]) == 1:
+            const_value = type_groups[nodes.Const][0]
+        else:
+            const_value = None
+
+        # no child is related to the shared value
+        if (
+            exclusive_value is not None
+            and binop_core.right.as_string() != exclusive_value.as_string()
+            and binop_core.left.as_string() != exclusive_value.as_string()
+        ) or (
+            exclusive_value is None
+            and const_value is not None
+            and binop_core.right.as_string() != const_value.as_string()
+            and binop_core.left.as_string != const_value.as_string()
+        ):
+            return None
+
+        if const_value is not None:
+            const_nums = [0]
+        else:
+            const_nums = []
+
+        if exclusive_value is not None:
+            if binop_core.op == "+" or (
+                binop_core.op == "-" and exclusive_value.as_string() == binop_core.left.as_string()
+            ):
+                exclusive_nums = [0]
+            elif binop_core.op == "*" or (
+                binop_core.op in ("/", "//", "%")
+                and exclusive_value.as_string() == binop_core.left.as_string()
+            ):
+                exclusive_nums = [1]
+            else:
+                exclusive_nums = []
+        else:
+            exclusive_nums = []
+
+        if isinstance(binop_avar.subs[0], nodes.NodeNG):
+            binop_nums, sub_binop_use = iter_use_from_partition(partition_by_type(binop_avar.subs))
+            if binop_nums is None:
+                return None
+            if binop_core.left == binop_avar.parent:
+                binop_core.left = sub_binop_use
+            else:
+                binop_core.right = sub_binop_use
+        else:
+            binop_nums = binop_avar.subs
+
+        dct = {
+            nodes.Const: const_nums,
+            exclusive_type: exclusive_nums,
+            nodes.BinOp: binop_nums,
+        }
+
+        return [n for t in types for n in dct[t]], binop_core
+
+    def to_iter_use(avar):
+        sequence = list(avar.subs)
+
+        const_sequence = to_const_sequence(sequence)
+        if const_sequence is not None:
+            sequence = const_sequence
+
+        range_args = to_range_args(sequence)
+        if range_args is not None:
+            return range_args, avar
+
+        partition = partition_by_type(sequence)
+        # single type present => use values directly, if different
+        if len(partition) == 1:
+            assert not any(isinstance(v, nodes.NodeNG) for v in sequence)
+            if len(sequence) != len(set(sequence)):  # some value is repeated
+                return None
+            return sequence, avar
+
+        result = iter_use_from_partition(partition)
+        if result is None:
+            return None
+        range_nums, use = result
+        range_args = to_range_args(range_nums)
+        if range_args is None:
+            return None
+        return range_args, use
+
+    def consolidate_ranges(ranges):
+        if len(ranges) == 1:
+            range_args, use = ranges[0]
+            return [to_range_node(range_args)], [use]
+
+        uses = []
+        for (start, stop, step), use in ranges:
+            if step != 1:
+                new = nodes.BinOp("*")
+                new.left = use
+                new.rigth = nodes.Const(step)
+                use = new
+            if start != 0:
+                new = nodes.BinOp("+")
+                new.left = use
+                new.right = nodes.Const(start)
+                use = new
+            uses.append(use)
+
+        start, stop, step = 0, (stop - stop) // step + 1, 1
+        return [to_range_node((start, stop, step))], uses
+
+    def get_nice_iters(avars):
+        sequences = [avar.subs for avar in avars]
         if len(sequences) == 0:
             range_node = nodes.Call()
             range_node.func = nodes.Name("range")
             range_node.args = [nodes.Const(len(to_aunify))]
-            return range_node
+            return [range_node], {}
 
-        if len(sequences) == 1:
-            range_node = to_range_node(sequences[0])
-            if range_node is not None:
-                return range_node
+        iter_uses = []
+        for avar in avars:
+            result = to_iter_use(avar)
+            if result is None:
+                return None
+            iter, use = result
+            iter_uses.append((iter, use))
 
-            iter = nodes.Tuple()
-            iter.elts = [to_node(s, avars[0]) for s in sequences[0]]
-            return iter
+        ranges = [(iter, use) for iter, use in iter_uses if isinstance(iter, tuple)]
 
-        ranges = [to_range_node(sequence) for sequence in sequences]
-        if all(range is not None for range in ranges):
-            iter = nodes.Call()
-            iter.func = nodes.Name("zip")
-            iter.args = ranges
-            return iter
+        # disallow mixing ranges with collections
+        # TODO maybe too strict?
+        if len(ranges) != 0 and len(ranges) != len(iter_uses):
+            return None
 
-        tuples = []
-        for i in range(len(sequences[0])):
-            tuple_node = nodes.Tuple()
-            tuple_node.elts = [to_node(sequences[j][i], avars[j]) for j in range(len(avars))]
-            tuples.append(tuple_node)
+        if len(ranges) == 0:
+            str_iters = {
+                tuple(to_node(n, avars[i]).as_string() for n in iter)
+                for i, (iter, _use) in enumerate(iter_uses)
+            }
+            if len(str_iters) != 1:
+                return None
+            some_iter, _use = iter_uses[0]
 
-        iter = nodes.List()
-        iter.elts = tuples
-        return iter
+            collection = nodes.Tuple()
+            collection.elts = [to_node(n, avars[0]) for n in some_iter]
+            return [collection], [use for _iter, use in iter_uses]
 
-    def get_target(avars, sequences):
-        if len(sequences) == 0:
-            return nodes.Name("_")
+        return consolidate_ranges(ranges)
 
-        if len(sequences) == 1:
-            return avars[0]
+    def get_iter(iters):
+        return iters[0]
 
-        target = nodes.Tuple()
-        target.elts = avars
-        return target
+    def get_target(_avars, _iters):
+        return nodes.AssignName("i")
 
     def get_fixed_by_merging_with_parent_loop(to_aunify, core, avars):
         parent = to_aunify[0][0].parent
@@ -1448,11 +1650,15 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
         )
 
     def get_fixed_by_loop(to_aunify, core, avars):
-        sequences = [avar.subs for avar in avars]
+        result = get_nice_iters(avars)
+        if result is None:
+            return None
+        iters, uses = result
+        assert len(iters) == 1
 
         for_ = nodes.For()
-        for_.iter = get_iter(to_aunify, sequences)
-        for_.target = get_target(avars, sequences)
+        for_.iter = get_iter(iters)
+        for_.target = get_target(avars, iters)
         for_.body = core
 
         return Fixed(
@@ -1470,7 +1676,15 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
 
     result = antiunify(
         to_aunify,
-        stop_on=lambda avars: length_or_type_mismatch(avars) or called_aunify_var(avars),
+        stop_on=lambda avars: length_mismatch(avars)
+        or type_mismatch(
+            avars,
+            allowed_mismatches=[
+                {nodes.Const, nodes.BinOp, t}
+                for t in (nodes.Name, nodes.Subscript, nodes.Attribute)
+            ],
+        )
+        or called_aunify_var(avars),
         stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
     )
     if result is None:
@@ -1487,6 +1701,8 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
         fixed = fixed_by_merge
     else:
         fixed = get_fixed_by_loop(to_aunify, core, avars)
+        if fixed is None:
+            return False
 
     if not saves_enough_tokens(tokens_before, stmts_before, fixed):
         return False
@@ -1968,7 +2184,9 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
             result = antiunify(
                 to_aunify,
-                stop_on=lambda avars: length_or_type_mismatch(avars) or called_aunify_var(avars),
+                stop_on=lambda avars: length_mismatch(avars)
+                or type_mismatch(avars)
+                or called_aunify_var(avars),
                 stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
             )
             if result is None:

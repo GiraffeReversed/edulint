@@ -2,6 +2,7 @@ from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, Tuple
 from astroid import nodes, Uninferable  # type: ignore
 import sys
 import inspect
+import operator
 from pylint.checkers import utils  # type: ignore
 
 
@@ -105,22 +106,61 @@ def get_range_params(
     assert False, "unreachable"
 
 
-def get_const_value(node: nodes.NodeNG) -> Any:
+# based on https://docs.python.org/3/library/operator.html
+UNARY_SYMBOL_TO_OP = {
+    "+": operator.pos,
+    "-": operator.neg,
+    "not": operator.not_,
+    "~": operator.invert,
+}
+
+BINARY_SYMBOL_TO_OP = {
+    "+": operator.add,
+    "/": operator.truediv,
+    "//": operator.floordiv,
+    "&": operator.and_,
+    "^": operator.xor,
+    "|": operator.or_,
+    "**": operator.pow,
+    "is": operator.is_,
+    "is not": operator.is_not,
+    "<<": operator.lshift,
+    "%": operator.mod,
+    "*": operator.mul,
+    ">>": operator.rshift,
+    "-": operator.sub,
+    "<": operator.lt,
+    "<=": operator.le,
+    "==": operator.eq,
+    "!=": operator.ne,
+    ">=": operator.ge,
+    ">": operator.gt,
+}
+
+
+def get_const_value_rec(node: Any) -> Any:
+    if not isinstance(node, nodes.NodeNG):
+        return node
+
     if isinstance(node, nodes.Const):
         return node.value
 
-    if isinstance(node, nodes.UnaryOp) and isinstance(node.operand, nodes.Const):
-        if node.op == "+":
-            return node.operand.value
-        if node.op == "-":
-            return -node.operand.value
-        if node.op == "not":
-            return not node.operand.value
-        if node.op == "~":
-            return ~node.operand.value
-        assert False, "unreachable" + node.op
+    if isinstance(node, nodes.UnaryOp):
+        return UNARY_SYMBOL_TO_OP[node.op](get_const_value_rec(node.operand.value))
 
-    return None
+    if isinstance(node, (nodes.BinOp, nodes.BoolOp)):
+        return BINARY_SYMBOL_TO_OP[node.op](
+            get_const_value_rec(node.left), get_const_value_rec(node.right)
+        )
+
+    raise ValueError(f"{type(node)} cannot be evaluated")
+
+
+def get_const_value(node: Any) -> Any:
+    try:
+        return get_const_value_rec(node)
+    except ValueError:
+        return None
 
 
 def infer_to_value(node: nodes.NodeNG) -> Optional[nodes.NodeNG]:
