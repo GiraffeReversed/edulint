@@ -98,6 +98,7 @@ class ScopeListener(BaseVisitor[T]):
     def _visit_assigned_to(self, node: nodes.NodeNG) -> None:
         if isinstance(node, nodes.AssignName):
             self._init_var_in_scope(node.name, node)
+        return self.visit_many(node.get_children())
 
     def _names_from_tuple(self, targets: List[nodes.NodeNG]) -> Iterator[nodes.NodeNG]:
         for target in targets:
