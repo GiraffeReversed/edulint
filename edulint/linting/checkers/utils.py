@@ -63,6 +63,33 @@ def is_builtin(node: nodes.NodeNG, function: Optional[str] = None) -> bool:
     return utils.is_builtin_object(inferred) and function is None or inferred.name == function
 
 
+EXPR_FUNCTIONS = {
+    "abs",
+    "max",
+    "min",
+    "round",
+    "sqrt",
+    "len",
+    "all",
+    "any",
+    "sum",
+    "map",
+    "filter",
+    "sorted",
+    "reversed",
+    "int",
+    "float",
+    "str",
+    "ord",
+    "chr",
+}
+
+
+def is_pure_builtin(node: nodes.NodeNG) -> bool:
+    inferred = utils.safe_infer(node)
+    return is_builtin(node, inferred.name) and inferred and inferred.name in EXPR_FUNCTIONS
+
+
 def is_multi_assign(node: nodes.NodeNG) -> bool:
     return hasattr(node, "targets")
 
