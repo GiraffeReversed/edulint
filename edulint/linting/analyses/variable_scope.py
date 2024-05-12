@@ -74,6 +74,12 @@ class ScopeListener(BaseVisitor[T]):
         for arg in node.args.arguments:
             self._init_var_in_scope(arg.name, arg)
 
+        for arg in node.args.kwonlyargs:
+            self._init_var_in_scope(arg.name, arg)
+
+        if node.args.vararg is not None:
+            self._init_var_in_scope(node.args.vararg, node.args)
+
         return self.visit_many(node.body)
 
     @in_new_scope

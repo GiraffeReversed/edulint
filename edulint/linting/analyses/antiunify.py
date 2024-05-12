@@ -4,7 +4,7 @@ import copy
 from astroid import nodes
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs_from, get_cfg_loc
-from edulint.linting.analyses.reaching_definitions import get_scope, get_vars_used_after
+from edulint.linting.analyses.reaching_definitions import get_vars_used_after, MODIFYING_EVENTS
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.checkers.utils import eprint, cformat
 
@@ -342,17 +342,64 @@ def get_avars(core: nodes.NodeNG, result: List[AunifyVar] = None) -> List[Aunify
     return result
 
 
-def can_be_removed(core, avar) -> bool:
+def ancestors_till(node: nodes.NodeNG, ancestor: nodes.NodeNG):
+    result = []
+    for parent in node.node_ancestors():
+        if parent == ancestor:
+            break
+        result.append(parent)
+    return result
+
+
+def sub_to_variable(avar, i):
+    assert isinstance(avar.parent, nodes.AssignName)
+
+    sub = avar.subs[i]
     avar_loc = get_cfg_loc(avar)
-    avar_sub_locs = avar_loc.node.sub_locs
-    assert len(avar_sub_locs) == len(avar.subs)
-    avar_scopes = [get_scope(sub, loc) for sub, loc in zip(avar.subs, avar_sub_locs)]
+    sub_loc = avar_loc.node.sub_locs[i]
+    event_nodes = list(
+        {
+            (scope, event.node)
+            for (varname, scope), events in sub_loc.var_events.items()
+            if varname == sub
+            for event in events
+            if event.type in MODIFYING_EVENTS
+        }
+    )
+
+    if len(event_nodes) == 1:
+        return sub, event_nodes[0][0]
+    assert len(event_nodes) > 1
+
+    avar_ancestors = ancestors_till(avar, avar_loc.node)
+
+    sub_node = sub_loc.node
+    for scope, node in event_nodes:
+        if not isinstance(node, nodes.AssignName):
+            continue
+        node_ancestors = ancestors_till(node, sub_node)
+
+        # TODO fix, may return wrong scope in case
+        # sub=t, sub_node = [t for t in range(10)] + [t for t in range(20)]
+        if len(avar_ancestors) == len(node_ancestors) and all(
+            isinstance(avar_a, type(node_a))
+            for avar_a, node_a in zip(avar_ancestors, node_ancestors)
+        ):
+            return sub, scope
+
+    assert False, f"unreachable, but {sub}"
+
+
+def can_be_removed(core, avar) -> bool:
+    assert isinstance(avar.parent, nodes.AssignName)
+    avar_loc = get_cfg_loc(avar)
 
     to_remove = [avar]
 
     for core_loc in syntactic_children_locs_from(avar_loc, core):
         for i, loc in enumerate(core_loc.node.sub_locs):
-            if (avar.subs[i], avar_scopes[i]) in loc.var_events:
+            var = sub_to_variable(avar, i)
+            if var in loc.var_events:
                 for loc_avar in get_avars(core_loc.node):
                     assert len(avar.subs) == len(loc_avar.subs)
                     if any(asub != lasub for asub, lasub in zip(avar.subs, loc_avar.subs)):
@@ -371,8 +418,7 @@ def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
     vars_used_after = get_vars_used_after(core)
     for avar in avars:
         if not isinstance(avar.parent, nodes.AssignName) or any(
-            (sub, get_scope(sub, get_cfg_loc(avar).node.sub_locs[i])) in vars_used_after.keys()
-            for i, sub in enumerate(avar.subs)
+            sub_to_variable(avar, i) in vars_used_after.keys() for i, sub in enumerate(avar.subs)
         ):
             continue
 

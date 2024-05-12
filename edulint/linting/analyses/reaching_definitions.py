@@ -12,7 +12,7 @@ from edulint.linting.analyses.cfg.utils import (
     get_cfg_loc,
     get_locs_in_and_after,
 )
-from edulint.linting.analyses.variable_scope import ScopeNode, VarName, Variable
+from edulint.linting.analyses.variable_scope import Variable
 from edulint.linting.analyses.variable_modification import VarEventType
 
 
@@ -28,23 +28,6 @@ def vars_in(
                 if event_types is None or event.type in event_types:
                     result.add((varname, scope))
     return result
-
-
-def get_scope(varname: VarName, loc: CFGLoc) -> Optional[ScopeNode]:
-    for loc in predecessors_from_loc(loc, include_start=True):
-        for loc_varname, scope in loc.var_events.keys():
-            if varname == loc_varname:
-                return scope
-    for node in loc.node.root().body:
-        for loc_varname, scope in node.cfg_loc.var_events.keys():
-            if varname == loc_varname:
-                return scope
-        if isinstance(node, nodes.ClassDef):
-            for node in node.body:
-                for loc_varname, scope in node.cfg_loc.var_events.keys():
-                    if varname == loc_varname:
-                        return scope
-    return None
 
 
 def is_changed_between(var: Variable, before_loc: CFGLoc, after_locs: List[CFGLoc]) -> bool:
