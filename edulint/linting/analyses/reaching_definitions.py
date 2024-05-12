@@ -1,4 +1,4 @@
-from typing import List, Union, Set, Optional, Tuple, Dict
+from typing import List, Union, Set, Optional, Dict
 from collections import defaultdict
 
 from astroid import nodes
@@ -12,50 +12,48 @@ from edulint.linting.analyses.cfg.utils import (
     get_cfg_loc,
     get_locs_in_and_after,
 )
-from edulint.linting.analyses.variable_scope import ScopeNode, VarName
+from edulint.linting.analyses.variable_scope import ScopeNode, VarName, Variable
 from edulint.linting.analyses.variable_modification import VarEventType
 
 
 def vars_in(
-    node: Union[nodes.NodeNG, List[nodes.NodeNG]], events: Optional[Set[VarEventType]] = None
-) -> Set[Tuple[str, ScopeNode]]:
+    node: Union[nodes.NodeNG, List[nodes.NodeNG]], event_types: Optional[Set[VarEventType]] = None
+) -> Set[Variable]:
     result = set()
 
     first = node[0] if isinstance(node, list) else node
     for loc in syntactic_children_locs_from(get_cfg_loc(first), node):
-        for varname, scope, event in loc.var_events:
-            if events is None or event in events:
-                result.add((varname, scope))
+        for (varname, scope), events in loc.var_events.items():
+            for event in events:
+                if event_types is None or event.type in event_types:
+                    result.add((varname, scope))
     return result
 
 
 def get_scope(varname: VarName, loc: CFGLoc) -> Optional[ScopeNode]:
     for loc in predecessors_from_loc(loc, include_start=True):
-        for loc_varname, scope, _event in loc.var_events:
+        for loc_varname, scope in loc.var_events.keys():
             if varname == loc_varname:
                 return scope
     for node in loc.node.root().body:
-        for loc_varname, scope, _event in node.cfg_loc.var_events:
+        for loc_varname, scope in node.cfg_loc.var_events.keys():
             if varname == loc_varname:
                 return scope
         if isinstance(node, nodes.ClassDef):
             for node in node.body:
-                for loc_varname, scope, _event in node.cfg_loc.var_events:
+                for loc_varname, scope in node.cfg_loc.var_events.keys():
                     if varname == loc_varname:
                         return scope
     return None
 
 
-def is_changed_between(varname: str, before_loc: CFGLoc, after_locs: List[CFGLoc]) -> bool:
-    scope = get_scope(varname, before_loc)
-    assert scope is not None, f"but {varname}"
-
+def is_changed_between(var: Variable, before_loc: CFGLoc, after_locs: List[CFGLoc]) -> bool:
     for after_loc in after_locs:
         for loc in predecessors_from_loc(
             after_loc, stop_on_loc=lambda loc: loc == before_loc, include_start=True
         ):
-            for loc_varname, loc_scope, event in loc.var_events:
-                if loc_varname == varname and (loc_scope != scope or event != VarEventType.READ):
+            for event in loc.var_events[var]:
+                if event.type != VarEventType.READ:
                     return True
     return False
 
@@ -69,8 +67,9 @@ def get_vars_defined_before(core):
         (varname, scope)
         for loc in syntactic_children_locs_from(first_loc, core)
         for sub_loc in loc.node.sub_locs
-        for varname, scope, event in sub_loc.var_events
-        if event == VarEventType.READ
+        for (varname, scope), events in sub_loc.var_events.items()
+        for event in events
+        if event.type == VarEventType.READ
     }
 
     # FIXME counts all read variables, including avars
@@ -78,19 +77,18 @@ def get_vars_defined_before(core):
         for loc in successors_from_loc(
             first_loc,
             stop_on_loc=lambda loc: all(
-                varname != loc_varname
-                or scope != loc_scope
-                or event in {VarEventType.ASSIGN, VarEventType.REASSIGN}
+                event.type in {VarEventType.ASSIGN, VarEventType.REASSIGN}
                 for sub_loc in loc.node.sub_locs
-                for loc_varname, loc_scope, event in sub_loc.var_events
+                for event in sub_loc.var_events[(varname, scope)]
             ),
             include_start=True,
             include_end=True,
         ):
             for sub_loc in loc.node.sub_locs:
-                for loc_varname, loc_scope, event in sub_loc.var_events:
-                    if event == VarEventType.READ:
-                        result.add((varname, scope))
+                for (loc_varname, loc_scope), events in sub_loc.var_events.items():
+                    for event in events:
+                        if event.type == VarEventType.READ:
+                            result.add((varname, scope))
 
     return result
 
@@ -98,7 +96,7 @@ def get_vars_defined_before(core):
 MODIFYING_EVENTS = (VarEventType.ASSIGN, VarEventType.REASSIGN, VarEventType.MODIFY)
 
 
-def get_vars_used_after(core) -> Dict[Tuple[str, ScopeNode], List[nodes.NodeNG]]:
+def get_vars_used_after(core) -> Dict[Variable, List[nodes.NodeNG]]:
     core_subs = (
         [[c.sub_locs[i] for c in core] for i in range(len(core[0].sub_locs))]
         if isinstance(core, list)
@@ -112,9 +110,10 @@ def get_vars_used_after(core) -> Dict[Tuple[str, ScopeNode], List[nodes.NodeNG]]
             if is_in:
                 for i in range(from_pos, to_pos):
                     loc = block.locs[i]
-                    for varname, scope, event in loc.var_events:
-                        if event in MODIFYING_EVENTS:
-                            vars.add((varname, scope))
+                    for (varname, scope), events in loc.var_events.items():
+                        for event in events:
+                            if event.type in MODIFYING_EVENTS:
+                                vars.add((varname, scope))
             else:
                 first_locs_after.add(block.locs[from_pos])
 
@@ -123,16 +122,14 @@ def get_vars_used_after(core) -> Dict[Tuple[str, ScopeNode], List[nodes.NodeNG]]
         for loc in successors_from_locs(
             first_locs_after,
             stop_on_loc=lambda loc: any(
-                varname == loc_vn
-                and scope == loc_scope
-                and event in {VarEventType.ASSIGN, VarEventType.REASSIGN}
-                for loc_vn, loc_scope, event in loc.var_events
+                event.type in {VarEventType.ASSIGN, VarEventType.REASSIGN}
+                for event in loc.var_events[(varname, scope)]
             ),
             include_start=True,
             include_end=True,
         ):
-            for loc_varname, loc_scope, event in loc.var_events:
-                if loc_varname == varname and loc_scope == scope and event == VarEventType.READ:
+            for event in loc.var_events[(varname, scope)]:
+                if event.type == VarEventType.READ:
                     result[(varname, scope)].append(loc.node)
 
     return dict(result)

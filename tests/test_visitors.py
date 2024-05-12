@@ -380,11 +380,11 @@ def test_var_event_listener(program: List[str], init_lines: int, modified: Dict[
     def was_modified(in_varname: str) -> bool:
         in_scope = None
         for stmt in successors_from_loc(module.body[0].cfg_loc, explore_functions=True, include_start=True):
-            for varname, scope, event in stmt.var_events:
+            for (varname, scope), event in stmt.var_events.items():
                 if in_varname == varname:
-                    if in_scope is None and event == VarEventType.ASSIGN:
+                    if in_scope is None and event.type == VarEventType.ASSIGN:
                         in_scope = scope
-                    if in_scope == scope and event in (VarEventType.REASSIGN, VarEventType.MODIFY):
+                    if in_scope == scope and event.type in (VarEventType.REASSIGN, VarEventType.MODIFY):
                         return True
         return False
 

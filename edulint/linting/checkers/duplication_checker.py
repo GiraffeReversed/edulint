@@ -906,8 +906,8 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         first_loc = tests[0].cfg_loc
         avars_locs = [get_cfg_loc(to_parent(avar)).node.sub_locs for avar in avars]
         return any(
-            is_changed_between(varname, first_loc, avar_locs)
-            for varname, _scope in vars
+            is_changed_between(var, first_loc, avar_locs)
+            for var in vars
             for avar_locs in avars_locs
         )
 

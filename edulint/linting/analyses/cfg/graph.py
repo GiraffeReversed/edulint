@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Generator, List, Optional, Set
+from typing import Any, Generator, List, Optional, Set, Dict
 
 from astroid import nodes
 
@@ -153,7 +154,9 @@ class CFGLoc:
     block: CFGBlock
     pos: int
     node: nodes.NodeNG
-    var_events: List["VarEvent"] = field(default_factory=list)  # noqa: F821
+    var_events: Dict["Variable", List["VarEvent"]] = field(  # noqa: F821
+        default_factory=lambda: defaultdict(list)
+    )
 
     def __eq__(self, other):
         return self.block == other.block and self.pos == other.pos and self.node == other.node

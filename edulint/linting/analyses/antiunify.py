@@ -352,13 +352,12 @@ def can_be_removed(core, avar) -> bool:
 
     for core_loc in syntactic_children_locs_from(avar_loc, core):
         for i, loc in enumerate(core_loc.node.sub_locs):
-            for loc_varname, loc_scope, _event in loc.var_events:
-                if loc_varname == avar.subs[i] and loc_scope == avar_scopes[i]:
-                    for loc_avar in get_avars(core_loc.node):
-                        assert len(avar.subs) == len(loc_avar.subs)
-                        if any(asub != lasub for asub, lasub in zip(avar.subs, loc_avar.subs)):
-                            return False, to_remove
-                        to_remove.append(loc_avar)
+            if (avar.subs[i], avar_scopes[i]) in loc.var_events:
+                for loc_avar in get_avars(core_loc.node):
+                    assert len(avar.subs) == len(loc_avar.subs)
+                    if any(asub != lasub for asub, lasub in zip(avar.subs, loc_avar.subs)):
+                        return False, to_remove
+                    to_remove.append(loc_avar)
     return True, to_remove
 
 

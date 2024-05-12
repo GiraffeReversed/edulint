@@ -1,12 +1,22 @@
-from typing import Dict, List, TypeVar, Union, Optional, Iterator
+from typing import Dict, List, TypeVar, Union, Optional, Iterator, Tuple
 
 from astroid import nodes
 
 from edulint.linting.checkers.utils import BaseVisitor, is_builtin
 
 
-ScopeNode = Union[nodes.Module, nodes.FunctionDef, nodes.ClassDef, nodes.Lambda, nodes.GeneratorExp]
+ScopeNode = Union[
+    nodes.Module,
+    nodes.FunctionDef,
+    nodes.ClassDef,
+    nodes.Lambda,
+    nodes.GeneratorExp,
+    nodes.ListComp,
+    nodes.DictComp,
+    nodes.SetComp,
+]
 VarName = str
+Variable = Tuple[VarName, ScopeNode]
 
 T = TypeVar("T")
 
@@ -42,9 +52,9 @@ class ScopeListener(BaseVisitor[T]):
             return None
         return self.stack[scope_index][name]
 
-    def _init_var_in_scope(self, name: VarName, scope_node: nodes.NodeNG, offset: int = 0) -> None:
+    def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG, offset: int = 0) -> None:
         if name not in self.stack[-1 + offset]:
-            self.stack[-1 + offset][name] = scope_node.scope()
+            self.stack[-1 + offset][name] = name_node.scope()
 
     def _del_var_from_scope(self, name: VarName, _node: nodes.NodeNG):
         scope_index = self._get_var_scope_index(name)
@@ -61,8 +71,8 @@ class ScopeListener(BaseVisitor[T]):
     def visit_functiondef(self, node: nodes.FunctionDef) -> T:
         self._init_var_in_scope(node.name, node, offset=-1)
 
-        for arg in node.argnames():
-            self._init_var_in_scope(arg, node.args)
+        for arg in node.args.arguments:
+            self._init_var_in_scope(arg.name, arg)
 
         return self.visit_many(node.body)
 
@@ -74,14 +84,35 @@ class ScopeListener(BaseVisitor[T]):
 
     @in_new_scope
     def visit_lambda(self, node: nodes.Lambda) -> T:
-        for arg in node.argnames():
-            self._init_var_in_scope(arg, node.args)
+        for arg in node.args.arguments:
+            self._init_var_in_scope(arg.name, arg)
 
         return self.visit(node.body)
 
+    def _visit_generator(
+        self, node: Union[nodes.GeneratorExp, nodes.ListComp, nodes.DictComp, nodes.SetComp]
+    ):
+        self.visit_many(node.generators)
+        if isinstance(node, nodes.DictComp):
+            self.visit(node.key)
+            return self.visit(node.value)
+        return self.visit(node.elt)
+
     @in_new_scope
     def visit_generatorexp(self, node: nodes.GeneratorExp) -> T:
-        return self.visit_many(node.get_children())
+        return self._visit_generator(node)
+
+    @in_new_scope
+    def visit_listcomp(self, node: nodes.ListComp) -> T:
+        return self._visit_generator(node)
+
+    @in_new_scope
+    def visit_dictcomp(self, node: nodes.DictComp) -> T:
+        return self._visit_generator(node)
+
+    @in_new_scope
+    def visit_setcomp(self, node: nodes.SetComp) -> T:
+        return self._visit_generator(node)
 
     def visit_global(self, node: nodes.Global) -> T:
         for name in node.names:
@@ -112,19 +143,22 @@ class ScopeListener(BaseVisitor[T]):
         return self.default
 
     def visit_assign(self, node: nodes.Assign) -> T:
+        self.visit(node.value)
+
         for target in self._names_from_tuple(node.targets):
             self._visit_assigned_to(target)
 
-        return self.visit(node.value)
+        return self.default
 
     def visit_augassign(self, node: nodes.AugAssign) -> T:
+        self.visit(node.value)
         self._visit_assigned_to(node.target)
-        return self.visit(node.value)
+        return self.default
 
     def visit_annassign(self, node: nodes.AnnAssign) -> T:
-        self._visit_assigned_to(node.target)
         if node.value is not None:
-            return self.visit(node.value)
+            self.visit(node.value)
+        self._visit_assigned_to(node.target)
         return self.default
 
     def visit_delname(self, node: nodes.DelName) -> T:

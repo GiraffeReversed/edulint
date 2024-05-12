@@ -5,7 +5,6 @@ import re
 
 from astroid import nodes
 
-from edulint.linting.analyses.cfg.graph import CFGLoc
 from edulint.linting.analyses.cfg.utils import get_cfg_loc
 from edulint.linting.analyses.variable_scope import ScopeListener, VarName
 from edulint.linting.checkers.utils import is_builtin
@@ -19,9 +18,7 @@ class VarEventType(Enum):
     DELETE = auto()
 
 
-ScopeNode = Union[nodes.Module, nodes.FunctionDef, nodes.ClassDef, nodes.Lambda, nodes.GeneratorExp]
-
-VarEvent = namedtuple("VarEvent", ["varname", "scope", "event"])
+VarEvent = namedtuple("VarEvent", ["node", "type"])
 
 
 class VarModificationAnalysis:
@@ -38,39 +35,47 @@ class VarEventListener(ScopeListener[None]):
     def __init__(self):
         super().__init__()
 
-    def _add_var_event(self, name: VarName, loc: CFGLoc, action: VarEventType):
+    @staticmethod
+    def may_be_unscoped(name: str, name_node: nodes.NodeNG, loc_node: nodes.NodeNG):
+        if name.startswith("__"):
+            return True
+        if is_builtin(name_node, name):
+            return True
+        if (
+            isinstance(name_node, nodes.Attribute)
+            and isinstance(name_node.parent, nodes.Call)
+            and name_node.parent.func == name_node
+        ):
+            return True
+
+        for parent in name_node.node_ancestors():
+            if parent == loc_node.parent:
+                break
+            if isinstance(parent, nodes.Call):  # and is_builtin(parent.func, name):
+                return True
+
+        return False
+
+    def _add_var_event(self, name: VarName, name_node: nodes.NodeNG, action: VarEventType):
+        loc = get_cfg_loc(name_node)
         scope = self._get_var_scope(name)
-        # assert (
-        #     scope is not None
-        #     or name.startswith("__")
-        #     or (isinstance(loc.node, nodes.Call) and is_builtin(loc.node.func, name))
-        #     or (
-        #         isinstance(loc.node, (nodes.Expr, nodes.Assign))
-        #         and isinstance(loc.node.value, nodes.Call)
-        #         and is_builtin(loc.node.value.func, name)
-        #     )
-        #     or (
-        #         isinstance(loc.node, nodes.ExceptHandler)
-        #         and loc.node.type is not None
-        #         and is_builtin(loc.node.type, name)
-        #     )
-        # )
+        assert scope is not None or VarEventListener.may_be_unscoped(
+            name, name_node, loc.node
+        ), f"but {name_node.as_string()}, {loc.node.as_string()}"
         if scope is not None:
-            loc.var_events.append(VarEvent(name, scope, action))
+            loc.var_events[(name, scope)].append(VarEvent(name_node, action))
 
     # @override
-    def _init_var_in_scope(self, name: VarName, scope_node: nodes.NodeNG, offset: int = 0) -> None:
+    def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG, offset: int = 0) -> None:
         was_defined = name in self.stack[-1 + offset]
-        super()._init_var_in_scope(name, scope_node, offset)
+        super()._init_var_in_scope(name, name_node, offset)
         self._add_var_event(
-            name,
-            get_cfg_loc(scope_node),
-            VarEventType.ASSIGN if not was_defined else VarEventType.REASSIGN,
+            name, name_node, VarEventType.ASSIGN if not was_defined else VarEventType.REASSIGN
         )
 
     # @override
     def _del_var_from_scope(self, name: VarName, node: nodes.NodeNG):
-        self._add_var_event(name, get_cfg_loc(node), VarEventType.DELETE)
+        self._add_var_event(name, node, VarEventType.DELETE)
         super()._del_var_from_scope(name, node)
 
     @staticmethod
@@ -94,18 +99,18 @@ class VarEventListener(ScopeListener[None]):
             return
 
         if isinstance(node, (nodes.AssignAttr, nodes.Subscript)):
-            self._add_var_event(stripped.name, get_cfg_loc(node), VarEventType.MODIFY)
+            self._add_var_event(stripped.name, node, VarEventType.MODIFY)
 
     # @override
     def visit_augassign(self, node: nodes.AugAssign) -> None:
         stripped = self._strip(node.target)
         if stripped is not None:
-            self._add_var_event(stripped.name, get_cfg_loc(node), VarEventType.READ)
+            self._add_var_event(stripped.name, node, VarEventType.READ)
 
         super().visit_augassign(node)
 
     def visit_name(self, node: nodes.Name) -> None:
-        self._add_var_event(node.name, get_cfg_loc(node), VarEventType.READ)
+        self._add_var_event(node.name, node, VarEventType.READ)
 
     def visit_attribute(self, node: nodes.Attribute) -> None:
         stripped = self._strip(node)
@@ -114,7 +119,14 @@ class VarEventListener(ScopeListener[None]):
             and VarEventListener.NON_PURE_METHODS.match(node.attrname)
             and stripped is not None
         ):
-            self._add_var_event(stripped.name, get_cfg_loc(node), VarEventType.MODIFY)
+            self._add_var_event(stripped.name, node, VarEventType.MODIFY)
+
+        return self.visit_many(node.get_children())
+
+    def visit_assignattr(self, node: nodes.AssignAttr) -> None:
+        stripped = self._strip(node)
+        if stripped is not None:
+            self._add_var_event(stripped.name, node, VarEventType.MODIFY)
 
         return self.visit_many(node.get_children())
 
@@ -122,4 +134,4 @@ class VarEventListener(ScopeListener[None]):
         stripped = self._strip(node)
         if stripped is None:
             return
-        self._add_var_event(stripped.name, get_cfg_loc(node), VarEventType.MODIFY)
+        self._add_var_event(stripped.name, node, VarEventType.MODIFY)
