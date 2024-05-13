@@ -239,6 +239,71 @@ def test_similar_to_loop(filename: str, expected_output: List[Problem]) -> None:
         expected_output
     )
 
+@pytest.mark.parametrize("lines,expected_output", [
+    ([  # 0
+        "f(0)",
+        "f(1)",
+        "f(2)",
+        "f(3)",
+        "f(4)",
+    ], [lazy_problem().set_line(1)]),
+    ([  # 1
+        "f(v + 0)",
+        "f(v + 1)",
+        "f(v + 2)",
+        "f(v + 3)",
+        "f(v + 4)",
+    ], [lazy_problem().set_line(1)]),
+    ([  # 2
+        "f(v)",
+        "f(v + 1)",
+        "f(v + 2)",
+        "f(v + 3)",
+        "f(v + 4)",
+    ], [lazy_problem().set_line(1)]),
+    ([  # 3
+        "f(v)",
+        "f(v * 2)",
+        "f(v * 3)",
+        "f(v * 4)",
+        "f(v * 5)",
+    ], [lazy_problem().set_line(1)]),
+    ([  # 4
+        "f(0)",
+        "f(v)",
+        "f(v * 2)",
+        "f(v * 3)",
+        "f(v * 4)",
+    ], [lazy_problem().set_line(1)]),
+    ([  # 5
+        "f(5)",
+        "f(5 + v)",
+        "f(5 + v * 2)",
+        "f(5 + v * 3)",
+        "f(5 + v * 4)",
+    ], [lazy_problem().set_line(1)]),
+    ([  # 6
+        "f(k)",
+        "f(k + v)",
+        "f(k + v * 2)",
+        "f(k + v * 3)",
+        "f(k + v * 4)",
+    ], [lazy_problem().set_line(1)]),
+    ([  # 7
+        "f(0)",
+        "f(v * 2)",
+        "f(v * 3)",
+        "f(v * 4)",
+        "f(v * 5)",
+    ], [lazy_problem().set_line(2)]),
+])
+def test_similar_to_loop_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=similar-to-loop")],
+        expected_output
+    )
+
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("ut_80_2861_19_63.py", [lazy_problem().set_line(3).set_end_line(10)]),

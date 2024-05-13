@@ -1458,7 +1458,6 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
         if len(bionp_avars) != 1 or bionp_avars[0] == binop_core.op:
             return None
         binop_avar = bionp_avars[0]
-        assert binop_core.left == binop_avar.parent or binop_core.right == binop_avar.parent
 
         if len(type_groups[nodes.Const]) == 1:
             const_value = type_groups[nodes.Const][0]
@@ -1474,7 +1473,7 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
             exclusive_value is None
             and const_value is not None
             and binop_core.right.as_string() != const_value.as_string()
-            and binop_core.left.as_string != const_value.as_string()
+            and binop_core.left.as_string() != const_value.as_string()
         ):
             return None
 
