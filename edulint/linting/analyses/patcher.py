@@ -5,8 +5,11 @@
 
 from pylint.lint import PyLinter
 
+from edulint.linting.analyses.variable_scope import UnknowableLocalsException
 from edulint.linting.analyses.variable_modification import VarModificationAnalysis
+from edulint.linting.analyses.reaching_definitions import collect_reaching_definitions
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
+from loguru import logger
 
 
 def patch_ast_transforms():
@@ -15,11 +18,13 @@ def patch_ast_transforms():
     def new_get_ast(self, filepath, modname, data):
         ast = old_get_ast(self, filepath, modname, data)
         if ast is not None:
-            try:
-                ast.accept(CFGVisitor())
-                VarModificationAnalysis().collect(ast)
-            except Exception:
-                pass
+            ast.accept(CFGVisitor())
+            if len(ast.cfg_loc.block.locs) > 0:
+                try:
+                    VarModificationAnalysis().collect(ast)
+                    collect_reaching_definitions(ast)
+                except UnknowableLocalsException as e:
+                    logger.warning(str(e))
         return ast
 
     PyLinter.get_ast = new_get_ast

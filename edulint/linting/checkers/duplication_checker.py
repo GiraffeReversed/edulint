@@ -907,7 +907,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         avars_locs = [get_cfg_loc(to_parent(avar)).node.sub_locs for avar in avars]
         return any(
             is_changed_between(var, first_loc, avar_locs)
-            for var in vars
+            for var in vars.keys()
             for avar_locs in avars_locs
         )
 
@@ -1092,7 +1092,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             call = nodes.Call()
             call.func = nodes.Name("AUX")
             call.args = [to_node(val) for val in if_vals] + [
-                nodes.Name(varname) for varname, _scope in extra_args
+                nodes.Name(varname) for varname, _scope in extra_args.keys()
             ]
             if return_vals_needed + control_needed == 0:
                 body.append(call)
@@ -1109,7 +1109,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         fun_def.args = nodes.Arguments()
         fun_def.args.postinit(
             args=[nodes.AssignName(avar.name) for avar in seen.values()]
-            + [nodes.AssignName(varname) for varname, _scope in extra_args],
+            + [nodes.AssignName(varname) for varname, _scope in extra_args.keys()],
             defaults=None,
             kwonlyargs=[],
             kw_defaults=None,
@@ -1206,7 +1206,7 @@ def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) 
             call = nodes.Call()
             call.func = nodes.Name("AUX")
             call.args = [to_node(param) for param in params] + [
-                nodes.Name(varname) for varname, _scope in extra_args
+                nodes.Name(varname) for varname, _scope in extra_args.keys()
             ]
             if return_vals_needed + control_needed == 0:
                 calls.append(call)
@@ -1232,7 +1232,7 @@ def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) 
         fun_def.args = nodes.Arguments()
         fun_def.args.postinit(
             args=[nodes.AssignName(avar.name) for avar in seen.values()]
-            + [nodes.AssignName(varname) for varname, _scope in extra_args],
+            + [nodes.AssignName(varname) for varname, _scope in extra_args.keys()],
             defaults=None,
             kwonlyargs=[],
             kw_defaults=None,
@@ -1332,7 +1332,7 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
             if not isinstance(last.value, nodes.Tuple)
             else [e.as_string() for e in last.value.elts]
         )
-        for (varname, scope), users in vars_used_after.items():
+        for users in vars_used_after.values():
             for node in users:
                 if not returns_used_value(last, returned_values, node):
                     return False
@@ -1632,7 +1632,10 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
         used_vars = vars_in([n for ns in to_aunify for n in ns])
         target = parent.target
         # TODO can be weakened -- use div to get i's original value
-        if not isinstance(target, nodes.AssignName) or (target.name, parent.scope()) in used_vars:
+        if (
+            not isinstance(target, nodes.AssignName)
+            or (target.name, parent.scope()) in used_vars.keys()
+        ):
             return None
 
         const_stop = get_const_value(stop)

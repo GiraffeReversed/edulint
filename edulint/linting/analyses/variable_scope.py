@@ -183,7 +183,8 @@ class ScopeListener(BaseVisitor[T]):
     def visit_call(self, node: nodes.Call) -> T:
         if node.func.as_string() in ("locals", "globals") and is_builtin(node.func):
             raise UnknowableLocalsException(
-                f"call to {node.func.as_string()}, unable to determine variable scopes"
+                f"call to {node.func.as_string()} on line {node.fromlineno}, unable to determine variable scopes"
+                f"this may disable some checkers that rely on the analysis results"
             )
         return self.visit_many(node.get_children())
 

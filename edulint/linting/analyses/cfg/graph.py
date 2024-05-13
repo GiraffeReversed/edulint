@@ -157,6 +157,10 @@ class CFGLoc:
     var_events: Dict["Variable", List["VarEvent"]] = field(  # noqa: F821
         default_factory=lambda: defaultdict(list)
     )
+    definitions: Dict[nodes.NodeNG, Set[nodes.NodeNG]] = field(
+        default_factory=lambda: defaultdict(set)
+    )
+    uses: Dict[nodes.NodeNG, Set[nodes.NodeNG]] = field(default_factory=lambda: defaultdict(set))
 
     def __eq__(self, other):
         return self.block == other.block and self.pos == other.pos and self.node == other.node

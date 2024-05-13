@@ -1,32 +1,140 @@
-from typing import List, Union, Set, Optional, Dict
+from typing import List, Union, Set, Optional, Dict, Tuple
 from collections import defaultdict
 
 from astroid import nodes
 
-from edulint.linting.analyses.cfg.graph import CFGLoc
+from edulint.linting.analyses.cfg.graph import CFGLoc, CFGBlock
 from edulint.linting.analyses.cfg.utils import (
+    successor_blocks_from_locs,
     predecessors_from_loc,
-    successors_from_loc,
-    successors_from_locs,
     syntactic_children_locs_from,
     get_cfg_loc,
-    get_locs_in_and_after,
 )
 from edulint.linting.analyses.variable_scope import Variable
 from edulint.linting.analyses.variable_modification import VarEventType
 
 
+MODIFYING_EVENTS = (VarEventType.ASSIGN, VarEventType.REASSIGN, VarEventType.MODIFY)
+KILLING_EVENTS = (
+    VarEventType.ASSIGN,
+    VarEventType.REASSIGN,
+    VarEventType.DELETE,
+    VarEventType.MODIFY,
+)
+GENERATING_EVENTS = (VarEventType.READ, VarEventType.MODIFY)
+
+
+def collect_gens_kill(
+    block: CFGBlock,
+) -> Tuple[
+    Dict[Variable, List[Tuple[CFGLoc, nodes.NodeNG]]],
+    Dict[Variable, List[Tuple[CFGLoc, nodes.NodeNG]]],
+]:
+    gens, kill = defaultdict(list), defaultdict(list)
+    for loc in block.locs:
+        for var, events in loc.var_events.items():
+            for event in events:
+                if event.type in GENERATING_EVENTS:
+                    if var not in kill:
+                        gens[var].append((loc, event.node))
+                    else:
+                        assert len(kill[var]) == 1
+                        kill_loc, kill_node = kill[var][0]
+                        loc.definitions[event.node].add(kill_node)
+                        kill_loc.uses[kill_node].add(event.node)
+
+                if event.type in KILLING_EVENTS:
+                    kill[var] = [(loc, event.node)]
+
+    return gens, kill
+
+
+def kills_from_parents(
+    block: CFGBlock,
+    gens_kill: Dict[
+        CFGBlock,
+        Tuple[
+            Dict[Variable, List[Tuple[CFGLoc, nodes.NodeNG]]],
+            Dict[Variable, List[Tuple[CFGLoc, nodes.NodeNG]]],
+        ],
+    ],
+    parent_scope_kills: Dict[Variable, List[Tuple[CFGLoc, nodes.NodeNG]]],
+) -> Dict[Variable, List[Tuple[CFGLoc, nodes.NodeNG]]]:
+    if len(block.predecessors) == 0:
+        return parent_scope_kills
+
+    result = defaultdict(list)
+    for edge in block.predecessors:
+        parent = edge.source
+        kill = gens_kill[parent]
+        for var, ns in kill.items():
+            result[var].extend(ns)
+    return result
+
+
+def collect_reaching_definitions(
+    node: Union[nodes.Module, nodes.Arguments],
+    parent_scope_kills: Dict[Variable, List[Tuple[CFGLoc, nodes.NodeNG]]] = None,
+) -> None:
+    parent_scope_kills = parent_scope_kills if parent_scope_kills is not None else {}
+
+    original_gens_kills = {}
+    blocks = []
+    for block, start, end in successor_blocks_from_locs([node.cfg_loc], include_start=True):
+        assert start == 0 and end == len(block.locs)
+        original_gens_kills[block] = collect_gens_kill(block)
+
+        blocks.append(block)
+
+    computed_kills = {
+        block: defaultdict(list, {var: k.copy() for var, k in kills.items()})
+        for block, (gens, kills) in original_gens_kills.items()
+    }
+
+    changed = True
+    while changed:
+        changed = False
+
+        for block in blocks:
+            parent_kills = kills_from_parents(block, computed_kills, parent_scope_kills)
+            gens, original_kill = original_gens_kills[block]
+            computed_kill = computed_kills[block]
+
+            for var, ns in parent_kills.items():
+                # this block does not kill the parent's value
+                if var not in original_kill:
+                    for def_loc_node in ns:
+                        # if the kill was not added already
+                        if def_loc_node not in computed_kill[var]:
+                            computed_kill[var].append(def_loc_node)
+                            changed = True
+
+                for use_loc, use_node in gens.get(var, []):
+                    for def_loc, def_node in ns:
+                        use_loc.definitions[use_node].add(def_node)
+                        def_loc.uses[def_node].add(use_node)
+
+    for block in blocks:
+        for loc in block.locs:
+            if isinstance(loc.node, nodes.FunctionDef):
+                collect_reaching_definitions(loc.node.args, computed_kills[block])
+            elif isinstance(loc.node, nodes.ClassDef):
+                for class_node in loc.node.body:
+                    if isinstance(class_node, nodes.FunctionDef):
+                        collect_reaching_definitions(class_node.args, computed_kills[block])
+
+
 def vars_in(
     node: Union[nodes.NodeNG, List[nodes.NodeNG]], event_types: Optional[Set[VarEventType]] = None
-) -> Set[Variable]:
-    result = set()
+) -> Dict[Variable, List[nodes.NodeNG]]:
+    result = {}
 
     first = node[0] if isinstance(node, list) else node
     for loc in syntactic_children_locs_from(get_cfg_loc(first), node):
         for (varname, scope), events in loc.var_events.items():
             for event in events:
                 if event_types is None or event.type in event_types:
-                    result.add((varname, scope))
+                    result[(varname, scope)] = event.node
     return result
 
 
@@ -41,81 +149,45 @@ def is_changed_between(var: Variable, before_loc: CFGLoc, after_locs: List[CFGLo
     return False
 
 
-def get_vars_defined_before(core):
-    result = set()
+def node_to_var(node, loc):
+    for var, events in loc.var_events.items():
+        for event in events:
+            if event.node == node:
+                return var
+    assert False, "unreachable"
 
-    first_loc = get_cfg_loc(core[0] if isinstance(core, list) else core)
 
-    vars = {
-        (varname, scope)
-        for loc in syntactic_children_locs_from(first_loc, core)
-        for sub_loc in loc.node.sub_locs
-        for (varname, scope), events in sub_loc.var_events.items()
-        for event in events
-        if event.type == VarEventType.READ
-    }
-
+def get_vars_defined_before(core) -> Dict[Variable, Set[nodes.NodeNG]]:
     # FIXME counts all read variables, including avars
-    for varname, scope in vars:
-        for loc in successors_from_loc(
-            first_loc,
-            stop_on_loc=lambda loc: all(
-                event.type in {VarEventType.ASSIGN, VarEventType.REASSIGN}
-                for sub_loc in loc.node.sub_locs
-                for event in sub_loc.var_events[(varname, scope)]
-            ),
-            include_start=True,
-            include_end=True,
-        ):
-            for sub_loc in loc.node.sub_locs:
-                for (loc_varname, loc_scope), events in sub_loc.var_events.items():
-                    for event in events:
-                        if event.type == VarEventType.READ:
-                            result.add((varname, scope))
-
+    result = defaultdict(set)
+    for i in range(len(core[0].sub_locs)):
+        core_sub_locs = [c.sub_locs[i] for c in core]
+        children_locs = set(
+            syntactic_children_locs_from(core_sub_locs[0], [loc.node for loc in core_sub_locs])
+        )
+        for loc in children_locs:
+            for use_node, definitions in loc.definitions.items():
+                var = node_to_var(use_node, loc)
+                for def_node in definitions:
+                    if get_cfg_loc(def_node) not in children_locs:
+                        result[var].add(def_node)
     return result
 
 
-MODIFYING_EVENTS = (VarEventType.ASSIGN, VarEventType.REASSIGN, VarEventType.MODIFY)
-
-
-def get_vars_used_after(core) -> Dict[Variable, List[nodes.NodeNG]]:
-    core_subs = (
-        [[c.sub_locs[i] for c in core] for i in range(len(core[0].sub_locs))]
-        if isinstance(core, list)
-        else core.sub_locs
-    )
-
-    vars = set()
-    first_locs_after = set()
-    for core_sub in core_subs:
-        for is_in, block, from_pos, to_pos in get_locs_in_and_after(core_sub):
-            if is_in:
-                for i in range(from_pos, to_pos):
-                    loc = block.locs[i]
-                    for (varname, scope), events in loc.var_events.items():
-                        for event in events:
-                            if event.type in MODIFYING_EVENTS:
-                                vars.add((varname, scope))
-            else:
-                first_locs_after.add(block.locs[from_pos])
-
-    result = defaultdict(list)
-    for varname, scope in vars:
-        for loc in successors_from_locs(
-            first_locs_after,
-            stop_on_loc=lambda loc: any(
-                event.type in {VarEventType.ASSIGN, VarEventType.REASSIGN}
-                for event in loc.var_events[(varname, scope)]
-            ),
-            include_start=True,
-            include_end=True,
-        ):
-            for event in loc.var_events[(varname, scope)]:
-                if event.type == VarEventType.READ:
-                    result[(varname, scope)].append(loc.node)
-
-    return dict(result)
+def get_vars_used_after(core) -> Dict[Variable, Set[nodes.NodeNG]]:
+    result = defaultdict(set)
+    for i in range(len(core[0].sub_locs)):
+        core_sub_locs = [c.sub_locs[i] for c in core]
+        children_locs = set(
+            syntactic_children_locs_from(core_sub_locs[0], [loc.node for loc in core_sub_locs])
+        )
+        for loc in children_locs:
+            for def_node, users in loc.uses.items():
+                var = node_to_var(def_node, loc)
+                for use_node in users:
+                    if get_cfg_loc(use_node) not in children_locs:
+                        result[var].add(use_node)
+    return result
 
 
 def get_control_statements(core):
