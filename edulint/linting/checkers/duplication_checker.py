@@ -2020,6 +2020,10 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                     isinstance(node, (nodes.Import, nodes.ImportFrom))
                     and node.parent == node.root()
                 )
+                or (
+                    isinstance(node, (nodes.Assign, nodes.AugAssign, nodes.AnnAssign))
+                    and len(node.cfg_loc.uses) == 0
+                )
             )
 
         def include_in_stmts(node):
