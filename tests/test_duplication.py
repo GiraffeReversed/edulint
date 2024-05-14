@@ -69,6 +69,7 @@ from typing import List
         .set_text("Identical code inside all if's branches, move 3 lines after the if.")
     ]),
     ("hw48505.py", []),
+    ("uc_92_9765_21_23.py", [lazy_problem().set_code("R6851").set_line(2)]),
 ])
 def test_identical_before_after_branch(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
@@ -221,7 +222,9 @@ def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]
     ("1687aeed39-hw4.py", []),
     ("7e1dd5c338-p2_tortoise.py", []),
     ("b3b13aa3f7-p5_merge.py", [lazy_problem().set_line(37)]),
+    ("uc_10_7828_23_16.py", []),
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
+    ("uc_52_2125_16_10.py", []),
     ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11)]),
     ("ut_57_4473_30_10.py", [lazy_problem().set_line(2)]),
     ("ut_57_5508_21_10.py", [lazy_problem().set_line(1)]),
