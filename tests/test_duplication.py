@@ -27,19 +27,21 @@ from typing import List
     ("024056-cards.py", [
         lazy_problem().set_line(7)
     ]),
-    ("024329-workdays.py", [  # TODO improve
-        # lazy_problem().set_line(56)
+    ("024329-workdays.py", [
+        lazy_problem().set_line(56)
     ]),
     ("024535-credit.py", [
         lazy_problem().set_line(23)
         .set_text("Identical code inside all if's branches, move 3 lines after the if."),
-        lazy_problem().set_line(35),
+        # lazy_problem().set_line(35),
     ]),
     ("052786-course.py", []),
     ("054050-course.py", [
         lazy_problem().set_line(31)
     ]),
-    ("074168-doubly_linked.py", []),
+    ("074168-doubly_linked.py", [
+        lazy_problem().set_line(31)  # dubious
+    ]),
     ("074242-tortoise.py", [
         lazy_problem().set_line(32),
         lazy_problem().set_line(32),
@@ -47,8 +49,8 @@ from typing import List
         lazy_problem().set_line(65)
     ]),
     ("124573-lists.py", [
-        lazy_problem().set_line(51)
-        .set_text("Identical code inside all if's branches, move 1 lines after the if.")
+        # lazy_problem().set_line(51)
+        # .set_text("Identical code inside all if's branches, move 1 lines after the if.")
     ]),
     ("hw21739.py", [  # TODO more precise detection
         lazy_problem().set_line(40)

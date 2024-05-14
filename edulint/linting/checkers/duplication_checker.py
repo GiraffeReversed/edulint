@@ -332,30 +332,10 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
 
         same_suffix_len = get_stmts_difference(branches, forward=False)
         if same_suffix_len >= 1:
-            # allow early returns
+            # allow wip early returns
             if same_suffix_len == 1 and isinstance(branches[0][-1], nodes.Return):
-                i = 0
-                while len(branches[i]) == 1:
-                    i += 1
-                branches = branches[i:]
-                if len(branches) < 2:
-                    return
-            defect_node = branches[0][-1].parent
-
-            # disallow breaking up coherent segments
-            same_part = branches[0][-same_suffix_len:]
-            if (
-                get_statements_count(same_part, include_defs=True, include_name_main=True)
-                / (
-                    min(
-                        get_statements_count(branch, include_defs=True, include_name_main=True)
-                        for branch in branches
-                    )
-                    - same_prefix_len
-                )
-                < 1 / 2
-            ):  # TODO extract into parameter
                 return
+            defect_node = branches[0][-1].parent
 
             add_message(branches, same_suffix_len, defect_node, forward=False)
 
@@ -1854,30 +1834,10 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
         same_suffix_len = get_stmts_difference(branches, forward=False)
         if same_suffix_len >= 1:
-            # allow early returns
+            # allow wip early returns
             if same_suffix_len == 1 and isinstance(branches[0][-1], nodes.Return):
-                i = 0
-                while len(branches[i]) == 1:
-                    i += 1
-                branches = branches[i:]
-                if len(branches) < 2:
-                    return any_message
-            defect_node = branches[0][-1].parent
-
-            # disallow breaking up coherent segments
-            same_part = branches[0][-same_suffix_len:]
-            if (
-                get_statements_count(same_part, include_defs=True, include_name_main=True)
-                / (
-                    min(
-                        get_statements_count(branch, include_defs=True, include_name_main=True)
-                        for branch in branches
-                    )
-                    - same_prefix_len
-                )
-                < 1 / 2
-            ):  # TODO extract into parameter
                 return any_message
+            defect_node = branches[0][-1].parent
 
             add_message(branches, same_suffix_len, defect_node, forward=False)
             any_message = True
