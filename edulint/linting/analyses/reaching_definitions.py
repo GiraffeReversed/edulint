@@ -66,6 +66,8 @@ def kills_from_parents(
     result = defaultdict(list)
     for edge in block.predecessors:
         parent = edge.source
+        if not parent.reachable:
+            continue
         kill = gens_kill[parent]
         for var, ns in kill.items():
             result[var].extend(ns)

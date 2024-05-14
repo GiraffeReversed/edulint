@@ -847,9 +847,8 @@ def to_node(val, avar=None) -> nodes.NodeNG:
     assert not isinstance(val, list)
     if isinstance(val, nodes.NodeNG):
         return val
-    if avar is not None:
-        assert not isinstance(avar.parent, nodes.FunctionDef)
-        return type(avar.parent)(val)
+    if avar is not None and isinstance(avar.parent, nodes.Name):
+        return nodes.Name(val)
     return nodes.Const(val)
 
 
@@ -1498,9 +1497,10 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
             exclusive_nums = []
 
         if isinstance(binop_avar.subs[0], nodes.NodeNG):
-            binop_nums, sub_binop_use = iter_use_from_partition(partition_by_type(binop_avar.subs))
-            if binop_nums is None:
+            binop_result = iter_use_from_partition(partition_by_type(binop_avar.subs))
+            if binop_result is None:
                 return None
+            binop_nums, sub_binop_use = binop_result
             if binop_core.left == binop_avar.parent:
                 binop_core.left = sub_binop_use
             else:
