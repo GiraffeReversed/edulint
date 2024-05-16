@@ -771,8 +771,7 @@ class Short(BaseChecker):
         "redundant-compare-in-condition",
     )
     def visit_boolop(self, node: nodes.BoolOp) -> None:
-        self._check_for_simplification_of_single_or(node)
-        self._check_for_simplification_of_single_and(node)
+        self._check_for_simplification_of_single_boolop(node)
         self._check_for_simplification_of_or(node)
         self._check_for_simplification_of_and(node)
 
