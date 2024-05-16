@@ -646,15 +646,8 @@ class Short(BaseChecker):
 
         return cmp2 + " " + str(const2)
 
-    def _check_for_simplification_of_single_or(self, node: nodes.BoolOp) -> None:
-        """
-        Assumes that node is a BoolOp representation of 'and' operator
-        and that it is just a binary operator (ie not: a or b or c).
-        Checks for problems like 'f(x) >= 4 or f(x) <= -4' and suggests to
-        replace them with 'abs(f(x)) >= 4'. (f is pure builtin function or
-        identity)
-        """
-        if node.op != "or" or len(node.values) != 2:
+    def _check_for_simplification_of_single_boolop(self, node: nodes.BoolOp) -> None:
+        if node.op not in {"or", "and"} or len(node.values) != 2:
             return
 
         operand1 = self._get_node_comparator_const_value(node.values[0])
@@ -675,7 +668,7 @@ class Short(BaseChecker):
             new_expr = (
                 expr_string
                 + " "
-                + self._remove_redundant_compare(cmp1, const1, cmp2, const2, False)
+                + self._remove_redundant_compare(cmp1, const1, cmp2, const2, node.op == "and")
             )
 
             self.add_message(
@@ -688,6 +681,34 @@ class Short(BaseChecker):
         if const1 != -const2 or cmp1 != self.SWITCHED_COMPARATOR[cmp2]:
             return
 
+        if node.op == "and":
+            new_expr = self._check_for_simplification_of_single_and()
+        else:
+            new_expr = self._check_for_simplification_of_single_or(
+                const1, cmp1, const2, cmp2, expr_string
+            )
+
+        self.add_message(
+            f"simplifiable-single-{node.op}-with-abs",
+            node=node,
+            args=(get_name(node), new_expr),
+        )
+
+    def _check_for_simplification_of_single_or(
+        self, const1: Any, cmp1: str, const2: Any, cmp2: str, expr_string: str
+    ) -> str:
+        """
+        Supposes that <expr_string> is a variable name or is of type f(x), where
+        f is pure builtin function.
+
+        And checks if an expression <<expr_string> <cmp1> <const1> or
+        <expr_string> <cmp2> <const2>> can be simplified.
+
+        Checks for problems like 'f(x) >= 4 or f(x) <= -4' and suggests to
+        replace them with 'abs(f(x)) >= 4'.
+
+        Returns the suggestion as a string.
+        """
         new_expr = "True"
 
         if const1 == 0:
@@ -703,52 +724,23 @@ class Short(BaseChecker):
             if const1 < 0:
                 new_expr = "abs(" + expr_string + ") " + cmp2 + " " + str(const2)
 
-        self.add_message(
-            "simplifiable-single-or-with-abs",
-            node=node,
-            args=(get_name(node), new_expr),
-        )
+        return new_expr
 
-    def _check_for_simplification_of_single_and(self, node: nodes.BoolOp) -> None:
+    def _check_for_simplification_of_single_and(
+        self, const1: Any, cmp1: str, const2: Any, cmp2: str, expr_string: str
+    ) -> str:
         """
-        Assumes that node is a BoolOp representation of 'and' operator
-        and that it is just a binary operator (ie not: a and b and c).
-        Checks for problems like 'f(x) < 4 or f(x) > -4' and suggests to
-        replace them with 'abs(f(x)) < 4'. (f is pure builtin function or
-        identity)
+        Supposes that <expr_string> is a variable name or is of type f(x), where
+        f is pure builtin function.
+
+        And checks if an expression <<expr_string> <cmp1> <const1> and
+        <expr_string> <cmp2> <const2>> can be simplified.
+
+        Checks for problems like 'f(x) < 4 and f(x) > -4' and suggests to
+        replace them with 'abs(f(x)) < 4'.
+
+        Returns the suggestion as a string.
         """
-        if node.op != "and" or len(node.values) != 2:
-            return
-
-        operand1 = self._get_node_comparator_const_value(node.values[0])
-        operand2 = self._get_node_comparator_const_value(node.values[1])
-
-        if not operand1 or not operand2:
-            return
-
-        expr1, cmp1, const1 = operand1
-        expr2, cmp2, const2 = operand2
-
-        if not self._same_var_or_function_call(expr1, expr2):
-            return
-
-        expr_string = expr1.as_string()
-
-        if cmp1[0] == cmp2[0]:
-            new_expr = (
-                expr_string + " " + self._remove_redundant_compare(cmp1, const1, cmp2, const2, True)
-            )
-
-            self.add_message(
-                "redundant-compare-in-condition",
-                node=node,
-                args=(new_expr),
-            )
-            return
-
-        if const1 != -const2 or cmp1 != self.SWITCHED_COMPARATOR[cmp2]:
-            return
-
         new_expr = "False"
 
         if const1 == 0:
@@ -761,11 +753,7 @@ class Short(BaseChecker):
             if const1 > 0:
                 new_expr = "abs(" + expr_string + ") " + cmp1 + " " + str(const1)
 
-        self.add_message(
-            "simplifiable-single-and-with-abs",
-            node=node,
-            args=(new_expr),
-        )
+        return new_expr
 
     def _check_for_simplification_of_and(self, node: nodes.BoolOp) -> None:
         if node.op != "and" or len(node.values) == 2:
