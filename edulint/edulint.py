@@ -6,7 +6,7 @@ from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
 from edulint.versions.version_checker import PackageInfoManager
 from edulint.explanations import update_explanations
-from typing import List, Optional, Dict, Tuple, Any
+from typing import List, Dict, Tuple, Any
 import argparse
 import os
 import sys
@@ -91,21 +91,6 @@ def setup_argparse(option_parses: Dict[Option, OptionParse]) -> argparse.Namespa
     return parser.parse_args()
 
 
-def extract_files(files_or_dirs: List[str]) -> List[str]:
-    def extract_files_rec(
-        prefix: Optional[str], files_or_dirs: List[str], result: List[str]
-    ) -> List[str]:
-        for file_or_dir in files_or_dirs:
-            full_path = os.path.join(prefix, file_or_dir) if prefix is not None else file_or_dir
-            if os.path.isdir(full_path):
-                extract_files_rec(full_path, os.listdir(full_path), result)
-            elif os.path.splitext(full_path)[1] == ".py":
-                result.append(full_path)
-        return result
-
-    return extract_files_rec(None, files_or_dirs, [])
-
-
 def to_json(
     configs: List[Tuple[List[str], ImmutableConfig, LangTranslations]], problems: List[Problem]
 ) -> str:
@@ -151,22 +136,24 @@ def main() -> int:
     )  # get_explanations also can trigger update, but we're not calling it anywhere else.
     cmd_args = get_cmd_args(args)
 
-    files = extract_files(args.files_or_dirs)
-    file_configs = get_config_many(files, cmd_args, option_parses=option_parses)
+    file_configs = get_config_many(args.files_or_dirs, cmd_args, option_parses=option_parses)
 
     try:
         results = lint_many(file_configs)
     except (TimeoutError, json.decoder.JSONDecodeError, EduLintLinterFailedException):
         return 2
 
-    sorted_results = sort(files, results)
+    sorted_results = sort(args.files_or_dirs, results)
+    checks_single_file = len(args.files_or_dirs) == 1 and not os.path.isdir(args.files_or_dirs[0])
 
     if args.json:
         print(to_json(file_configs, sorted_results))
     else:
         prev_problem = None
         for problem in sorted_results:
-            if len(files) > 1 and (prev_problem is None or prev_problem.path != problem.path):
+            if not checks_single_file and (
+                prev_problem is None or prev_problem.path != problem.path
+            ):
                 print(f"****************** {os.path.basename(problem.path)}")
                 prev_problem = problem
 

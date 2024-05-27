@@ -12,6 +12,7 @@ from functools import partial
 import sys
 import json
 import os
+from pathlib import Path
 from loguru import logger
 
 
@@ -193,9 +194,24 @@ def lint_one(filename: str, config: Tuple[ImmutableConfig, LangTranslations]) ->
     return lint_many([([filename], option_config, lang_translations)])
 
 
-def sort(filenames: List[str], problems: List[Problem]) -> List[Problem]:
-    indices = {get_proper_path(fn): i for i, fn in enumerate(filenames)}
-    problems.sort(key=lambda problem: (indices[problem.path], problem.line, problem.column))
+def sort(files_or_dirs: List[str], problems: List[Problem]) -> List[Problem]:
+    files_or_dirs = [Path(path) for path in files_or_dirs]
+
+    def get_file_or_dir_index(path: str):
+        path = Path(path)
+        for i, fd in enumerate(files_or_dirs):
+            if fd == path or fd in path.parents:
+                return i
+        assert False, "unreachable"
+
+    problems.sort(
+        key=lambda problem: (
+            get_file_or_dir_index(problem.path),
+            problem.path,
+            problem.line,
+            problem.column,
+        )
+    )
     return problems
 
 

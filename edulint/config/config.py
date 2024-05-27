@@ -15,7 +15,7 @@ from edulint.option_parses import (
     LANG_TRANSLATIONS_LABEL,
     DEFAULT_ENABLER_LABEL,
 )
-from edulint.config.file_config import load_toml_file
+from edulint.config.file_config import load_toml_file, get_config_type, ConfigFileType
 from edulint.config.option_sets import OptionSets, OptionSet, parse_option_sets
 from edulint.config.language_translations import (
     LangTranslations,
@@ -23,7 +23,7 @@ from edulint.config.language_translations import (
     parse_lang_file,
 )
 from edulint.config.utils import print_invalid_type_message, config_file_val_to_str, add_enabled
-from typing import Dict, List, Optional, Tuple, Iterator, Any, Set
+from typing import Dict, List, Optional, Tuple, Iterator, Any
 
 from dataclasses import dataclass
 from argparse import Namespace
@@ -203,12 +203,12 @@ class ImmutableConfig:
 # %% components
 
 
-def extract_args(filename: str) -> List[str]:
+def extract_args(path: str) -> List[str]:
     edulint_re = re.compile(r"\s*#[\s#]*edulint:\s*", re.IGNORECASE)
     ib111_re = re.compile(r".*from\s+ib111\s+import.+week_(\d+)", re.IGNORECASE)
 
     result: List[str] = []
-    with open(filename, encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for i, line in enumerate(f):
             line = line.strip()
 
@@ -281,10 +281,44 @@ def parse_cmd_config(args: List[str], option_parses: Dict[Option, OptionParse]) 
     return Config("cmd", parsed, option_parses)
 
 
-def parse_infile_config(filename: str, option_parses: Dict[Option, OptionParse]) -> Config:
-    extracted = extract_args(filename)
+def resolve_relative_config_path(path: str, config: Config) -> None:
+    config_path = config.get_last_value(Option.CONFIG_FILE, use_default=False)
+    if config_path is None:
+        return
+
+    config_type = get_config_type(config_path)
+    if config_type != ConfigFileType.LOCAL or os.path.isabs(config_path):
+        return
+
+    assert config.option_parses[Option.CONFIG_FILE].combine == Combine.REPLACE
+    config_abspath = os.path.abspath(os.path.join(os.path.dirname(path), config_path))
+    config.config.append(ProcessedArg(Option.CONFIG_FILE, config_abspath))
+
+
+def resolve_ignore_infile_config(parsed: List[UnprocessedArg], config: Config) -> Config:
+    if not _ignore_infile(config):
+        return config
+
+    ignore_infile_val = config.get_last_value(Option.IGNORE_INFILE_CONFIG_FOR, use_default=False)
+    assert ignore_infile_val is not None
+    ignore_infile_str = ",".join(ignore_infile_val)
+
+    if "edulint" in ignore_infile_val or "all" in ignore_infile_val:
+        parsed = [UnprocessedArg(Option.IGNORE_INFILE_CONFIG_FOR, ignore_infile_str)]
+    else:
+        parsed.append(UnprocessedArg(Option.IGNORE_INFILE_CONFIG_FOR, ignore_infile_str))
+
+    return Config("in-file", parsed, config.option_parses)
+
+
+def parse_infile_config(path: str, option_parses: Dict[Option, OptionParse]) -> Config:
+    extracted = extract_args(path)
     parsed = parse_args(extracted, option_parses)
-    return Config("in-file", parsed, option_parses)
+    infile_config = Config("in-file", parsed, option_parses)
+
+    resolve_relative_config_path(path, infile_config)
+
+    return resolve_ignore_infile_config(parsed, infile_config)
 
 
 def parse_config_file(
@@ -395,67 +429,86 @@ def _ignore_infile(config: Config) -> bool:
     return Linter.EDULINT.to_name() in ignored_infile or "all" in ignored_infile
 
 
+# def get_config_paths(
+#     filenames: List[str], infile_configs: List[Config]
+# ) -> Tuple[Set[str], Dict[str, str]]:
+#     assert len(filenames) == len(infile_configs)
+#     config_paths = set()
+#     filename_mapping = {}
+#     for filename, config in zip(filenames, infile_configs):
+#         config_file = config.get_last_value(Option.CONFIG_FILE, use_default=True)
+#         if (
+#             config_file.startswith("http")
+#             or not config_file.endswith(".toml")
+#             or os.path.isabs(config_file)
+#         ):
+#             config_path = config_file
+#         else:
+#             config_path = str(Path(filename).parent / config_file)
+#         config_paths.add(config_path)
+#         filename_mapping[filename] = config_path
+#     return config_paths, filename_mapping
+
+
 def _parse_infile_configs(
-    filenames: List[str], cmd_config: Config, option_parses: Dict[Option, OptionParse]
-) -> List[Config]:
-    if _ignore_infile(cmd_config):
-        return [_get_default_config(option_parses)[0] for filename in filenames]
+    files_or_dirs: List[str], cmd_config: Config, option_parses: Dict[Option, OptionParse]
+) -> Dict[ImmutableConfig, Tuple[Config, List[str]]]:
 
-    infile_configs = []
-    for filename in filenames:
-        infile_config = parse_infile_config(filename, option_parses)
-        if _ignore_infile(infile_config):
-            ignore_infile_val = infile_config.get_last_value(
-                Option.IGNORE_INFILE_CONFIG_FOR, use_default=False
-            )
-            assert ignore_infile_val is not None
-            ignore_infile_str = ",".join(ignore_infile_val)
-            infile_config = Config(
-                "in-file",
-                [UnprocessedArg(Option.IGNORE_INFILE_CONFIG_FOR, ignore_infile_str)],
-                option_parses,
-            )
-
-        infile_configs.append(infile_config)
-    return infile_configs
-
-
-def get_config_paths(
-    filenames: List[str], infile_configs: List[Config]
-) -> Tuple[Set[str], Dict[str, str]]:
-    assert len(filenames) == len(infile_configs)
-    config_paths = set()
-    filename_mapping = {}
-    for filename, config in zip(filenames, infile_configs):
-        config_file = config.get_last_value(Option.CONFIG_FILE, use_default=True)
-        if (
-            config_file.startswith("http")
-            or not config_file.endswith(".toml")
-            or os.path.isabs(config_file)
-        ):
-            config_path = config_file
+    def add_to_result(result, config, path, iconfig=None):
+        iconfig = config.to_immutable() if iconfig is None else iconfig
+        if iconfig not in result:
+            result[iconfig] = (config, [path])
         else:
-            config_path = str(Path(filename).parent / config_file)
-        config_paths.add(config_path)
-        filename_mapping[filename] = config_path
-    return config_paths, filename_mapping
+            result[iconfig][1].append(path)
+
+    def aggregate_subresults(paths):
+        result = {}
+        for path in paths:
+            subresult = _parse_infile_configs_rec(path)
+            for iconfig, (config, subpaths) in subresult.items():
+                if iconfig not in result:
+                    result[iconfig] = (config, subpaths)
+                else:
+                    result[iconfig][1].extend(subpaths)
+        return result
+
+    def _parse_infile_configs_rec(path: str):
+        if not os.path.isdir(path):
+            if not os.path.splitext(path)[1].lower() == ".py":
+                return {}
+
+            infile_config = parse_infile_config(path, option_parses)
+            return {infile_config.to_immutable(): (infile_config, [path])}
+
+        result = aggregate_subresults([os.path.join(path, name) for name in os.listdir(path)])
+
+        if len(result) != 1:
+            return result
+
+        iconfig, (config, _paths) = list(result.items())[0]
+        return {iconfig: (config, [path])}
+
+    if _ignore_infile(cmd_config):
+        default_config = _get_default_config(option_parses)[0]
+        return {default_config.to_immutable(): (default_config, files_or_dirs)}
+
+    return aggregate_subresults(files_or_dirs)
 
 
 def get_config_many(
-    filenames: List[str],
+    files_or_dirs: List[str],
     cmd_args_raw: List[str],
     option_parses: Dict[Option, OptionParse] = get_option_parses(),
 ) -> List[Tuple[List[str], ImmutableConfig, LangTranslations]]:
     cmd_config = parse_cmd_config(cmd_args_raw, option_parses)
-    infile_configs = _parse_infile_configs(filenames, cmd_config, option_parses)
+    infile_configs = _parse_infile_configs(files_or_dirs, cmd_config, option_parses)
 
     cmd_config_path = cmd_config.get_last_value(Option.CONFIG_FILE, use_default=False)
 
     if cmd_config_path is not None:
         config_paths = {cmd_config_path}
-        filenames_mapping = {filename: cmd_config_path for filename in filenames}
     else:
-        config_paths, filenames_mapping = get_config_paths(filenames, infile_configs)
+        config_paths = {iconfig[Option.CONFIG_FILE] for iconfig in infile_configs.keys()}
 
     config_file_results = {
         config_path: parse_config_file(config_path, option_parses) for config_path in config_paths
@@ -463,9 +516,15 @@ def get_config_many(
     lang_file_results = {}
 
     result: List[Tuple[List[str], ImmutableConfig, LangTranslations]] = []
-    for files, infile_config in _partition(filenames, infile_configs, filenames_mapping):
+    for infile_config, paths in infile_configs.values():
         combined = Config.combine(infile_config, cmd_config)
-        config_file_result = config_file_results[filenames_mapping[files[0]]]
+        config_file_result = (
+            config_file_results[cmd_config_path]
+            if cmd_config_path is not None
+            else config_file_results[
+                infile_config.get_last_value(Option.CONFIG_FILE, use_default=True)
+            ]
+        )
         if config_file_result is None:
             continue
         file_config, option_sets, lang_translations = config_file_result
@@ -488,7 +547,7 @@ def get_config_many(
                 lang_translations = {**lang_translations, **lang_file_translations}
                 lang_file_results[language_file] = lang_translations
 
-        result.append((files, iconfig, lang_translations))
+        result.append((paths, iconfig, lang_translations))
     return result
 
 

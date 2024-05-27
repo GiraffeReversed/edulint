@@ -1,4 +1,5 @@
 import pytest
+import os
 from edulint.linters import Linter
 from edulint.config.arg import UnprocessedArg, ProcessedArg
 from edulint.options import Option, DEFAULT_CONFIG
@@ -185,11 +186,16 @@ def test_remote_config_parses():
     assert parse_config_file(url, get_option_parses()) is not None
 
 
+def relative_to_file(file_path, relative_path):
+    dir_path = os.path.dirname(file_path)
+    abspath = os.path.abspath(dir_path)
+    return os.path.join(abspath, relative_path)
+
 def test_local_config_found_relative_to_file():
     filename = get_tests_path(str(Path() / "file" / "somewhere" / "deep" / "03-d4_points.py"))
     iconfig, _lang_translations = get_config_one(filename, [])
 
-    assert iconfig[Option.CONFIG_FILE] == "enable-missing-docstring.toml"
+    assert iconfig[Option.CONFIG_FILE] == relative_to_file(filename, "enable-missing-docstring.toml")
     assert iconfig[Option.PYLINT][-1] == "--enable=missing-function-docstring"
 
 
@@ -202,10 +208,10 @@ def test_local_configs_found_relative_to_files():
     iconfig1 = iconfigs[0][1]
     iconfig2 = iconfigs[1][1]
 
-    assert iconfig1[Option.CONFIG_FILE] == "enable-missing-docstring.toml"
+    assert iconfig1[Option.CONFIG_FILE] == relative_to_file(filename1, "enable-missing-docstring.toml")
     assert iconfig1[Option.PYLINT][-1] == "--enable=missing-function-docstring"
 
-    assert iconfig2[Option.CONFIG_FILE] == "enable-missing-docstring.toml"
+    assert iconfig2[Option.CONFIG_FILE] == relative_to_file(filename2, "enable-missing-docstring.toml")
     assert iconfig2[Option.PYLINT][-1] == "--enable=missing-module-docstring"
 
 

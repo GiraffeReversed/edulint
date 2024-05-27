@@ -6,6 +6,7 @@ import hashlib
 import json
 import time
 from loguru import logger
+from enum import Enum, auto
 
 import tomli
 import requests
@@ -29,6 +30,12 @@ class InvalidConfigFile(EduLintConfigFileException):
     pass
 
 
+class ConfigFileType(Enum):
+    REMOTE = auto()
+    LOCAL = auto()
+    PACKAGED = auto()
+
+
 def load_toml_file(filename_or_url: str) -> Optional[Dict[str, Any]]:
     try:
         file_content = _load_file_from_uri(filename_or_url)
@@ -44,14 +51,29 @@ def load_toml_file(filename_or_url: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _load_file_from_uri(path_or_url: str) -> str:
+def get_config_type(path_or_url: str) -> ConfigFileType:
     if path_or_url.startswith(("http://", "https://")):
-        return _load_external_config_file(path_or_url)
+        return ConfigFileType.REMOTE
 
     if _only_acceptable_chars(path_or_url):
+        return ConfigFileType.PACKAGED
+
+    return ConfigFileType.LOCAL
+
+
+def _load_file_from_uri(path_or_url: str) -> str:
+    config_type = get_config_type(path_or_url)
+
+    if config_type == ConfigFileType.REMOTE:
+        return _load_external_config_file(path_or_url)
+
+    if config_type == ConfigFileType.LOCAL:
+        return _load_local_config_file(path_or_url, path_or_url, "found locally")
+
+    if config_type == ConfigFileType.PACKAGED:
         return _load_packaged_config_file(path_or_url)
 
-    return _load_local_config_file(path_or_url, path_or_url, "found locally")
+    assert False, "unreachable"
 
 
 def _only_acceptable_chars(filepath: str) -> bool:
