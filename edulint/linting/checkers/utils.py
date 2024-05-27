@@ -286,10 +286,13 @@ class TokenCountingVisitor(BaseVisitor[int]):
     def visit_ifexp(self, node: nodes.IfExp) -> int:
         return self._visit_with_else(node)
 
+    def visit_expr(self, node: nodes.Expr) -> int:
+        return self.visit(node.value)
+
 
 def get_token_count(node: Union[nodes.NodeNG, List[nodes.NodeNG]]) -> int:
     visitor = TokenCountingVisitor()
     if isinstance(node, (list, tuple)):
-        return visitor.visit_many(node)
+        return visitor.visit_many(node) - 1
     else:
         return visitor.visit(node)

@@ -462,7 +462,7 @@ def test_if_into_variables(filename: str, expected_output: List[Problem]) -> Non
     ("fdc1570861-p6_workdays.py", []),
     ("tarot_card_reader.py", []),
     ("uc_73_0198_15_17.py", []),
-    ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
+    ("uc_73_2551_11_17.py", [lazy_problem().set_line(3), lazy_problem().set_line(5)]),
     ("uc_73_3819_50_56.py", [lazy_problem().set_line(6), lazy_problem().set_line(16)]),
     ("uc_73_3819-20_56.py", [lazy_problem().set_line(7), lazy_problem().set_line(18)]),
     ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]),
@@ -494,7 +494,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     ("uc_73_0198_15_17.py", []),
     ("uc_73_2551_11_17.py", []), # dubious
     ("uc_73_3819_50_56.py", []), # dubious
-    ("uc_73_3819-20_56.py", [lazy_problem().set_line(3)]),
+    ("uc_73_3819-20_56.py", [lazy_problem().set_line(3), lazy_problem().set_line(7)]),
     ("uc_73_3897_10_43.py", []), # dubious
     ("uc_73_5468_12_52.py", []),
     ("uc_73_7863_14_44.py", []), # dubious
