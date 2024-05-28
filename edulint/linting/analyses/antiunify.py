@@ -316,22 +316,24 @@ def sub_to_variable(avar, i):
     assert False, f"unreachable, but {sub}"
 
 
-def can_be_removed(core, avar) -> bool:
+def get_removable(core, avar) -> bool:
     assert isinstance(avar.parent, nodes.AssignName)
     avar_loc = get_cfg_loc(avar)
 
-    to_remove = [avar]
+    to_remove = {avar}
 
-    for core_loc in syntactic_children_locs_from(avar_loc, core):
-        for i, loc in enumerate(core_loc.node.sub_locs):
-            var = sub_to_variable(avar, i)
+    for ic, core_loc in enumerate(syntactic_children_locs_from(avar_loc, core)):
+        if ic == 0:
+            continue
+        for il, loc in enumerate(core_loc.node.sub_locs):
+            var = sub_to_variable(avar, il)
             if var in loc.var_events:
                 for loc_avar in get_avars(core_loc.node):
                     assert len(avar.subs) == len(loc_avar.subs)
                     if any(asub != lasub for asub, lasub in zip(avar.subs, loc_avar.subs)):
-                        return False, to_remove
-                    to_remove.append(loc_avar)
-    return True, to_remove
+                        return set()
+                    to_remove.add(loc_avar)
+    return to_remove
 
 
 def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
@@ -348,11 +350,8 @@ def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
         ):
             continue
 
-        remove, to_remove = can_be_removed(core, avar)
-        if remove:
-            for to_remove_avar in to_remove:
-                if all(asub == trsub for asub, trsub in zip(avar.subs, to_remove_avar.subs)):
-                    to_remove_avar.parent.name = avar.subs[0]
+        for to_remove_avar in get_removable(core, avar):
+            to_remove_avar.parent.name = avar.subs[0]
 
     return core, get_avars(core)
 
