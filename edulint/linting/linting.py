@@ -44,7 +44,9 @@ def flake8_to_problem(enablers: Dict[str, str], raw: ProblemJson) -> Problem:
     )
 
 
-def pylint_to_problem(filenames: List[str], enablers: Dict[str, str], raw: ProblemJson) -> Problem:
+def pylint_to_problem(
+    files_or_dirs: List[str], enablers: Dict[str, str], raw: ProblemJson
+) -> Problem:
     assert isinstance(raw["path"], str), f'got {type(raw["path"])} for path'
     assert isinstance(raw["line"], int), f'got {type(raw["line"])} for line'
     assert isinstance(raw["column"], int), f'got {type(raw["column"])} for column'
@@ -59,9 +61,15 @@ def pylint_to_problem(filenames: List[str], enablers: Dict[str, str], raw: Probl
     assert isinstance(raw["symbol"], str), f'get {type(raw["symbol"])} for symbol'
 
     def get_used_filename(path: str) -> str:
-        for filename in filenames:
-            if os.path.abspath(filename) == os.path.abspath(path):
-                return filename
+        path = Path(path)
+        for fd in [Path(path) for path in files_or_dirs]:
+            abs_path = path.absolute()
+            abs_fd = fd.absolute()
+            if abs_fd == abs_path or abs_fd in abs_path.parents:
+                if fd.is_absolute():
+                    return path.absolute()
+                else:
+                    return fd / path.relative_to(fd)
         assert False, "unreachable"
 
     code_enabler = enablers.get(raw["message-id"])
@@ -83,14 +91,14 @@ def pylint_to_problem(filenames: List[str], enablers: Dict[str, str], raw: Probl
 
 def lint_any(
     linter: Linter,
-    filenames: List[str],
+    files_or_dirs: List[str],
     linter_args: List[str],
     config_arg: ImmutableT,
     result_getter: Callable[[Any], Any],
     out_to_problem: Callable[[Dict[str, str], ProblemJson], Problem],
     enablers: Dict[str, str],
 ) -> List[Problem]:
-    command = [sys.executable, "-m", str(linter)] + linter_args + list(config_arg) + filenames  # type: ignore
+    command = [sys.executable, "-m", str(linter)] + linter_args + list(config_arg) + files_or_dirs  # type: ignore
     return_code, outs, errs = ProcessHandler.run(command, timeout=1000)
 
     if ProcessHandler.is_status_code_by_timeout(return_code):
@@ -122,18 +130,18 @@ def lint_any(
     return list(map(partial(out_to_problem, enablers), result_getter(parsed)))
 
 
-def lint_edulint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
+def lint_edulint(files_or_dirs: List[str], config: ImmutableConfig) -> List[Problem]:
     ignored_infile = set(config[Option.IGNORE_INFILE_CONFIG_FOR])
     if len(ignored_infile) > 0:
-        return report_infile_config(filenames, ignored_infile, config.enablers)
+        return report_infile_config(files_or_dirs, ignored_infile, config.enablers)
     return []
 
 
-def lint_flake8(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
+def lint_flake8(files_or_dirs: List[str], config: ImmutableConfig) -> List[Problem]:
     flake8_args = ["--format=json"]
     return lint_any(
         Linter.FLAKE8,
-        filenames,
+        files_or_dirs,
         flake8_args,
         config[Option.FLAKE8],
         lambda r: [problem for problems in r.values() for problem in problems],
@@ -142,15 +150,15 @@ def lint_flake8(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
     )
 
 
-def lint_pylint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
+def lint_pylint(files_or_dirs: List[str], config: ImmutableConfig) -> List[Problem]:
     pylint_args = ["--output-format=json"]
     return lint_any(
         Linter.PYLINT,
-        filenames,
+        files_or_dirs,
         pylint_args,
         config[Option.PYLINT],
         lambda r: r,
-        partial(pylint_to_problem, filenames),
+        partial(pylint_to_problem, files_or_dirs),
         config.enablers,
     )
 
@@ -215,15 +223,17 @@ def sort(files_or_dirs: List[str], problems: List[Problem]) -> List[Problem]:
     return problems
 
 
-def lint(filenames: List[str], config: ImmutableConfig) -> List[Problem]:
-    logger.info("linting files: {filenames}", filenames=filenames)
+def lint(files_or_dirs: List[str], config: ImmutableConfig) -> List[Problem]:
+    logger.info("linting files: {files_or_dirs}", files_or_dirs=files_or_dirs)
     logger.info("using config: {config}", config=config)
-    edulint_result = lint_edulint(filenames, config)
-    flake8_result = [] if config[Option.NO_FLAKE8] else lint_flake8(filenames, config)
-    pylint_result = lint_pylint(filenames, config)
+
+    edulint_result = lint_edulint(files_or_dirs, config)
+    flake8_result = [] if config[Option.NO_FLAKE8] else lint_flake8(files_or_dirs, config)
+    pylint_result = lint_pylint(files_or_dirs, config)
+
     result = apply_overrides(edulint_result + flake8_result + pylint_result, get_overriders())
     result = apply_tweaks(result, get_tweakers(), config)
-    return sort(filenames, result)
+    return sort(files_or_dirs, result)
 
 
 def translate(lang_translations: LangTranslations, problem: Problem):
@@ -242,6 +252,6 @@ def lint_many(
 ) -> List[Problem]:
     return [
         translate(lang_translations, problem)
-        for filenames, config, lang_translations in partition
-        for problem in lint(filenames, config)
+        for files_or_dirs, config, lang_translations in partition
+        for problem in lint(files_or_dirs, config)
     ]
