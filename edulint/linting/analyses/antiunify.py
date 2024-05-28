@@ -41,9 +41,6 @@ class AunifyVar(nodes.Name):
     def __radd__(other, self):
         return other + str(self)
 
-    def __deepcopy__(self, memo):
-        return copy.copy(self)
-
     def replace(self, old, new):
         return self.name.replace(old, new)
 
@@ -398,33 +395,36 @@ def set_parents(parent: nodes.NodeNG, node: Any, recursive):
         assert False, f"unreachable, but {type(node)}"
 
 
-def get_sub_variant(orig, index: int):
-    def get_val_to_set(attrval, avar, val):
-        if isinstance(attrval, nodes.NodeNG):
-            if attrval == avar:
-                return True, val
+def get_sub_variant(core, index: int):
+    if isinstance(core, (list, tuple)):
+        return type(core)([get_sub_variant(c, index) for c in core])
+
+    if not isinstance(core, nodes.NodeNG):
+        return core
+
+    if isinstance(core, AunifyVar):
+        variant = core.subs[index]
+
+    else:
+        attr_variants = {
+            attr: get_sub_variant(getattr(core, attr), index) for attr in get_all_fields(core)
+        }
+        if isinstance(core, (nodes.Const, nodes.Nonlocal, nodes.Global, nodes.ImportFrom)):
+            variant = type(core)(**attr_variants)
         else:
-            for i, av in enumerate(attrval):
-                should_set, to_set_val = get_val_to_set(av, avar, val)
-                if should_set:
-                    return True, attrval[:i] + type(attrval[:i])([to_set_val]) + attrval[i + 1 :]
+            variant = type(core)()
 
-        return False, None
+        for attr, attr_variant in attr_variants.items():
+            setattr(variant, attr, attr_variant)
+            set_parents(variant, attr_variant, recursive=False)
 
-    core = copy.deepcopy(orig)
-    set_parents(None, core, recursive=True)
+    try:
+        if len(core.sub_locs) > 0:
+            variant.cfg_loc = core.sub_locs[index]
+    except AttributeError:
+        pass
 
-    for avar in get_avars(core):
-        val = avar.subs[index]
-        all_fields = get_all_fields(avar.parent)
-        for attr in all_fields:
-            attrval = getattr(avar.parent, attr)
-            should_set, to_set_val = get_val_to_set(attrval, avar, val)
-            if should_set:
-                setattr(avar.parent, attr, to_set_val)
-                break
-
-    return core
+    return variant
 
 
 ##############################################################################
