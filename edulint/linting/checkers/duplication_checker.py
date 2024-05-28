@@ -8,7 +8,12 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, AunifyVar, core_as_string
+from edulint.linting.analyses.antiunify import (
+    antiunify,
+    AunifyVar,
+    core_as_string,
+    get_sub_variant,
+)
 from edulint.linting.analyses.variable_modification import VarEventType
 from edulint.linting.analyses.reaching_definitions import (
     vars_in,
@@ -37,6 +42,8 @@ from edulint.linting.checkers.utils import (
     has_else_block,
     get_range_params,
     get_const_value,
+    is_negation,
+    are_identical,
 )
 
 
@@ -867,6 +874,66 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
         return middle
 
+    def merge_twisted_if_branches(tests, inner_if: nodes.If, avars):
+        if len(tests) > 1 or len(inner_if.orelse) == 0:
+            return None
+
+        outer_test = tests[0]
+        inner_test = inner_if.test
+
+        pos_pos = get_sub_variant(inner_if.body, 0)
+        pos_neg = get_sub_variant(inner_if.orelse, 0)
+        neg_pos = get_sub_variant(inner_if.body, 1)
+        neg_neg = get_sub_variant(inner_if.orelse, 1)
+
+        # positive and negative branches are twisted
+        if not (
+            are_identical(pos_pos, neg_neg)
+            and are_identical(pos_neg, neg_pos)
+            and not contains_avar(inner_test, avars)
+        ) and not (
+            # branches are correctly structured, but the inner condition is negated
+            are_identical(pos_pos, neg_pos)
+            and are_identical(pos_neg, neg_neg)
+            and is_negation(
+                get_sub_variant(inner_test, 0), get_sub_variant(inner_test, 1), negated_rt=False
+            )
+        ):
+            return None
+
+        pp_test = nodes.BoolOp(op="and")
+        pp_test.values = [outer_test, inner_test]
+
+        neg_outer_test = nodes.UnaryOp(op="not")
+        neg_outer_test.operand = outer_test
+        neg_inner_test = nodes.UnaryOp(op="not")
+        neg_inner_test.operand = inner_test
+
+        nn_test = nodes.BoolOp(op="and")
+        nn_test.values = [neg_outer_test, neg_inner_test]
+
+        test = nodes.BoolOp(op="or")
+        test.values = [pp_test, nn_test]
+
+        if_ = nodes.If()
+        if_.test = test
+        if_.body = inner_if.sub_locs[0].node.body
+        if_.orelse = inner_if.sub_locs[0].node.orelse
+
+        return if_
+
+    def restructure_nested_conditions(tests, core, avars):
+        if len(core) != 0 or not isinstance(core[0], nodes.If):
+            return None
+
+        inner_if = core[0]
+
+        restructured = merge_twisted_if_branches(tests, inner_if, avars)
+        if restructured is not None:
+            return restructured
+
+        return None
+
     COMPLEX_EXPRESSION_TYPES = (nodes.BinOp,)
     # SIMPLE_EXPRESSION_TYPES = (nodes.AugAssign, nodes.Call, nodes.BoolOp, nodes.Compare)
 
@@ -966,9 +1033,17 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             if min_ == max_ and if_can_be_moved(core[min_], avars):
                 root = get_fixed_by_moving_if_rec(tests, core[min_], avars)
             else:
-                root, if_bodies = create_ifs(tests)
-                for if_body in if_bodies:
-                    if_body.extend(core[min_ : max_ + 1])
+                new_body = core[min_ : max_ + 1]
+                root = None
+                if len(new_body) == 1 and isinstance(new_body[0], nodes.If):
+                    restructured = merge_twisted_if_branches(tests, new_body[0], avars)
+                    if restructured is not None:
+                        root = restructured
+
+                if root is None:
+                    root, if_bodies = create_ifs(tests)
+                    for if_body in if_bodies:
+                        if_body.extend(new_body)
 
             return core[:min_] + [root] + core[max_ + 1 :]
 

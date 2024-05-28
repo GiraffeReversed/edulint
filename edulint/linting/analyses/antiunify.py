@@ -41,6 +41,9 @@ class AunifyVar(nodes.Name):
     def __radd__(other, self):
         return other + str(self)
 
+    def __deepcopy__(self, memo):
+        return copy.copy(self)
+
     def replace(self, old, new):
         return self.name.replace(old, new)
 
@@ -201,15 +204,6 @@ class Antiunify:
 
         return attr_cores, avars
 
-    def _set_parents(self, core: nodes.NodeNG, node: Any):
-        if isinstance(node, nodes.NodeNG):
-            node.parent = core
-        elif isinstance(node, (list, tuple)):
-            for elem in node:
-                self._set_parents(core, elem)
-        elif node is not None and not isinstance(node, (str, bool, int, float, bytes)):
-            assert False, f"unreachable, but {type(node)}"
-
     def _aunify_by_attrs(
         self,
         to_aunify,
@@ -245,12 +239,12 @@ class Antiunify:
             pass
 
         for attr_core_before in attr_cores_before.values():
-            self._set_parents(core, attr_core_before)
+            set_parents(core, attr_core_before, recursive=False)
 
         attr_cores_after, avars_after = self._aunify_many_attrs(attrs_after, to_aunify, stop_on)
         for attr, attr_core_after in attr_cores_after.items():
             setattr(core, attr, attr_core_after)
-            self._set_parents(core, attr_core_after)
+            set_parents(core, attr_core_after, recursive=False)
 
         avars = avars_before + avars_after
         if stop_on(avars):
@@ -385,6 +379,52 @@ def antiunify(
     if stop_on_after_renamed_identical(avars):
         return None
     return core, avars
+
+
+def set_parents(parent: nodes.NodeNG, node: Any, recursive):
+    if isinstance(node, nodes.NodeNG):
+        node.parent = parent
+
+        if recursive:
+            for attr in get_all_fields(node):
+                children = getattr(node, attr)
+                set_parents(node, children, recursive)
+
+    elif isinstance(node, (list, tuple)):
+        for elem in node:
+            set_parents(parent, elem, recursive)
+
+    elif node is not None and not isinstance(node, (str, bool, int, float, bytes)):
+        assert False, f"unreachable, but {type(node)}"
+
+
+def get_sub_variant(orig, index: int):
+    def get_val_to_set(attrval, avar, val):
+        if isinstance(attrval, nodes.NodeNG):
+            if attrval == avar:
+                return True, val
+        else:
+            for i, av in enumerate(attrval):
+                should_set, to_set_val = get_val_to_set(av, avar, val)
+                if should_set:
+                    return True, attrval[:i] + type(attrval[:i])([to_set_val]) + attrval[i + 1 :]
+
+        return False, None
+
+    core = copy.deepcopy(orig)
+    set_parents(None, core, recursive=True)
+
+    for avar in get_avars(core):
+        val = avar.subs[index]
+        all_fields = get_all_fields(avar.parent)
+        for attr in all_fields:
+            attrval = getattr(avar.parent, attr)
+            should_set, to_set_val = get_val_to_set(attrval, avar, val)
+            if should_set:
+                setattr(avar.parent, attr, to_set_val)
+                break
+
+    return core
 
 
 ##############################################################################

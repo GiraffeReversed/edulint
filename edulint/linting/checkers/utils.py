@@ -1,4 +1,4 @@
-from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, Tuple, cast
+from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, Tuple, cast, Callable
 from astroid import nodes, Uninferable  # type: ignore
 import sys
 import inspect
@@ -296,3 +296,79 @@ def get_token_count(node: Union[nodes.NodeNG, List[nodes.NodeNG]]) -> int:
         return visitor.visit_many(node) - 1
     else:
         return visitor.visit(node)
+
+
+NEGATED_OP = {
+    ">=": "<",
+    "<=": ">",
+    ">": "<=",
+    "<": ">=",
+    "==": "!=",
+    "!=": "==",
+    "is": "is not",
+    "is not": "is",
+    "in": "not in",
+    "not in": "in",
+    "and": "or",
+    "or": "and",
+}
+
+
+def is_negation(lt: nodes.NodeNG, rt: nodes.NodeNG, negated_rt: bool) -> bool:
+    def ops_match(lt: nodes.NodeNG, rt: nodes.NodeNG, lt_transform: Callable[[str], str]) -> bool:
+        return all(lt_transform(lt_op) == rt_op for (lt_op, _), (rt_op, _) in zip(lt.ops, rt.ops))
+
+    def to_values(node: nodes.NodeNG) -> List[nodes.NodeNG]:
+        return [node.left] + [val for _, val in node.ops]
+
+    def all_are_negations(
+        lt_values: List[nodes.NodeNG], rt_values: List[nodes.NodeNG], new_rt_negated: bool
+    ) -> bool:
+        return all(is_negation(ll, rr, new_rt_negated) for ll, rr in zip(lt_values, rt_values))
+
+    def strip_nots(node: nodes.NodeNG, negated_rt: bool) -> Tuple[nodes.NodeNG, bool]:
+        while isinstance(node, nodes.UnaryOp) and node.op == "not":
+            negated_rt = not negated_rt
+            node = node.operand
+        return node, negated_rt
+
+    lt, negated_rt = strip_nots(lt, negated_rt)
+    rt, negated_rt = strip_nots(rt, negated_rt)
+
+    if not isinstance(lt, type(rt)):
+        return False
+
+    if isinstance(lt, nodes.BoolOp):
+        if len(lt.values) == len(rt.values) and (
+            (negated_rt and lt.op == rt.op) or (not negated_rt and NEGATED_OP[lt.op] == rt.op)
+        ):
+            return all_are_negations(lt.values, rt.values, negated_rt)
+        return False
+
+    if isinstance(lt, nodes.Compare):
+        if len(lt.ops) != len(rt.ops):
+            return False
+
+        if negated_rt and ops_match(lt, rt, lambda op: op):
+            return all_are_negations(to_values(lt), to_values(rt), negated_rt)
+
+        if not negated_rt and ops_match(lt, rt, lambda op: NEGATED_OP[op]):
+            return all_are_negations(to_values(lt), to_values(rt), not negated_rt)
+
+        return False
+
+    return negated_rt and are_identical(lt, rt)
+
+
+def are_identical(
+    block1: Union[nodes.NodeNG, List[nodes.NodeNG]], block2: Union[nodes.NodeNG, List[nodes.NodeNG]]
+) -> bool:
+    if isinstance(block1, nodes.NodeNG):
+        assert isinstance(block2, nodes.NodeNG)
+        block1 = [block1]
+        block2 = [block2]
+
+    strings1 = [n.as_string() for n in block1]
+    strings2 = [n.as_string() for n in block2]
+
+    return strings1 == strings2

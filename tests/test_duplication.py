@@ -493,11 +493,11 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     ("tarot_card_reader.py", []),
     ("uc_73_0198_15_17.py", []),
     ("uc_73_2551_11_17.py", []), # dubious
-    ("uc_73_3819_50_56.py", []), # dubious
+    ("uc_73_3819_50_56.py", [lazy_problem().set_line(3)]), # multi-step
     ("uc_73_3819-20_56.py", [lazy_problem().set_line(3), lazy_problem().set_line(7)]),
     ("uc_73_3897_10_43.py", []), # dubious
     ("uc_73_5468_12_52.py", []),
-    ("uc_73_7863_14_44.py", []), # dubious
+    ("uc_73_7863_14_44.py", [lazy_problem().set_line(3)]), # multi-step
     ("uc_73_8593_19_21.py", []),
 ])
 def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:

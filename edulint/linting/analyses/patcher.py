@@ -3,11 +3,14 @@
 
 # adapted from https://github.com/pyta-uoft/pyta/blob/4c858623549e24a49fea7aef9c8ec7c20c836bd6/python_ta/patches/transforms.py
 
+import astroid
 from pylint.lint import PyLinter
 
 from edulint.linting.analyses.variable_scope import UnknowableLocalsException
 from edulint.linting.analyses.variable_modification import VarModificationAnalysis
 from edulint.linting.analyses.reaching_definitions import collect_reaching_definitions
+
+from edulint.linting.analyses.antiunify import AunifyVar
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from loguru import logger
 
@@ -28,6 +31,7 @@ def patch_ast_transforms():
         return ast
 
     PyLinter.get_ast = new_get_ast
+    astroid.raw_building._CONST_PROXY[AunifyVar] = None
 
 
 def register(_linter: "PyLinter") -> None:

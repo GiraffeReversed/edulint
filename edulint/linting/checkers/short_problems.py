@@ -1,5 +1,5 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Callable
+from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any
 
 from pylint.checkers import BaseChecker
 from pylint.checkers.utils import only_required_for_messages
@@ -13,6 +13,7 @@ from edulint.linting.checkers.utils import (
     infer_to_value,
     is_parents_elif,
     get_statements_count,
+    is_negation,
 )
 
 
@@ -339,72 +340,7 @@ class Short(BaseChecker):
         if any(is_mutable(elem) for elem in lst.elts):
             self.add_message("do-not-multiply-mutable", node=node)
 
-    NEGATED_OP = {
-        ">=": "<",
-        "<=": ">",
-        ">": "<=",
-        "<": ">=",
-        "==": "!=",
-        "!=": "==",
-        "is": "is not",
-        "is not": "is",
-        "in": "not in",
-        "not in": "in",
-        "and": "or",
-        "or": "and",
-    }
-
     def _check_redundant_elif(self, node: nodes.If) -> None:
-        def ops_match(
-            lt: nodes.NodeNG, rt: nodes.NodeNG, lt_transform: Callable[[str], str]
-        ) -> bool:
-            return all(
-                lt_transform(lt_op) == rt_op for (lt_op, _), (rt_op, _) in zip(lt.ops, rt.ops)
-            )
-
-        def to_values(node: nodes.NodeNG) -> List[nodes.NodeNG]:
-            return [node.left] + [val for _, val in node.ops]
-
-        def all_are_negations(
-            lt_values: List[nodes.NodeNG], rt_values: List[nodes.NodeNG], new_rt_negated: bool
-        ) -> bool:
-            return all(is_negation(ll, rr, new_rt_negated) for ll, rr in zip(lt_values, rt_values))
-
-        def strip_nots(node: nodes.NodeNG, negated_rt: bool) -> Tuple[nodes.NodeNG, bool]:
-            while isinstance(node, nodes.UnaryOp) and node.op == "not":
-                negated_rt = not negated_rt
-                node = node.operand
-            return node, negated_rt
-
-        def is_negation(lt: nodes.NodeNG, rt: nodes.NodeNG, negated_rt: bool) -> bool:
-            lt, negated_rt = strip_nots(lt, negated_rt)
-            rt, negated_rt = strip_nots(rt, negated_rt)
-
-            if not isinstance(lt, type(rt)):
-                return False
-
-            if isinstance(lt, nodes.BoolOp) and isinstance(rt, nodes.BoolOp):
-                if len(lt.values) == len(rt.values) and (
-                    (negated_rt and lt.op == rt.op)
-                    or (not negated_rt and Short.NEGATED_OP[lt.op] == rt.op)
-                ):
-                    return all_are_negations(lt.values, rt.values, negated_rt)
-                return False
-
-            if isinstance(lt, nodes.Compare) and isinstance(rt, nodes.Compare):
-                if len(lt.ops) != len(rt.ops):
-                    return False
-
-                if negated_rt and ops_match(lt, rt, lambda op: op):
-                    return all_are_negations(to_values(lt), to_values(rt), negated_rt)
-
-                if not negated_rt and ops_match(lt, rt, lambda op: Short.NEGATED_OP[op]):
-                    return all_are_negations(to_values(lt), to_values(rt), not negated_rt)
-
-                return False
-
-            return negated_rt and lt.as_string() == rt.as_string()
-
         if_test = node.test
         if node.has_elif_block():
             next_if = node.orelse[0]
