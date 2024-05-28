@@ -45,6 +45,7 @@ from edulint.linting.checkers.utils import (
     get_const_value,
     is_negation,
     are_identical,
+    EXPRESSION_TYPES,
 )
 
 
@@ -1376,6 +1377,9 @@ def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) 
             ),
         )
 
+    if type_mismatch(avars):
+        return False
+
     tokens_before = sum(get_token_count(node) for node in to_aunify)
     stmts_before = sum(
         get_statements_count(node, include_defs=False, include_name_main=True) for node in to_aunify
@@ -2319,7 +2323,9 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             result = antiunify(
                 to_aunify,
                 stop_on=lambda avars: length_mismatch(avars)
-                or type_mismatch(avars)
+                or type_mismatch(
+                    avars, allowed_mismatches=[{nodes.Name, t} for t in EXPRESSION_TYPES]
+                )
                 or called_aunify_var(avars),
                 stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
             )

@@ -5,6 +5,24 @@ import inspect
 import operator
 from pylint.checkers import utils  # type: ignore
 
+EXPRESSION_TYPES = (
+    nodes.Subscript,
+    nodes.Attribute,
+    nodes.BinOp,
+    nodes.BoolOp,
+    nodes.Call,
+    nodes.Compare,
+    nodes.Const,
+    nodes.List,
+    nodes.Dict,
+    nodes.Set,
+    nodes.GeneratorExp,
+    nodes.IfExp,
+    nodes.Lambda,
+    nodes.Tuple,
+    nodes.UnaryOp,
+)
+
 
 def eprint(*args: Any, **kwargs: Any) -> None:
     print(*args, file=sys.stderr, **kwargs)

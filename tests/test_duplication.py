@@ -403,6 +403,7 @@ def test_similar_to_loop_merge(filename: str, expected_output: List[Problem]) ->
         # lazy_problem().set_line(24),
         # lazy_problem().set_line(28),
     ]),
+    ("ut_92_5508_03_10.py", [lazy_problem().set_line(7)]),
 ])
 def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
