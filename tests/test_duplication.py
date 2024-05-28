@@ -565,7 +565,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
 def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=if-into-block,twisted-if-into-restructured,nested-if-into-restructured")],
+        [Arg(Option.PYLINT, "--enable=if-into-block,twisted-if-to-restructured,nested-if-to-restructured")],
         expected_output
     )
 
