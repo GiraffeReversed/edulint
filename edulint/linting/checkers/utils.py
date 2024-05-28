@@ -332,6 +332,33 @@ def is_negation(lt: nodes.NodeNG, rt: nodes.NodeNG, negated_rt: bool) -> bool:
             node = node.operand
         return node, negated_rt
 
+    def is_mod_two(node: nodes.NodeNG):
+        return isinstance(node, nodes.BinOp) and node.op == "%" and get_const_value(node.right) == 2
+
+    # TODO allow x % 2 > 0
+    def is_eq_mod_two(node: nodes.NodeNG):
+        if len(node.ops) != 1:
+            return False
+
+        left, (op, right) = node.left, node.ops[0]
+        if op not in ("==", "!=") or is_mod_two(left) == is_mod_two(right):
+            return False
+
+        # MAYBE check if value equal to mod is 0 or 1?
+        return True
+
+    def mod_two_negation(lt: nodes.NodeNG, rt: nodes.NodeNG):
+        if not is_eq_mod_two(lt) or not is_eq_mod_two(rt):
+            return False
+
+        lt_lt, (_, lt_rt) = lt.left, lt.ops[0]
+        rt_lt, (_, rt_rt) = rt.left, rt.ops[0]
+
+        lt_mod, lt_val = (lt_lt, lt_rt) if is_mod_two(lt_lt) else (lt_rt, lt_lt)
+        rt_mod, rt_val = (rt_lt, rt_rt) if is_mod_two(rt_lt) else (rt_rt, rt_lt)
+
+        return are_identical(lt_mod.left, rt_mod.left) and not are_identical(lt_val, rt_val)
+
     lt, negated_rt = strip_nots(lt, negated_rt)
     rt, negated_rt = strip_nots(rt, negated_rt)
 
@@ -354,6 +381,9 @@ def is_negation(lt: nodes.NodeNG, rt: nodes.NodeNG, negated_rt: bool) -> bool:
 
         if not negated_rt and ops_match(lt, rt, lambda op: NEGATED_OP[op]):
             return all_are_negations(to_values(lt), to_values(rt), not negated_rt)
+
+        if not negated_rt and mod_two_negation(lt, rt):
+            return True
 
         return False
 
