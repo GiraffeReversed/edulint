@@ -53,6 +53,31 @@ class DisallowedAntiunification(Exception):
     pass
 
 
+ASTROID_EXTRA_FIELDS = {
+    nodes.Name: ("name",),
+    nodes.AssignName: ("name",),
+    nodes.Attribute: ("attrname",),
+    nodes.AssignAttr: ("attrname",),
+    nodes.BoolOp: ("op",),
+    nodes.BinOp: ("op",),
+    nodes.UnaryOp: ("op",),
+    nodes.AugAssign: ("op",),
+    nodes.FunctionDef: ("name",),
+    nodes.Const: ("value",),
+    nodes.Nonlocal: ("names",),
+    nodes.Global: ("names",),
+    nodes.ImportFrom: (
+        "modname",
+        "names",
+    ),
+    nodes.Import: ("names",),
+}
+
+
+def get_all_fields(node):
+    return type(node)._astroid_fields + ASTROID_EXTRA_FIELDS.get(type(node), ())
+
+
 class Antiunify:
     __num = 0
 
@@ -114,11 +139,12 @@ class Antiunify:
             )
 
         # astroid.nodes of same type
-        aunify_funcname = f"_aunify_{type(to_aunify[0]).__name__.lower()}"
-        if hasattr(self, aunify_funcname):
-            return getattr(self, aunify_funcname)(to_aunify, stop_on)
+        some = to_aunify[0]
+        all_fields = get_all_fields(some)
+        if isinstance(some, (nodes.Const, nodes.Nonlocal, nodes.Global, nodes.ImportFrom)):
+            return self._aunify_by_attrs(to_aunify, all_fields, [], stop_on)
 
-        return self._aunify_by_attrs(to_aunify, [], to_aunify[0]._astroid_fields, stop_on)
+        return self._aunify_by_attrs(to_aunify, [], all_fields, stop_on)
 
     def _antiunify_lists(
         self,
@@ -232,97 +258,6 @@ class Antiunify:
 
         return core, avars
 
-    def _aunify_by_attr(self, to_aunify, attr: str, stop_on: Callable[[List[AunifyVar]], bool]):
-        return self._aunify_by_attrs(to_aunify, [], [attr], stop_on)
-
-    def _aunify_name(self, to_aunify: List[nodes.Name], stop_on: Callable[[List[AunifyVar]], bool]):
-        return self._aunify_by_attr(to_aunify, "name", stop_on)
-
-    def _aunify_assignname(
-        self, to_aunify: List[nodes.AssignName], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attr(to_aunify, "name", stop_on)
-
-    def _aunify_attribute(
-        self, to_aunify: List[nodes.Attribute], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, [], ["expr", "attrname"], stop_on)
-
-    def _aunify_assignattr(
-        self, to_aunify: List[nodes.AssignAttr], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, [], ["expr", "attrname"], stop_on)
-
-    def _aunify_boolop(
-        self, to_aunify: List[nodes.BoolOp], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, [], ["op", "values"], stop_on)
-
-    def _aunify_binop(
-        self, to_aunify: List[nodes.BinOp], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, [], ["left", "op", "right"], stop_on)
-
-    def _aunify_unaryop(
-        self, to_aunify: List[nodes.UnaryOp], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, [], ["op", "operand"], stop_on)
-
-    def _aunify_augassign(
-        self, to_aunify: List[nodes.AugAssign], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, [], ["target", "op", "value"], stop_on)
-
-    def _aunify_functiondef(
-        self, to_aunify: List[nodes.FunctionDef], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(
-            to_aunify, [], to_aunify[0]._astroid_fields + ("name",), stop_on
-        )
-
-    def _aunify_const(
-        self, to_aunify: List[nodes.Const], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, ["value"], [], stop_on)
-
-    def _aunify_nonlocal(
-        self, to_aunify: List[nodes.Nonlocal], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, ["names"], [], stop_on)
-
-    def _aunify_global(
-        self, to_aunify: List[nodes.Global], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, ["names"], [], stop_on)
-
-    def _aunify_importfrom(
-        self, to_aunify: List[nodes.ImportFrom], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, ["modname", "names"], [], stop_on)
-
-    def _aunify_import(
-        self, to_aunify: List[nodes.Import], stop_on: Callable[[List[AunifyVar]], bool]
-    ):
-        return self._aunify_by_attrs(to_aunify, [], ["names"], stop_on)
-
-
-ASTROID_FIELDS = {
-    nodes.Name: ["name"],
-    nodes.AssignName: ["name"],
-    nodes.Attribute: ["expr", "attrname"],
-    nodes.AssignAttr: ["expr", "attrname"],
-    nodes.BoolOp: ["op", "values"],
-    nodes.BinOp: ["left", "op", "right"],
-    nodes.UnaryOp: ["op", "operand"],
-    nodes.AugAssign: ["target", "op", "value"],
-    nodes.FunctionDef: ("name",) + nodes.FunctionDef._astroid_fields,
-    nodes.Const: ["value"],
-    nodes.Nonlocal: ["names"],
-    nodes.Global: ["names"],
-    nodes.ImportFrom: ["modname", "names"],
-    nodes.Import: ["names"],
-}
-
 
 def get_avars(core: nodes.NodeNG, result: List[AunifyVar] = None) -> List[AunifyVar]:
     result = result if result is not None else []
@@ -331,8 +266,8 @@ def get_avars(core: nodes.NodeNG, result: List[AunifyVar] = None) -> List[Aunify
         result.append(core)
 
     elif isinstance(core, nodes.NodeNG):
-        attrs = ASTROID_FIELDS.get(type(core), type(core)._astroid_fields)
-        for attr in attrs:
+        all_fields = get_all_fields(core)
+        for attr in all_fields:
             get_avars(getattr(core, attr), result)
 
     elif isinstance(core, (tuple, list)):
