@@ -365,9 +365,19 @@ def test_twisted_to_restructured(lines: List[str], expected_output: List[Problem
 
     ], [lazy_problem().set_line(2)]),
 ])
-def test_nested_to_restructured(lines: List[str], expected_output: List[Problem]) -> None:
+def test_nested_to_restructured_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
+        [Arg(Option.PYLINT, "--enable=nested-if-to-restructured")],
+        expected_output
+    )
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("uc_28_6710_05_14.py", []),
+])
+def test_nested_to_restructured(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
         [Arg(Option.PYLINT, "--enable=nested-if-to-restructured")],
         expected_output
     )
