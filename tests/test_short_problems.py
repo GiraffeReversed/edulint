@@ -9,28 +9,31 @@ from typing import List
 class TestShort:
     @pytest.mark.parametrize("lines,expected_output", [
         ([
-            "if x > y:",
-            "    print('foo')",
-            "elif x <= y:",
-            "    print('bar')"
+            "def fun(x, y):",
+            "    if x > y:",
+            "        print('foo')",
+            "    elif x <= y:",
+            "        print('bar')"
         ], [
-            lazy_problem().set_line(3).set_code("R6611")
+            lazy_problem().set_line(4).set_code("R6611")
         ]),
         ([
-            "if x > y:",
-            "    print('foo')",
-            "if x <= y:",
-            "    print('bar')"
+            "def fun(x, y):",
+            "    if x > y:",
+            "        print('foo')",
+            "    if x <= y:",
+            "        print('bar')"
         ], [
             # lazy_problem().set_line(3).set_code("R6611")  # TODO report another defect
         ]),
         ([
-            "if x > y:",
-            "    print('foo')",
-            "if x <= y:",
-            "    print('bar')",
-            "else:",
-            "    print('foobar')"
+            "def fun(x, y):",
+            "    if x > y:",
+            "        print('foo')",
+            "    if x <= y:",
+            "        print('bar')",
+            "    else:",
+            "        print('foobar')"
         ], [
         ]),
     ])
