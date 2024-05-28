@@ -38,6 +38,7 @@ from edulint.linting.checkers.utils import (
     get_statements_count,
     eprint,
     cformat,  # noqa: F401
+    cprint,
     get_token_count,
     has_else_block,
     get_range_params,
