@@ -860,21 +860,28 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         assert parent is not None
         return parent
 
-    def check_enabled(message_id: str):
+    def check_enabled(message_ids: Union[str, List[str]]):
+        if isinstance(message_ids, str):
+            message_ids = [message_ids]
+
         def middle(func):
             def inner(*args, **kwargs):
-                if not self.linter.is_message_enabled(message_id):
+                if not any(self.linter.is_message_enabled(mi) for mi in message_ids):
                     return None
                 result = func(*args, **kwargs)
                 if result is None:
                     return result
-                return Fixed(message_id, *result)
+
+                if len(message_ids) == 1:
+                    return Fixed(message_ids[0], *result)
+                symbol, *result = result
+                return Fixed(symbol, *result)
 
             return inner
 
         return middle
 
-    def merge_twisted_if_branches(tests, inner_if: nodes.If, avars):
+    def restructure_twisted_ifs(tests, inner_if: nodes.If, avars):
         if len(tests) > 1 or len(inner_if.orelse) == 0:
             return None
 
@@ -922,15 +929,55 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
         return if_
 
-    def restructure_nested_conditions(tests, core, avars):
-        if len(core) != 0 or not isinstance(core[0], nodes.If):
+    def restructure_nested_ifs(tests, inner_if, avars):
+        if contains_avar(inner_if.test, avars):
             return None
 
-        inner_if = core[0]
+        if_ = nodes.If()
+        if_.test = inner_if.test
+        to_complete = []
 
-        restructured = merge_twisted_if_branches(tests, inner_if, avars)
-        if restructured is not None:
-            return restructured
+        if not contains_avar(inner_if.body, avars):
+            if_.body = inner_if.body
+            if_.orelse = to_complete
+            to_extract = inner_if.orelse
+
+        elif not contains_avar(inner_if.orelse, avars):
+            if_.body = to_complete
+            if_.orelse = inner_if.orelse
+            to_extract = inner_if.body
+
+        else:
+            return None
+
+        new_inner_if, if_bodies = create_ifs(tests)
+        to_complete.append(new_inner_if)
+
+        for i in range(len(avars[0].subs)):
+            if_bodies[i].extend(get_sub_variant(to_extract, i))
+
+        return if_
+
+    def restructure_ifs(tests, core, avars):
+        if isinstance(core, list):
+            if len(core) != 1:
+                return None
+            inner_if = core[0]
+        else:
+            inner_if = core
+
+        if not isinstance(inner_if, nodes.If):
+            return None
+
+        for symbol, fun in (
+            ("twisted-if-to-restructured", restructure_twisted_ifs),
+            ("nested-if-to-restructured", restructure_nested_ifs),
+        ):
+            if not self.linter.is_message_enabled(symbol):
+                continue
+            restructured = fun(tests, inner_if, avars)
+            if restructured is not None:
+                return symbol, restructured
 
         return None
 
@@ -982,10 +1029,15 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             (),
         )
 
-    def contains_avar(node: nodes.NodeNG, avars):
+    def contains_avar(node: Union[nodes.NodeNG, List[nodes.NodeNG]], avars):
+        if isinstance(node, nodes.NodeNG):
+            ns = [node]
+        else:
+            ns = node
+
         for avar in avars:
             for ancestor in avar.node_ancestors():
-                if ancestor == node:
+                if any(ancestor == n for n in ns):
                     return True
         return False
 
@@ -1036,9 +1088,9 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
                 new_body = core[min_ : max_ + 1]
                 root = None
                 if len(new_body) == 1 and isinstance(new_body[0], nodes.If):
-                    restructured = merge_twisted_if_branches(tests, new_body[0], avars)
-                    if restructured is not None:
-                        root = restructured
+                    result = restructure_ifs(tests, new_body[0], avars)
+                    if result is not None:
+                        _symbol, root = result
 
                 if root is None:
                     root, if_bodies = create_ifs(tests)
@@ -1080,7 +1132,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             (),
         )
 
-    def create_ifs(tests: List[nodes.NodeNG]) -> nodes.If:
+    def create_ifs(tests: List[nodes.NodeNG]) -> Tuple[nodes.If, List[nodes.NodeNG]]:
         root = nodes.If()
         if_ = root
         if_bodies = []
@@ -1192,6 +1244,20 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             ),
         )
 
+    @check_enabled(["nested-if-to-restructured", "twisted-if-to-restructured"])
+    def get_fixed_by_restructuring(tests, core, avars):
+        result = restructure_ifs(tests, core, avars)
+        if result is None:
+            return None
+
+        symbol, fixed = result
+        return (
+            symbol,
+            get_token_count(fixed),
+            get_statements_count(fixed, include_defs=False, include_name_main=False),
+            (),
+        )
+
     if is_parents_elif(node):
         return False
 
@@ -1221,6 +1287,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         get_fixed_by_moving_if(tests, core, avars) if not tvs_change else None,
         get_fixed_by_vars(tests, core, avars) if not called_avar else None,
         get_fixed_by_function(tests, core, avars) if not called_avar else None,
+        get_fixed_by_restructuring(tests, core, avars) if not tvs_change else None,
     ]
 
     fixed = [
@@ -1826,6 +1893,16 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         "R6809": (
             "Extract to a common function (%d repetitions of %d statements).",
             "similar-to-function-in-if",
+            "",
+        ),
+        "R6810": (
+            "Restructure nested ifs",
+            "nested-if-to-restructured",
+            "",
+        ),
+        "R6811": (
+            "Restructure twisted ifs",
+            "twisted-if-to-restructured",
             "",
         ),
         "R6851": (

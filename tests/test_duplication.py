@@ -309,6 +309,59 @@ def test_similar_to_loop_custom(lines: List[str], expected_output: List[Problem]
         expected_output
     )
 
+@pytest.mark.parametrize("lines,expected_output", [
+    ([  # 0
+        "def fun(c1, c2):",
+        "    if c1:",
+        "        if c2:",
+        "            print('hello')",
+        "            print('kind')",
+        "        else:",
+        "            print('cruel')",
+        "            print('world')",
+        "    else:",
+        "        if c2:",
+        "            print('cruel')",
+        "            print('world')",
+        "        else:",
+        "            print('hello')",
+        "            print('kind')",
+
+    ], [lazy_problem().set_line(2)]),
+])
+def test_twisted_to_restructured(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=twisted-if-to-restructured")],
+        expected_output
+    )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([  # 0
+        "def fun(c1, c2):",
+        "    if c1:",
+        "        if c2:",
+        "            print('hello')",
+        "            print('kind')",
+        "        else:",
+        "            print('cruel')",
+        "            print('world')",
+        "    else:",
+        "        if c2:",
+        "            print('hello')",
+        "            print('foo')",
+        "        else:",
+        "            print('cruel')",
+        "            print('world')",
+
+    ], [lazy_problem().set_line(2)]),
+])
+def test_nested_to_restructured(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=nested-if-to-restructured")],
+        expected_output
+    )
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("ut_80_2861_19_63.py", [lazy_problem().set_line(3).set_end_line(10)]),
@@ -495,7 +548,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     ("uc_73_2551_11_17.py", []), # dubious
     ("uc_73_3819_50_56.py", [lazy_problem().set_line(3)]), # multi-step
     ("uc_73_3819-20_56.py", [lazy_problem().set_line(3), lazy_problem().set_line(7)]),
-    ("uc_73_3897_10_43.py", []), # dubious
+    ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]), # multi-step
     ("uc_73_5468_12_52.py", []),
     ("uc_73_7863_14_44.py", [lazy_problem().set_line(3)]), # multi-step
     ("uc_73_8593_19_21.py", []),
@@ -503,7 +556,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
 def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=if-into-block")],
+        [Arg(Option.PYLINT, "--enable=if-into-block,twisted-if-into-restructured,nested-if-into-restructured")],
         expected_output
     )
 
