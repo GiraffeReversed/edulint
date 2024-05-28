@@ -784,7 +784,9 @@ def called_aunify_var(avars) -> bool:
     return False
 
 
-def extract_from_elif(node: nodes.If, result: List[nodes.If] = None) -> bool:
+def extract_from_elif(
+    node: nodes.If, result: List[nodes.If] = None
+) -> Tuple[bool, List[List[nodes.NodeNG]]]:
     """
     returns True iff elifs end with else
     """
@@ -817,6 +819,15 @@ def extract_from_elif(node: nodes.If, result: List[nodes.If] = None) -> bool:
     return False, result
 
 
+def get_bodies(ifs: List[nodes.If]) -> List[List[nodes.NodeNG]]:
+    result = []
+    for i, if_ in enumerate(ifs):
+        result.append(if_.body)
+        if i == len(ifs) - 1:
+            result.append(if_.orelse)
+    return result
+
+
 def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
     sibling = node.next_sibling()
     while sibling is not None and isinstance(sibling, nodes.If):
@@ -845,14 +856,6 @@ def saves_enough_tokens(tokens_before: int, stmts_before: int, fixed: Fixed):
 
 
 def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
-
-    def get_bodies(ifs: List[nodes.If]) -> List[List[nodes.NodeNG]]:
-        result = []
-        for i, if_ in enumerate(ifs):
-            result.append(if_.body)
-            if i == len(ifs) - 1:
-                result.append(if_.orelse)
-        return result
 
     def to_parent(val: AunifyVar) -> nodes.NodeNG:
         parent = val.parent
@@ -1927,6 +1930,11 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             "identical-exprs-to-function",
             "Emitted when an overly complex expression is used multiple times.",
         ),
+        "R6855": (
+            "Identical if branches",
+            "identical-if-branches",
+            "",
+        ),
     }
 
     def identical_before_after_branch(self, node: nodes.If) -> bool:
@@ -1973,17 +1981,24 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
         if not node.orelse or is_parents_elif(node):
             return False
 
-        branches = extract_branch_bodies(node)
-        if branches is None:
+        ends_with_else, ifs = extract_from_elif(node)
+        if not ends_with_else:
             return False
+
+        branches = get_bodies(ifs)
 
         any_message = False
         same_prefix_len = get_stmts_difference(branches, forward=True)
         if same_prefix_len >= 1:
+            if all(same_prefix_len == len(b) for b in branches):
+                self.add_message("identical-if-branches", node=node)
+                return True
+
             add_message(branches, same_prefix_len, node, forward=True)
-            any_message = True
             if any(same_prefix_len == len(b) for b in branches):
-                return any_message
+                return True
+
+            any_message = True
 
         same_suffix_len = get_stmts_difference(branches, forward=False)
         if same_suffix_len >= 1:

@@ -80,6 +80,15 @@ def test_identical_before_after_branch(filename: str, expected_output: List[Prob
         expected_output
     )
 
+@pytest.mark.parametrize("filename,expected_output", [
+    ("uc_88_6816_15_15.py", [lazy_problem().set_line(5)]),
+])
+def test_identical_if_branches(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=identical-if-branches")],
+        expected_output
+    )
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("012889-geometry.py", [
