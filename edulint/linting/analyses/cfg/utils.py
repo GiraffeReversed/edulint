@@ -371,6 +371,25 @@ def get_locs_in_and_after(locs: List[CFGLoc]) -> Iterator[Tuple[bool, CFGBlock, 
     yield from get_locs_in_and_after_from(locs, locs)
 
 
+def _get_conseq_partition(block_locs, block):
+    same_block_locs = block_locs.get(block, [])
+
+    conseqs = []
+    conseq = []
+
+    for loc in same_block_locs:
+        if len(conseq) == 0 or conseq[-1].pos + 1 == loc.pos:
+            conseq.append(loc)
+        else:
+            conseqs.append(conseq)
+            conseq = [loc]
+
+    if len(conseq) > 0:
+        conseqs.append(conseq)
+
+    return conseqs
+
+
 def get_locs_in_and_after_from(
     froms: List[CFGLoc], locs: List[CFGLoc]
 ) -> Iterator[Tuple[bool, CFGBlock, int, int]]:
@@ -382,38 +401,30 @@ def get_locs_in_and_after_from(
         last = block.locs[to_pos - 1].node
         return len(loc_node_set & (set(last.node_ancestors()) | {last})) == 0
 
+    block_froms = defaultdict(list)
+    for loc in sorted(froms, key=lambda loc: loc.pos):
+        block_froms[loc.block].append(loc)
+
     block_locs = defaultdict(list)
     for loc in sorted(locs, key=lambda loc: loc.pos):
         block_locs[loc.block].append(loc)
 
     for succ_block, from_pos, to_pos in successor_blocks_from_locs(
-        [same_block_locs[-1] for same_block_locs in block_locs.values()],
+        [same_block_locs[0] for same_block_locs in block_froms.values()],
         stop_on_block=stop_on,
         include_start=True,
         include_end=True,
     ):
         stop = stop_on(succ_block, from_pos, to_pos)
-        if succ_block not in block_locs:
+        conseqs = _get_conseq_partition(block_locs, succ_block)
+
+        if len(conseqs) == 0 or (
+            len(conseqs) == 1 and conseqs[0][-1].pos + 1 >= len(succ_block.locs)
+        ):
             yield not stop, succ_block, from_pos, to_pos
             continue
 
-        same_block_locs = block_locs[succ_block]
-
-        conseqs = []
-        conseq = []
-
-        for loc in same_block_locs:
-            if len(conseq) == 0 or conseq[-1].pos + 1 == loc.pos:
-                conseq.append(loc)
-            else:
-                conseqs.append(conseq)
-                conseq = [loc]
-
-        if len(conseq) > 0:
-            conseqs.append(conseq)
-
-        for i in range(len(conseqs)):
-            conseq = conseqs[i]
+        for i, conseq in enumerate(conseqs):
             yield True, succ_block, conseq[0].pos, conseq[-1].pos + 1
 
             if i < len(conseqs) - 1:
