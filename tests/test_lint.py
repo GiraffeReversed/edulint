@@ -1,9 +1,10 @@
 import pytest
+from pathlib import Path
 from edulint.linters import Linter
 from edulint.options import Option
 from edulint.config.arg import Arg
 from edulint.linting.problem import Problem
-from utils import lazy_problem, apply_and_lint, create_apply_and_lint, just_lint
+from utils import lazy_problem, apply_and_lint, create_apply_and_lint, just_lint, get_tests_path
 from typing import List
 
 
@@ -66,6 +67,15 @@ def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Proble
         args + [Arg(Option.FLAKE8, "--extend-ignore=E721")],
         expected_output,
         from_empty=False,
+    )
+
+def test_lint_file_in_folder() -> None:
+    dir_path = get_tests_path(str(Path() / "file"))
+    apply_and_lint(
+        dir_path,
+        [Arg(Option.PYLINT, "--enable=missing-module-docstring")],
+        [lazy_problem().set_source(Linter.PYLINT), lazy_problem().set_source(Linter.PYLINT)],
+        from_empty=True,
     )
 
 
