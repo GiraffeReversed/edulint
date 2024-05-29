@@ -151,7 +151,8 @@ def lint_flake8(files_or_dirs: List[str], config: ImmutableConfig) -> List[Probl
 
 
 def lint_pylint(files_or_dirs: List[str], config: ImmutableConfig) -> List[Problem]:
-    pylint_args = ["--output-format=json"]
+    pylint_args = ["--output-format=json", "--recursive=y"]
+
     return lint_any(
         Linter.PYLINT,
         files_or_dirs,
