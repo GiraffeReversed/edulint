@@ -3,6 +3,8 @@ import sys
 from astroid import nodes  # type: ignore
 from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Callable, Dict, Set
 
+from pylint.checkers import utils
+
 from pylint.checkers import BaseChecker
 from pylint.checkers.utils import only_required_for_messages
 
@@ -18,6 +20,7 @@ from edulint.linting.checkers.utils import (
     is_pure_builtin,
     is_negation,
     get_name,
+    variable_contains_impure_function,
 )
 
 Expr_representation = str
@@ -113,27 +116,15 @@ class Short(BaseChecker):
         ),
         "R6617": (
             "'%s' can be replaced with '%s'",
-            "simplifiable-single-and-with-abs",
+            "simplifiable-and-with-abs",
             "Emitted when there is a problem like x < 4 and x > -4 and suggests abs(x) < 4.",
         ),
         "R6618": (
             "'%s' can be replaced with '%s'",
-            "simplifiable-single-or-with-abs",
+            "simplifiable-or-with-abs",
             "Emitted when there is a problem like x > 4 or x < -4 and suggests abs(x) > 4.",
         ),
         "R6619": (
-            "'%s' can be replaced with '%s'",
-            "simplifiable-and-with-abs",
-            "Emitted when there is a problem like x < 4 and x > -4 and suggests abs(x) < 4."
-            "But works with multiple and-s. (but is possibly slower than simplifiable-single-and-with-abs).",
-        ),
-        "R6620": (
-            "'%s' can be replaced with '%s'",
-            "simplifiable-or-with-abs",
-            "Emitted when there is a problem like x > 4 or x < -4 and suggests abs(x) > 4."
-            "But works with multiple and-s. (but is possibly slower than simplifiable-single-and-with-abs).",
-        ),
-        "R6621": (
             "'%s' can be replaced with '%s'",
             "redundant-compare-in-condition",
             "Emitted when there is a problem like x > 4 or x > 3 and suggests x > 3. (ie min{4, 3})",
@@ -595,6 +586,7 @@ class Short(BaseChecker):
             isinstance(left, nodes.Call)
             or isinstance(left, nodes.Name)
             or isinstance(left, nodes.BinOp)
+            or isinstance(left, nodes.UnaryOp)
         ) or not self._is_numeric(right):
             return None
 
@@ -606,7 +598,9 @@ class Short(BaseChecker):
 
         return const1 is not None and const2 is not None and const1 == const2
 
-    def _same_expressions(self, ex1: nodes.NodeNG, ex2: nodes.NodeNG) -> bool:
+    def _same_expressions(
+        self, ex1: nodes.NodeNG, ex2: nodes.NodeNG, first_param_of_map_or_filter: bool
+    ) -> bool:
         """
         Returns True iff ex1 and ex2 represent the same variable or the same pure builtin
         function called on exactly same arguments that also satisfy _same_expressions
@@ -623,6 +617,7 @@ class Short(BaseChecker):
                 not isinstance(ex1, nodes.Name)
                 and not isinstance(ex1, nodes.Call)
                 and not isinstance(ex1, nodes.BinOp)
+                and not isinstance(ex1, nodes.UnaryOp)
             )
             or (
                 isinstance(ex1, nodes.Call)
@@ -642,19 +637,32 @@ class Short(BaseChecker):
         ):
             return False
 
+        if isinstance(ex1, nodes.UnaryOp):
+            return ex1.op == ex2.op and self._same_expressions(ex1.operand, ex2.operand, False)
+
         if isinstance(ex1, nodes.BinOp):
-            return self._same_expressions(ex1.left, ex2.left) and self._same_expressions(
-                ex1.right, ex2.right
+            return (
+                ex1.op == ex2.op
+                and self._same_expressions(ex1.left, ex2.left, False)
+                and self._same_expressions(ex1.right, ex2.right, False)
             )
 
         if isinstance(ex1, nodes.Name):
-            return ex1.name == ex2.name
+            return ex1.name == ex2.name and (
+                not first_param_of_map_or_filter
+                or (
+                    not variable_contains_impure_function(ex1)
+                    and not variable_contains_impure_function(ex2)
+                )
+            )
 
         for i in range(len(ex1.args)):
             arg1 = ex1.args[i]
             arg2 = ex2.args[i]
 
-            if not self._same_expressions(arg1, arg2):
+            if not self._same_expressions(
+                arg1, arg2, ex1.func.as_string() in {"map", "filter"} and i == 0
+            ):
                 return False
 
         return True
@@ -791,7 +799,7 @@ class Short(BaseChecker):
         expr1, cmp1, const1 = operand1
         expr2, cmp2, const2 = operand2
 
-        if not self._same_expressions(expr1, expr2):
+        if not self._same_expressions(expr1, expr2, False):
             return
 
         expr_string = expr1.as_string()
@@ -833,7 +841,7 @@ class Short(BaseChecker):
             )
 
         self.add_message(
-            f"simplifiable-single-{node.op}-with-abs",
+            f"simplifiable-{node.op}-with-abs",
             node=node,
             args=(get_name(node), new_expr),
         )
@@ -884,15 +892,17 @@ class Short(BaseChecker):
             self.add_message(
                 "redundant-compare-in-condition",
                 node=node,
-                args=(group_string, " ".join([expr_string, cmp_greater, val2])),
+                args=(group_string, " ".join([expr_string, cmp_greater, str(val2)])),
             )
+            return
 
         if cmp_greater is None:
             self.add_message(
                 "redundant-compare-in-condition",
                 node=node,
-                args=(group_string, " ".join([expr_string, cmp_less, val1])),
+                args=(group_string, " ".join([expr_string, cmp_less, str(val1)])),
             )
+            return
 
         new_expr = self._check_if_always_true_or_false(
             val1, cmp_less, val2, cmp_greater, expr_string, node.op
@@ -943,15 +953,24 @@ class Short(BaseChecker):
             args=(group_string, new_expr),
         )
 
-    MAXIMUM_LAYER = 16
+    MAXIMUM_LAYER = 32
 
-    def _might_have_impure_function_call(self, node: nodes.NodeNG, layer: int) -> bool:
-        for child in node.get_children():
+    def _might_have_impure_function_call(
+        self, node: nodes.NodeNG, layer: int, parent_is_map_or_filter: bool
+    ) -> bool:
+        for i, child in enumerate(node.get_children()):
             if (
                 (child.is_function and not is_pure_builtin(child))
-                or child.is_lambda
                 or layer > self.MAXIMUM_LAYER
-                or self._might_have_impure_function_call(child, layer + 1)
+                or (
+                    parent_is_map_or_filter
+                    and i == 0
+                    and isinstance(child, nodes.Name)
+                    and variable_contains_impure_function(child)
+                )
+                or self._might_have_impure_function_call(
+                    child, layer + 1, node.is_function and node.as_string() in {"map", "filter"}
+                )
             ):
                 return True
 
@@ -974,7 +993,7 @@ class Short(BaseChecker):
                     continue
 
                 expr2, cmp2, const2 = comparison_operands[j]
-                if self._same_expressions(expr1, expr2):
+                if self._same_expressions(expr1, expr2, False):
                     current_group.append((cmp2, const2))
                     already_checked.add(j)
 
@@ -988,32 +1007,23 @@ class Short(BaseChecker):
             return
 
         comparison_operands: List[Node_cmp_value] = []
-        suggested_changes: List[str] = []
 
         for value in node.values:
-            if self._might_have_impure_function_call(value, 0):
+            if self._might_have_impure_function_call(
+                value,
+                0,
+                isinstance(node, nodes.Call) and node.func.as_string() in {"map", "filter"},
+            ):
                 return
 
             operand = self._get_node_comparator_const_value(value)
 
-            if operand is None:
-                suggested_changes.append(value.as_string())
-            else:
+            if operand is not None:
                 comparison_operands.append(operand)
 
         self._group_and_check_by_representation(comparison_operands, node)
 
-    def _check_for_simplification_of_and(self, node: nodes.BoolOp) -> None:
-        if node.op != "and" or len(node.values) == 2:
-            return
-
-    def _check_for_simplification_of_or(self, node: nodes.BoolOp) -> None:
-        if node.op != "or" or len(node.values) == 2:
-            return
-
     @only_required_for_messages(
-        "simplifiable-single-and-with-abs",
-        "simplifiable-single-or-with-abs",
         "simplifiable-and-with-abs",
         "simplifiable-or-with-abs",
         "redundant-compare-in-condition",
