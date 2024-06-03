@@ -1410,7 +1410,9 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         if len(sub_aunify) == len(function.body):
             return True
 
-        return isinstance(function.body[len(sub_aunify)], nodes.Return)
+        return sub_aunify == function.body[: len(sub_aunify)] and isinstance(
+            function.body[len(sub_aunify)], nodes.Return
+        )
 
     def get_possible_callees(to_aunify):
         possible_callees = []

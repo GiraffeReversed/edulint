@@ -394,6 +394,7 @@ def test_similar_to_loop_merge(filename: str, expected_output: List[Problem]) ->
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("051746-gps.py", [lazy_problem().set_line(71)]),
+    ("c93682fee8-p4_digits.py", []),
     ("ut_80_0402_13_19.py", [
         lazy_problem().set_line(8).set_end_line(10),
         # remaining are also true, but currently overriden by loop suggestion
