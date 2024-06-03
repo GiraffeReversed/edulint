@@ -1580,6 +1580,10 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
     return True
 
 
+class NoSubseqToLoop(Exception):
+    pass
+
+
 def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
     def to_range_args(sequence):
         start = None
@@ -1863,6 +1867,9 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
             collection.elts = [to_node(n, avars[0]) for n in some_iter]
             return [collection], [use for _iter, use in iter_uses]
 
+        if len({r[0] for r in ranges}) > 2:
+            raise NoSubseqToLoop
+
         return consolidate_ranges(ranges)
 
     def get_iter(iters):
@@ -1963,7 +1970,11 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
     if fixed_by_merge is not None:
         fixed = fixed_by_merge
     else:
-        fixed = get_fixed_by_loop(to_aunify, core, avars)
+        try:
+            fixed = get_fixed_by_loop(to_aunify, core, avars)
+        except NoSubseqToLoop:
+            return True
+
         if fixed is None:
             return False
 
