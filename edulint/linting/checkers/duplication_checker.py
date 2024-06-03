@@ -856,6 +856,19 @@ def saves_enough_tokens(tokens_before: int, stmts_before: int, fixed: Fixed):
 
 def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
+    def is_one_of_parents_ifs(node: nodes.If) -> bool:
+        parent = node.parent
+        if not isinstance(parent, nodes.If):
+            return False
+
+        while isinstance(parent.parent, nodes.If):
+            parent = parent.parent
+
+        _ends_with_else, ifs = extract_from_elif(parent)
+        if_bodies = get_bodies(ifs)
+
+        return all(any(isinstance(n, nodes.If) for n in body) for body in if_bodies)
+
     def to_parent(val: AunifyVar) -> nodes.NodeNG:
         parent = val.parent
         if isinstance(parent, (nodes.Const, nodes.Name)):
@@ -1262,6 +1275,10 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         )
 
     if is_parents_elif(node):
+        return False
+
+    # do not break up consistent ifs
+    if is_one_of_parents_ifs(node):
         return False
 
     ends_with_else, ifs = extract_from_elif(node)

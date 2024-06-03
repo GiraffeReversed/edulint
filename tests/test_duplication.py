@@ -374,6 +374,7 @@ def test_nested_to_restructured_custom(lines: List[str], expected_output: List[P
     )
 
 @pytest.mark.parametrize("filename,expected_output", [
+    ("30c8bd0ad7-p6_cellular.py", []),
     ("uc_28_6710_05_14.py", []),
 ])
 def test_nested_to_restructured(filename: str, expected_output: List[Problem]) -> None:
