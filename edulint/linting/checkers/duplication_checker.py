@@ -2308,10 +2308,9 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
 
         duplicate = set()
         candidates = {}
-        candidate_duplicate = set()
         siblings = {}
         for i, fst in candidate_fst(stmt_nodes):
-            if fst in duplicate or fst in candidate_duplicate:
+            if fst in duplicate:
                 continue
 
             if isinstance(fst, nodes.If):
@@ -2410,9 +2409,6 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                         id_ = candidates.get((ranges[0], to_aunify[0]), len(candidates))
                         candidates[(ranges[0], to_aunify[0])] = id_
                         candidates[(ranges[1], to_aunify[1])] = id_
-
-                        candidate_duplicate.update(to_aunify[0])
-
                         break
 
         for this_id in set(candidates.values()):
