@@ -792,29 +792,27 @@ def extract_from_elif(
     returns True iff elifs end with else
     """
 
-    def count_elses(node: nodes.If) -> int:
-        if len(node.body) != 1 or not isinstance(node.body[0], nodes.If):
+    def count_nested_ifs(ns: List[nodes.NodeNG]) -> int:
+        if len(ns) != 1 or not isinstance(ns[0], nodes.If):
             return 0
 
-        node = node.body[0]
-        result = 0
-        while node.has_elif_block():
-            node = node.orelse[0]
-            result += 1
-        return result + (1 if has_else_block(node) else 0)
+        if_ = ns[0]
+        return max(count_nested_ifs(if_.body), count_nested_ifs(if_.orelse)) + 1
 
     result = [node] if result is None else result
     if has_else_block(node):
         return True, result
 
     current = node
-    else_count = count_elses(node)
+    nested_count = count_nested_ifs(node.body)
     while current.has_elif_block():
         elif_ = current.orelse[0]
         result.append(elif_)
         if has_else_block(elif_):
             return True, (
-                result if else_count == 0 or else_count >= len(result) else result[:-else_count]
+                result
+                if nested_count == 0 or nested_count >= len(result)
+                else result[:-nested_count]
             )
         current = elif_
     return False, result
