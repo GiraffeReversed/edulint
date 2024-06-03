@@ -47,6 +47,10 @@ class Problem:
         self.code = v
         return self
 
+    def set_symbol(self, v: str) -> "Problem":
+        self.symbol = v
+        return self
+
     def set_text(self, v: str) -> "Problem":
         self.text = v
         return self

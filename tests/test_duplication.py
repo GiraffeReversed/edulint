@@ -514,10 +514,12 @@ def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
     ("7e1dd5c338-p5_credit.py", []),
     ("9668dff756-p6_workdays.py", []),
     ("ccf4a9f103-p6_workdays.py", []),
+    ("cf_1113_c_27.py", [lazy_problem().set_line(16)]),
     ("custom_if_calls_to_variables.py", []),
     ("fd637a2984-p6_workdays.py", []),
     ("fdc1570861-p6_workdays.py", [lazy_problem().set_line(47)]),  # multiple if branches differing in one value
     ("tarot_card_reader.py", []),
+    ("uc_13_1073_17_21.py", [lazy_problem().set_line(2)]),
     ("uc_73_0198_15_17.py", [lazy_problem().set_line(6)]),
     ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
     ("uc_73_3819_50_56.py", []),
@@ -596,7 +598,28 @@ def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
 
 
 @pytest.mark.parametrize("filename,expected_output", [
-    ("0379f32d24-p6_workdays.py", [lazy_problem().set_code("R6802").set_line(75)])
+    ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-to-loop").set_line(75)]),
+    ("406561e0ae-workdays.py", []),  # contains duplication, but no good advice
+    ("63257195a0-p6_workdays.py", []),  # contains duplication, but no good advice
+    ("cf_1113_c_27.py", [lazy_problem().set_symbol("if-to-variables").set_line(16)]),
+    ("cf_1399_e_0.py", [lazy_problem().set_symbol("if-into-block").set_line(44)]),
+    ("cf_1551_d_11.py", [
+        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(17),
+        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(34),
+        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(51),
+        lazy_problem().set_symbol("if-to-ternary").set_line(70),
+        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(82),
+        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(99),
+        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(116),
+    ]),
+    # contains more duplication, but no good advice
+    ("cf_994_c_10.py", [lazy_problem().set_symbol("identical-seq-ifs").set_line(26)]),
+    # TODO suggest moving print into the for below
+    ("uc_11_8337_17_22.py", [lazy_problem().set_symbol("if-to-variables").set_line(3)]),
+    ("uc_13_1073_17_21.py", [lazy_problem().set_symbol("if-to-variables").set_line(2)]),
+    ("uc_28_6562_15_18.py", [lazy_problem().set_symbol("if-to-variables").set_line(4)]),
+    ("uc_28_7857_02_17.py", [lazy_problem().set_symbol("if-to-variables").set_line(3)]),
+    ("uc_73_6644_16_22.py", [lazy_problem().set_symbol("if-into-block").set_line(14)]),
 ])
 def test_interactions(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
