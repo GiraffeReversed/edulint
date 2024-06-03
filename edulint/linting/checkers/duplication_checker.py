@@ -1580,7 +1580,7 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
                     return None
             previous = s
 
-        return (start, previous + 1, step)
+        return (start, previous + (1 if step > 0 else -1), step)
 
     def to_range_node(range_args):
         start, step, stop = range_args
@@ -1797,7 +1797,7 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
             if step != 1:
                 new = nodes.BinOp("*")
                 new.left = use
-                new.rigth = nodes.Const(step)
+                new.right = nodes.Const(step)
                 use = new
             if start != 0:
                 new = nodes.BinOp("+")
