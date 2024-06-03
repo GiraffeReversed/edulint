@@ -838,6 +838,24 @@ def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
         sibling = sibling.next_sibling()
 
 
+def is_duplication_candidate(stmtss) -> bool:
+    for ns in zip(*stmtss):
+        if not all(isinstance(n, type(ns[0])) for n in ns):
+            return False
+    return True
+
+
+def get_loop_repetitions(
+    block: List[nodes.NodeNG],
+) -> Generator[Tuple[int, List[List[nodes.NodeNG]]], None, None]:
+    for end in range(len(block), 0, -1):
+        for subblock_len in range(1, end // 2 + 1):
+            if end % subblock_len != 0:
+                continue
+            subblocks = [block[i : i + subblock_len] for i in range(0, end, subblock_len)]
+            yield ((end // subblock_len) * subblock_len, subblocks)
+
+
 Fixed = namedtuple("Fixed", ["symbol", "tokens", "statements", "message_args"])
 
 
@@ -868,6 +886,46 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         if_bodies = get_bodies(ifs)
 
         return all(any(isinstance(n, nodes.If) for n in body) for body in if_bodies)
+
+    def get_common_parent(ns: List[nodes.NodeNG]) -> bool:
+        if len(ns) == 0:
+            return None
+
+        if len(ns) == 1:
+            return to_parent(ns[0])
+
+        fst_parents = [ns[0]] + list(ns[0].node_ancestors())
+        other_parents = set.intersection(
+            *[{ns[i]} | set(ns[i].node_ancestors()) for i in range(1, len(ns))]
+        )
+
+        for parent in fst_parents:
+            if parent in other_parents:
+                return parent
+        return None
+
+    def contains_other_duplication(core, avars) -> bool:
+        parent = get_common_parent(avars)
+        if parent is None:
+            body = core
+        else:
+            body = list(parent.get_children())
+
+        if len(body) < 3:
+            return False
+
+        for end, to_aunify in get_loop_repetitions(body):
+            if not is_duplication_candidate(to_aunify):
+                continue
+
+            result = antiunify(
+                if_bodies,
+                stop_on=lambda avars: length_mismatch(avars) or type_mismatch(avars),
+            )
+            if result is not None:
+                return True
+
+        return False
 
     def to_parent(val: AunifyVar) -> nodes.NodeNG:
         parent = val.parent
@@ -1295,6 +1353,9 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     if result is None:
         return False
     core, avars = result
+
+    if contains_other_duplication(core, avars):
+        return False
 
     tokens_before = get_token_count(node)
     stmts_before = get_statements_count(node, include_defs=False, include_name_main=True)
@@ -2176,22 +2237,6 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
             last_node = stmt_nodes[last1 - 1]
             first_node = stmt_nodes[first2]
             return last_node.tolineno >= first_node.fromlineno
-
-        def is_duplication_candidate(stmtss) -> bool:
-            for ns in zip(*stmtss):
-                if not all(isinstance(n, type(ns[0])) for n in ns):
-                    return False
-            return True
-
-        def get_loop_repetitions(
-            block: List[nodes.NodeNG],
-        ) -> Generator[Tuple[int, List[List[nodes.NodeNG]]], None, None]:
-            for end in range(len(fst_siblings), 0, -1):
-                for subblock_len in range(1, end // 2 + 1):
-                    if end % subblock_len != 0:
-                        continue
-                    subblocks = [block[i : i + subblock_len] for i in range(0, end, subblock_len)]
-                    yield ((end // subblock_len) * subblock_len, subblocks)
 
         def break_on_stmt(node):
             return isinstance(node, (nodes.Assert, nodes.ClassDef))
