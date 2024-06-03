@@ -1543,6 +1543,32 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
             result.append(c)
         return result
 
+    def from_chars(avar, sequence):
+        if not all(isinstance(s, str) and len(s) == 1 for s in sequence):
+            return None
+
+        min_char = min(sequence)
+
+        sequence = [ord(s) - ord(min_char) for s in sequence]
+
+        if ord(min_char) == 0:
+            return sequence, avar
+
+        # chr(ord(min_char) + ID)
+        ord_call = nodes.Call()
+        ord_call.func = nodes.Name("ord")
+        ord_call.args = [nodes.Const(min_char)]
+
+        binop = nodes.BinOp("+")
+        binop.left = ord_call
+        binop.right = avar
+
+        chr_call = nodes.Call()
+        chr_call.func = nodes.Name("chr")
+        chr_call.args = [binop]
+
+        return sequence, chr_call
+
     def iter_use_from_partition(partition):
         types = [type(p[0]) for p in partition]
         # a type repeats
@@ -1650,14 +1676,19 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
 
     def to_iter_use(avar):
         sequence = list(avar.subs)
+        use = avar
 
         const_sequence = to_const_sequence(sequence)
         if const_sequence is not None:
             sequence = const_sequence
 
+        from_chars_result = from_chars(avar, sequence)
+        if from_chars_result is not None:
+            sequence, use = from_chars_result
+
         range_args = to_range_args(sequence)
         if range_args is not None:
-            return range_args, avar
+            return range_args, use
 
         partition = partition_by_type(sequence)
         # single type present => use values directly, if different
@@ -1665,7 +1696,7 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
             assert not any(isinstance(v, nodes.NodeNG) for v in sequence)
             if len(sequence) != len(set(sequence)):  # some value is repeated
                 return None
-            return sequence, avar
+            return sequence, use
 
         result = iter_use_from_partition(partition)
         if result is None:
