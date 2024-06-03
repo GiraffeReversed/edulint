@@ -2325,12 +2325,20 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                             for stmt_loc in get_stmt_locs(loc)
                             if stmt_loc is not None
                         }
-                        - {
-                            stmt_loc.node
-                            for loc in syntactic_children_locs_from(fst.body[0].cfg_loc, fst.body)
-                            for stmt_loc in get_stmt_locs(loc)
-                            if stmt_loc is not None
-                        }
+                        # do not suggest more changes in a duplicate-if block,
+                        # other than moving identical before-after branch code
+                        - (
+                            {
+                                stmt_loc.node
+                                for loc in syntactic_children_locs_from(
+                                    fst.body[0].cfg_loc, fst.body
+                                )
+                                for stmt_loc in get_stmt_locs(loc)
+                                if stmt_loc is not None
+                            }
+                            if not any_message2
+                            else set()
+                        )
                     )
                     continue
 
