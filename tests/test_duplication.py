@@ -339,9 +339,19 @@ def test_similar_to_loop_custom(lines: List[str], expected_output: List[Problem]
 
     ], [lazy_problem().set_line(2)]),
 ])
-def test_twisted_to_restructured(lines: List[str], expected_output: List[Problem]) -> None:
+def test_twisted_to_restructured_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
+        [Arg(Option.PYLINT, "--enable=twisted-if-to-restructured")],
+        expected_output
+    )
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("cf_1316_b_41.py", [lazy_problem().set_line(12)]),
+])
+def test_twisted_to_restructured(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
         [Arg(Option.PYLINT, "--enable=twisted-if-to-restructured")],
         expected_output
     )
@@ -376,6 +386,7 @@ def test_nested_to_restructured_custom(lines: List[str], expected_output: List[P
 @pytest.mark.parametrize("filename,expected_output", [
     ("30c8bd0ad7-p6_cellular.py", []),
     ("uc_28_6710_05_14.py", []),
+    ("cf_479_c_0.py", [lazy_problem().set_line(12)]),
 ])
 def test_nested_to_restructured(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
