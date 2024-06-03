@@ -1060,12 +1060,23 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
     def is_part_of_complex_expression(avars) -> bool:
         for avar in avars:
+            has_parent_call = False
             parent = to_parent(avar)
-            assert parent is not None
+            while parent is not None:
+                if isinstance(parent, nodes.Call):
+                    if has_parent_call:
+                        return True
+                    has_parent_call = True
 
-            # if not isinstance(parent, SIMPLE_EXPRESSION_TYPES):
-            if isinstance(parent, COMPLEX_EXPRESSION_TYPES):
-                return True
+                # if not isinstance(parent, SIMPLE_EXPRESSION_TYPES):
+                if isinstance(parent, COMPLEX_EXPRESSION_TYPES):
+                    return True
+
+                if hasattr(parent, "cfg_loc"):
+                    break
+
+                parent = parent.parent
+
         return False
 
     def test_variables_change(tests, core, avars):
@@ -1080,8 +1091,13 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
 
     @check_enabled("if-to-ternary")
     def get_fixed_by_ternary(tests, core, avars):
+        # the condition would get too complicated
         if len(tests) > 2:
             return None
+        # too much place for error
+        if len(avars) > 1 and not all(isinstance(avar.parent, nodes.Const) for avar in avars):
+            return None
+        # do not make complicated expressions even more complicated
         if is_part_of_complex_expression(avars):
             return None
 
