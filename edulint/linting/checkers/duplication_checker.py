@@ -1287,25 +1287,29 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     tests = [if_.test for if_ in ifs]
     called_avar = called_aunify_var(avars)
     tvs_change = test_variables_change(tests, core, avars)
-    fixed = [
-        get_fixed_by_ternary(tests, core, avars) if not called_avar and not tvs_change else None,
-        get_fixed_by_moving_if(tests, core, avars) if not tvs_change else None,
-        get_fixed_by_vars(tests, core, avars) if not called_avar else None,
-        get_fixed_by_function(tests, core, avars) if not called_avar else None,
-        get_fixed_by_restructuring(tests, core, avars) if not tvs_change else None,
-    ]
 
-    fixed = [
-        f for f in fixed if f is not None and saves_enough_tokens(tokens_before, stmts_before, f)
-    ]
-    if len(fixed) == 0:
-        return False
+    for fix_function in (
+        get_fixed_by_restructuring if not tvs_change else None,
+        get_fixed_by_moving_if if not tvs_change else None,
+        get_fixed_by_ternary if not called_avar and not tvs_change else None,
+        get_fixed_by_vars if not called_avar else None,
+        get_fixed_by_function if not called_avar else None,
+    ):
+        if fix_function is None:
+            continue
 
-    suggestion = min(fixed, key=lambda f: f.tokens)
+        suggestion = fix_function(tests, core, avars)
+        if suggestion is None:
+            continue
 
-    message_id, _tokens, _statements, message_args = suggestion
-    self.add_message(message_id, node=node, args=message_args)
-    return True
+        if not saves_enough_tokens(tokens_before, stmts_before, suggestion):
+            continue
+
+        message_id, _tokens, _statements, message_args = suggestion
+        self.add_message(message_id, node=node, args=message_args)
+        return True
+
+    return False
 
 
 def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> bool:
