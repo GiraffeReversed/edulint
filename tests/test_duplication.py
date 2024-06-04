@@ -579,6 +579,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     ("7e1dd5c338-p5_credit.py", []),
     ("9668dff756-p6_workdays.py", []),
     ("ccf4a9f103-p6_workdays.py", []),
+    ("cf_1503_a_14.py", []),
     ("cf_621_b_47.py", []),
     ("cf_911_e_11.py", []),
     ("custom_if_calls_to_variables.py", []),

@@ -133,9 +133,9 @@ def is_one_of_parents_ifs(node: nodes.If) -> bool:
 def contains_other_duplication(core, avars) -> bool:
     parent = get_common_parent(avars)
     if parent is None:
-        body = core
+        body = get_sub_variant(core, 0)
     elif isinstance(parent, (nodes.List, nodes.Tuple, nodes.Dict, nodes.Set)):
-        body = list(parent.get_children())
+        body = list(get_sub_variant(parent, 0).get_children())
     else:
         return False
 
