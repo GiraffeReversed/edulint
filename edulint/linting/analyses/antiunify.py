@@ -362,9 +362,6 @@ def get_removable(core, avar) -> bool:
 
 
 def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
-    if isinstance(core, list) and any(len(c.sub_locs) != len(core[0].sub_locs) for c in core):
-        return core, avars
-
     if not any(isinstance(avar.parent, nodes.AssignName) for avar in avars):
         return core, avars
 
