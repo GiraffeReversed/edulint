@@ -168,7 +168,7 @@ def get_const_value_rec(node: Any) -> Any:
         return node.value
 
     if isinstance(node, nodes.UnaryOp):
-        return UNARY_SYMBOL_TO_OP[node.op](get_const_value_rec(node.operand.value))
+        return UNARY_SYMBOL_TO_OP[node.op](get_const_value_rec(node.operand))
 
     if isinstance(node, (nodes.BinOp, nodes.BoolOp)):
         return BINARY_SYMBOL_TO_OP[node.op](

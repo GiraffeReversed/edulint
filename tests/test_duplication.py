@@ -233,6 +233,8 @@ def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]
     ("1687aeed39-hw4.py", []),
     ("7e1dd5c338-p2_tortoise.py", []),
     ("b3b13aa3f7-p5_merge.py", [lazy_problem().set_line(37)]),
+    ("cf_1462_e_86.py", []),
+    ("cf_20_b_30.py", []),
     ("cf_373_a_21.py", [lazy_problem().set_line(17)]),
     ("uc_10_7828_23_16.py", []),
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
@@ -408,6 +410,7 @@ def test_similar_to_loop_merge(filename: str, expected_output: List[Problem]) ->
 @pytest.mark.parametrize("filename,expected_output", [
     ("051746-gps.py", [lazy_problem().set_line(71)]),
     ("c93682fee8-p4_digits.py", []),
+    ("cf_1440_c1_2.py", []), # TODO lazy_problem().set_line(50)
     ("ut_80_0402_13_19.py", [
         lazy_problem().set_line(8).set_end_line(10),
         # remaining are also true, but currently overriden by loop suggestion
@@ -576,6 +579,8 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     ("7e1dd5c338-p5_credit.py", []),
     ("9668dff756-p6_workdays.py", []),
     ("ccf4a9f103-p6_workdays.py", []),
+    ("cf_621_b_47.py", []),
+    ("cf_911_e_11.py", []),
     ("custom_if_calls_to_variables.py", []),
     ("fd637a2984-p6_workdays.py", []),
     ("fdc1570861-p6_workdays.py", []),
@@ -601,6 +606,7 @@ def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
     ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-to-loop").set_line(75)]),
     ("406561e0ae-workdays.py", []),  # contains duplication, but no good advice
     ("63257195a0-p6_workdays.py", []),  # contains duplication, but no good advice
+    ("cf_1086_a_14.py", []),
     ("cf_1113_c_27.py", [lazy_problem().set_symbol("if-to-variables").set_line(16)]),
     ("cf_1399_e_0.py", [lazy_problem().set_symbol("if-into-block").set_line(44)]),
     ("cf_1551_d_11.py", [
@@ -625,5 +631,19 @@ def test_interactions(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
         [Arg(Option.PYLINT, "--enable=big-no-duplicate-code")],
+        expected_output
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("cf_1166_c_4.py", []),
+    # TODO report identical functions
+    ("pronto_jawless_seismic_hefty.py", []),
+])
+def test_cfg(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        # [Arg(Option.PYLINT, "--enable=big-no-duplicate-code")],
+        [],
         expected_output
     )

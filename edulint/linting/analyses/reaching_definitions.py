@@ -177,6 +177,7 @@ def get_vars_defined_before(core) -> Dict[Variable, Set[nodes.NodeNG]]:
 
 
 def get_vars_used_after(core) -> Dict[Variable, Set[nodes.NodeNG]]:
+    """DANGER: variables used in core are not returned, even if core is in a loop"""
     result = defaultdict(set)
     for i in range(len(core[0].sub_locs)):
         core_sub_locs = [c.sub_locs[i] for c in core]

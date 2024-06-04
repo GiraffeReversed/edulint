@@ -4,7 +4,11 @@ import copy
 from astroid import nodes
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs_from, get_cfg_loc
-from edulint.linting.analyses.reaching_definitions import get_vars_used_after, MODIFYING_EVENTS
+from edulint.linting.analyses.reaching_definitions import (
+    get_vars_defined_before,
+    get_vars_used_after,
+    MODIFYING_EVENTS,
+)
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.checkers.utils import eprint, cformat
 
@@ -250,6 +254,19 @@ class Antiunify:
         return core, avars
 
 
+def contains_avar(node: Union[nodes.NodeNG, List[nodes.NodeNG]], avars):
+    if isinstance(node, nodes.NodeNG):
+        ns = [node]
+    else:
+        ns = node
+
+    for avar in avars:
+        for ancestor in avar.node_ancestors():
+            if any(ancestor == n for n in ns):
+                return True
+    return False
+
+
 def get_avars(core: nodes.NodeNG, result: List[AunifyVar] = None) -> List[AunifyVar]:
     result = result if result is not None else []
 
@@ -277,12 +294,31 @@ def ancestors_till(node: nodes.NodeNG, ancestor: nodes.NodeNG):
     return result
 
 
+def get_avar_parent_in_sub(avar_node, sub_node, avar):
+    if avar_node == avar.parent:
+        return sub_node
+
+    if isinstance(avar_node, list):
+        assert isinstance(sub_node, list) and len(avar_node) == len(sub_node)
+        for an, sn in zip(avar_node, sub_node):
+            if contains_avar(an, [avar]):
+                return get_avar_parent_in_sub(an, sn, avar)
+    else:
+        for attr in get_all_fields(avar_node):
+            avar_attr_node = getattr(avar_node, attr)
+            if contains_avar(avar_attr_node, [avar]):
+                return get_avar_parent_in_sub(avar_attr_node, getattr(sub_node, attr), avar)
+
+    assert False, f"unreachable, but {avar}"
+
+
 def sub_to_variable(avar, i):
     assert isinstance(avar.parent, nodes.AssignName)
 
     sub = avar.subs[i]
     avar_loc = get_cfg_loc(avar)
     sub_loc = avar_loc.node.sub_locs[i]
+
     event_nodes = list(
         {
             (scope, event.node)
@@ -292,25 +328,14 @@ def sub_to_variable(avar, i):
             if event.type in MODIFYING_EVENTS
         }
     )
-
     if len(event_nodes) == 1:
         return sub, event_nodes[0][0]
     assert len(event_nodes) > 1
 
-    avar_ancestors = ancestors_till(avar, avar_loc.node)
+    sub_node = get_avar_parent_in_sub(avar_loc.node, sub_loc.node, avar)
 
-    sub_node = sub_loc.node
     for scope, node in event_nodes:
-        if not isinstance(node, nodes.AssignName):
-            continue
-        node_ancestors = ancestors_till(node, sub_node)
-
-        # TODO fix, may return wrong scope in case
-        # sub=t, sub_node = [t for t in range(10)] + [t for t in range(20)]
-        if len(avar_ancestors) == len(node_ancestors) and all(
-            isinstance(avar_a, type(node_a))
-            for avar_a, node_a in zip(avar_ancestors, node_ancestors)
-        ):
+        if node == sub_node:
             return sub, scope
 
     assert False, f"unreachable, but {sub}"
@@ -343,10 +368,13 @@ def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
     if not any(isinstance(avar.parent, nodes.AssignName) for avar in avars):
         return core, avars
 
+    vars_defined_before = get_vars_defined_before(core)
     vars_used_after = get_vars_used_after(core)
+    irremovable_vars = set(vars_defined_before.keys()) | set(vars_used_after.keys())
+
     for avar in avars:
         if not isinstance(avar.parent, nodes.AssignName) or any(
-            sub_to_variable(avar, i) in vars_used_after.keys() for i, sub in enumerate(avar.subs)
+            sub_to_variable(avar, i) in irremovable_vars for i, sub in enumerate(avar.subs)
         ):
             continue
 

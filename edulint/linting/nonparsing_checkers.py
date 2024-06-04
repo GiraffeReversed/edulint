@@ -21,12 +21,14 @@ CONFIG_PATTERNS = {
 }
 
 
-def to_file_paths(files_or_dirs):
+def to_file_paths(files_or_dirs, prefix=""):
     for path in files_or_dirs:
-        if not os.path.isdir(path) and path.endswith(".py"):
-            yield path
+        path = os.path.join(prefix, path)
+        if not os.path.isdir(path):
+            if path.endswith(".py"):
+                yield path
         else:
-            yield from to_file_paths(os.listdir(path))
+            yield from to_file_paths(os.listdir(path), path)
 
 
 def report_infile_config(

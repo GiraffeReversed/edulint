@@ -13,6 +13,7 @@ from edulint.linting.analyses.antiunify import (
     AunifyVar,
     core_as_string,
     get_sub_variant,
+    contains_avar,
 )
 from edulint.linting.analyses.variable_modification import VarEventType
 from edulint.linting.analyses.reaching_definitions import (
@@ -1121,27 +1122,15 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             (),
         )
 
-    def contains_avar(node: Union[nodes.NodeNG, List[nodes.NodeNG]], avars):
-        if isinstance(node, nodes.NodeNG):
-            ns = [node]
-        else:
-            ns = node
-
-        for avar in avars:
-            for ancestor in avar.node_ancestors():
-                if any(ancestor == n for n in ns):
-                    return True
-        return False
-
     HEADER_ATTRIBUTES = {
-        nodes.For: ["target", "iter"],
-        nodes.While: ["test"],
+        nodes.For: [["target"], ["iter"]],
+        nodes.While: [["test"]],
         # nodes.If: ["test"],
-        nodes.FunctionDef: ["name", "args"],
-        nodes.ExceptHandler: ["name", "type"],
-        nodes.TryExcept: [],
-        nodes.TryFinally: [],
-        nodes.With: ["items"],
+        nodes.FunctionDef: [["name"], ["args"]],
+        nodes.ExceptHandler: [["name", "type"]],
+        nodes.TryExcept: [["body", "handlers"]],
+        nodes.TryFinally: [["body", "finalbody"]],
+        nodes.With: [["items"]],
     }
 
     BODY_ATTRIBUTES = {
@@ -1156,9 +1145,13 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     }
 
     def if_can_be_moved(core, avars):
-        return type(core) in HEADER_ATTRIBUTES.keys() and not any(
-            contains_avar(getattr(core, attr), avars) for attr in HEADER_ATTRIBUTES[type(core)]
-        )
+        if type(core) not in HEADER_ATTRIBUTES.keys():
+            return False
+
+        for attr_group in HEADER_ATTRIBUTES[type(core)]:
+            if all(contains_avar(getattr(core, attr), avars) for attr in attr_group):
+                return False
+        return True
 
     def get_fixed_by_moving_if_rec(tests, core, avars):
         if isinstance(core, list):
@@ -1194,7 +1187,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         assert contains_avar(core, avars) and if_can_be_moved(core, avars)
         new_core = type(core)()
 
-        for attr in HEADER_ATTRIBUTES[type(core)]:
+        for attr in [attr for attr_group in HEADER_ATTRIBUTES[type(core)] for attr in attr_group]:
             setattr(new_core, attr, getattr(core, attr))
 
         for attr in BODY_ATTRIBUTES[type(core)]:
@@ -1552,6 +1545,8 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
 
     vars_used_after = get_vars_used_after(core)
     if len(vars_used_after) != 0:
+        if len(function.body) <= len(to_aunify[i]):
+            return False
         last = function.body[len(to_aunify[i])]  # handle unreachable code
         if not isinstance(last, nodes.Return) or last.value is None:
             return False
@@ -1646,6 +1641,9 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
         return result
 
     def from_chars(avar, sequence):
+        if not isinstance(avar.parent, nodes.Const):
+            return None
+
         if not all(isinstance(s, str) and len(s) == 1 for s in sequence):
             return None
 
@@ -1714,7 +1712,7 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
         binop_core, bionp_avars = antiunify(type_groups[nodes.BinOp])
         assert isinstance(binop_core, nodes.BinOp)
         # all same binops and binops differing in multiple places break niceness
-        if len(bionp_avars) != 1 or bionp_avars[0] == binop_core.op:
+        if len(bionp_avars) != 1 or called_aunify_var(bionp_avars):
             return None
         binop_avar = bionp_avars[0]
 

@@ -367,7 +367,12 @@ class CFGVisitor:
                 child.accept(self)
             end_handler = self._current_block
 
-            h.add_CF_statement(handler)
+            if len(h.locs) == 0:
+                # h was overtaken by link_or_merge
+                assert len(handler.body) > 0
+                handler.body[0].cfg_loc.block.add_CF_statement(handler)
+            else:
+                h.add_CF_statement(handler)
 
             self._current_cfg.link_or_merge(end_handler, end_block)
             after_body.append(h)
@@ -388,7 +393,9 @@ class CFGVisitor:
             child.accept(self)
         end_body = self._current_block
 
-        node_block.add_CF_statement(node)
+        assert len(node.body) > 0
+        # do not use node_block, because it may be overtaken by link_or_merge
+        node.body[0].cfg_loc.block.add_CF_statement(node)
 
         # Remove each control boundary that we added in this method
         for _ in range(cbs_added):

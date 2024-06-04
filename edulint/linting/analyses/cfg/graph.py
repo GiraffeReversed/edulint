@@ -101,17 +101,24 @@ class ControlFlowGraph:
 
     def get_blocks(self) -> Generator[CFGBlock, None, None]:
         """Generate a sequence of all blocks in this graph."""
-        yield from self._get_blocks(self.start, set())
+        stack = [(0, self.start)]
+        visited = {self.start}
 
-    def _get_blocks(self, block: CFGBlock, visited: Set[int]) -> Generator[CFGBlock, None, None]:
-        if block.id in visited:
-            return
+        while stack:
+            i, block = stack.pop()
+            if i == 0:
+                yield block
+            if i >= len(block.successors):
+                continue
 
-        yield block
-        visited.add(block.id)
+            stack.append((i + 1, block))
 
-        for edge in block.successors:
-            yield from self._get_blocks(edge.target, visited)
+            next_block = block.successors[i].target
+            if next_block in visited:
+                continue
+
+            stack.append((0, next_block))
+            visited.add(next_block)
 
     def get_blocks_postorder(self) -> Generator[CFGBlock, None, None]:
         """Return the sequence of all blocks in this graph in the order of

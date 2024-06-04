@@ -699,6 +699,11 @@ class TestLongCode:
             ],
             [lazy_problem().set_line(19).set_text("Forbidden magic comment 'pylint: disable'")],
         ),
+        (
+            str(Path("file") / "somewhere"),
+            [Arg(Option.IGNORE_INFILE_CONFIG_FOR, "all")],
+            []
+        )
     ],
 )
 def test_ignore_infile_config(
