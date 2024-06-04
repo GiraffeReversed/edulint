@@ -25,366 +25,391 @@ class NoSubseqToLoop(Exception):
     pass
 
 
-def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
-    def to_range_args(sequence):
-        start = None
-        step = None
-        previous = None
-        for s in sequence:
-            if not isinstance(s, int):
-                return None
-            if start is None:
-                start = s
-            elif step is None:
-                step = s - start
-            else:
-                assert previous is not None
-                if s - previous != step:
-                    return None
-            previous = s
+### constructive helper functions
 
-        return (start, previous + (1 if step > 0 else -1), step)
 
-    def to_range_node(range_args):
-        start, step, stop = range_args
-
-        range = nodes.Call()
-        range.func = nodes.Name("range")
-        start_node = nodes.Const(start)
-        stop_node = nodes.Const(step)
-        step_node = nodes.Const(step)
-        if step != 1:
-            range.args = [start_node, stop_node, step_node]
-        elif start != 0:
-            range.args = [start_node, stop_node]
+def to_range_args(sequence):
+    start = None
+    step = None
+    previous = None
+    for s in sequence:
+        if not isinstance(s, int):
+            return None
+        if start is None:
+            start = s
+        elif step is None:
+            step = s - start
         else:
-            range.args = [stop_node]
-        return range
+            assert previous is not None
+            if s - previous != step:
+                return None
+        previous = s
 
-    def partition_by_type(sequence):
-        result = []
-        current = []
+    return (start, previous + (1 if step > 0 else -1), step)
 
-        for n in sequence:
-            if len(current) == 0 or isinstance(n, type(current[-1])):
-                current.append(n)
-            else:
-                result.append(current)
-                current = [n]
 
-        if len(current) > 0:
+def to_range_node(range_args):
+    start, step, stop = range_args
+
+    range = nodes.Call()
+    range.func = nodes.Name("range")
+    start_node = nodes.Const(start)
+    stop_node = nodes.Const(step)
+    step_node = nodes.Const(step)
+    if step != 1:
+        range.args = [start_node, stop_node, step_node]
+    elif start != 0:
+        range.args = [start_node, stop_node]
+    else:
+        range.args = [stop_node]
+    return range
+
+
+### nice sequence helpers
+
+
+def partition_by_type(sequence):
+    result = []
+    current = []
+
+    for n in sequence:
+        if len(current) == 0 or isinstance(n, type(current[-1])):
+            current.append(n)
+        else:
             result.append(current)
+            current = [n]
 
-        return result
+    if len(current) > 0:
+        result.append(current)
 
-    def to_const_sequence(sequence):
-        result = []
-        for v in sequence:
-            c = get_const_value(v)
-            if c is None:
-                return None
-            result.append(c)
-        return result
+    return result
 
-    def from_chars(avar, sequence):
-        if not isinstance(avar.parent, nodes.Const):
+
+def to_const_sequence(sequence):
+    result = []
+    for v in sequence:
+        c = get_const_value(v)
+        if c is None:
             return None
+        result.append(c)
+    return result
 
-        if not all(isinstance(s, str) and len(s) == 1 for s in sequence):
+
+def from_chars(avar, sequence):
+    if not isinstance(avar.parent, nodes.Const):
+        return None
+
+    if not all(isinstance(s, str) and len(s) == 1 for s in sequence):
+        return None
+
+    min_char = min(sequence)
+
+    sequence = [ord(s) - ord(min_char) for s in sequence]
+
+    if ord(min_char) == 0:
+        return sequence, avar
+
+    # chr(ord(min_char) + ID)
+    ord_call = nodes.Call()
+    ord_call.func = nodes.Name("ord")
+    ord_call.args = [nodes.Const(min_char)]
+
+    binop = nodes.BinOp("+")
+    binop.left = ord_call
+    binop.right = avar
+
+    chr_call = nodes.Call()
+    chr_call.func = nodes.Name("chr")
+    chr_call.args = [binop]
+
+    return sequence, chr_call
+
+
+def iter_use_from_partition(partition):
+    types = [type(p[0]) for p in partition]
+    # a type repeats
+    if len(types) != len(set(types)):
+        return None
+
+    exclusive = set(types) & {nodes.Name, nodes.Subscript, nodes.Attribute}
+    # different exclusive types or an exclusive type multiple times
+    if len(exclusive) > 1:
+        return None
+
+    type_groups = {type(p[0]): p for p in partition}
+    for t in (nodes.Const, nodes.Name, nodes.Subscript, nodes.Attribute, nodes.BinOp):
+        type_groups[t] = type_groups.get(t, [])
+
+    # multiple constants or no binops
+    if len(type_groups[nodes.Const]) > 1 or len(type_groups[nodes.BinOp]) == 0:
+        return None
+
+    if len(exclusive) == 1:
+        exclusive_type = next(iter(exclusive))
+        # multiple values for an exclusive type
+        if len(type_groups[exclusive_type]) > 1:
             return None
+        exclusive_value = type_groups[exclusive_type][0]
+    else:
+        exclusive_type = None
+        exclusive_value = None
 
-        min_char = min(sequence)
+    if not any(
+        ts
+        in (
+            [nodes.Const, exclusive_type, nodes.BinOp],
+            [exclusive_type, nodes.BinOp],
+            [nodes.Const, nodes.BinOp],
+        )
+        for ts in (types, list(reversed(types)))
+    ):
+        return None
 
-        sequence = [ord(s) - ord(min_char) for s in sequence]
+    binop_core, bionp_avars = antiunify(type_groups[nodes.BinOp])
+    assert isinstance(binop_core, nodes.BinOp)
+    # all same binops and binops differing in multiple places break niceness
+    if len(bionp_avars) != 1 or called_aunify_var(bionp_avars):
+        return None
+    binop_avar = bionp_avars[0]
 
-        if ord(min_char) == 0:
-            return sequence, avar
+    if len(type_groups[nodes.Const]) == 1:
+        const_value = type_groups[nodes.Const][0]
+    else:
+        const_value = None
 
-        # chr(ord(min_char) + ID)
-        ord_call = nodes.Call()
-        ord_call.func = nodes.Name("ord")
-        ord_call.args = [nodes.Const(min_char)]
+    # no child is related to the shared value
+    if (
+        exclusive_value is not None
+        and binop_core.right.as_string() != exclusive_value.as_string()
+        and binop_core.left.as_string() != exclusive_value.as_string()
+    ) or (
+        exclusive_value is None
+        and const_value is not None
+        and binop_core.right.as_string() != const_value.as_string()
+        and binop_core.left.as_string() != const_value.as_string()
+    ):
+        return None
 
-        binop = nodes.BinOp("+")
-        binop.left = ord_call
-        binop.right = avar
+    if const_value is not None:
+        const_nums = [0]
+    else:
+        const_nums = []
 
-        chr_call = nodes.Call()
-        chr_call.func = nodes.Name("chr")
-        chr_call.args = [binop]
-
-        return sequence, chr_call
-
-    def iter_use_from_partition(partition):
-        types = [type(p[0]) for p in partition]
-        # a type repeats
-        if len(types) != len(set(types)):
-            return None
-
-        exclusive = set(types) & {nodes.Name, nodes.Subscript, nodes.Attribute}
-        # different exclusive types or an exclusive type multiple times
-        if len(exclusive) > 1:
-            return None
-
-        type_groups = {type(p[0]): p for p in partition}
-        for t in (nodes.Const, nodes.Name, nodes.Subscript, nodes.Attribute, nodes.BinOp):
-            type_groups[t] = type_groups.get(t, [])
-
-        # multiple constants or no binops
-        if len(type_groups[nodes.Const]) > 1 or len(type_groups[nodes.BinOp]) == 0:
-            return None
-
-        if len(exclusive) == 1:
-            exclusive_type = next(iter(exclusive))
-            # multiple values for an exclusive type
-            if len(type_groups[exclusive_type]) > 1:
-                return None
-            exclusive_value = type_groups[exclusive_type][0]
-        else:
-            exclusive_type = None
-            exclusive_value = None
-
-        if not any(
-            ts
-            in (
-                [nodes.Const, exclusive_type, nodes.BinOp],
-                [exclusive_type, nodes.BinOp],
-                [nodes.Const, nodes.BinOp],
-            )
-            for ts in (types, list(reversed(types)))
+    if exclusive_value is not None:
+        if binop_core.op == "+" or (
+            binop_core.op == "-" and exclusive_value.as_string() == binop_core.left.as_string()
         ):
-            return None
-
-        binop_core, bionp_avars = antiunify(type_groups[nodes.BinOp])
-        assert isinstance(binop_core, nodes.BinOp)
-        # all same binops and binops differing in multiple places break niceness
-        if len(bionp_avars) != 1 or called_aunify_var(bionp_avars):
-            return None
-        binop_avar = bionp_avars[0]
-
-        if len(type_groups[nodes.Const]) == 1:
-            const_value = type_groups[nodes.Const][0]
-        else:
-            const_value = None
-
-        # no child is related to the shared value
-        if (
-            exclusive_value is not None
-            and binop_core.right.as_string() != exclusive_value.as_string()
-            and binop_core.left.as_string() != exclusive_value.as_string()
-        ) or (
-            exclusive_value is None
-            and const_value is not None
-            and binop_core.right.as_string() != const_value.as_string()
-            and binop_core.left.as_string() != const_value.as_string()
+            exclusive_nums = [0]
+        elif binop_core.op == "*" or (
+            binop_core.op in ("/", "//", "%")
+            and exclusive_value.as_string() == binop_core.left.as_string()
         ):
-            return None
-
-        if const_value is not None:
-            const_nums = [0]
-        else:
-            const_nums = []
-
-        if exclusive_value is not None:
-            if binop_core.op == "+" or (
-                binop_core.op == "-" and exclusive_value.as_string() == binop_core.left.as_string()
-            ):
-                exclusive_nums = [0]
-            elif binop_core.op == "*" or (
-                binop_core.op in ("/", "//", "%")
-                and exclusive_value.as_string() == binop_core.left.as_string()
-            ):
-                exclusive_nums = [1]
-            else:
-                exclusive_nums = []
+            exclusive_nums = [1]
         else:
             exclusive_nums = []
+    else:
+        exclusive_nums = []
 
-        if isinstance(binop_avar.subs[0], nodes.NodeNG):
-            binop_result = iter_use_from_partition(partition_by_type(binop_avar.subs))
-            if binop_result is None:
-                return None
-            binop_nums, sub_binop_use = binop_result
-            if binop_core.left == binop_avar.parent:
-                binop_core.left = sub_binop_use
-            else:
-                binop_core.right = sub_binop_use
+    if isinstance(binop_avar.subs[0], nodes.NodeNG):
+        binop_result = iter_use_from_partition(partition_by_type(binop_avar.subs))
+        if binop_result is None:
+            return None
+        binop_nums, sub_binop_use = binop_result
+        if binop_core.left == binop_avar.parent:
+            binop_core.left = sub_binop_use
         else:
-            binop_nums = binop_avar.subs
+            binop_core.right = sub_binop_use
+    else:
+        binop_nums = binop_avar.subs
 
-        dct = {
-            nodes.Const: const_nums,
-            exclusive_type: exclusive_nums,
-            nodes.BinOp: binop_nums,
-        }
+    dct = {
+        nodes.Const: const_nums,
+        exclusive_type: exclusive_nums,
+        nodes.BinOp: binop_nums,
+    }
 
-        return [n for t in types for n in dct[t]], binop_core
+    return [n for t in types for n in dct[t]], binop_core
 
-    def to_iter_use(avar):
-        sequence = list(avar.subs)
-        use = avar
 
-        const_sequence = to_const_sequence(sequence)
-        if const_sequence is not None:
-            sequence = const_sequence
+def to_iter_use(avar):
+    sequence = list(avar.subs)
+    use = avar
 
-        from_chars_result = from_chars(avar, sequence)
-        if from_chars_result is not None:
-            sequence, use = from_chars_result
+    const_sequence = to_const_sequence(sequence)
+    if const_sequence is not None:
+        sequence = const_sequence
 
-        range_args = to_range_args(sequence)
-        if range_args is not None:
-            return range_args, use
+    from_chars_result = from_chars(avar, sequence)
+    if from_chars_result is not None:
+        sequence, use = from_chars_result
 
-        partition = partition_by_type(sequence)
-        # single type present => use values directly, if different
-        if len(partition) == 1:
-            assert not any(isinstance(v, nodes.NodeNG) for v in sequence)
-            if len(sequence) != len(set(sequence)):  # some value is repeated
-                return None
-            return sequence, use
-
-        result = iter_use_from_partition(partition)
-        if result is None:
-            return None
-        range_nums, use = result
-        range_args = to_range_args(range_nums)
-        if range_args is None:
-            return None
+    range_args = to_range_args(sequence)
+    if range_args is not None:
         return range_args, use
 
-    def consolidate_ranges(ranges):
-        if len(ranges) == 1:
-            range_args, use = ranges[0]
-            return [to_range_node(range_args)], [use]
-
-        uses = []
-        for (start, stop, step), use in ranges:
-            if step != 1:
-                new = nodes.BinOp("*")
-                new.left = use
-                new.right = nodes.Const(step)
-                use = new
-            if start != 0:
-                new = nodes.BinOp("+")
-                new.left = use
-                new.right = nodes.Const(start)
-                use = new
-            uses.append(use)
-
-        start, stop, step = 0, (stop - stop) // step + 1, 1
-        return [to_range_node((start, stop, step))], uses
-
-    def get_nice_iters(avars):
-        sequences = [avar.subs for avar in avars]
-        if len(sequences) == 0:
-            range_node = nodes.Call()
-            range_node.func = nodes.Name("range")
-            range_node.args = [nodes.Const(len(to_aunify))]
-            return [range_node], {}
-
-        iter_uses = []
-        for avar in avars:
-            result = to_iter_use(avar)
-            if result is None:
-                return None
-            iter, use = result
-            iter_uses.append((iter, use))
-
-        ranges = [(iter, use) for iter, use in iter_uses if isinstance(iter, tuple)]
-
-        # disallow mixing ranges with collections
-        # TODO maybe too strict?
-        if len(ranges) != 0 and len(ranges) != len(iter_uses):
+    partition = partition_by_type(sequence)
+    # single type present => use values directly, if different
+    if len(partition) == 1:
+        assert not any(isinstance(v, nodes.NodeNG) for v in sequence)
+        if len(sequence) != len(set(sequence)):  # some value is repeated
             return None
+        return sequence, use
 
-        if len(ranges) == 0:
-            str_iters = {
-                tuple(to_node(n, avars[i]).as_string() for n in iter)
-                for i, (iter, _use) in enumerate(iter_uses)
-            }
-            if len(str_iters) != 1:
-                return None
-            some_iter, _use = iter_uses[0]
+    result = iter_use_from_partition(partition)
+    if result is None:
+        return None
+    range_nums, use = result
+    range_args = to_range_args(range_nums)
+    if range_args is None:
+        return None
+    return range_args, use
 
-            collection = nodes.Tuple()
-            collection.elts = [to_node(n, avars[0]) for n in some_iter]
-            return [collection], [use for _iter, use in iter_uses]
 
-        if len({r[0] for r in ranges}) > 2:
-            raise NoSubseqToLoop
+def consolidate_ranges(ranges):
+    if len(ranges) == 1:
+        range_args, use = ranges[0]
+        return [to_range_node(range_args)], [use]
 
-        return consolidate_ranges(ranges)
+    uses = []
+    for (start, stop, step), use in ranges:
+        if step != 1:
+            new = nodes.BinOp("*")
+            new.left = use
+            new.right = nodes.Const(step)
+            use = new
+        if start != 0:
+            new = nodes.BinOp("+")
+            new.left = use
+            new.right = nodes.Const(start)
+            use = new
+        uses.append(use)
 
-    def get_iter(iters):
-        return iters[0]
+    start, stop, step = 0, (stop - stop) // step + 1, 1
+    return [to_range_node((start, stop, step))], uses
 
-    def get_target(_avars, _iters):
-        return nodes.AssignName("i")
 
-    def get_fixed_by_merging_with_parent_loop(to_aunify, core, avars):
-        parent = to_aunify[0][0].parent
-        if len(avars) > 0 or not isinstance(parent, nodes.For):
-            return None
+def get_nice_iters(avars, to_aunify):
+    sequences = [avar.subs for avar in avars]
+    if len(sequences) == 0:
+        range_node = nodes.Call()
+        range_node.func = nodes.Name("range")
+        range_node.args = [nodes.Const(len(to_aunify))]
+        return [range_node], {}
 
-        first = to_aunify[0][0]
-        last = to_aunify[-1][-1]
-
-        if first != parent.body[0] or last != parent.body[-1]:
-            return None
-
-        range_params = get_range_params(parent.iter)
-        if range_params is None:
-            return None
-
-        start, stop, step = range_params
-        if get_const_value(start) != 0 or get_const_value(step) != 1:
-            return None
-
-        used_vars = vars_in([n for ns in to_aunify for n in ns])
-        target = parent.target
-        # TODO can be weakened -- use div to get i's original value
-        if (
-            not isinstance(target, nodes.AssignName)
-            or (target.name, parent.scope()) in used_vars.keys()
-        ):
-            return None
-
-        const_stop = get_const_value(stop)
-        new_iter = (
-            f"{const_stop * len(to_aunify)}"
-            if isinstance(stop, nodes.Const)
-            else f"{stop.as_string()} * {len(to_aunify)}"
-        )
-        return Fixed(
-            "similar-to-loop-merge",
-            get_token_count(core),
-            get_statements_count(core, include_defs=False, include_name_main=True),
-            (new_iter,),
-        )
-
-    def get_fixed_by_loop(to_aunify, core, avars):
-        result = get_nice_iters(avars)
+    iter_uses = []
+    for avar in avars:
+        result = to_iter_use(avar)
         if result is None:
             return None
-        iters, uses = result
-        assert len(iters) == 1
+        iter, use = result
+        iter_uses.append((iter, use))
 
-        for_ = nodes.For()
-        for_.iter = get_iter(iters)
-        for_.target = get_target(avars, iters)
-        for_.body = core
+    ranges = [(iter, use) for iter, use in iter_uses if isinstance(iter, tuple)]
 
-        return Fixed(
-            "similar-to-loop",
-            get_token_count(for_),
-            get_statements_count(for_, include_defs=False, include_name_main=True),
-            (
-                len(to_aunify),
-                get_statements_count(to_aunify[0], include_defs=False, include_name_main=True),
-            ),
-        )
+    # disallow mixing ranges with collections
+    # TODO maybe too strict?
+    if len(ranges) != 0 and len(ranges) != len(iter_uses):
+        return None
 
+    if len(ranges) == 0:
+        str_iters = {
+            tuple(to_node(n, avars[i]).as_string() for n in iter)
+            for i, (iter, _use) in enumerate(iter_uses)
+        }
+        if len(str_iters) != 1:
+            return None
+        some_iter, _use = iter_uses[0]
+
+        collection = nodes.Tuple()
+        collection.elts = [to_node(n, avars[0]) for n in some_iter]
+        return [collection], [use for _iter, use in iter_uses]
+
+    if len({r[0] for r in ranges}) > 2:
+        raise NoSubseqToLoop
+
+    return consolidate_ranges(ranges)
+
+
+### fixers
+
+
+def get_iter(iters):
+    return iters[0]
+
+
+def get_target(_avars, _iters):
+    return nodes.AssignName("i")
+
+
+def get_fixed_by_merging_with_parent_loop(to_aunify, core, avars):
+    parent = to_aunify[0][0].parent
+    if len(avars) > 0 or not isinstance(parent, nodes.For):
+        return None
+
+    first = to_aunify[0][0]
+    last = to_aunify[-1][-1]
+
+    if first != parent.body[0] or last != parent.body[-1]:
+        return None
+
+    range_params = get_range_params(parent.iter)
+    if range_params is None:
+        return None
+
+    start, stop, step = range_params
+    if get_const_value(start) != 0 or get_const_value(step) != 1:
+        return None
+
+    used_vars = vars_in([n for ns in to_aunify for n in ns])
+    target = parent.target
+    # TODO can be weakened -- use div to get i's original value
+    if (
+        not isinstance(target, nodes.AssignName)
+        or (target.name, parent.scope()) in used_vars.keys()
+    ):
+        return None
+
+    const_stop = get_const_value(stop)
+    new_iter = (
+        f"{const_stop * len(to_aunify)}"
+        if isinstance(stop, nodes.Const)
+        else f"{stop.as_string()} * {len(to_aunify)}"
+    )
+    return Fixed(
+        "similar-to-loop-merge",
+        get_token_count(core),
+        get_statements_count(core, include_defs=False, include_name_main=True),
+        (new_iter,),
+    )
+
+
+def get_fixed_by_loop(to_aunify, core, avars):
+    result = get_nice_iters(avars, to_aunify)
+    if result is None:
+        return None
+    iters, uses = result
+    assert len(iters) == 1
+
+    for_ = nodes.For()
+    for_.iter = get_iter(iters)
+    for_.target = get_target(avars, iters)
+    for_.body = core
+
+    return Fixed(
+        "similar-to-loop",
+        get_token_count(for_),
+        get_statements_count(for_, include_defs=False, include_name_main=True),
+        (
+            len(to_aunify),
+            get_statements_count(to_aunify[0], include_defs=False, include_name_main=True),
+        ),
+    )
+
+
+### control function
+
+
+def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
     if max(len(to_aunify), len(to_aunify[0])) <= 2:  # TODO parametrize?
         return False
 

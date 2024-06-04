@@ -16,76 +16,79 @@ from edulint.linting.checkers.duplication.utils import (
     to_node,
 )
 
+### similar to function
+
+
+def get_fixed_by_function(to_aunify, core, avars):
+    # compute necessary arguments from different values
+    seen = {}
+    for avar in avars:
+        var_vals = tuple(avar.subs)
+        old_avar = seen.get(var_vals, avar)
+
+        if old_avar != avar:
+            continue
+        seen[var_vals] = avar
+
+    # compute extras
+    extra_args = get_vars_defined_before(core)
+    return_vals_needed = len(get_vars_used_after(core))
+    control_needed = len(get_control_statements(core))
+
+    # generate calls in ifs
+    calls = []
+    for i in range(len(to_aunify)):
+        params = [s[i] for s in seen]
+        call = nodes.Call()
+        call.func = nodes.Name("AUX")
+        call.args = [to_node(param) for param in params] + [
+            nodes.Name(varname) for varname, _scope in extra_args.keys()
+        ]
+        if return_vals_needed + control_needed == 0:
+            calls.append(call)
+        else:
+            assign = nodes.Assign()
+            assign.targets = [
+                nodes.AssignName(f"<r{i}>") for i in range(control_needed + return_vals_needed)
+            ]
+            assign.value = call
+            calls.append(assign)
+
+            # generate management for returned control flow
+            for i in range(control_needed):
+                test = nodes.BinOp("is")
+                test.postinit(left=nodes.Name(f"<r{i}>"), right=nodes.Const(None))
+                if_ = nodes.If()
+                if_.test = test
+                if_.body = [nodes.Return()]  # placeholder for a control
+                calls.append(if_)
+
+    # generate function
+    fun_def = nodes.FunctionDef(name="AUX")
+    fun_def.args = nodes.Arguments()
+    fun_def.args.postinit(
+        args=[nodes.AssignName(avar.name) for avar in seen.values()]
+        + [nodes.AssignName(varname) for varname, _scope in extra_args.keys()],
+        defaults=None,
+        kwonlyargs=[],
+        kw_defaults=None,
+        annotations=[],
+    )
+    fun_def.body = core if isinstance(core, list) else [core]
+
+    return Fixed(
+        "similar-to-function",
+        get_token_count(calls) + get_token_count(fun_def),
+        get_statements_count(calls, include_defs=False, include_name_main=True)
+        + get_statements_count(fun_def, include_defs=False, include_name_main=True),
+        (
+            len(to_aunify),
+            get_statements_count(core, include_defs=False, include_name_main=True),
+        ),
+    )
+
 
 def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> bool:
-    def get_fixed_by_function(to_aunify, core, avars):
-        # compute necessary arguments from different values
-        seen = {}
-        for avar in avars:
-            var_vals = tuple(avar.subs)
-            old_avar = seen.get(var_vals, avar)
-
-            if old_avar != avar:
-                continue
-            seen[var_vals] = avar
-
-        # compute extras
-        extra_args = get_vars_defined_before(core)
-        return_vals_needed = len(get_vars_used_after(core))
-        control_needed = len(get_control_statements(core))
-
-        # generate calls in ifs
-        calls = []
-        for i in range(len(to_aunify)):
-            params = [s[i] for s in seen]
-            call = nodes.Call()
-            call.func = nodes.Name("AUX")
-            call.args = [to_node(param) for param in params] + [
-                nodes.Name(varname) for varname, _scope in extra_args.keys()
-            ]
-            if return_vals_needed + control_needed == 0:
-                calls.append(call)
-            else:
-                assign = nodes.Assign()
-                assign.targets = [
-                    nodes.AssignName(f"<r{i}>") for i in range(control_needed + return_vals_needed)
-                ]
-                assign.value = call
-                calls.append(assign)
-
-                # generate management for returned control flow
-                for i in range(control_needed):
-                    test = nodes.BinOp("is")
-                    test.postinit(left=nodes.Name(f"<r{i}>"), right=nodes.Const(None))
-                    if_ = nodes.If()
-                    if_.test = test
-                    if_.body = [nodes.Return()]  # placeholder for a control
-                    calls.append(if_)
-
-        # generate function
-        fun_def = nodes.FunctionDef(name="AUX")
-        fun_def.args = nodes.Arguments()
-        fun_def.args.postinit(
-            args=[nodes.AssignName(avar.name) for avar in seen.values()]
-            + [nodes.AssignName(varname) for varname, _scope in extra_args.keys()],
-            defaults=None,
-            kwonlyargs=[],
-            kw_defaults=None,
-            annotations=[],
-        )
-        fun_def.body = core if isinstance(core, list) else [core]
-
-        return Fixed(
-            "similar-to-function",
-            get_token_count(calls) + get_token_count(fun_def),
-            get_statements_count(calls, include_defs=False, include_name_main=True)
-            + get_statements_count(fun_def, include_defs=False, include_name_main=True),
-            (
-                len(to_aunify),
-                get_statements_count(core, include_defs=False, include_name_main=True),
-            ),
-        )
-
     if type_mismatch(avars):
         return False
 
@@ -113,41 +116,47 @@ def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) 
     return True
 
 
+### similar to call
+
+
+def is_possible_callee(function: nodes.FunctionDef, sub_aunify):
+    assert len(sub_aunify) <= len(function.body)
+    if len(sub_aunify) == len(function.body):
+        return True
+
+    return sub_aunify == function.body[: len(sub_aunify)] and isinstance(
+        function.body[len(sub_aunify)], nodes.Return
+    )
+
+
+def get_possible_callees(to_aunify):
+    possible_callees = []
+
+    for i, sub_aunify in enumerate(to_aunify):
+        if not isinstance(sub_aunify[0].parent, nodes.FunctionDef):
+            continue
+        function = sub_aunify[0].parent
+        if is_possible_callee(function, sub_aunify):
+            possible_callees.append((i, function))
+
+    return possible_callees
+
+
+def returns_used_value(return_, returned_values, node):
+    # TODO do properly, not by checking for substring
+    if node == return_ or any(r in node.as_string() for r in returned_values):
+        return True
+
+    for parent in node.node_ancestors():
+        if parent == return_:
+            return True
+        if any(r in parent.as_string() for r in returned_values):
+            return True
+
+    return False
+
+
 def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> bool:
-    def is_possible_callee(function: nodes.FunctionDef, sub_aunify):
-        assert len(sub_aunify) <= len(function.body)
-        if len(sub_aunify) == len(function.body):
-            return True
-
-        return sub_aunify == function.body[: len(sub_aunify)] and isinstance(
-            function.body[len(sub_aunify)], nodes.Return
-        )
-
-    def get_possible_callees(to_aunify):
-        possible_callees = []
-
-        for i, sub_aunify in enumerate(to_aunify):
-            if not isinstance(sub_aunify[0].parent, nodes.FunctionDef):
-                continue
-            function = sub_aunify[0].parent
-            if is_possible_callee(function, sub_aunify):
-                possible_callees.append((i, function))
-
-        return possible_callees
-
-    def returns_used_value(return_, returned_values, node):
-        # TODO do properly, not by checking for substring
-        if node == return_ or any(r in node.as_string() for r in returned_values):
-            return True
-
-        for parent in node.node_ancestors():
-            if parent == return_:
-                return True
-            if any(r in parent.as_string() for r in returned_values):
-                return True
-
-        return False
-
     possible_callees = get_possible_callees(to_aunify)
     if len(possible_callees) != 1:
         return False
