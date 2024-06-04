@@ -258,7 +258,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
                 continue
 
             result = antiunify(
-                if_bodies,
+                to_aunify,
                 stop_on=lambda avars: length_mismatch(avars) or type_mismatch(avars),
             )
             if result is not None:
