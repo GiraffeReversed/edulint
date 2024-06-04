@@ -3,7 +3,7 @@ from typing import Tuple, List, Generator
 
 from astroid import nodes
 
-from edulint.linting.analyses.antiunify import cprint  # noqa: F401
+from edulint.linting.analyses.antiunify import AunifyVar, cprint  # noqa: F401
 
 
 Fixed = namedtuple("Fixed", ["symbol", "tokens", "statements", "message_args"])
@@ -89,3 +89,29 @@ def to_node(val, avar=None) -> nodes.NodeNG:
     if avar is not None and isinstance(avar.parent, nodes.Name):
         return nodes.Name(val)
     return nodes.Const(val)
+
+
+def to_parent(val: AunifyVar) -> nodes.NodeNG:
+    parent = val.parent
+    if isinstance(parent, (nodes.Const, nodes.Name)):
+        parent = parent.parent
+    assert parent is not None
+    return parent
+
+
+def get_common_parent(ns: List[nodes.NodeNG]) -> bool:
+    if len(ns) == 0:
+        return None
+
+    if len(ns) == 1:
+        return to_parent(ns[0])
+
+    fst_parents = [ns[0]] + list(ns[0].node_ancestors())
+    other_parents = set.intersection(
+        *[{ns[i]} | set(ns[i].node_ancestors()) for i in range(1, len(ns))]
+    )
+
+    for parent in fst_parents:
+        if parent in other_parents:
+            return parent
+    return None

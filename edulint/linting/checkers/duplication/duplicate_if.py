@@ -4,7 +4,6 @@ from astroid import nodes  # type: ignore
 
 from edulint.linting.analyses.antiunify import (
     antiunify,
-    AunifyVar,
     cprint,  # noqa: F401
     get_sub_variant,
     contains_avar,
@@ -37,6 +36,8 @@ from edulint.linting.checkers.duplication.utils import (
     saves_enough_tokens,
     get_loop_repetitions,
     to_node,
+    to_parent,
+    get_common_parent,
 )
 
 ### constructive helper functions
@@ -115,14 +116,6 @@ def create_ifs(tests: List[nodes.NodeNG]) -> Tuple[nodes.If, List[nodes.NodeNG]]
 ### testing helper functions
 
 
-def to_parent(val: AunifyVar) -> nodes.NodeNG:
-    parent = val.parent
-    if isinstance(parent, (nodes.Const, nodes.Name)):
-        parent = parent.parent
-    assert parent is not None
-    return parent
-
-
 def is_one_of_parents_ifs(node: nodes.If) -> bool:
     parent = node.parent
     if not isinstance(parent, nodes.If):
@@ -135,24 +128,6 @@ def is_one_of_parents_ifs(node: nodes.If) -> bool:
     if_bodies = get_bodies(ifs)
 
     return all(any(isinstance(n, nodes.If) for n in body) for body in if_bodies)
-
-
-def get_common_parent(ns: List[nodes.NodeNG]) -> bool:
-    if len(ns) == 0:
-        return None
-
-    if len(ns) == 1:
-        return to_parent(ns[0])
-
-    fst_parents = [ns[0]] + list(ns[0].node_ancestors())
-    other_parents = set.intersection(
-        *[{ns[i]} | set(ns[i].node_ancestors()) for i in range(1, len(ns))]
-    )
-
-    for parent in fst_parents:
-        if parent in other_parents:
-            return parent
-    return None
 
 
 def contains_other_duplication(core, avars) -> bool:
