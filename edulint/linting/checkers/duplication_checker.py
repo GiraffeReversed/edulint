@@ -2397,8 +2397,9 @@ class BigNoDuplicateCode(BaseChecker):  # type: ignore
                 snd_siblings = get_memoized_siblings(snd)
 
                 for length in range(min(len(fst_siblings), len(snd_siblings), j - i), 0, -1):
-                    if length == 1 and any(
-                        isinstance(node, (nodes.Assign, nodes.Expr)) for node in (fst, snd)
+                    if length == 1 and (
+                        isinstance(fst, (nodes.Assign, nodes.Expr))
+                        or isinstance(snd, (nodes.Assign, nodes.Expr))
                     ):
                         break
 
