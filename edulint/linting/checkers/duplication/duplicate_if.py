@@ -801,7 +801,7 @@ def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> 
     return False
 
 
-def duplicate_blocks_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
+def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
     if is_parents_elif(node):
         return False, False
 

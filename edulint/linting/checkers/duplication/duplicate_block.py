@@ -2,16 +2,19 @@ from typing import List
 
 from astroid import nodes  # type: ignore
 
-from edulint.linting.analyses.antiunify import cprint  # noqa: F401
+from edulint.linting.analyses.antiunify import antiunify, cprint  # noqa: F401
 from edulint.linting.analyses.reaching_definitions import (
     get_vars_defined_before,
     get_vars_used_after,
     get_control_statements,
 )
-from edulint.linting.checkers.utils import get_statements_count, get_token_count
+from edulint.linting.checkers.utils import get_statements_count, get_token_count, EXPRESSION_TYPES
 from edulint.linting.checkers.duplication.utils import (
     Fixed,
+    length_mismatch,
     type_mismatch,
+    called_aunify_var,
+    assignment_to_aunify_var,
     saves_enough_tokens,
     to_node,
 )
@@ -200,3 +203,26 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         args=(function.name),
     )
     return True
+
+
+### control function
+
+
+def similar_to_block(checker, to_aunify: List[List[nodes.NodeNG]]) -> bool:
+    result = antiunify(
+        to_aunify,
+        stop_on=lambda avars: length_mismatch(avars)
+        or type_mismatch(avars, allowed_mismatches=[{nodes.Name, t} for t in EXPRESSION_TYPES])
+        or called_aunify_var(avars),
+        stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
+    )
+    if result is None:
+        return False
+    core, avars = result
+
+    if all(isinstance(vals[0], nodes.FunctionDef) for vals in to_aunify):
+        return False  # TODO hint use common helper function
+
+    if similar_to_call(checker, to_aunify, core, avars):
+        return True
+    return similar_to_function(checker, to_aunify, core, avars)

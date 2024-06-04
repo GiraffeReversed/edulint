@@ -316,36 +316,19 @@ def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
     return loc, None
 
 
-def syntactic_children_locs_from_old(
-    loc: CFGLoc,
-    syntactic: nodes.NodeNG,
-) -> Generator[CFGLoc, None, None]:
-    if isinstance(syntactic, list):
-        syntactic_set = set(syntactic)
+def syntactic_children_locs(syntactic: nodes.NodeNG, include_stmt_locs: bool = False):
+    if isinstance(syntactic, nodes.NodeNG):
+        node = syntactic
     else:
-        syntactic_set = {syntactic}
+        node = syntactic[0]
 
-    def stop_on_block(block, from_pos, to_pos):
-        # if last is not nested, then none exectued after will be nested
-        last = block.locs[to_pos - 1].node
-        return len(syntactic_set & (set(last.node_ancestors()) | {last})) == 0
+    assert hasattr(node, "cfg_loc")
 
-    def stop_on_loc(loc):
-        return len(syntactic_set & (set(loc.node.node_ancestors()) | {loc.node})) == 0
-
-    for succ in successors_from_loc(
-        loc,
-        stop_on_block=stop_on_block,
-        stop_on_loc=stop_on_loc,
-        include_start=True,
-        include_end=False,
-    ):
-        yield succ
+    yield from syntactic_children_locs_from(node.cfg_loc, syntactic, include_stmt_locs)
 
 
 def syntactic_children_locs_from(
-    loc: CFGLoc,
-    syntactic: nodes.NodeNG,
+    loc: CFGLoc, syntactic: nodes.NodeNG, include_stmt_locs: bool = False
 ) -> Generator[CFGLoc, None, None]:
 
     if isinstance(loc, CFGLoc):
@@ -358,7 +341,13 @@ def syntactic_children_locs_from(
     for is_in, block, from_pos, to_pos in get_locs_in_and_after_from(loc, syntactic):
         if is_in:
             for i in range(from_pos, to_pos):
-                yield block.locs[i]
+                loc = block.locs[i]
+                if not include_stmt_locs:
+                    yield loc
+                else:
+                    for stmt_loc in get_stmt_locs(loc):
+                        if stmt_loc is not None:
+                            yield stmt_loc
 
 
 def get_first_locs_after(locs: List[CFGLoc]):
