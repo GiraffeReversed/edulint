@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List, Union
+from typing import Tuple, List, Union
 
 from astroid import nodes  # type: ignore
 
@@ -197,8 +197,8 @@ def check_enabled(message_ids: Union[str, List[str]]):
         message_ids = [message_ids]
 
     def middle(func):
-        def inner(self, *args, **kwargs):
-            if not any(self.linter.is_message_enabled(mi) for mi in message_ids):
+        def inner(checker, *args, **kwargs):
+            if not any(checker.linter.is_message_enabled(mi) for mi in message_ids):
                 return None
             result = func(*args, **kwargs)
             if result is None:
@@ -217,7 +217,7 @@ def check_enabled(message_ids: Union[str, List[str]]):
 ### identical code before/after branch
 
 
-def identical_before_after_branch(self, node: nodes.If) -> bool:
+def identical_before_after_branch(checker, ends_with_else: bool, ifs: List[nodes.If]) -> bool:
 
     def get_stmts_difference(branches: List[nodes.NodeNG], forward: bool) -> int:
         reference = branches[0]
@@ -240,16 +240,12 @@ def identical_before_after_branch(self, node: nodes.If) -> bool:
         last = reference[stmts_difference - 1 if forward else -1]
         lines_difference = get_lines_between(first, last, including_last=True)
 
-        self.add_message(
+        checker.add_message(
             "identical-before-after-branch",
             node=defect_node,
             args=(lines_difference, "before" if forward else "after"),
         )
 
-    if not node.orelse or is_parents_elif(node):
-        return False
-
-    ends_with_else, ifs = extract_from_elif(node)
     if not ends_with_else:
         return False
 
@@ -259,10 +255,10 @@ def identical_before_after_branch(self, node: nodes.If) -> bool:
     same_prefix_len = get_stmts_difference(branches, forward=True)
     if same_prefix_len >= 1:
         if all(same_prefix_len == len(b) for b in branches):
-            self.add_message("identical-if-branches", node=node)
+            checker.add_message("identical-if-branches", node=ifs[0])
             return True
 
-        add_message(branches, same_prefix_len, node, forward=True)
+        add_message(branches, same_prefix_len, ifs[0], forward=True)
         if any(same_prefix_len == len(b) for b in branches):
             return True
 
@@ -283,7 +279,7 @@ def identical_before_after_branch(self, node: nodes.If) -> bool:
 ### identical sequential ifs
 
 
-def identical_seq_ifs(self, node: nodes.If) -> Tuple[bool, Optional[nodes.NodeNG]]:
+def identical_seq_ifs(checker, ends_with_else: bool, ifs: List[nodes.If]) -> bool:
 
     def same_ifs_count(seq_ifs: List[nodes.NodeNG], start: int) -> int:
         reference = seq_ifs[start].body
@@ -300,30 +296,28 @@ def identical_seq_ifs(self, node: nodes.If) -> Tuple[bool, Optional[nodes.NodeNG
                     return i - start
         return len(seq_ifs) - start
 
-    prev_sibling = node.previous_sibling()
-    if is_parents_elif(node) or (
-        isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]
-    ):
-        return False, None
-
-    ends_with_else, seq_ifs = extract_from_elif(node)
     if ends_with_else:
-        return False, None
-    extract_from_siblings(node, seq_ifs)
+        return False
 
-    if len(seq_ifs) == 1:
-        return False, None
+    prev_sibling = ifs[0].previous_sibling()
+    if isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]:
+        return False
+
+    extract_from_siblings(ifs[0], ifs)
+
+    if len(ifs) == 1:
+        return False
 
     i = 0
     last = None
-    while i < len(seq_ifs) - 1:
-        count = same_ifs_count(seq_ifs, i)
+    while i < len(ifs) - 1:
+        count = same_ifs_count(ifs, i)
         if count > 1:
-            first = seq_ifs[i]
-            assert isinstance(seq_ifs[i + count - 1], nodes.If)
-            last = seq_ifs[i + count - 1].body[-1]
+            first = ifs[i]
+            assert isinstance(ifs[i + count - 1], nodes.If)
+            last = ifs[i + count - 1].body[-1]
 
-            self.add_message(
+            checker.add_message(
                 "identical-seq-ifs",
                 line=first.fromlineno,
                 col_offset=first.col_offset,
@@ -333,9 +327,7 @@ def identical_seq_ifs(self, node: nodes.If) -> Tuple[bool, Optional[nodes.NodeNG
             )
         i += count
 
-    if last is None:
-        return False, None
-    return True, last.parent
+    return last is not None
 
 
 ### if to restructured
@@ -748,16 +740,19 @@ def get_fixed_by_function(tests, core, avars):
 ### control functions
 
 
-def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
-    if is_parents_elif(node):
+def identical_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> bool:
+    if identical_before_after_branch(checker, ends_with_else, ifs):
+        return True
+
+    return identical_seq_ifs(checker, ends_with_else, ifs)
+
+
+def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> Tuple[bool, bool]:
+    if not ends_with_else:
         return False
 
     # do not break up consistent ifs
-    if is_one_of_parents_ifs(node):
-        return False
-
-    ends_with_else, ifs = extract_from_elif(node)
-    if not ends_with_else:
+    if is_one_of_parents_ifs(ifs[0]):
         return False
 
     if_bodies = get_bodies(ifs)
@@ -774,8 +769,8 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
     if contains_other_duplication(core, avars):
         return False
 
-    tokens_before = get_token_count(node)
-    stmts_before = get_statements_count(node, include_defs=False, include_name_main=True)
+    tokens_before = get_token_count(ifs[0])
+    stmts_before = get_statements_count(ifs[0], include_defs=False, include_name_main=True)
 
     tests = [if_.test for if_ in ifs]
     called_avar = called_aunify_var(avars)
@@ -792,7 +787,7 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
         if fix_function is None:
             continue
 
-        suggestion = fix_function(self, tests, core, avars)
+        suggestion = fix_function(checker, tests, core, avars)
         if suggestion is None:
             continue
 
@@ -800,7 +795,18 @@ def duplicate_blocks_in_if(self, node: nodes.If) -> bool:
             continue
 
         message_id, _tokens, _statements, message_args = suggestion
-        self.add_message(message_id, node=node, args=message_args)
+        checker.add_message(message_id, node=ifs[0], args=message_args)
         return True
 
     return False
+
+
+def duplicate_blocks_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
+    if is_parents_elif(node):
+        return False, False
+
+    ends_with_else, ifs = extract_from_elif(node)
+    if identical_blocks_in_if(checker, ends_with_else, ifs):
+        return True, True
+
+    return similar_blocks_in_if(checker, ends_with_else, ifs), False

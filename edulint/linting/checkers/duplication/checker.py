@@ -14,11 +14,7 @@ from edulint.linting.analyses.cfg.utils import (
     successors_from_loc,
 )
 from edulint.linting.checkers.utils import is_block_comment, EXPRESSION_TYPES
-from edulint.linting.checkers.duplication.duplicate_if import (
-    duplicate_blocks_in_if,
-    identical_before_after_branch,
-    identical_seq_ifs,
-)
+from edulint.linting.checkers.duplication.duplicate_if import duplicate_blocks_in_if
 from edulint.linting.checkers.duplication.duplicate_sequence import similar_to_loop
 from edulint.linting.checkers.duplication.duplicate_block import (
     similar_to_function,
@@ -229,35 +225,6 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             if fst in duplicate:
                 continue
 
-            if isinstance(fst, nodes.If):
-                any_message1 = identical_before_after_branch(self, fst)
-                any_message2 = not any_message1 and duplicate_blocks_in_if(self, fst)
-
-                if any_message1 or any_message2:
-                    duplicate.update(
-                        {
-                            stmt_loc.node
-                            for loc in syntactic_children_locs_from(fst.cfg_loc, fst)
-                            for stmt_loc in get_stmt_locs(loc)
-                            if stmt_loc is not None
-                        }
-                        # do not suggest more changes in a duplicate-if block,
-                        # other than moving identical before-after branch code
-                        - (
-                            {
-                                stmt_loc.node
-                                for loc in syntactic_children_locs_from(
-                                    fst.body[0].cfg_loc, fst.body
-                                )
-                                for stmt_loc in get_stmt_locs(loc)
-                                if stmt_loc is not None
-                            }
-                            if not any_message2
-                            else set()
-                        )
-                    )
-                    continue
-
             fst_siblings = get_memoized_siblings(siblings, fst)
 
             if (
@@ -289,21 +256,29 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
                     continue
 
             if isinstance(fst, nodes.If):
-                # TODO only if similar-to-loop would detect nothing?
-                any_message, last_if = identical_seq_ifs(self, fst)
+                any_duplication, inspect_first_if = duplicate_blocks_in_if(self, fst)
 
-                if any_message:
-                    for sibling in fst_siblings:
-                        duplicate.update(
+                if any_duplication:
+                    duplicate.update(
+                        {
+                            stmt_loc.node
+                            for loc in syntactic_children_locs_from(fst.cfg_loc, fst)
+                            for stmt_loc in get_stmt_locs(loc)
+                            if stmt_loc is not None
+                        }
+                        - (
                             {
                                 stmt_loc.node
-                                for loc in syntactic_children_locs_from(sibling.cfg_loc, sibling)
+                                for loc in syntactic_children_locs_from(
+                                    fst.body[0].cfg_loc, fst.body
+                                )
                                 for stmt_loc in get_stmt_locs(loc)
                                 if stmt_loc is not None
                             }
+                            if inspect_first_if
+                            else set()
                         )
-                        if sibling == last_if or sibling in last_if.node_ancestors():
-                            break
+                    )
                     continue
 
             if not self.linter.is_message_enabled(
