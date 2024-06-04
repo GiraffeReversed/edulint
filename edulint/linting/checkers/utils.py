@@ -28,14 +28,6 @@ def eprint(*args: Any, **kwargs: Any) -> None:
     print(*args, file=sys.stderr, **kwargs)
 
 
-def cformat(node):
-    return "\n".join([c.as_string() for c in (node if isinstance(node, list) else [node])])
-
-
-def cprint(node):
-    return print(cformat(node))
-
-
 T = TypeVar("T")
 
 

@@ -10,7 +10,7 @@ from edulint.linting.analyses.reaching_definitions import (
     MODIFYING_EVENTS,
 )
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
-from edulint.linting.checkers.utils import eprint, cformat
+from edulint.linting.checkers.utils import eprint
 
 
 subitution = Dict[str, Union[nodes.NodeNG, Tuple[str, nodes.NodeNG]]]
@@ -563,6 +563,10 @@ def core_as_string(n) -> str:
     if isinstance(n, list):
         return "\n".join(n.accept(visitor) for n in n)
     return n.accept(visitor)
+
+
+def cprint(n) -> None:
+    eprint(core_as_string(n))
 
 
 def eprint_aunify_core(n, depth: int = 0):
