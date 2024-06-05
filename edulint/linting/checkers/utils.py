@@ -63,18 +63,14 @@ def is_builtin(node: nodes.NodeNG, function: Optional[str] = None) -> bool:
     return utils.is_builtin_object(inferred) and function is None or inferred.name == function
 
 
-EXPR_FUNCTIONS = {
+PURE_FUNCTIONS = {
     "abs",
     "max",
     "min",
     "round",
     "sqrt",
     "len",
-    "all",
-    "any",
     "sum",
-    "map",
-    "filter",
     "sorted",
     "reversed",
     "int",
@@ -84,20 +80,12 @@ EXPR_FUNCTIONS = {
     "chr",
 }
 
+EXPR_FUNCTIONS = PURE_FUNCTIONS | {"all", "any", "map", "filter"}
+
 
 def is_pure_builtin(node: nodes.NodeNG) -> bool:
     inferred = utils.safe_infer(node)
-    return is_builtin(node) and inferred and inferred.name in EXPR_FUNCTIONS
-
-
-def variable_contains_impure_function(node: nodes.Name) -> bool:
-    # Note: I am not sure about this yet.
-    inferred = utils.safe_infer(node)
-    return (
-        inferred is None
-        or inferred is Uninferable
-        or (inferred.is_function and not is_pure_builtin(inferred))
-    )
+    return is_builtin(node) and inferred and inferred.name in PURE_FUNCTIONS
 
 
 def is_multi_assign(node: nodes.NodeNG) -> bool:

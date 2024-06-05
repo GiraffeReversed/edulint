@@ -1,6 +1,7 @@
 import sys
 
 from astroid import nodes  # type: ignore
+from astroid.const import Context
 from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Callable, Dict, Set
 
 from pylint.checkers import utils
@@ -19,8 +20,6 @@ from edulint.linting.checkers.utils import (
     get_statements_count,
     is_pure_builtin,
     is_negation,
-    get_name,
-    variable_contains_impure_function,
 )
 
 Expr_representation = str
@@ -548,6 +547,7 @@ class Short(BaseChecker):
         return left, comp, right
 
     def _is_constant(self, node: nodes.NodeNG) -> bool:
+        # Needs fixing
         return get_const_value(node) is not None
 
     def _is_numeric(self, node: nodes.NodeNG) -> bool:
@@ -559,10 +559,9 @@ class Short(BaseChecker):
         Assumes that node is a child of Bool Op.
         If the extraction was not successful returns None.
         It is succesful if and only if it is an inequality between
-        a constant and a variable or a function call or a binary
-        operation.
+        a constant and a non-constant.
 
-        When returns non None, the constant is last.
+        When this does not return None, the constant is last.
         """
         if not isinstance(node, nodes.Compare) or len(node.ops) >= 2:
             return None
@@ -582,90 +581,10 @@ class Short(BaseChecker):
         if left_is_constant:
             left, comp, right = right, self.SWITCHED_COMPARATOR[comp], left
 
-        if not (
-            isinstance(left, nodes.Call)
-            or isinstance(left, nodes.Name)
-            or isinstance(left, nodes.BinOp)
-            or isinstance(left, nodes.UnaryOp)
-        ) or not self._is_numeric(right):
+        if not self._is_numeric(right):
             return None
 
         return left, comp, get_const_value(right)
-
-    def _equal_constants(self, ex1: nodes.NodeNG, ex2: nodes.NodeNG) -> bool:
-        const1 = get_const_value(ex1)
-        const2 = get_const_value(ex2)
-
-        return const1 is not None and const2 is not None and const1 == const2
-
-    def _same_expressions(
-        self, ex1: nodes.NodeNG, ex2: nodes.NodeNG, first_param_of_map_or_filter: bool
-    ) -> bool:
-        """
-        Returns True iff ex1 and ex2 represent the same variable or the same pure builtin
-        function called on exactly same arguments that also satisfy _same_expressions
-        or are the same constants or are both BinOp where left and right satisfy _same_expressions.
-
-        Note that the function uses recursion, so be aware of recursion limit.
-        """
-        if self._equal_constants(ex1, ex2):
-            return True
-
-        if (
-            type(ex1) != type(ex2)
-            or (
-                not isinstance(ex1, nodes.Name)
-                and not isinstance(ex1, nodes.Call)
-                and not isinstance(ex1, nodes.BinOp)
-                and not isinstance(ex1, nodes.UnaryOp)
-            )
-            or (
-                isinstance(ex1, nodes.Call)
-                and (
-                    len(ex1.args) != len(ex2.args)
-                    or len(ex1.keywords) != 0
-                    or len(ex2.keywords) != 0
-                    or len(ex1.kwargs) != 0
-                    or len(ex2.kwargs) != 0
-                    or len(ex1.starargs) != 0
-                    or len(ex2.starargs) != 0
-                    or ex1.func.as_string() != ex2.func.as_string()
-                    or not is_pure_builtin(ex1.func)
-                    or not is_pure_builtin(ex2.func)
-                )
-            )
-        ):
-            return False
-
-        if isinstance(ex1, nodes.UnaryOp):
-            return ex1.op == ex2.op and self._same_expressions(ex1.operand, ex2.operand, False)
-
-        if isinstance(ex1, nodes.BinOp):
-            return (
-                ex1.op == ex2.op
-                and self._same_expressions(ex1.left, ex2.left, False)
-                and self._same_expressions(ex1.right, ex2.right, False)
-            )
-
-        if isinstance(ex1, nodes.Name):
-            return ex1.name == ex2.name and (
-                not first_param_of_map_or_filter
-                or (
-                    not variable_contains_impure_function(ex1)
-                    and not variable_contains_impure_function(ex2)
-                )
-            )
-
-        for i in range(len(ex1.args)):
-            arg1 = ex1.args[i]
-            arg2 = ex2.args[i]
-
-            if not self._same_expressions(
-                arg1, arg2, ex1.func.as_string() in {"map", "filter"} and i == 0
-            ):
-                return False
-
-        return True
 
     def _get_comparator_by_restriction(self, cmp1: str, cmp2: str, more_restrictive: bool) -> str:
         if len(cmp1) > len(cmp2):
@@ -786,66 +705,6 @@ class Short(BaseChecker):
 
         return ""
 
-    def _check_for_simplification_of_single_boolop(self, node: nodes.BoolOp) -> None:
-        if node.op is None or len(node.values) != 2:
-            return
-
-        operand1 = self._get_node_comparator_const_value(node.values[0])
-        operand2 = self._get_node_comparator_const_value(node.values[1])
-
-        if not operand1 or not operand2:
-            return
-
-        expr1, cmp1, const1 = operand1
-        expr2, cmp2, const2 = operand2
-
-        if not self._same_expressions(expr1, expr2, False):
-            return
-
-        expr_string = expr1.as_string()
-
-        if cmp1[0] == cmp2[0]:
-            cmp1, const1 = self._remove_redundant_compare(
-                cmp1, const1, cmp2, const2, node.op == "and"
-            )
-
-            self.add_message(
-                "redundant-compare-in-condition",
-                node=node,
-                args=(get_name(node), expr_string + " " + cmp1 + " " + str(const1)),
-            )
-            return
-
-        new_expr = self._check_if_always_true_or_false(
-            const1, cmp1, const2, cmp2, expr_string, node.op
-        )
-
-        if len(new_expr) != 0:
-            self.add_message(
-                "redundant-compare-in-condition",
-                node=node,
-                args=(get_name(node), new_expr),
-            )
-            return
-
-        if const1 != -const2 or cmp1 != self.SWITCHED_COMPARATOR[cmp2]:
-            return
-
-        if node.op == "and":
-            new_expr = self._check_for_simplification_of_single_and(
-                const1, cmp1, const2, cmp2, expr_string
-            )
-        else:
-            new_expr = self._check_for_simplification_of_single_or(
-                const1, cmp1, const2, cmp2, expr_string
-            )
-
-        self.add_message(
-            f"simplifiable-{node.op}-with-abs",
-            node=node,
-            args=(get_name(node), new_expr),
-        )
-
     def _get_group_as_string(
         self, expr_string: str, group: List[Tuple[Comparison, Value]], op: str
     ) -> str:
@@ -953,28 +812,42 @@ class Short(BaseChecker):
             args=(group_string, new_expr),
         )
 
-    MAXIMUM_LAYER = 32
+    def _is_pure_node(self, node: nodes.NodeNG):
+        """
+        Note: This method does not check children of the node, just the node itself.
+        """
+        return (
+            isinstance(node, nodes.Name)
+            or isinstance(node, nodes.Const)
+            or isinstance(node, nodes.BinOp)
+            or isinstance(node, nodes.BoolOp)
+            or isinstance(node, nodes.UnaryOp)
+            or isinstance(node, nodes.Compare)
+            or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
+            or isinstance(node, nodes.Attribute)
+            or (
+                isinstance(node, nodes.Call)
+                and len(node.keywords) == 0
+                and len(node.kwargs) == 0
+                and len(node.starargs) == 0
+                and is_pure_builtin(node.func)
+            )
+        )
 
-    def _might_have_impure_function_call(
-        self, node: nodes.NodeNG, layer: int, parent_is_map_or_filter: bool
-    ) -> bool:
-        for i, child in enumerate(node.get_children()):
-            if (
-                (child.is_function and not is_pure_builtin(child))
-                or layer > self.MAXIMUM_LAYER
-                or (
-                    parent_is_map_or_filter
-                    and i == 0
-                    and isinstance(child, nodes.Name)
-                    and variable_contains_impure_function(child)
-                )
-                or self._might_have_impure_function_call(
-                    child, layer + 1, node.is_function and node.as_string() in {"map", "filter"}
-                )
-            ):
-                return True
+    def _is_pure_expression(self, node: nodes.NodeNG) -> bool:
+        if not self._is_pure_node(node):
+            return False
 
-        return False
+        children = node.get_children()
+        if isinstance(node, nodes.Call):
+            # the first child of Call is always the function itself and we know it is pure by now.
+            next(children)
+
+        for child in children:
+            if not self._is_pure_expression(child):
+                return False
+
+        return True
 
     def _group_and_check_by_representation(
         self, comparison_operands: List[Node_cmp_value], node: nodes.BoolOp
@@ -993,7 +866,12 @@ class Short(BaseChecker):
                     continue
 
                 expr2, cmp2, const2 = comparison_operands[j]
-                if self._same_expressions(expr1, expr2, False):
+                # I could have done something more, but thanks to how as_string returns same string
+                # even if there are some additional parentheses or spaces this seems good enough.
+                # Could be improved with checking the actual structure and types of expr1 and expr2,
+                # but with the knowledge that all the operands are pure and are from the same bool
+                # expression we can safely just check using as_string().
+                if expr1.as_string() == expr2.as_string():
                     current_group.append((cmp2, const2))
                     already_checked.add(j)
 
@@ -1003,17 +881,13 @@ class Short(BaseChecker):
             self._suggestion_for_group_of_boolops(expr1.as_string(), current_group, node)
 
     def _check_for_simplification_of_boolop(self, node: nodes.BoolOp) -> None:
-        if node.op is None or len(node.values) == 2:
+        if node.op is None:
             return
 
         comparison_operands: List[Node_cmp_value] = []
 
         for value in node.values:
-            if self._might_have_impure_function_call(
-                value,
-                0,
-                isinstance(node, nodes.Call) and node.func.as_string() in {"map", "filter"},
-            ):
+            if not self._is_pure_expression(value):
                 return
 
             operand = self._get_node_comparator_const_value(value)
@@ -1029,7 +903,6 @@ class Short(BaseChecker):
         "redundant-compare-in-condition",
     )
     def visit_boolop(self, node: nodes.BoolOp) -> None:
-        self._check_for_simplification_of_single_boolop(node)
         self._check_for_simplification_of_boolop(node)
 
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
