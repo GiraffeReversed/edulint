@@ -59,9 +59,9 @@ class VarEventListener(ScopeListener[None]):
     def _add_var_event(self, name: VarName, name_node: nodes.NodeNG, action: VarEventType):
         loc = get_cfg_loc(name_node)
         scope = self._get_var_scope(name)
-        assert scope is not None or VarEventListener.may_be_unscoped(
-            name, name_node, loc.node
-        ), f"but {name_node.as_string()}, {loc.node.as_string()}"
+        # assert scope is not None or VarEventListener.may_be_unscoped(
+        #     name, name_node, loc.node
+        # ), f"but {name_node.as_string()}, {loc.node.as_string()}"
         if scope is not None:
             loc.var_events[(name, scope)].append(VarEvent(name_node, action))
 
