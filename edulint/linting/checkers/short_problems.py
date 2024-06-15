@@ -546,13 +546,17 @@ class Short(BaseChecker):
         left, (comp, right) = node.left, node.ops[0]
         return left, comp, right
 
-    def _is_constant(self, node: nodes.NodeNG) -> bool:
-        # Needs fixing
-        return get_const_value(node) is not None
+    def _is_numeric_constant(self, node: nodes.NodeNG) -> bool:
+        return isinstance(node, nodes.Const) and (
+            isinstance(node.value, int) or isinstance(node.value, float)
+        )
 
-    def _is_numeric(self, node: nodes.NodeNG) -> bool:
-        value = get_const_value(node)
-        return isinstance(value, int) or isinstance(value, float)
+    def _is_number(self, node: nodes.NodeNG) -> bool:
+        return self._is_numeric_constant(node) or (
+            isinstance(node, nodes.UnaryOp)
+            and node.op in ["+", "-"]
+            and self._is_numeric_constant(node.operand)
+        )
 
     def _get_node_comparator_const_value(self, node: nodes.NodeNG) -> Node_cmp_value:
         """
@@ -568,21 +572,18 @@ class Short(BaseChecker):
 
         left, comp, right = self._get_values_and_comparator(node)
 
-        left_is_constant = self._is_constant(left)
-        right_is_constant = self._is_constant(right)
+        left_is_number = self._is_number(left)
+        right_is_number = self._is_number(right)
 
         if (
-            (left_is_constant and right_is_constant)
-            or (not left_is_constant and not right_is_constant)
+            (left_is_number and right_is_number)
+            or (not left_is_number and not right_is_number)
             or comp not in self.SWITCHED_COMPARATOR
         ):
             return None
 
-        if left_is_constant:
+        if left_is_number:
             left, comp, right = right, self.SWITCHED_COMPARATOR[comp], left
-
-        if not self._is_numeric(right):
-            return None
 
         return left, comp, get_const_value(right)
 
