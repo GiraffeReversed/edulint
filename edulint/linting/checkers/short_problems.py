@@ -1,10 +1,6 @@
-import sys
-
 from astroid import nodes  # type: ignore
 from astroid.const import Context
-from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Callable, Dict, Set
-
-from pylint.checkers import utils
+from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Set
 
 from pylint.checkers import BaseChecker
 from pylint.checkers.utils import only_required_for_messages
