@@ -436,3 +436,27 @@ def test_redundant_compare2(lines: List[str], expected_output: List[Problem]) ->
         [Arg(Option.PYLINT, "--enable=redundant-compare-in-condition")],
         expected_output
     )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "a < b and a+50 < b",
+        "j >= n//2 and i>=n//2",
+        "i < len(t1) or len(t2) > i or i < 5 or i < max( x,y , z )",
+        "- 1 + len(lst) > min(x, 3, y) or max(y, z) < -1 + len(lst) or (-1 + len(lst)) > min(x, z)"
+    ], [
+        lazy_problem().set_line(1).set_code("R6620")
+        .set_text("'a < b and a + 50 < b' can be replaced with 'b > max(a, a + 50)'"),
+        lazy_problem().set_line(2).set_code("R6620")
+        .set_text("'j >= n // 2 and i >= n // 2' can be replaced with 'n // 2 <= min(j, i)'"),
+        lazy_problem().set_line(3).set_code("R6620")
+        .set_text("'i < len(t1) or len(t2) > i or i < max(x, y, z) or i < 5' can be replaced with 'i < max(len(t1), len(t2), x, y, z, 5)'"),
+        lazy_problem().set_line(4).set_code("R6620")
+        .set_text("'-1 + len(lst) > min(x, 3, y) or max(y, z) < -1 + len(lst) or -1 + len(lst) > min(x, z)' can be replaced with '-1 + len(lst) > min(x, 3, y, max(y, z), x, z)'"),
+    ]),
+])
+def test_redundant_compare_with_variables(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=redundant-compare-with-variables-avoidable-with-max-min")],
+        expected_output
+    )
