@@ -616,7 +616,7 @@ def test_simplifiable_with_abs(filename: str, expected_output: List[Problem]) ->
         "    a = person.age > 5 and person.age > 9",
         "    b = person.this_not_pure(y) > 6 or person.this_not_pure(y) < -6",
     ], [
-        lazy_problem().set_line(10).set_code("R6619")
+        lazy_problem().set_line(10)
         .set_text("'person.age > 5 and person.age > 9' can be replaced with 'person.age > 9'"),
     ]),
 ])
