@@ -319,7 +319,7 @@ def test_simplify_if_statement_multiconds_custom(lines: List[str], expected_outp
         "    return triangle_is_righ"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'triangle_is_righ = c**2 == a**2 "
+        .set_text("The conditional assignment can be replaced with 'triangle_is_righ = c**2 == a**2 "
                   "+ b**2 or a**2 == c**2 + b**2 or b**2 == a**2 + c**2'")
     ]),
 ])
@@ -336,7 +336,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = y"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = x or y'")
+        .set_text("The conditional assignment can be replaced with 'a = x or y'")
     ]),
     ([
         "def xxx(x, y):",
@@ -346,7 +346,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = y"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = <negated x> and y'")
+        .set_text("The conditional assignment can be replaced with 'a = <negated x> and y'")
     ]),
     ([
         "def xxx(x, y):",
@@ -356,7 +356,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = False"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = x and y'")
+        .set_text("The conditional assignment can be replaced with 'a = x and y'")
     ]),
     ([
         "def xxx(x, y):",
@@ -366,7 +366,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = True"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = <negated x> or y'")
+        .set_text("The conditional assignment can be replaced with 'a = <negated x> or y'")
     ]),
     ([
         "def xxx(x, y, z):",
@@ -376,7 +376,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = True"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = <negated x> or (y and z)'")
+        .set_text("The conditional assignment can be replaced with 'a = <negated x> or (y and z)'")
     ]),
     ([
         "def xxx(x, y, z):",
@@ -386,7 +386,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = True"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = <negated x> or y or z'")
+        .set_text("The conditional assignment can be replaced with 'a = <negated x> or y or z'")
     ]),
 ])
 def test_simplify_if_assigning_statement_conj_custom(lines: List[str], expected_output: List[Problem]) -> None:
@@ -511,4 +511,158 @@ def test_simplify_if_files(filename: str, expected_output: List[Problem]) -> Non
         filename,
         [Arg(Option.PYLINT, "--enable=simplifiable-if")],
         expected_output
+    )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "x = 7.8",
+        "y = [-5.25, 2.3, 3, 4]",
+        "z = -20",
+        "a = abs(min(y)) > -4.47 and abs(min(y)) < 4.47",
+        "c = int(z + abs(sum(reversed(sorted(y))))) < 8.56 and -8.56 < int(z + abs(sum(reversed(sorted(y)))))",
+        "d = x + len(y) < 5 and x < 5 and x + len(y) > -10 and x > -5 and x + len(y) > -5",
+    ], [
+        lazy_problem().set_line(4)
+        .set_text("'abs(min(y)) > -4.47 and abs(min(y)) < 4.47' can be replaced with 'abs(min(y)) < 4.47'"),
+        lazy_problem().set_line(5)
+        .set_text("'int(z + abs(sum(reversed(sorted(y))))) < 8.56 and int(z + abs(sum(reversed(sorted(y))))) > -8.56' can be replaced with 'abs(int(z + abs(sum(reversed(sorted(y)))))) < 8.56'"),
+        lazy_problem().set_line(6)
+        .set_text("'x + len(y) < 5 and x + len(y) > -10 and x + len(y) > -5' can be replaced with 'abs(x + len(y)) < 5'"),
+        lazy_problem().set_line(6)
+        .set_text("'x < 5 and x > -5' can be replaced with 'abs(x) < 5'"),
+    ]),
+    ([
+        "x = 7.8",
+        "y = [-5.25, 2.3, 3, 4]",
+        "a = x >= 2 or x <= -2",
+        "b = x + len(y) > 4 or x + len(y) < -4",
+        "c = x + 1 < -9 or 9 < x + 1",
+        "d = x > 5 or x > 4 or x <= -7 or x >= 3 or x < -5 or x <= -3",
+        "e = -0.5 <= len(y) and len(y) < 5 and -7 <= x or x > 7 or x < -7",
+        "f = y[0] >= 5 or y[0] <= -5",
+    ], [
+        lazy_problem().set_line(3)
+        .set_text("'x >= 2 or x <= -2' can be replaced with 'abs(x) >= 2'"),
+        lazy_problem().set_line(4)
+        .set_text("'x + len(y) > 4 or x + len(y) < -4' can be replaced with 'abs(x + len(y)) > 4'"),
+        lazy_problem().set_line(5)
+        .set_text("'x + 1 < -9 or x + 1 > 9' can be replaced with 'abs(x + 1) > 9'"),
+        lazy_problem().set_line(6)
+        .set_text("'x > 5 or x > 4 or x <= -7 or x >= 3 or x < -5 or x <= -3' can be replaced with 'abs(x) >= 3'"),
+        lazy_problem().set_line(7)
+        .set_text("'x > 7 or x < -7' can be replaced with 'abs(x) > 7'"),
+        lazy_problem().set_line(8)
+        .set_text("'y[0] >= 5 or y[0] <= -5' can be replaced with 'abs(y[0]) >= 5'"),
+    ]),
+])
+def test_simplifiable_with_abs_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=simplifiable-with-abs")],
+        expected_output,
+    )
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("ffed796f7c-gps.py", [
+        lazy_problem().set_line(23)
+        .set_text("'float(y[1]) > 90 or float(y[1]) < -90 or float(y[1]) > 180 or float(y[1]) < -180' can be replaced with 'abs(float(y[1])) > 90'")
+    ]),
+    ("ffed796f7c-gps_tweaked.py", [
+        lazy_problem().set_line(23)
+        .set_text("'float(y[1]) > 90 or float(y[1]) < -90' can be replaced with 'abs(float(y[1])) > 90'"),
+        lazy_problem().set_line(23)
+        .set_text("'float(y[2]) > 180 or float(y[2]) < -180' can be replaced with 'abs(float(y[2])) > 180'")
+    ])
+])
+def test_simplifiable_with_abs(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=simplifiable-with-abs")],
+        expected_output,
+    )
+
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "x = 7.8",
+        "y = [-5.25, 2.3, 3, 4]",
+        "a = x > -2 or x <= 6",
+        "c = x >= 1 or x > 1",
+        "d = x < 2 and x <= -5",
+        "e = -(x - 1) > 5 or - (x- 1) < -5 or -(x-1) >= 4",
+    ], [
+        lazy_problem().set_line(3)
+        .set_text("'x > -2 or x <= 6' can be simplified to 'True', change it if it is not on purpose"),
+        lazy_problem().set_line(4)
+        .set_text("'x >= 1 or x > 1' can be simplified to 'x >= 1', change it if it is not on purpose"),
+        lazy_problem().set_line(5)
+        .set_text("'x < 2 and x <= -5' can be simplified to 'x <= -5', change it if it is not on purpose"),
+        lazy_problem().set_line(6)
+        .set_text("'-(x - 1) > 5 or -(x - 1) < -5 or -(x - 1) >= 4' can be simplified to '-(x - 1) < -5 or -(x - 1) >= 4', change it if it is not on purpose"),
+    ]),
+    ([
+        "class Person:",
+        "    def __init__(self, name, age):",
+        "        self.name = name",
+        "        self.age = age",
+        "    def this_not_pure(self, something):",
+        "        something.append(5)",
+        "        return something[0]",
+        "def foo():",
+        "    person = Person('Albert', 56)",
+        "    a = person.age > 5 and person.age > 9",
+        "    b = person.this_not_pure(y) > 6 or person.this_not_pure(y) < -6",
+    ], [
+        lazy_problem().set_line(10)
+        .set_text("'person.age > 5 and person.age > 9' can be simplified to 'person.age > 9', change it if it is not on purpose"),
+    ]),
+])
+def test_redundant_compare(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=redundant-compare-in-condition")],
+        expected_output,
+    )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "x = 7.8",
+        "b = x > 4 or x > 0 or x < -1 or x < 0",
+        "c = x >= 9 and x <= 9"
+    ], [
+        lazy_problem().set_line(2)
+        .set_text("'x > 4 or x > 0 or x < -1 or x < 0' can be replaced with 'x != 0'"),
+        lazy_problem().set_line(3)
+        .set_text("'x >= 9 and x <= 9' can be replaced with 'x == 9'"),
+    ]),
+])
+def test_using_compare_instead_of_equal(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=using-compare-instead-of-equal")],
+        expected_output,
+    )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "a < b and a+50 < b",
+        "j >= n//2 and i>=n//2",
+        "i < len(t1) or len(t2) > i or i < 5 or i < max( x,y , z )",
+        "- 1 + len(lst) > min(x, 3, y) or max(y, z) < -1 + len(lst) or (-1 + len(lst)) > min(x, z)"
+    ], [
+        lazy_problem().set_line(1)
+        .set_text("'a < b and a + 50 < b' can be replaced with 'max(a, a + 50) < b'"),
+        lazy_problem().set_line(2)
+        .set_text("'j >= n // 2 and i >= n // 2' can be replaced with 'min(j, i) >= n // 2'"),
+        lazy_problem().set_line(3)
+        .set_text("'i < len(t1) or len(t2) > i or i < max(x, y, z) or i < 5' can be replaced with 'i < max(len(t1), len(t2), x, y, z, 5)'"),
+        lazy_problem().set_line(4)
+        .set_text("'-1 + len(lst) > min(x, 3, y) or max(y, z) < -1 + len(lst) or -1 + len(lst) > min(x, z)' can be replaced with 'min(x, 3, y, max(y, z), x, z) < -1 + len(lst)'"),
+    ]),
+])
+def test_redundant_compare_with_variables(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=redundant-compare-avoidable-with-max-min")],
+        expected_output,
     )
