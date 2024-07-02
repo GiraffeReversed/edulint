@@ -363,17 +363,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         left, (comp, right) = node.left, node.ops[0]
         return left, comp, right
 
-    def _is_numeric_constant(self, node: nodes.NodeNG) -> bool:
-        return isinstance(node, nodes.Const) and (
-            isinstance(node.value, int) or isinstance(node.value, float)
-        )
-
     def _is_number(self, node: nodes.NodeNG) -> bool:
-        return self._is_numeric_constant(node) or (
-            isinstance(node, nodes.UnaryOp)
-            and node.op in ["+", "-"]
-            and self._is_numeric_constant(node.operand)
-        )
+        const_val = get_const_value(node)
+        return isinstance(const_val, (int, float)) and not isinstance(const_val, bool)
 
     def _get_node_comparator_const_value(self, node: nodes.NodeNG) -> NodeCmpValue:
         """

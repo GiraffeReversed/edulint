@@ -1,4 +1,5 @@
 from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, Tuple, cast, Callable
+from functools import reduce
 from astroid import nodes, Uninferable  # type: ignore
 import sys
 import inspect
@@ -174,6 +175,8 @@ BINARY_SYMBOL_TO_OP = {
     "!=": operator.ne,
     ">=": operator.ge,
     ">": operator.gt,
+    "and": operator.and_,
+    "or": operator.or_,
 }
 
 
@@ -187,10 +190,14 @@ def get_const_value_rec(node: Any) -> Any:
     if isinstance(node, nodes.UnaryOp):
         return UNARY_SYMBOL_TO_OP[node.op](get_const_value_rec(node.operand))
 
-    if isinstance(node, (nodes.BinOp, nodes.BoolOp)):
+    if isinstance(node, nodes.BinOp):
         return BINARY_SYMBOL_TO_OP[node.op](
             get_const_value_rec(node.left), get_const_value_rec(node.right)
         )
+
+    if isinstance(node, nodes.BoolOp):
+        assert len(node.values) > 1
+        return reduce(BINARY_SYMBOL_TO_OP[node.op], map(get_const_value_rec, node.values))
 
     raise ValueError(f"{type(node)} cannot be evaluated")
 
