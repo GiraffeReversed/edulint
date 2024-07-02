@@ -761,11 +761,13 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         comparison: str,
         expressions: List[str],
         compared_with_num: Optional[Tuple[str, bool]],
+        was_switched: List[bool],
     ) -> str:
         """
         the <function> should contain either "max(" or "min("
         """
-        result: List[str] = [expression + " " + comparison + " " + function]
+        result: List[str] = [function]
+        all_switched_or_all_not_switched = True
 
         for i in range(len(expressions)):
             if expressions[i].startswith(function):
@@ -773,15 +775,25 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             else:
                 result.append(expressions[i])
 
+            all_switched_or_all_not_switched &= was_switched[i] == was_switched[0]
+
             if i < len(expressions) - 1:
                 result.append(", ")
 
         if compared_with_num is not None:
+            all_switched_or_all_not_switched &= compared_with_num[1] == was_switched[0]
+
             result.append(", ")
             result.append(compared_with_num[0])
 
         result.append(")")
-        return "".join(result)
+
+        if (all_switched_or_all_not_switched and was_switched[0]) or (
+            not all_switched_or_all_not_switched and comparison[0] == ">"
+        ):
+            return "".join(result) + f" {self.SWITCHED_COMPARATOR[comparison]} {expression}"
+
+        return f"{expression} {comparison} " + "".join(result)
 
     def _make_suggestion_for_using_max_min_if_possible(
         self,
@@ -857,7 +869,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             args=(
                 group_string,
                 self._put_into_max_or_min(
-                    func, expression, comparison, expressions, compared_with_num
+                    func, expression, comparison, expressions, compared_with_num, was_switched
                 ),
             ),
         )

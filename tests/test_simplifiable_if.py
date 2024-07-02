@@ -651,13 +651,13 @@ def test_using_compare_instead_of_equal(lines: List[str], expected_output: List[
         "- 1 + len(lst) > min(x, 3, y) or max(y, z) < -1 + len(lst) or (-1 + len(lst)) > min(x, z)"
     ], [
         lazy_problem().set_line(1)
-        .set_text("'a < b and a + 50 < b' can be replaced with 'b > max(a, a + 50)'"),
+        .set_text("'a < b and a + 50 < b' can be replaced with 'max(a, a + 50) < b'"),
         lazy_problem().set_line(2)
-        .set_text("'j >= n // 2 and i >= n // 2' can be replaced with 'n // 2 <= min(j, i)'"),
+        .set_text("'j >= n // 2 and i >= n // 2' can be replaced with 'min(j, i) >= n // 2'"),
         lazy_problem().set_line(3)
         .set_text("'i < len(t1) or len(t2) > i or i < max(x, y, z) or i < 5' can be replaced with 'i < max(len(t1), len(t2), x, y, z, 5)'"),
         lazy_problem().set_line(4)
-        .set_text("'-1 + len(lst) > min(x, 3, y) or max(y, z) < -1 + len(lst) or -1 + len(lst) > min(x, z)' can be replaced with '-1 + len(lst) > min(x, 3, y, max(y, z), x, z)'"),
+        .set_text("'-1 + len(lst) > min(x, 3, y) or max(y, z) < -1 + len(lst) or -1 + len(lst) > min(x, z)' can be replaced with 'min(x, 3, y, max(y, z), x, z) < -1 + len(lst)'"),
     ]),
 ])
 def test_redundant_compare_with_variables(lines: List[str], expected_output: List[Problem]) -> None:
