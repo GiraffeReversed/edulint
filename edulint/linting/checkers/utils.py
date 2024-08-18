@@ -175,8 +175,8 @@ BINARY_SYMBOL_TO_OP = {
     "!=": operator.ne,
     ">=": operator.ge,
     ">": operator.gt,
-    "and": operator.and_,
-    "or": operator.or_,
+    "and": lambda lt, rt: lt and rt,
+    "or": lambda lt, rt: lt or rt,
 }
 
 
