@@ -92,7 +92,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "Emitted when there is a problem like x < 4 and x > -4 and suggests abs(x) < 4.",
         ),
         "R6212": (
-            "'%s' can be replaced with '%s'",
+            "'%s' can be simplified to '%s', change it if it is not on purpose",
             "redundant-compare-in-condition",
             "Emitted when there is a problem like x > 4 or x > 3 and suggests x > 3. (ie min{4, 3})",
         ),
@@ -100,6 +100,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "'%s' can be replaced with '%s'",
             "redundant-compare-avoidable-with-max-min",
             "Emitted when there is a problem like 'x > a and x > b' and suggests x > max(a, b).",
+        ),
+        "R6214": (
+            "'%s' can be replaced with '%s'",
+            "using-compare-instead-of-equal",
+            "Emitted when there is a problem like x >= 0 and x <= 0 and suggests x == 0.",
         ),
     }
 
@@ -579,7 +584,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         if len(new_expr) != 0:
             self.add_message(
-                "redundant-compare-in-condition",
+                (
+                    "redundant-compare-in-condition"
+                    if new_expr == "True" or new_expr == "False"
+                    else "using-compare-instead-of-equal"
+                ),
                 node=node,
                 args=(group_string, new_expr),
             )
@@ -910,6 +919,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "simplifiable-with-abs",
         "redundant-compare-in-condition",
         "redundant-compare-avoidable-with-max-min",
+        "using-compare-instead-of-equal",
     )
     def visit_boolop(self, node: nodes.BoolOp) -> None:
         self._check_for_simplification_of_boolop(node)
