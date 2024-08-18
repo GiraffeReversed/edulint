@@ -429,6 +429,10 @@ def get_fixed_by_if_to_use(tests, core, avars):
     ):
         return None
 
+    # do not repeat simplifiable if
+    if isinstance(avar.parent.parent, (nodes.Return, nodes.Assign)):
+        return None
+
     return (
         get_token_count(core) - 1 + get_token_count(tests[0]),
         get_statements_count(core, include_defs=False, include_name_main=False),

@@ -603,7 +603,9 @@ def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
     )
 
 @pytest.mark.parametrize("filename,expected_output",[
-    ("d2e87302a6-b_family_tree.py", [lazy_problem().set_line(82)])
+    ("d2e87302a6-b_family_tree.py", [lazy_problem().set_line(82)]),
+    ("014823-p4_geometry.py", []),
+    ("m2630.py", []),
 ])
 def test_if_to_use(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
