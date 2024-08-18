@@ -1,6 +1,7 @@
 from astroid import nodes  # type: ignore
 from astroid.const import Context
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
+from enum import Enum
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -28,8 +29,18 @@ SameDirComparisons = Dict[
 # indicates, whether the comparison in the original source code is in the same direction as in the dictionary.
 
 
+def is_modulo_residue(value: Any, modulo: int) -> bool:
+    return isinstance(value, int) and 0 <= value < modulo
+
+
+class Comparisons(Enum):
+    EQUALITY = 0
+    INEQUALITY = 1
+    OTHER = 2
+
+
 # I use this to represent all the pairs of type 'x % 2 == 0 and y % 2 != 1'
-# expression_pair is the ('x', 'y'), modulo is 2, comparisons is [(('==', 0), ('!=', 1))] and comparisons_pairs is ['x % 2 == 0 and y % 2 != 1']
+# expression_pair is the ('x', 'y'), modulo is 2, comparisons is [{0}, {}] and comparisons_pairs is ['x % 2 == 0 and y % 2 != 1']
 class PairsOfModComparisonsWithNum:
     def __init__(
         self,
@@ -45,10 +56,76 @@ class PairsOfModComparisonsWithNum:
         # the two expressions that have modulo applied to them
         self.expression_pair = (expr1, expr2)
         self.modulo = modulo
-        self.comparisons = [((cmp1, value1), (cmp2, value2))]
+
+        # for expressions of type 'x % n == a and y % n == a' we add to this set the 'a'
+        self.comparisons_for_equality: Set[int] = set()
+
+        # stores expressions like 'expr1 % modulo == a and expr2 % modulo != b',
+        # index represents the number that 'expr1 % modulo' is equal to and the set is
+        # the set of all the values 'expr2 % modulo' could be equal to.
+        self.comparisons_for_inequality: List[Set[int]] = [set() for _ in range(modulo)]
+        self.comparisons_for_true: List[Set[int]] = [set() for _ in range(modulo)]
 
         # this is here so that we can easily get the original string
-        self.comparisons_pairs: List[str] = [comparison_pair_string]
+        self.comparisons_pairs: List[Tuple[str, Comparisons]] = []
+
+        self.update(cmp1, value1, cmp2, value2, comparison_pair_string)
+
+    def update_comparisons(
+        self,
+        comparisons: List[Set[int]],
+        cmp1: Comparison,
+        value1: Value,
+        cmp2: Comparison,
+        value2: Value,
+    ) -> None:
+        for v1 in self.get_possible_values_mod(cmp1, value1):
+            comparisons[v1].update(self.get_possible_values_mod(cmp2, value2))
+
+    def get_possible_values_mod(self, cmp1: Comparison, value1: Value) -> List[int]:
+        # Note that here we use that for example 'x % 3 != 1' can be rewritten to 'x % 3 == 0 or x % 3 == 2'
+        if cmp1 == "==":
+            return [value1]
+
+        return [i for i in range(self.modulo) if i != value1]
+
+    def update(
+        self,
+        cmp1: Comparison,
+        value1: Value,
+        cmp2: Comparison,
+        value2: Value,
+        comparison_pair_string: str,
+    ) -> None:
+        if cmp1 == "==" and cmp2 == "==" and value1 == value2:
+            self.comparisons_for_equality.add(value1)
+            self.comparisons_pairs.append((comparison_pair_string, Comparisons.EQUALITY))
+        elif (cmp1 == "==" and cmp2 == "==") or (
+            (cmp1 != "!=" or cmp2 != "!=") and value1 == value2
+        ):
+            self.update_comparisons(self.comparisons_for_inequality, cmp1, value1, cmp2, value2)
+            self.comparisons_pairs.append((comparison_pair_string, Comparisons.INEQUALITY))
+        else:
+            self.comparisons_pairs.append((comparison_pair_string, Comparisons.OTHER))
+
+        self.update_comparisons(self.comparisons_for_true, cmp1, value1, cmp2, value2)
+
+    def always_true(self) -> bool:
+        for comparisons in self.comparisons_for_true:
+            if len(comparisons) != self.modulo:
+                return False
+
+        return True
+
+    def has_part_simplifiable_to_equality(self) -> bool:
+        return len(self.comparisons_for_equality) == self.modulo
+
+    def has_part_simplifiable_to_inequality(self) -> bool:
+        for comparisons in self.comparisons_for_inequality:
+            if len(comparisons) != self.modulo - 1:
+                return False
+
+        return True
 
 
 class SimplifiableIf(BaseChecker):  # type: ignore
@@ -920,6 +997,12 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             and self._is_equality_or_inequality(node.values[1])
         )
 
+    def _add_parentheses_to_operations(self, node: nodes.NodeNG) -> str:
+        if isinstance(node, (nodes.BinOp, nodes.BoolOp, nodes.UnaryOp, nodes.Compare)):
+            return f"({node.as_string()})"
+
+        return node.as_string()
+
     def _destructure_mod_and_number_comparison(
         self, node: nodes.Compare
     ) -> Optional[Tuple[ExprRepresentation, int, Comparison, Value]]:
@@ -942,7 +1025,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if not isinstance(mod, int):
             return None
 
-        return left.left, mod, cmp, get_const_value(right)
+        return self._add_parentheses_to_operations(left.left), mod, cmp, get_const_value(right)
 
     def _destructure_mod_and_number_comps(
         self, left: nodes.Compare, right: nodes.Compare
@@ -981,12 +1064,19 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         mod: int,
         comparison_pair_string: str,
     ) -> None:
+        if not is_modulo_residue(val1, mod) or not is_modulo_residue(val2, mod):
+            return
+
         for pair in modulo_connected_with_and:
-            if pair.modulo == mod and (
-                pair.expression_pair == (expr1, expr2) or pair.expression_pair == (expr2, expr1)
-            ):
-                pair.comparisons.append(((cmp1, val1), (cmp2, val2)))
-                pair.comparisons_pairs.append(comparison_pair_string)
+            if pair.modulo != mod:
+                continue
+
+            if pair.expression_pair == (expr1, expr2):
+                pair.update(cmp1, val1, cmp2, val2, comparison_pair_string)
+                return
+
+            if pair.expression_pair == (expr2, expr1):
+                pair.update(cmp2, val2, cmp1, val1, comparison_pair_string)
                 return
 
         modulo_connected_with_and.append(
@@ -998,8 +1088,38 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def _make_suggestion_for_simplifiable_test_by_equals(
         self, modulo_connected_with_and: List[PairsOfModComparisonsWithNum], node: nodes.BoolOp
     ) -> None:
-        # TODO
-        pass
+        for pair in modulo_connected_with_and:
+            original: Optional[str] = None
+            suggestion: Optional[str] = None
+
+            if pair.always_true():
+                original = " or ".join([expr for (expr, _) in pair.comparisons_pairs])
+                suggestion = "True"
+            elif pair.has_part_simplifiable_to_equality():
+                original = " or ".join(
+                    [
+                        expr
+                        for (expr, for_comparison) in pair.comparisons_pairs
+                        if for_comparison == Comparisons.EQUALITY
+                    ]
+                )
+                suggestion = f"{pair.expression_pair[0]} % {pair.modulo} == {pair.expression_pair[1]} % {pair.modulo}"
+            elif pair.has_part_simplifiable_to_inequality():
+                original = " or ".join(
+                    [
+                        expr
+                        for (expr, for_comparison) in pair.comparisons_pairs
+                        if for_comparison == Comparisons.INEQUALITY
+                    ]
+                )
+                suggestion = f"{pair.expression_pair[0]} % {pair.modulo} != {pair.expression_pair[1]} % {pair.modulo}"
+
+            if original is not None:
+                self.add_message(
+                    "simplifiable-test-by-equals",
+                    node=node,
+                    args=(original, suggestion),
+                )
 
     def _is_comparison_not_between_numbers(self, node: nodes.NodeNG) -> bool:
         return (
@@ -1069,6 +1189,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "redundant-compare-in-condition",
         "redundant-compare-avoidable-with-max-min",
         "using-compare-instead-of-equal",
+        "simplifiable-test-by-equals",
     )
     def visit_boolop(self, node: nodes.BoolOp) -> None:
         self._check_for_simplification_of_boolop(node)
