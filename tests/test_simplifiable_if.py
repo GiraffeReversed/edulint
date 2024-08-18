@@ -555,11 +555,30 @@ def test_simplify_if_files(filename: str, expected_output: List[Problem]) -> Non
         .set_text("'y[0] >= 5 or y[0] <= -5' can be replaced with 'abs(y[0]) >= 5'"),
     ]),
 ])
-def test_simplification_of_and(lines: List[str], expected_output: List[Problem]) -> None:
+def test_simplifiable_with_abs_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=simplifiable-with-abs")],
-        [p.set_code("R6211") for p in expected_output]
+        expected_output,
+    )
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("ffed796f7c-gps.py", [
+        lazy_problem().set_line(23)
+        .set_text("'float(y[1]) > 90 or float(y[1]) < -90 or float(y[1]) > 180 or float(y[1]) < -180' can be replaced with 'abs(float(y[1])) > 90'")
+    ]),
+    ("ffed796f7c-gps_tweaked.py", [
+        lazy_problem().set_line(23)
+        .set_text("'float(y[1]) > 90 or float(y[1]) < -90' can be replaced with 'abs(float(y[1])) > 90'"),
+        lazy_problem().set_line(23)
+        .set_text("'float(y[2]) > 180 or float(y[2]) < -180' can be replaced with 'abs(float(y[2])) > 180'")
+    ])
+])
+def test_simplifiable_with_abs(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=simplifiable-with-abs")],
+        expected_output,
     )
 
 
@@ -605,7 +624,7 @@ def test_redundant_compare(lines: List[str], expected_output: List[Problem]) -> 
     create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=redundant-compare-in-condition")],
-        [p.set_code("R6212") for p in expected_output]
+        expected_output,
     )
 
 
@@ -630,5 +649,5 @@ def test_redundant_compare_with_variables(lines: List[str], expected_output: Lis
     create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=redundant-compare-avoidable-with-max-min")],
-        [p.set_code("R6213") for p in expected_output]
+        expected_output,
     )
