@@ -202,6 +202,22 @@ def is_any_similar_to_block(checker, duplicate: Set[nodes.NodeNG], candidates):
     def may_be_similar_to_loop(ranges):
         return all(last == first for ((_, last), (first, _)) in zip(ranges, ranges[1:]))
 
+    def get_ordered_candidates(candidates):
+        filpped_candidates = {}
+
+        for c, id_ in candidates.items():
+            if id_ not in filpped_candidates:
+                filpped_candidates[id_] = []
+            filpped_candidates[id_].append(c)
+
+        for candidate in filpped_candidates.values():
+            candidate.sort(key=lambda v: v[0])
+
+        return sorted(
+            filpped_candidates.values(),
+            key=lambda candidate: (candidate[0][0][0], -candidate[0][0][1]),
+        )
+
     def all_children_of_one_statement(to_aunify: List[List[nodes.NodeNG]]) -> bool:
         last_ancestors = set(to_aunify[0][-1].node_ancestors())
         for parent in to_aunify[0][0].node_ancestors():
@@ -220,12 +236,11 @@ def is_any_similar_to_block(checker, duplicate: Set[nodes.NodeNG], candidates):
                     return True
         return False
 
-    for this_id in set(candidates.values()):
-        this_candidate = [c for c, id_ in candidates.items() if id_ == this_id]
-        if may_be_similar_to_loop([r for r, _ in this_candidate]):
+    for candidate in get_ordered_candidates(candidates):
+        if may_be_similar_to_loop([r for r, _ in candidate]):
             continue
 
-        to_aunify = [list(sub_aunify) for _, sub_aunify in this_candidate]
+        to_aunify = [list(sub_aunify) for _, sub_aunify in candidate]
         if to_aunify[0][0] in duplicate:
             continue
 
