@@ -197,7 +197,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "Emitted when there is a problem like x < 4 and x > -4 and suggests abs(x) < 4.",
         ),
         "R6212": (
-            "'%s' can be simplified to '%s', change it if it is not on purpose",
+            "'%s' can be simplified to '%s'. Simplify the condition if it is on purpose, or change it if it was not.",
             "redundant-compare-in-condition",
             "Emitted when there is a problem like x > 4 or x > 3 and suggests x > 3. (ie min{4, 3})",
         ),

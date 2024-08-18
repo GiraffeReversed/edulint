@@ -592,13 +592,13 @@ def test_simplifiable_with_abs(filename: str, expected_output: List[Problem]) ->
         "e = -(x - 1) > 5 or - (x- 1) < -5 or -(x-1) >= 4",
     ], [
         lazy_problem().set_line(3)
-        .set_text("'x > -2 or x <= 6' can be simplified to 'True', change it if it is not on purpose"),
+        .set_text("'x > -2 or x <= 6' can be simplified to 'True'. Simplify the condition if it is on purpose, or change it if it was not."),
         lazy_problem().set_line(4)
-        .set_text("'x >= 1 or x > 1' can be simplified to 'x >= 1', change it if it is not on purpose"),
+        .set_text("'x >= 1 or x > 1' can be simplified to 'x >= 1'. Simplify the condition if it is on purpose, or change it if it was not."),
         lazy_problem().set_line(5)
-        .set_text("'x < 2 and x <= -5' can be simplified to 'x <= -5', change it if it is not on purpose"),
+        .set_text("'x < 2 and x <= -5' can be simplified to 'x <= -5'. Simplify the condition if it is on purpose, or change it if it was not."),
         lazy_problem().set_line(6)
-        .set_text("'-(x - 1) > 5 or -(x - 1) < -5 or -(x - 1) >= 4' can be simplified to '-(x - 1) < -5 or -(x - 1) >= 4', change it if it is not on purpose"),
+        .set_text("'-(x - 1) > 5 or -(x - 1) < -5 or -(x - 1) >= 4' can be simplified to '-(x - 1) < -5 or -(x - 1) >= 4'. Simplify the condition if it is on purpose, or change it if it was not."),
     ]),
     ([
         "class Person:",
@@ -614,7 +614,7 @@ def test_simplifiable_with_abs(filename: str, expected_output: List[Problem]) ->
         "    b = person.this_not_pure(y) > 6 or person.this_not_pure(y) < -6",
     ], [
         lazy_problem().set_line(10)
-        .set_text("'person.age > 5 and person.age > 9' can be simplified to 'person.age > 9', change it if it is not on purpose"),
+        .set_text("'person.age > 5 and person.age > 9' can be simplified to 'person.age > 9'. Simplify the condition if it is on purpose, or change it if it was not."),
     ]),
 ])
 def test_redundant_compare(lines: List[str], expected_output: List[Problem]) -> None:
