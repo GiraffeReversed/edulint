@@ -481,6 +481,7 @@ def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
     ("9668dff756-p6_workdays.py", []),
     ("ccf4a9f103-p6_workdays.py", []),
     ("cf_1113_c_27.py", [lazy_problem().set_line(16)]),
+    ("cf_1271_b_32_tweaked.py", [lazy_problem().set_line(17)]),
     ("custom_if_calls_to_variables.py", []),
     ("fd637a2984-p6_workdays.py", []),
     ("fdc1570861-p6_workdays.py", [lazy_problem().set_line(47)]),  # multiple if branches differing in one value

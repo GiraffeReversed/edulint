@@ -73,7 +73,7 @@ def saves_enough_tokens(tokens_before: int, stmts_before: int, fixed: Fixed):
         "if-to-use",
     ):
         return True
-    return fixed.statements <= stmts_before and fixed.tokens < 0.8 * tokens_before
+    return fixed.statements <= stmts_before + 1 and fixed.tokens < 0.8 * tokens_before
 
 
 def get_loop_repetitions(
