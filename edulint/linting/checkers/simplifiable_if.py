@@ -28,6 +28,29 @@ SameDirComparisons = Dict[
 # indicates, whether the comparison in the original source code is in the same direction as in the dictionary.
 
 
+# I use this to represent all the pairs of type 'x % 2 == 0 and y % 2 != 1'
+# expression_pair is the ('x', 'y'), modulo is 2, comparisons is [(('==', 0), ('!=', 1))] and comparisons_pairs is ['x % 2 == 0 and y % 2 != 1']
+class PairsOfModComparisonsWithNum:
+    def __init__(
+        self,
+        expr1: ExprRepresentation,
+        cmp1: Comparison,
+        value1: Value,
+        expr2: ExprRepresentation,
+        cmp2: Comparison,
+        value2: Value,
+        modulo: int,
+        comparison_pair_string: str,
+    ) -> None:
+        # the two expressions that have modulo applied to them
+        self.expression_pair = (expr1, expr2)
+        self.modulo = modulo
+        self.comparisons = [((cmp1, value1), (cmp2, value2))]
+
+        # this is here so that we can easily get the original string
+        self.comparisons_pairs: List[str] = [comparison_pair_string]
+
+
 class SimplifiableIf(BaseChecker):  # type: ignore
     name = "simplifiable-if"
     msgs = {
@@ -105,6 +128,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "'%s' can be replaced with '%s'",
             "using-compare-instead-of-equal",
             "Emitted when there is a problem like x >= 0 and x <= 0 and suggests x == 0.",
+        ),
+        "R6215": (
+            "'%s' can be replaced with '%s'",
+            "simplifiable-test-by-equals",
+            "Emitted when there is a problem like 'x % 2 == 0 and y % 2 == 0 or x % 2 == 1 and y % 2 == 1' and suggests 'x % 2 == y % 2'.",
         ),
     }
 
@@ -358,6 +386,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "<=": ">=",
         "<": ">",
     }
+
+    EQ_NEQ = {"==", "!="}
 
     def _get_values_and_comparator(
         self, node: nodes.Compare
@@ -874,6 +904,103 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             ),
         )
 
+    def _is_equality_or_inequality(self, node: nodes.NodeNG) -> bool:
+        return (
+            isinstance(node, (nodes.Compare))
+            and len(node.ops) == 1
+            and node.ops[0][0] in self.EQ_NEQ
+        )
+
+    def _is_conjunction_of_two_equalities(self, node: nodes.NodeNG) -> bool:
+        return (
+            isinstance(node, nodes.BoolOp)
+            and node.op == "and"
+            and len(node.values) == 2
+            and self._is_equality_or_inequality(node.values[0])
+            and self._is_equality_or_inequality(node.values[1])
+        )
+
+    def _destructure_mod_and_number_comparison(
+        self, node: nodes.Compare
+    ) -> Optional[Tuple[ExprRepresentation, int, Comparison, Value]]:
+        left, cmp, right = self._get_values_and_comparator(node)
+
+        left_is_number = self._is_number(left)
+        right_is_number = self._is_number(right)
+
+        if (left_is_number and right_is_number) or (not left_is_number and not right_is_number):
+            return None
+
+        if left_is_number:
+            left, cmp, right = right, cmp, left
+
+        if not isinstance(left, nodes.BinOp) or left.op != "%" or not self._is_number(left.right):
+            return None
+
+        mod = get_const_value(left.right)
+
+        if not isinstance(mod, int):
+            return None
+
+        return left.left, mod, cmp, get_const_value(right)
+
+    def _destructure_mod_and_number_comps(
+        self, left: nodes.Compare, right: nodes.Compare
+    ) -> Optional[
+        Tuple[ExprRepresentation, Comparison, Value, ExprRepresentation, Comparison, Value, int]
+    ]:
+        left_comparison = self._destructure_mod_and_number_comparison(left)
+        right_comparison = self._destructure_mod_and_number_comparison(right)
+
+        if (
+            left_comparison is None
+            or right_comparison is None
+            or left_comparison[1] != right_comparison[1]
+        ):
+            return None
+
+        return (
+            left_comparison[0],
+            left_comparison[2],
+            left_comparison[3],
+            right_comparison[0],
+            right_comparison[2],
+            right_comparison[3],
+            left_comparison[1],
+        )
+
+    def _insert_conjuncted_mod_comparison(
+        self,
+        modulo_connected_with_and: List[PairsOfModComparisonsWithNum],
+        expr1: ExprRepresentation,
+        cmp1: Comparison,
+        val1: Value,
+        expr2: ExprRepresentation,
+        cmp2: Comparison,
+        val2: Value,
+        mod: int,
+        comparison_pair_string: str,
+    ) -> None:
+        for pair in modulo_connected_with_and:
+            if pair.modulo == mod and (
+                pair.expression_pair == (expr1, expr2) or pair.expression_pair == (expr2, expr1)
+            ):
+                pair.comparisons.append(((cmp1, val1), (cmp2, val2)))
+                pair.comparisons_pairs.append(comparison_pair_string)
+                return
+
+        modulo_connected_with_and.append(
+            PairsOfModComparisonsWithNum(
+                expr1, cmp1, val1, expr2, cmp2, val2, mod, comparison_pair_string
+            )
+        )
+
+    def _make_suggestion_for_simplifiable_test_by_equals(
+        self, modulo_connected_with_and: List[PairsOfModComparisonsWithNum], node: nodes.BoolOp
+    ) -> None:
+        # TODO
+        pass
+
     def _is_comparison_not_between_numbers(self, node: nodes.NodeNG) -> bool:
         return (
             isinstance(node, nodes.Compare)
@@ -890,6 +1017,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         comparison_operands: List[NodeCmpValue] = []
         comparisons_with_numbers: SameDirComparisons = {}
         comparisons: SameDirComparisons = {}
+
+        node_is_or = node.op == "or"
+        modulo_connected_with_and: List[PairsOfModComparisonsWithNum] = []
 
         for value in node.values:
             if not self._is_pure_expression(value):
@@ -921,11 +1051,18 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                     value.left.as_string(),
                     True,
                 )
+            elif node_is_or and self._is_conjunction_of_two_equalities(value):
+                tmp = self._destructure_mod_and_number_comps(value.values[0], value.values[1])
+                if tmp is not None:
+                    self._insert_conjuncted_mod_comparison(
+                        modulo_connected_with_and, *tmp, value.as_string()
+                    )
 
         self._group_and_check_by_representation(comparison_operands, node)
         self._make_suggestion_for_using_max_min_if_possible(
             comparisons_with_numbers, comparisons, node
         )
+        self._make_suggestion_for_simplifiable_test_by_equals(modulo_connected_with_and, node)
 
     @only_required_for_messages(
         "simplifiable-with-abs",
