@@ -602,19 +602,47 @@ class Short(BaseChecker):
         self, ex1: Union[nodes.Call, nodes.Name], ex2: Union[nodes.Call, nodes.Name]
     ) -> bool:
         """
-        Note that the function has to be called on exactly 1 argument or the
-        function returns False.
+        Returns True iff ex1 and ex2 represent the same varible or the same pure builtin
+        function called on exactly same arguments that also satisfy _same_var_or_function_call
+        or are the same constants.
+
+        Note that the function uses recursion, so be aware of recursion limit.
         """
-        return type(ex1) == type(ex2) and (
-            (isinstance(ex1, nodes.Name) and ex1.name == ex2.name)
+        if (
+            type(ex1) != type(ex2)
+            or (not isinstance(ex1, nodes.Name) and not isinstance(ex1, nodes.Call))
             or (
-                len(ex1.args) == len(ex2.args) == 1
-                and isinstance(ex1.args[0], nodes.Name)
-                and isinstance(ex2.args[0], nodes.Name)
-                and ex1.args[0].name == ex2.args[0].name
-                and ex1.func.as_string() == ex2.func.as_string()
+                isinstance(ex1, nodes.Call)
+                and (
+                    len(ex1.args) != len(ex2.args)
+                    or ex1.func.as_string() != ex2.func.as_string()
+                    or not is_pure_builtin(ex1.func)
+                    or not is_pure_builtin(ex2.func)
+                )
             )
-        )
+        ):
+            return False
+
+        if isinstance(ex1, nodes.Name):
+            return ex1.name == ex2.name
+
+        for i in range(len(ex1.args)):
+            arg1 = ex1.args[i]
+            arg2 = ex2.args[i]
+
+            if self._is_constant(arg1) and self._is_constant(arg2):
+                if get_const_value(arg1) != get_const_value(arg2):
+                    return False
+                continue
+
+            if (
+                type(arg1) != type(arg2)
+                or (not isinstance(arg1, nodes.Call) and not isinstance(arg1, nodes.Name))
+                or not self._same_var_or_function_call(arg1, arg2)
+            ):
+                return False
+
+        return True
 
     def _get_comparator_by_restriction(self, cmp1: str, cmp2: str, more_restrictive: bool) -> str:
         if len(cmp1) > len(cmp2):
@@ -796,6 +824,7 @@ class Short(BaseChecker):
             return
 
         comparison_operands: List[Node_cmp_value] = []
+        suggested_changes: List[str] = []
 
         for value in node.values:
             operand = self._get_node_comparator_const_value(value)
