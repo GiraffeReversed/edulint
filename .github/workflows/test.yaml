@@ -7,7 +7,7 @@ on:
     inputs:
       python_matrix:
         type: string
-        default: '["3.8"]'
+        default: '["3.11"]'
       pylint_matrix:
         type: string
         default: '["default"]'
@@ -49,12 +49,12 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: 'pip'
 
-      - name: Mock pylint version in requirements.txt and setup.cfg
+      - name: Mock pylint version in requirements.txt (which is sourced for setup.cfg)
         run: |
           sed -i "s/pylint *[~<>=][^\"]*/pylint==${{ matrix.pylint }}/" requirements.txt
         if: ${{ matrix.pylint != 'default' }}
 
-      - name: Mock flake8 version in requirements.txt and setup.cfg
+      - name: Mock flake8 version in requirements.txt (which is sourced for setup.cfg)
         run: |
           sed -i "s/flake8 *[~<>=][^\"]*/flake8==${{ matrix.flake8 }}/" requirements.txt
         if: ${{ matrix.flake8 != 'default' }}
