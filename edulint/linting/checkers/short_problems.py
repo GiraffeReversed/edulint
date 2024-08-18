@@ -1,7 +1,7 @@
 import sys
 
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any
+from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Callable, Dict, Set
 
 from pylint.checkers import BaseChecker
 from pylint.checkers.utils import only_required_for_messages
@@ -19,6 +19,11 @@ from edulint.linting.checkers.utils import (
     is_negation,
     get_name,
 )
+
+Expr_representation = str
+Comparison = str
+Value = Any
+Node_cmp_value = Optional[Tuple[Union[nodes.Call, nodes.Name], Comparison, Value]]
 
 
 class Short(BaseChecker):
@@ -107,7 +112,7 @@ class Short(BaseChecker):
             "Emitted when a long block of code is followed by an else that just returns, breaks or continues.",
         ),
         "R6617": (
-            "The and operation can be replaced with '%s'",
+            "'%s' can be replaced with '%s'",
             "simplifiable-single-and-with-abs",
             "Emitted when there is a problem like x < 4 and x > -4 and suggests abs(x) < 4.",
         ),
@@ -558,9 +563,7 @@ class Short(BaseChecker):
         value = get_const_value(node)
         return isinstance(value, int) or isinstance(value, float)
 
-    def _get_node_comparator_const_value(
-        self, node: nodes.NodeNG
-    ) -> Optional[Tuple[Union[nodes.Call, nodes.Name], str, Any]]:
+    def _get_node_comparator_const_value(self, node: nodes.NodeNG) -> Node_cmp_value:
         """
         Assumes that node is a child of Bool Op.
         If the extraction was not successful returns None.
@@ -646,54 +649,6 @@ class Short(BaseChecker):
 
         return cmp2 + " " + str(const2)
 
-    def _check_for_simplification_of_single_boolop(self, node: nodes.BoolOp) -> None:
-        if node.op not in {"or", "and"} or len(node.values) != 2:
-            return
-
-        operand1 = self._get_node_comparator_const_value(node.values[0])
-        operand2 = self._get_node_comparator_const_value(node.values[1])
-
-        if not operand1 or not operand2:
-            return
-
-        expr1, cmp1, const1 = operand1
-        expr2, cmp2, const2 = operand2
-
-        if not self._same_var_or_function_call(expr1, expr2):
-            return
-
-        expr_string = expr1.as_string()
-
-        if cmp1[0] == cmp2[0]:
-            new_expr = (
-                expr_string
-                + " "
-                + self._remove_redundant_compare(cmp1, const1, cmp2, const2, node.op == "and")
-            )
-
-            self.add_message(
-                "redundant-compare-in-condition",
-                node=node,
-                args=(get_name(node), new_expr),
-            )
-            return
-
-        if const1 != -const2 or cmp1 != self.SWITCHED_COMPARATOR[cmp2]:
-            return
-
-        if node.op == "and":
-            new_expr = self._check_for_simplification_of_single_and()
-        else:
-            new_expr = self._check_for_simplification_of_single_or(
-                const1, cmp1, const2, cmp2, expr_string
-            )
-
-        self.add_message(
-            f"simplifiable-single-{node.op}-with-abs",
-            node=node,
-            args=(get_name(node), new_expr),
-        )
-
     def _check_for_simplification_of_single_or(
         self, const1: Any, cmp1: str, const2: Any, cmp2: str, expr_string: str
     ) -> str:
@@ -754,6 +709,105 @@ class Short(BaseChecker):
                 new_expr = "abs(" + expr_string + ") " + cmp1 + " " + str(const1)
 
         return new_expr
+
+    def _check_for_simplification_of_single_boolop(self, node: nodes.BoolOp) -> None:
+        if node.op is None or len(node.values) != 2:
+            return
+
+        operand1 = self._get_node_comparator_const_value(node.values[0])
+        operand2 = self._get_node_comparator_const_value(node.values[1])
+
+        if not operand1 or not operand2:
+            return
+
+        expr1, cmp1, const1 = operand1
+        expr2, cmp2, const2 = operand2
+
+        if not self._same_var_or_function_call(expr1, expr2):
+            return
+
+        expr_string = expr1.as_string()
+
+        if cmp1[0] == cmp2[0]:
+            new_expr = (
+                expr_string
+                + " "
+                + self._remove_redundant_compare(cmp1, const1, cmp2, const2, node.op == "and")
+            )
+
+            self.add_message(
+                "redundant-compare-in-condition",
+                node=node,
+                args=(get_name(node), new_expr),
+            )
+            return
+
+        if const1 != -const2 or cmp1 != self.SWITCHED_COMPARATOR[cmp2]:
+            return
+
+        if node.op == "and":
+            new_expr = self._check_for_simplification_of_single_and(
+                const1, cmp1, const2, cmp2, expr_string
+            )
+        else:
+            new_expr = self._check_for_simplification_of_single_or(
+                const1, cmp1, const2, cmp2, expr_string
+            )
+
+        self.add_message(
+            f"simplifiable-single-{node.op}-with-abs",
+            node=node,
+            args=(get_name(node), new_expr),
+        )
+
+    def _check_group_of_boolops(
+        expr_string: str, group: List[Tuple[Comparison, Value]], op: str
+    ) -> None:
+        pass
+
+    def _group_and_check_by_representation(
+        self, comparison_operands: List[Node_cmp_value], op: str
+    ) -> None:
+        already_checked: Set[int] = set()
+        current_group: List[Tuple[Comparison, Value]] = []
+
+        for i in range(len(comparison_operands)):
+            if i in already_checked:
+                continue
+
+            expr1, cmp1, const1 = comparison_operands[i]
+            current_group = [(cmp1, const1)]
+            for j in range(i + 1, len(comparison_operands)):
+                if j in already_checked:
+                    continue
+
+                expr2, cmp2, const2 = comparison_operands[j]
+                if self._same_var_or_function_call(expr1, expr2):
+                    current_group.append((cmp2, const2))
+                    already_checked.add(j)
+
+            if len(current_group) < 2:
+                continue
+
+            self._check_group_of_boolops(expr1.as_string(), current_group, op)
+
+    def _check_for_simplification_of_boolop(self, node: nodes.BoolOp) -> None:
+        if node.op is None or len(node.values) == 2:
+            return
+
+        comparison_operands: List[Node_cmp_value] = []
+
+        for value in node.values:
+            operand = self._get_node_comparator_const_value(value)
+
+            if operand is not None:
+                comparison_operands.append(operand)
+
+        self._group_and_check_by_representation(comparison_operands, node.op)
+
+        # rozdělit je do tříd podle stejného volání fce nebo proměnné
+
+        # upravit _same_var_or_function_call
 
     def _check_for_simplification_of_and(self, node: nodes.BoolOp) -> None:
         if node.op != "and" or len(node.values) == 2:
