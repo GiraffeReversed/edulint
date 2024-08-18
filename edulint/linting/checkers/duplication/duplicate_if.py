@@ -452,7 +452,7 @@ def is_part_of_complex_expression(avars) -> bool:
         parent = to_parent(avar)
         while parent is not None:
             if isinstance(parent, nodes.Call):
-                if has_parent_call:
+                if has_parent_call or len(parent.args) > 1:
                     return True
                 has_parent_call = True
 
@@ -471,7 +471,7 @@ def is_part_of_complex_expression(avars) -> bool:
 @check_enabled("if-to-ternary")
 def get_fixed_by_ternary(tests, core, avars):
     # the condition would get too complicated
-    if len(tests) > 2:
+    if len(tests) > 1 and any(isinstance(test, nodes.BoolOp) for test in tests):
         return None
     # too much place for error
     if len(avars) > 1 and not all(isinstance(avar.parent, nodes.Const) for avar in avars):

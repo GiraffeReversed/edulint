@@ -509,17 +509,19 @@ def test_if_into_variables(filename: str, expected_output: List[Problem]) -> Non
 @pytest.mark.parametrize("filename,expected_output", [
     ("0bf69cc1a5-p4_geometry.py", []),
     ("163aadb1dd-p4_geometry.py", []),
-    ("3867ee9889-split.py", [lazy_problem().set_line(33)]),
+    ("3867ee9889-split.py", []),
     ("5ce8692f42-p5_fibsum.py", []),
     ("769200244d-p6_workdays.py", [lazy_problem().set_line(66)]),
     ("7e1dd5c338-p1_digit_sum.py", []),
     ("7e1dd5c338-p5_credit.py", []),
     ("9668dff756-p6_workdays.py", []),
-    ("ccf4a9f103-p6_workdays.py", [lazy_problem().set_line(80)]),
+    ("ccf4a9f103-p6_workdays.py", []),
     ("custom_if_calls_to_variables.py", []),
     ("fd637a2984-p6_workdays.py", []),
     ("fdc1570861-p6_workdays.py", []),
     ("tarot_card_reader.py", []),
+    ("uc_40_4468_31_23.py", []),
+    ("uc_56_4519_12_10.py", []),
     ("uc_73_0198_15_17.py", []),
     ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
     ("uc_73_3819_50_56.py", [lazy_problem().set_line(6), lazy_problem().set_line(16)]),
@@ -528,6 +530,8 @@ def test_if_into_variables(filename: str, expected_output: List[Problem]) -> Non
     ("uc_73_5468_12_52.py", []),
     ("uc_73_7863_14_44.py", []),
     ("uc_73_8593_19_21.py", []),
+    ("uc_82_1702_19_11.py", []),
+    ("uc_87_5303_19_15.py", []),
 ])
 def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
@@ -642,8 +646,14 @@ def test_if_to_use(filename: str, expected_output: List[Problem]) -> None:
     ("uc_13_1073_17_21.py", [lazy_problem().set_symbol("if-to-variables").set_line(2)]),
     ("uc_28_6562_15_18.py", [lazy_problem().set_symbol("if-to-variables").set_line(4)]),
     ("uc_28_7857_02_17.py", [lazy_problem().set_symbol("if-to-variables").set_line(3)]),
+    ("uc_40_4468_31_23.py", []),
+    # TODO suggest breaking up the string
+    ("uc_56_4519_12_10.py", []),
     ("uc_73_6644_16_22.py", [lazy_problem().set_symbol("if-into-block").set_line(14)]),
     ("uc_74_7627_27_19.py", [lazy_problem().set_line(6), lazy_problem().set_line(14)]),
+    # TODO suggest breaking up the string
+    ("uc_82_1702_19_11.py", []),
+    ("uc_87_5303_19_15.py", []),  # dubious
 ])
 def test_interactions(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
