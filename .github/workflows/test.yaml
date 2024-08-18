@@ -73,11 +73,15 @@ jobs:
       - name: Test with pytest
         run: pytest --junit-xml pytest.xml tests/
 
+      - name: Timestamp to have unique part of artefact ID
+        id: timestamp_id
+        run: echo "timestamp_id=$(date +%s.%N)" >> $GITHUB_OUTPUT
+
       - name: Upload Unit Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-${{ matrix.python }}-${{ matrix.pylint }}-${{ matrix.flake8 }}-${{ matrix.os }}.xml
+          name: pytest-${{ matrix.python }}-${{ matrix.pylint }}-${{ matrix.flake8 }}-${{ matrix.os }}-${{steps.timestamp_id.outputs.timestamp_id}}.xml
           path: pytest.xml
 
   publish-test-results:
