@@ -474,6 +474,7 @@ def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
 @pytest.mark.parametrize("filename,expected_output", [
     ("0bf69cc1a5-p4_geometry.py", []),
     ("163aadb1dd-p4_geometry.py", []),  # dubious
+    ("53647f4477-hw3.py", [lazy_problem().set_line(91)]),
     ("5ce8692f42-p5_fibsum.py", []),
     ("769200244d-p6_workdays.py", [lazy_problem().set_line(66)]),
     ("7e1dd5c338-p1_digit_sum.py", []), # [lazy_problem().set_line(23)]), dubious
@@ -495,6 +496,7 @@ def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
     ("uc_73_5468_12_52.py", [lazy_problem().set_line(3)]),
     ("uc_73_7863_14_44.py", [lazy_problem().set_line(3)]),
     ("uc_73_8593_19_21.py", []),
+    ("uc_74_7627_27_19.py", [lazy_problem().set_line(6), lazy_problem().set_line(14)]),
 ])
 def test_if_into_variables(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
@@ -614,6 +616,10 @@ def test_if_to_use(filename: str, expected_output: List[Problem]) -> None:
 @pytest.mark.parametrize("filename,expected_output", [
     ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-to-loop").set_line(75)]),
     ("406561e0ae-workdays.py", []),  # contains duplication, but no good advice
+    ("53647f4477-hw3.py", [
+        lazy_problem().set_symbol("if-to-variables").set_line(91),
+        lazy_problem().set_symbol("if-to-ternary").set_line(105)
+    ]),
     ("63257195a0-p6_workdays.py", []),  # contains duplication, but no good advice
     ("cf_1086_a_14.py", []),
     ("cf_1113_c_27.py", [lazy_problem().set_symbol("if-to-variables").set_line(16)]),
@@ -635,6 +641,7 @@ def test_if_to_use(filename: str, expected_output: List[Problem]) -> None:
     ("uc_28_6562_15_18.py", [lazy_problem().set_symbol("if-to-variables").set_line(4)]),
     ("uc_28_7857_02_17.py", [lazy_problem().set_symbol("if-to-variables").set_line(3)]),
     ("uc_73_6644_16_22.py", [lazy_problem().set_symbol("if-into-block").set_line(14)]),
+    ("uc_74_7627_27_19.py", [lazy_problem().set_line(6), lazy_problem().set_line(14)]),
 ])
 def test_interactions(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
