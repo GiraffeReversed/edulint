@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional, Dict
 import dbm
 import time
+import random
 
 import tomli
 import requests
@@ -62,10 +63,13 @@ def update_explanations(disable_explanations_update: bool = False):
 
 def _thread_update_explanations(ttl: int = 600): 
     try:
+        if not Path(EXPLANATIONS_DBM).exists():
+            time.sleep(random.randint(1,30)/1000)  # Small random delay to lower the chance for file creation race condition 
         with dbm.open(EXPLANATIONS_DBM, 'c') as db:
             if current_timestamp() < int(db.get('last_update', b'0')) + ttl:
                 return
             db['last_update'] = str(current_timestamp())  # We're counting any update attempt, not just the succesfull ones
+        logger.debug(f"Succesfully wrote current time to {EXPLANATIONS_DBM}.")
 
         resp = requests.get(GITHUB_URL, timeout=3)
         if resp.status_code != 200:
@@ -74,7 +78,7 @@ def _thread_update_explanations(ttl: int = 600):
         with open(EXPLANATIONS_ONLINE_DISTRIBUTED_FILEPATH, "w", encoding="utf8") as f:
             f.write(resp.text)
     except Exception as e:
-        logger.debug(f"Update of explanations failed with {e}.")
+        logger.debug(f"Update of explanations failed with {e}. This can ocassionaly hapen for some processes due to race condition.")
 
 # todo: add test to load explanantions (toml parser is sensitive to small mistakes)
 
