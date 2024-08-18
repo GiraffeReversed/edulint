@@ -391,7 +391,7 @@ TEST_FILE_FOR_SIMPLIFICATION_OF_BOOLOP = [
     ]),
 ])
 def test_simplification_of_or(lines: List[str], expected_output: List[Problem]) -> None:
-    apply_and_lint(
+    create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=simplifiable-or-with-abs")],
         expected_output
@@ -420,7 +420,7 @@ def test_simplification_of_or(lines: List[str], expected_output: List[Problem]) 
     ]),
 ])
 def test_simplification_of_and(lines: List[str], expected_output: List[Problem]) -> None:
-    apply_and_lint(
+    create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=simplifiable-and-with-abs")],
         expected_output
@@ -459,7 +459,7 @@ def test_simplification_of_and(lines: List[str], expected_output: List[Problem])
     ]),
 ])
 def test_redundant_compare(lines: List[str], expected_output: List[Problem]) -> None:
-    apply_and_lint(
+    create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=redundant-compare-in-condition")],
         expected_output

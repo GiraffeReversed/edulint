@@ -319,7 +319,7 @@ def test_simplify_if_statement_multiconds_custom(lines: List[str], expected_outp
         "    return triangle_is_righ"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'triangle_is_righ = c**2 == a**2 "
+        .set_text("The conditional assignment can be replaced with 'triangle_is_righ = c**2 == a**2 "
                   "+ b**2 or a**2 == c**2 + b**2 or b**2 == a**2 + c**2'")
     ]),
 ])
@@ -336,7 +336,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = y"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = x or y'")
+        .set_text("The conditional assignment can be replaced with 'a = x or y'")
     ]),
     ([
         "def xxx(x, y):",
@@ -346,7 +346,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = y"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = <negated x> and y'")
+        .set_text("The conditional assignment can be replaced with 'a = <negated x> and y'")
     ]),
     ([
         "def xxx(x, y):",
@@ -356,7 +356,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = False"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = x and y'")
+        .set_text("The conditional assignment can be replaced with 'a = x and y'")
     ]),
     ([
         "def xxx(x, y):",
@@ -366,7 +366,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = True"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = <negated x> or y'")
+        .set_text("The conditional assignment can be replaced with 'a = <negated x> or y'")
     ]),
     ([
         "def xxx(x, y, z):",
@@ -376,7 +376,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = True"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = <negated x> or (y and z)'")
+        .set_text("The conditional assignment can be replaced with 'a = <negated x> or (y and z)'")
     ]),
     ([
         "def xxx(x, y, z):",
@@ -386,7 +386,7 @@ def test_simplify_if_assigning_statement_custom(lines: List[str], expected_outpu
         "        a = True"
     ], [
         lazy_problem().set_line(2)
-        .set_text("The conditional assignment can be replace with 'a = <negated x> or y or z'")
+        .set_text("The conditional assignment can be replaced with 'a = <negated x> or y or z'")
     ]),
 ])
 def test_simplify_if_assigning_statement_conj_custom(lines: List[str], expected_output: List[Problem]) -> None:
