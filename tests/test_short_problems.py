@@ -324,3 +324,47 @@ class TestShort:
             [Arg(Option.PYLINT, "--enable=short-problems")],
             expected_output
         )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "x = 42",
+        "y = [-5.25,2.3,3,4]",
+
+        "a = x > 2 or x < -2",
+        "b = x >= 2 or x < -2",
+        "c = x >= 2 or x <= -2",
+
+        "d = x >= -2 or x <= 2",
+        "e = x > 0 or x < 0",
+
+        "f = x >= 1 or x > 1",
+
+        "g = x < -3.5 or x > 3.5",
+        "h = x <= 7.59 or x >= -7.59",
+        "i = -0.96 > sum(y) or sum(y) > 0.96",
+        "j = -0.96 > sum(y) or 0.96 < sum(y)",
+    ], [
+        lazy_problem().set_line(3).set_code("R6618")
+        .set_text("The or operation can be replaced with 'abs(x) > 2'"),
+        lazy_problem().set_line(5).set_code("R6618")
+        .set_text("The or operation can be replaced with 'abs(x) >= 2'"),
+        lazy_problem().set_line(6).set_code("R6618")
+        .set_text("The or operation can be replaced with 'True'"),
+        lazy_problem().set_line(7).set_code("R6618")
+        .set_text("The or operation can be replaced with 'x != 0'"),
+        lazy_problem().set_line(9).set_code("R6618")
+        .set_text("The or operation can be replaced with 'abs(x) > 3.5'"),
+        lazy_problem().set_line(10).set_code("R6618")
+        .set_text("The or operation can be replaced with 'True'"),
+        lazy_problem().set_line(11).set_code("R6618")
+        .set_text("The or operation can be replaced with 'abs(sum(y)) > 0.96'"),
+        lazy_problem().set_line(12).set_code("R6618")
+        .set_text("The or operation can be replaced with 'abs(sum(y)) > 7.59'"),
+    ]),
+])
+def test_simplification_of_or(lines: List[str], expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=simplifiable-single-or-with-abs")],
+        expected_output
+    )

@@ -15,9 +15,8 @@ from edulint.linting.checkers.utils import (
     infer_to_value,
     is_parents_elif,
     get_statements_count,
-    is_negation,
-    get_name,
     is_pure_builtin,
+    is_negation,
 )
 
 
@@ -551,33 +550,40 @@ class Short(BaseChecker):
         left, (comp, right) = node.left, node.ops[0]
         return left, comp, right
 
-    def _is_numeric(self, node: nodes.Const) -> bool:
-        return node.pytype() in {"int", "float"}
+    def _is_constant(self, node: nodes.NodeNG) -> bool:
+        return get_const_value(node) is not None
 
-    def _get_node_comparator_const(
+    def _is_numeric(self, node: nodes.NodeNG) -> bool:
+        value = get_const_value(node)
+        return isinstance(value, int) or isinstance(value, float)
+
+    def _get_node_comparator_const_value(
         self, node: nodes.NodeNG
-    ) -> Optional[Tuple[Union[nodes.Call, nodes.Name], str, nodes.Const]]:
+    ) -> Optional[Tuple[Union[nodes.Call, nodes.Name], str, Any]]:
         """
         Assumes that node is a child of Bool Op.
         If the extraction was not successful returns None.
         It is succesful if and only if it is an inequality between
         a constant and a variable or a call to pure builtin function.
 
-        When returns non None value the constant is last.
+        When returns non None, the constant is last.
         """
         if not isinstance(node, nodes.Compare) or len(node.ops) >= 2:
             return None
 
         left, comp, right = self._get_values_and_comparator(node)
 
+        left_is_constant = self._is_constant(left)
+        right_is_constant = self._is_constant(right)
+
         if (
-            (isinstance(left, nodes.Const) and isinstance(right, nodes.Const))
-            or (not isinstance(left, nodes.Const) and not isinstance(right, nodes.Const))
+            (left_is_constant and right_is_constant)
+            or (not left_is_constant and not right_is_constant)
             or comp not in self.SWITCHED_COMPARATOR
         ):
             return None
 
-        if isinstance(left, nodes.Const):
+        if left_is_constant:
             left, comp, right = right, self.SWITCHED_COMPARATOR[comp], left
 
         if not (
@@ -586,11 +592,11 @@ class Short(BaseChecker):
         ) or not self._is_numeric(right):
             return None
 
-        return left, comp, right
+        return left, comp, get_const_value(right)
 
     def _same_var_or_function_call(
-        ex1: Union[nodes.Call, nodes.Name], ex2: Union[nodes.Call, nodes.Name]
-    ):
+        self, ex1: Union[nodes.Call, nodes.Name], ex2: Union[nodes.Call, nodes.Name]
+    ) -> bool:
         """
         Note that the function has to be called on exactly 1 argument or the
         function returns False.
@@ -616,8 +622,8 @@ class Short(BaseChecker):
         if node.op != "or" or len(node.values) != 2:
             return
 
-        operand1 = self._get_node_comparator_const(node.values[0])
-        operand2 = self._get_node_comparator_const(node.values[1])
+        operand1 = self._get_node_comparator_const_value(node.values[0])
+        operand2 = self._get_node_comparator_const_value(node.values[1])
 
         if not operand1 or not operand2:
             return
@@ -633,39 +639,39 @@ class Short(BaseChecker):
         if cmp1 == cmp2:
             new_expr = expr_string + " " + cmp1 + " "
             if cmp1 == ">" or cmp1 == ">=":
-                new_expr += str(min(const1.value, const2.value))
+                new_expr += str(min(const1, const2))
             else:
-                new_expr += str(max(const1.value, const2.value))
+                new_expr += str(max(const1, const2))
 
             self.add_message(
                 "redundant-compare-in-condition",
                 node=node,
-                args=(get_name(node), new_expr),
+                args=(new_expr),
             )
             return
 
-        if const1.value != -const2.value or cmp1 != self.SWITCHED_COMPARATOR[cmp2]:
+        if const1 != -const2 or cmp1 != self.SWITCHED_COMPARATOR[cmp2]:
             return
 
         new_expr = "True"
 
-        if const1.value == 0:
+        if const1 == 0:
             if cmp1 in {"<", ">"}:
                 new_expr = expr_string + " != 0"
             # Note that this case belongs to simplifiable-single-or-with-abs,
             # but is a bit different. (suggests x != 0)
 
         elif cmp1 in {">=", ">"}:
-            if const1.value > 0:
-                new_expr = "abs(" + expr_string + ") " + cmp1 + " " + str(const1.value)
+            if const1 > 0:
+                new_expr = "abs(" + expr_string + ") " + cmp1 + " " + str(const1)
         else:
-            if const1.value < 0:
-                new_expr = "abs(" + expr_string + ") " + cmp1 + " " + str(-const1.value)
+            if const1 < 0:
+                new_expr = "abs(" + expr_string + ") " + cmp2 + " " + str(-const1)
 
         self.add_message(
             "simplifiable-single-or-with-abs",
             node=node,
-            args=(get_name(node), new_expr),
+            args=(new_expr),
         )
 
     def _check_for_simplification_of_single_and(self, node: nodes.BoolOp) -> None:
