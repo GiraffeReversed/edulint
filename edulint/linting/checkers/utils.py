@@ -87,7 +87,7 @@ EXPR_FUNCTIONS = {
 
 def is_pure_builtin(node: nodes.NodeNG) -> bool:
     inferred = utils.safe_infer(node)
-    return is_builtin(node, inferred.name) and inferred and inferred.name in EXPR_FUNCTIONS
+    return is_builtin(node) and inferred and inferred.name in EXPR_FUNCTIONS
 
 
 def is_multi_assign(node: nodes.NodeNG) -> bool:
