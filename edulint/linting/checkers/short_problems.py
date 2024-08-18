@@ -568,7 +568,8 @@ class Short(BaseChecker):
         Assumes that node is a child of Bool Op.
         If the extraction was not successful returns None.
         It is succesful if and only if it is an inequality between
-        a constant and a variable or a call to pure builtin function.
+        a constant and a variable or a function call or a binary
+        operation.
 
         When returns non None, the constant is last.
         """
@@ -591,30 +592,48 @@ class Short(BaseChecker):
             left, comp, right = right, self.SWITCHED_COMPARATOR[comp], left
 
         if not (
-            (isinstance(left, nodes.Call) and is_pure_builtin(left.func))
+            isinstance(left, nodes.Call)
             or isinstance(left, nodes.Name)
+            or isinstance(left, nodes.BinOp)
         ) or not self._is_numeric(right):
             return None
 
         return left, comp, get_const_value(right)
 
-    def _same_var_or_function_call(
-        self, ex1: Union[nodes.Call, nodes.Name], ex2: Union[nodes.Call, nodes.Name]
-    ) -> bool:
+    def _equal_constants(self, ex1: nodes.NodeNG, ex2: nodes.NodeNG) -> bool:
+        const1 = get_const_value(ex1)
+        const2 = get_const_value(ex1)
+
+        return const1 is not None and const2 is not None and const1 == const2
+
+    def _same_expressions(self, ex1: nodes.NodeNG, ex2: nodes.NodeNG) -> bool:
         """
-        Returns True iff ex1 and ex2 represent the same varible or the same pure builtin
-        function called on exactly same arguments that also satisfy _same_var_or_function_call
-        or are the same constants.
+        Returns True iff ex1 and ex2 represent the same variable or the same pure builtin
+        function called on exactly same arguments that also satisfy _same_expressions
+        or are the same constants or are both BinOp where left and right satisfy _same_expressions.
 
         Note that the function uses recursion, so be aware of recursion limit.
         """
+        if self._equal_constants(ex1, ex2):
+            return True
+
         if (
             type(ex1) != type(ex2)
-            or (not isinstance(ex1, nodes.Name) and not isinstance(ex1, nodes.Call))
+            or (
+                not isinstance(ex1, nodes.Name)
+                and not isinstance(ex1, nodes.Call)
+                and not isinstance(ex1, nodes.BinOp)
+            )
             or (
                 isinstance(ex1, nodes.Call)
                 and (
                     len(ex1.args) != len(ex2.args)
+                    or len(ex1.keywords) != 0
+                    or len(ex2.keywords) != 0
+                    or len(ex1.kwargs) != 0
+                    or len(ex2.kwargs) != 0
+                    or len(ex1.starargs) != 0
+                    or len(ex2.starargs) != 0
                     or ex1.func.as_string() != ex2.func.as_string()
                     or not is_pure_builtin(ex1.func)
                     or not is_pure_builtin(ex2.func)
@@ -623,6 +642,11 @@ class Short(BaseChecker):
         ):
             return False
 
+        if isinstance(ex1, nodes.BinOp):
+            return self._same_expressions(ex1.left, ex2.left) and self._same_expressions(
+                ex1.right, ex2.right
+            )
+
         if isinstance(ex1, nodes.Name):
             return ex1.name == ex2.name
 
@@ -630,16 +654,7 @@ class Short(BaseChecker):
             arg1 = ex1.args[i]
             arg2 = ex2.args[i]
 
-            if self._is_constant(arg1) and self._is_constant(arg2):
-                if get_const_value(arg1) != get_const_value(arg2):
-                    return False
-                continue
-
-            if (
-                type(arg1) != type(arg2)
-                or (not isinstance(arg1, nodes.Call) and not isinstance(arg1, nodes.Name))
-                or not self._same_var_or_function_call(arg1, arg2)
-            ):
+            if not self._same_expressions(arg1, arg2):
                 return False
 
         return True
@@ -677,6 +692,12 @@ class Short(BaseChecker):
 
         return cmp2 + " " + str(const2)
 
+    def _add_abs_if_necessary(self, expr_string: str) -> str:
+        if expr_string.startswith("abs("):
+            return expr_string
+
+        return "abs(" + expr_string + ") "
+
     def _check_for_simplification_of_single_or(
         self, const1: Any, cmp1: str, const2: Any, cmp2: str, expr_string: str
     ) -> str:
@@ -702,10 +723,10 @@ class Short(BaseChecker):
 
         elif cmp1 in {">=", ">"}:
             if const1 > 0:
-                new_expr = "abs(" + expr_string + ") " + cmp1 + " " + str(const1)
+                new_expr = self._add_abs_if_necessary(expr_string) + cmp1 + " " + str(const1)
         else:
             if const1 < 0:
-                new_expr = "abs(" + expr_string + ") " + cmp2 + " " + str(const2)
+                new_expr = self._add_abs_if_necessary(expr_string) + cmp2 + " " + str(const2)
 
         return new_expr
 
@@ -731,10 +752,10 @@ class Short(BaseChecker):
                 new_expr = expr_string + " == 0"
         elif cmp1 in {">=", ">"}:
             if const1 < 0:
-                new_expr = "abs(" + expr_string + ") " + cmp2 + " " + str(const2)
+                new_expr = self._add_abs_if_necessary(expr_string) + cmp2 + " " + str(const2)
         else:
             if const1 > 0:
-                new_expr = "abs(" + expr_string + ") " + cmp1 + " " + str(const1)
+                new_expr = self._add_abs_if_necessary(expr_string) + cmp1 + " " + str(const1)
 
         return new_expr
 
@@ -751,7 +772,7 @@ class Short(BaseChecker):
         expr1, cmp1, const1 = operand1
         expr2, cmp2, const2 = operand2
 
-        if not self._same_var_or_function_call(expr1, expr2):
+        if not self._same_expressions(expr1, expr2):
             return
 
         expr_string = expr1.as_string()
@@ -810,7 +831,7 @@ class Short(BaseChecker):
                     continue
 
                 expr2, cmp2, const2 = comparison_operands[j]
-                if self._same_var_or_function_call(expr1, expr2):
+                if self._same_expressions(expr1, expr2):
                     current_group.append((cmp2, const2))
                     already_checked.add(j)
 
