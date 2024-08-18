@@ -28,10 +28,19 @@ jobs:
       - name: Log python package versions
         run: pip freeze
 
-      - name: Download a test file
-        run: wget https://raw.githubusercontent.com/GiraffeReversed/edulint/main/setup.py
-        # There is no significance in using setup.py, it's just a file that will always be on that URL.
-
-      - name: Lint a test file
+      - name: Lint a test file with OK code
         run: |
-          python -m edulint setup.py || test $? -eq 1  # TODO: Change this to a special return code for a "defect found" situation.
+          echo "print('test')" > /tmp/ok.py
+          python -m edulint /tmp/ok.py || test $? -eq 0
+
+      - name: Lint a test file with simple code quality defect
+        run: |
+          echo -n "print('missing newline at the end of file')" > /tmp/with_simple_defect.py
+          python -m /tmp/with_simple_defect.py || test $? -eq 1  # TODO: Change this to a special return code for a "defect found" situation.
+
+      - name: Lint a test file with bigger code quality defect
+        run:  |
+          wget -O /tmp/with_bigger_defects.py https://raw.githubusercontent.com/GiraffeReversed/edulint/main/setup.py
+          # There is no significance in using setup.py, it's just a file that will always be on that URL.
+          # TODO: Change the test file for a more complex example.
+          python -m /tmp/with_bigger_defects.py || test $? -eq 1  # TODO: Change this to a special return code for a "defect found" situation.
