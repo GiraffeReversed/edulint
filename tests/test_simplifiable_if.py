@@ -587,7 +587,6 @@ def test_simplifiable_with_abs(filename: str, expected_output: List[Problem]) ->
         "x = 7.8",
         "y = [-5.25, 2.3, 3, 4]",
         "a = x > -2 or x <= 6",
-        "b = x > 0 or x < 0",
         "c = x >= 1 or x > 1",
         "d = x < 2 and x <= -5",
         "e = -(x - 1) > 5 or - (x- 1) < -5 or -(x-1) >= 4",
@@ -595,12 +594,10 @@ def test_simplifiable_with_abs(filename: str, expected_output: List[Problem]) ->
         lazy_problem().set_line(3)
         .set_text("'x > -2 or x <= 6' can be replaced with 'True'"),
         lazy_problem().set_line(4)
-        .set_text("'x > 0 or x < 0' can be replaced with 'x != 0'"),
-        lazy_problem().set_line(5)
         .set_text("'x >= 1 or x > 1' can be replaced with 'x >= 1'"),
-        lazy_problem().set_line(6)
+        lazy_problem().set_line(5)
         .set_text("'x < 2 and x <= -5' can be replaced with 'x <= -5'"),
-        lazy_problem().set_line(7)
+        lazy_problem().set_line(6)
         .set_text("'-(x - 1) > 5 or -(x - 1) < -5 or -(x - 1) >= 4' can be replaced with '-(x - 1) < -5 or -(x - 1) >= 4'"),
     ]),
     ([
@@ -627,6 +624,24 @@ def test_redundant_compare(lines: List[str], expected_output: List[Problem]) -> 
         expected_output,
     )
 
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "x = 7.8",
+        "b = x > 4 or x > 0 or x < -1 or x < 0",
+        "c = x >= 9 and x <= 9"
+    ], [
+        lazy_problem().set_line(2)
+        .set_text("'x > 4 or x > 0 or x < -1 or x < 0' can be replaced with 'x != 0'"),
+        lazy_problem().set_line(3)
+        .set_text("'x >= 9 and x <= 9' can be replaced with 'x == 9'"),
+    ]),
+])
+def test_using_compare_instead_of_equal(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=using-compare-instead-of-equal")],
+        expected_output,
+    )
 
 @pytest.mark.parametrize("lines,expected_output", [
     ([
