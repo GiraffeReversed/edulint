@@ -184,6 +184,7 @@ def check_enabled(message_ids: Union[str, List[str]]):
             symbol, *result = result
             return Fixed(symbol, *result)
 
+        inner.__name__ = func.__name__
         return inner
 
     return middle
@@ -411,6 +412,29 @@ def get_fixed_by_restructuring_twisted(tests, core, avars):
     return (
         get_token_count(if_),
         get_statements_count(if_, include_defs=False, include_name_main=False),
+        (),
+    )
+
+
+### if to use
+
+
+@check_enabled("if-to-use")
+def get_fixed_by_if_to_use(tests, core, avars):
+    if len(tests) > 1 or len(avars) > 1:
+        return None
+
+    avar = avars[0]
+    if (
+        not isinstance(avar.parent, nodes.Const)
+        or not isinstance(avar.subs[0], bool)
+        or not isinstance(avar.subs[1], bool)
+    ):
+        return None
+
+    return (
+        get_token_count(core) - 1 + get_token_count(tests[0]),
+        get_statements_count(core, include_defs=False, include_name_main=False),
         (),
     )
 
@@ -718,6 +742,7 @@ def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> 
 
     for fix_function in (
         get_fixed_by_restructuring_twisted if not tvs_change else None,
+        get_fixed_by_if_to_use if not tvs_change else None,
         get_fixed_by_moving_if if not tvs_change else None,
         get_fixed_by_ternary if not called_avar and not tvs_change else None,
         get_fixed_by_vars if not called_avar else None,

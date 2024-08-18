@@ -599,6 +599,16 @@ def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
         expected_output
     )
 
+@pytest.mark.parametrize("filename,expected_output",[
+    ("d2e87302a6-b_family_tree.py", [lazy_problem().set_line(82)])
+])
+def test_if_to_use(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=if-to-use")],
+        expected_output
+    )
+
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-to-loop").set_line(75)]),

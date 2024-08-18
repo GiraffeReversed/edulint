@@ -288,8 +288,8 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "",
         ),
         "R6810": (
-            "Restructure nested ifs",
-            "nested-if-to-restructured",
+            "Use condition directly",
+            "if-to-use",
             "",
         ),
         "R6811": (
