@@ -641,13 +641,13 @@ def test_interactions(filename: str, expected_output: List[Problem]) -> None:
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("cf_1166_c_4.py", []),
+    ("ksi_17_513_aacd.py", []),
     # TODO report identical functions
     ("pronto_jawless_seismic_hefty.py", []),
 ])
 def test_cfg(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        # [Arg(Option.PYLINT, "--enable=big-no-duplicate-code")],
         [],
         expected_output
     )

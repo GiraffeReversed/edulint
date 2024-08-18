@@ -111,6 +111,9 @@ class CFGVisitor:
         self._current_block = previous_block
         self._current_cfg = previous_cfg
 
+    def visit_asyncfunctiondef(self, func: nodes.AsyncFunctionDef) -> None:
+        self.visit_functiondef(func)
+
     def visit_functiondef(self, func: nodes.FunctionDef) -> None:
         # If user specifies to only render functions, check if the function/method name is listed
         functions_to_render = self.options.get("functions", [])
