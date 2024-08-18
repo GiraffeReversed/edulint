@@ -1,6 +1,6 @@
 from astroid import nodes  # type: ignore
 from astroid.const import Context
-from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Set
+from typing import TYPE_CHECKING, Optional, List, Tuple, Union, Any, Set, Dict
 
 from pylint.checkers import BaseChecker
 from pylint.checkers.utils import only_required_for_messages
@@ -21,7 +21,13 @@ from edulint.linting.checkers.utils import (
 Expr_representation = str
 Comparison = str
 Value = Any
-Node_cmp_value = Optional[Tuple[Union[nodes.Call, nodes.Name], Comparison, Value]]
+Node_cmp_value = Optional[Tuple[nodes.NodeNG, Comparison, Value]]
+Same_dir_comparisons = Dict[
+    Expr_representation, Dict[Comparison, Tuple[List[Expr_representation], List[bool]]]
+]
+# When you take a key (1), then one key (cmp) from the corresponding dictionary and an element from the
+# first array from its corresponding value (2), you get a comparison ((1) (cmp) (2)). The List[bool]
+# indicates, whether the comparison in the original source code is in the same direction as in the dictionary.
 
 
 class Short(BaseChecker):
@@ -123,6 +129,11 @@ class Short(BaseChecker):
             "'%s' can be replaced with '%s'",
             "redundant-compare-in-condition",
             "Emitted when there is a problem like x > 4 or x > 3 and suggests x > 3. (ie min{4, 3})",
+        ),
+        "R6620": (
+            "'%s' can be replaced with '%s'",
+            "redundant-compare-with-variables-avoidable-with-max-min",
+            "Emitted when there is a problem like 'x > a and x > b' and suggests x > max(a, b).",
         ),
     }
 
@@ -877,11 +888,185 @@ class Short(BaseChecker):
 
             self._suggestion_for_group_of_boolops(expr1.as_string(), current_group, node)
 
+    def _update_comparisons(
+        self,
+        comparisons: Same_dir_comparisons,
+        expr1: str,
+        comparator: str,
+        expr2: str,
+        comparison_switched: bool,
+    ):
+        if expr1 in comparisons:
+            if comparator in comparisons[expr1]:
+                comparisons[expr1][comparator][0].append(expr2)
+                comparisons[expr1][comparator][1].append(comparison_switched)
+            else:
+                comparisons[expr1][comparator] = ([expr2], [comparison_switched])
+        else:
+            comparisons[expr1] = {comparator: ([expr2], [comparison_switched])}
+
+    def _switch_if_necessary(
+        self, expr1: str, cmp: str, expr2: str, was_switched: bool
+    ) -> List[str]:
+        if was_switched:
+            return [expr2, self.SWITCHED_COMPARATOR[cmp], expr1]
+
+        return [expr1, cmp, expr2]
+
+    def _get_original_group_as_string(
+        self,
+        expr_string: str,
+        cmp: str,
+        group: List[Expr_representation],
+        was_switched: List[bool],
+        compared_with_num: Optional[Tuple[str, bool]],
+        op: str,
+    ) -> str:
+        result = []
+
+        for i in range(len(group)):
+            result.extend(self._switch_if_necessary(expr_string, cmp, group[i], was_switched[i]))
+
+            if i < len(group) - 1:
+                result.append(op)
+
+        if compared_with_num is not None:
+            result.append(op)
+            result.extend(
+                self._switch_if_necessary(
+                    expr_string,
+                    cmp,
+                    compared_with_num[0],
+                    compared_with_num[1],
+                )
+            )
+
+        return " ".join(result)
+
+    def _put_into_max_or_min(
+        self,
+        function: str,
+        expression: str,
+        comparison: str,
+        expressions: List[str],
+        compared_with_num: Optional[Tuple[str, bool]],
+    ) -> str:
+        """
+        the <function> should contain either "max(" or "min("
+        """
+        result: List[str] = [expression + " " + comparison + " " + function]
+
+        for i in range(len(expressions)):
+            if expressions[i].startswith(function):
+                result.append(expressions[i][4:-1])
+            else:
+                result.append(expressions[i])
+
+            if i < len(expressions) - 1:
+                result.append(", ")
+
+        if compared_with_num is not None:
+            result.append(", ")
+            result.append(compared_with_num[0])
+
+        result.append(")")
+        return "".join(result)
+
+    def _make_suggestion_for_using_max_min_if_possible(
+        self,
+        comparisons_with_numbers: Same_dir_comparisons,
+        comparisons: Same_dir_comparisons,
+        node: nodes.BoolOp,
+    ) -> None:
+        """
+        Makes suggestion only for the comparisons that will maximize the number of
+        comparisons put together with max (ie. in here: "x > a and b < x and b < 1
+        and a > b" would suggest "x > a and b < min(x, 1, a)" instead of
+        "x > max(a, b) and b < 1 and b < a"). And makes only one suggestion (after
+        finding the suggestion as described earlier the method just returns).
+        """
+        expression: Optional[str] = None
+        comparison: Optional[str] = None
+        expressions: Optional[List[str]] = None
+        was_switched: Optional[List[bool]] = None
+        compared_with_num: Optional[Tuple[str, bool]] = None
+
+        for expr, compared_with in comparisons.items():
+            for cmp, exprs in compared_with.items():
+                if len(exprs[0]) < 2:
+                    continue
+
+                comparison_count = len(exprs[0])
+                compared_with_1_number = False
+                # note: when it's compared with multiple numbers the redundant compare in condition
+                # or simplifiable-and/or-with-abs could make a suggestion and I don't want to make
+                # conflicting suggestions.
+
+                if (
+                    expr in comparisons_with_numbers
+                    and len(comparisons_with_numbers[expr]) == 1
+                    and cmp in comparisons_with_numbers[expr]
+                    and len(comparisons_with_numbers[expr][cmp][0]) == 1
+                ):
+                    comparison_count += 1
+                    compared_with_1_number = True
+
+                if expression is None or len(expressions) < comparison_count:
+                    expression = expr
+                    comparison = cmp
+                    expressions, was_switched = exprs
+
+                    if compared_with_1_number:
+                        compared_with_num = (
+                            comparisons_with_numbers[expr][cmp][0][0],
+                            comparisons_with_numbers[expr][cmp][1][0],
+                        )
+                    else:
+                        compared_with_num = None
+
+        if expression is None:
+            return
+
+        group_string = self._get_original_group_as_string(
+            expression, comparison, expressions, was_switched, compared_with_num, node.op
+        )
+
+        func = (
+            "max("
+            if (
+                (node.op == "and" and comparison[0] == ">")
+                or (node.op == "or" and comparison[0] == "<")
+            )
+            else "min("
+        )
+
+        self.add_message(
+            "redundant-compare-with-variables-avoidable-with-max-min",
+            node=node,
+            args=(
+                group_string,
+                self._put_into_max_or_min(
+                    func, expression, comparison, expressions, compared_with_num
+                ),
+            ),
+        )
+
+    def _is_comparison_not_between_numbers(self, node: nodes.NodeNG) -> bool:
+        return (
+            isinstance(node, nodes.Compare)
+            and len(node.ops) == 1
+            and node.ops[0][0] in self.SWITCHED_COMPARATOR
+            and not self._is_number(node.left)
+            and not self._is_number(node.ops[0][1])
+        )
+
     def _check_for_simplification_of_boolop(self, node: nodes.BoolOp) -> None:
         if node.op is None:
             return
 
         comparison_operands: List[Node_cmp_value] = []
+        comparisons_with_numbers: Same_dir_comparisons = {}
+        comparisons: Same_dir_comparisons = {}
 
         for value in node.values:
             if not self._is_pure_expression(value):
@@ -891,13 +1076,39 @@ class Short(BaseChecker):
 
             if operand is not None:
                 comparison_operands.append(operand)
+                self._update_comparisons(
+                    comparisons_with_numbers,
+                    operand[0].as_string(),
+                    operand[1],
+                    str(operand[2]),
+                    value.ops[0][0] != operand[1],
+                )
+            elif self._is_comparison_not_between_numbers(value):
+                self._update_comparisons(
+                    comparisons,
+                    value.left.as_string(),
+                    value.ops[0][0],
+                    value.ops[0][1].as_string(),
+                    False,
+                )
+                self._update_comparisons(
+                    comparisons,
+                    value.ops[0][1].as_string(),
+                    self.SWITCHED_COMPARATOR[value.ops[0][0]],
+                    value.left.as_string(),
+                    True,
+                )
 
         self._group_and_check_by_representation(comparison_operands, node)
+        self._make_suggestion_for_using_max_min_if_possible(
+            comparisons_with_numbers, comparisons, node
+        )
 
     @only_required_for_messages(
         "simplifiable-and-with-abs",
         "simplifiable-or-with-abs",
         "redundant-compare-in-condition",
+        "redundant-compare-with-variables-avoidable-with-max-min",
     )
     def visit_boolop(self, node: nodes.BoolOp) -> None:
         self._check_for_simplification_of_boolop(node)
