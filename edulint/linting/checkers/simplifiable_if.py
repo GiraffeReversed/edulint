@@ -25,12 +25,12 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "can be combined using logical operators.",
         ),
         "R6203": (
-            "The conditional assignment can be replace with '%s = %s'",
+            "The conditional assignment can be replaced with '%s = %s'",
             "simplifiable-if-assignment",
             "Emitted when the condition of an if statement can be assigned directly (possibly negated).",
         ),
         "R6210": (
-            "The conditional assignment can be replace with '%s = %s'",
+            "The conditional assignment can be replaced with '%s = %s'",
             "simplifiable-if-assignment-conj",
             "Emitted when the condition of an if statement and the assigned values "
             "can be combined using logical operators.",
