@@ -66,14 +66,11 @@ def extract_from_elif(
     while current.has_elif_block():
         elif_ = current.orelse[0]
         result.append(elif_)
-        if has_else_block(elif_):
-            return True, (
-                result
-                if nested_count == 0 or nested_count >= len(result)
-                else result[:-nested_count]
-            )
         current = elif_
-    return False, result
+
+    if nested_count == 0 or nested_count >= len(result):
+        return has_else_block(current), result
+    return True, result[:-nested_count]
 
 
 def get_bodies(ifs: List[nodes.If]) -> List[List[nodes.NodeNG]]:
