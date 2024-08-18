@@ -44,7 +44,7 @@ class Comparisons(Enum):
 # comparisons_for_true is [{0}, {}] and
 # comparisons_pairs is [('x % 2 == 0 and y % 2 != 1', Comparisons.OTHER)]
 # Note that we have some redundancy here, but this makes the code easier later and
-# this is not some code that would be run all the time, in fact it is quite rare.
+# this is not some code that would be running all the time, in fact it is quite rare.
 class PairsOfModComparisonsWithNum:
     def __init__(
         self,
@@ -646,7 +646,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _suggestion_for_group_of_boolops(
         self, expr_string: str, group: List[Tuple[Comparison, Value]], node: nodes.BoolOp
-    ) -> None:
+    ) -> bool:
         # We'll use commutativity of boolean operations and group the comparisons in same direction
         # (< with <= and > with >=) and simplify the grouped parts and then we can simplify the rest.
         cmp_less, val1 = None, None
@@ -679,7 +679,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 node=node,
                 args=(group_string, " ".join([expr_string, cmp_greater, str(val2)])),
             )
-            return
+            return True
 
         if cmp_greater is None:
             self.add_message(
@@ -687,7 +687,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 node=node,
                 args=(group_string, " ".join([expr_string, cmp_less, str(val1)])),
             )
-            return
+            return True
 
         new_expr = self._check_if_always_true_or_false(
             val1, cmp_less, val2, cmp_greater, expr_string, node.op
@@ -703,7 +703,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 node=node,
                 args=(group_string, new_expr),
             )
-            return
+            return True
 
         if val1 != -val2 or cmp_less != self.SWITCHED_COMPARATOR[cmp_greater]:
             if changed:
@@ -725,7 +725,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                         ),
                     ),
                 )
-            return
+            return changed
 
         if node.op == "and":
             new_expr = self._check_for_simplification_of_single_and(
@@ -742,9 +742,49 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             args=(group_string, new_expr),
         )
 
+        return True
+
+    def _is_pure_node(self, node: nodes.NodeNG):
+        """
+        Note: This method does not check children of the node, just the node itself.
+        """
+        return (
+            isinstance(node, nodes.Name)
+            or isinstance(node, nodes.Const)
+            or isinstance(node, nodes.BinOp)
+            or isinstance(node, nodes.BoolOp)
+            or isinstance(node, nodes.UnaryOp)
+            or isinstance(node, nodes.Compare)
+            or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
+            or isinstance(node, nodes.Attribute)
+            or (
+                isinstance(node, nodes.Call)
+                and len(node.keywords) == 0
+                and len(node.kwargs) == 0
+                and len(node.starargs) == 0
+                and is_pure_builtin(node.func)
+            )
+        )
+
+    def _is_pure_expression(self, node: nodes.NodeNG) -> bool:
+        if not self._is_pure_node(node):
+            return False
+
+        children = node.get_children()
+        if isinstance(node, nodes.Call):
+            # the first child of Call is always the function itself and we know it is pure by now.
+            next(children)
+
+        for child in children:
+            if not self._is_pure_expression(child):
+                return False
+
+        return True
+
     def _group_and_check_by_representation(
         self, comparison_operands: List[NodeCmpValue], node: nodes.BoolOp
-    ) -> None:
+    ) -> bool:
+        made_suggestion = False
         already_checked: Set[int] = set()
         current_group: List[Tuple[Comparison, Value]] = []
 
@@ -771,7 +811,12 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if len(current_group) < 2:
                 continue
 
-            self._suggestion_for_group_of_boolops(expr1.as_string(), current_group, node)
+            made_suggestion = (
+                self._suggestion_for_group_of_boolops(expr1.as_string(), current_group, node)
+                or made_suggestion
+            )
+
+        return made_suggestion
 
     def _update_comparisons(
         self,
@@ -874,7 +919,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         comparisons_with_numbers: SameDirComparisons,
         comparisons: SameDirComparisons,
         node: nodes.BoolOp,
-    ) -> None:
+    ) -> bool:
         """
         Makes suggestion only for the comparisons that will maximize the number of
         comparisons put together with max (ie. in here: "x > a and b < x and b < 1
@@ -922,7 +967,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                         compared_with_num = None
 
         if expression is None:
-            return
+            return False
 
         group_string = self._get_original_group_as_string(
             expression, comparison, expressions, was_switched, compared_with_num, node.op
@@ -947,6 +992,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 ),
             ),
         )
+
+        return True
 
     def _is_equality_or_inequality(self, node: nodes.NodeNG) -> bool:
         return (
@@ -1056,7 +1103,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _make_suggestion_for_simplifiable_test_by_equals(
         self, modulo_connected_with_and: List[PairsOfModComparisonsWithNum], node: nodes.BoolOp
-    ) -> None:
+    ) -> bool:
+        made_suggestion = False
         for pair in modulo_connected_with_and:
             original: Optional[str] = None
             suggestion: Optional[str] = None
@@ -1083,12 +1131,16 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 )
                 suggestion = f"{pair.expression_pair[0]} % {pair.modulo} != {pair.expression_pair[1]} % {pair.modulo}"
 
-            if original is not None:
+            if suggestion is not None:
                 self.add_message(
                     "simplifiable-test-by-equals",
                     node=node,
                     args=(original, suggestion),
                 )
+
+            made_suggestion = made_suggestion or suggestion is not None
+
+        return made_suggestion
 
     def _is_comparison_not_between_numbers(self, node: nodes.NodeNG) -> bool:
         return (
@@ -1098,6 +1150,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             and not self._is_number(node.left)
             and not self._is_number(node.ops[0][1])
         )
+
+    def _make_suggestion_for_redundant_condition_part(self) -> None:
+        pass
 
     def _check_for_simplification_of_boolop(self, node: nodes.BoolOp) -> None:
         if node.op is None:
@@ -1147,11 +1202,24 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                         modulo_connected_with_and, *tmp, value.as_string()
                     )
 
-        self._group_and_check_by_representation(comparison_operands, node)
-        self._make_suggestion_for_using_max_min_if_possible(
-            comparisons_with_numbers, comparisons, node
+        # checkers that might make conflicting or same suggestion as redundant-condition-part
+
+        made_suggestion = self._group_and_check_by_representation(comparison_operands, node)
+
+        made_suggestion = (
+            self._make_suggestion_for_using_max_min_if_possible(
+                comparisons_with_numbers, comparisons, node
+            )
+            or made_suggestion
         )
-        self._make_suggestion_for_simplifiable_test_by_equals(modulo_connected_with_and, node)
+
+        made_suggestion = (
+            self._make_suggestion_for_simplifiable_test_by_equals(modulo_connected_with_and, node)
+            or made_suggestion
+        )
+
+        if not made_suggestion:
+            self._make_suggestion_for_redundant_condition_part()
 
     @only_required_for_messages(
         "simplifiable-with-abs",
