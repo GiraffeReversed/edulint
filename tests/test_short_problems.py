@@ -325,46 +325,142 @@ class TestShort:
             expected_output
         )
 
+TEST_FILE_FOR_SIMPLIFICATION_OF_BOOLOP = [
+        "def func(l):",
+        "    l.append(5)",
+        "    return min(l)",
+        "def my_function(x, my_list):",
+        "    my_list.append(2)",
+        "    return x - 1",
+        "def func2():",
+        "    x = 42",
+        "    y = [-5.25, 2.3, 3, 4]",
+        "    z = 3.14",
+        "    a = x > 2 or x < -2",
+        "    b = x >= 2 or x < -2",
+        "    c = x >= 2 or x <= -2",
+        "    d = x >= -2 or x <= 2",
+        "    e = x > 0 or x < 0",
+        "    f = x >= 1 or x > 1",
+        "    g = x < -3.5 or x > 3.5",
+        "    h = x <= 7.59 or x >= -7.59",
+        "    i = -0.96 > sum(y) or sum(y) > 0.96",
+        "    j = -0.96 > sum(y) or 0.96 < sum(y)",
+        "    k = sum(y) > 2 or x > 4",
+        "    variable = x <= 2 and x < -5",
+        "    m = x < 2 and x <= -5",
+        "    n = sum(y) <= 5 and -5 <= sum(y)",
+        "    o = abs(min(y)) > -4.47 and abs(min(y)) < 4.47",
+        "    l = abs(min(x)) > -3 and abs(min(y)) > 3",
+        "    p = float(abs(x + z)) > -8.56 and float(abs(x + z)) < 8.56",
+        "    q = x + 1 < -9 or x + 1 > 9",
+        "    r = float(abs(sum(reversed(sorted(y))))) < 5 and -5 < float(abs(sum(reversed(sorted(y)))))",
+        "    s = my_function(x, y) > 5 and my_function(x, y) < -5",
+        "    t = float(sum(map(abs, y))) < 5 and -5 < float(sum(map(abs, y)))",
+        "    u = float(sum(y)) >= 5.01 and float(sum(y)) > 5",
+        "    v = x > 5 or x > 4 or x > 3 or x < -5 or x <= -7 or x <= -3",
+        "    w = x > 5 or x > 4 or x <= -7 or x >= 3 or x < -5 or x <= -3",
+        "    aa = x > 5 or x > 4 or x > 3 or x < -5 or x <= -7 or x > -3",
+        "    bb = x > 5 or x > 4 or x > 3 or x < -5 or x <= -7 or x > -5",
+        "    cc = x < 7 and x < 8 and x > 13",
+        "    dd = [[2, 3, 4, -1, -8, 2, -3], [7, 3, 6, 5, 4], [-9, 2]]",
+        "    ee = max(map(min, dd)) <= 7 and -9 < max(map(min, dd)) and max(map(min, dd)) < 14.2 and -7 <= max(map(min, dd))",
+        "    ff = max(map(min, dd)) < 7 and -9 < max(map(min, dd)) and max(map(min, dd)) < 14.2 and -7 <= max(map(min, dd))",
+        "    gg = max(map(func, dd)) <= 7 and -9 < max(map(func, dd)) and max(map(func, dd)) < 14.2 and -7 <= max(map(func, dd))",
+        "    hh = -0.5 <= len(y) and len(y) < 5 and x < -5 and 7 < len(y) and len(y) > -5 and x > 5 and -7 <= x or x > 7 or x < -7",
+        "    ii = (x + len(y) < 5 and x + len(y) > -5) or (x + len(y) > 4 or x + len(y) < -4)",
+        "    jj = max(map(func, dd)) <= 9 and -9 <= max(map(func, dd)) and -9 <= max(map(func, dd))",
+    ]
+
 @pytest.mark.parametrize("lines,expected_output", [
-    ([
-        "x = 42",
-        "y = [-5.25,2.3,3,4]",
-
-        "a = x > 2 or x < -2",
-        "b = x >= 2 or x < -2",
-        "c = x >= 2 or x <= -2",
-
-        "d = x >= -2 or x <= 2",
-        "e = x > 0 or x < 0",
-
-        "f = x >= 1 or x > 1",
-
-        "g = x < -3.5 or x > 3.5",
-        "h = x <= 7.59 or x >= -7.59",
-        "i = -0.96 > sum(y) or sum(y) > 0.96",
-        "j = -0.96 > sum(y) or 0.96 < sum(y)",
-    ], [
-        lazy_problem().set_line(3).set_code("R6618")
-        .set_text("The or operation can be replaced with 'abs(x) > 2'"),
-        lazy_problem().set_line(5).set_code("R6618")
-        .set_text("The or operation can be replaced with 'abs(x) >= 2'"),
-        lazy_problem().set_line(6).set_code("R6618")
-        .set_text("The or operation can be replaced with 'True'"),
-        lazy_problem().set_line(7).set_code("R6618")
-        .set_text("The or operation can be replaced with 'x != 0'"),
-        lazy_problem().set_line(9).set_code("R6618")
-        .set_text("The or operation can be replaced with 'abs(x) > 3.5'"),
-        lazy_problem().set_line(10).set_code("R6618")
-        .set_text("The or operation can be replaced with 'True'"),
-        lazy_problem().set_line(11).set_code("R6618")
-        .set_text("The or operation can be replaced with 'abs(sum(y)) > 0.96'"),
-        lazy_problem().set_line(12).set_code("R6618")
-        .set_text("The or operation can be replaced with 'abs(sum(y)) > 7.59'"),
+    (TEST_FILE_FOR_SIMPLIFICATION_OF_BOOLOP, [
+        lazy_problem().set_line(24).set_code("R6617")
+        .set_text("'sum(y) <= 5 and -5 <= sum(y)' can be replaced with 'abs(sum(y)) <= 5'"),
+        lazy_problem().set_line(25).set_code("R6617")
+        .set_text("'abs(min(y)) > -4.47 and abs(min(y)) < 4.47' can be replaced with 'abs(min(y)) < 4.47'"),
+        lazy_problem().set_line(27).set_code("R6617")
+        .set_text("'float(abs(x + z)) > -8.56 and float(abs(x + z)) < 8.56' can be replaced with 'abs(float(abs(x + z))) < 8.56'"),
+        lazy_problem().set_line(29).set_code("R6617")
+        .set_text("'float(abs(sum(reversed(sorted(y))))) < 5 and -5 < float(abs(sum(reversed(sorted(y)))))' can be replaced with 'abs(float(abs(sum(reversed(sorted(y)))))) < 5'"),
+        lazy_problem().set_line(31).set_code("R6617")
+        .set_text("'float(sum(map(abs, y))) < 5 and -5 < float(sum(map(abs, y)))' can be replaced with 'abs(float(sum(map(abs, y)))) < 5'"),
+        lazy_problem().set_line(39).set_code("R6617")
+        .set_text("'max(map(min, dd)) <= 7 and max(map(min, dd)) > -9 and max(map(min, dd)) < 14.2 and max(map(min, dd)) >= -7' can be replaced with 'abs(max(map(min, dd))) <= 7'"),
+        lazy_problem().set_line(43).set_code("R6617")
+        .set_text("'x + len(y) < 5 and x + len(y) > -5' can be replaced with 'abs(x + len(y)) < 5'"),
     ]),
 ])
 def test_simplification_of_or(lines: List[str], expected_output: List[Problem]) -> None:
     apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--enable=simplifiable-single-or-with-abs")],
+        [Arg(Option.PYLINT, "--enable=simplifiable-or-with-abs")],
+        expected_output
+    )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    (TEST_FILE_FOR_SIMPLIFICATION_OF_BOOLOP, [
+        lazy_problem().set_line(11).set_code("R6618")
+        .set_text("'x > 2 or x < -2' can be replaced with 'abs(x) > 2'"),
+        lazy_problem().set_line(13).set_code("R6618")
+        .set_text("'x >= 2 or x <= -2' can be replaced with 'abs(x) >= 2'"),
+        lazy_problem().set_line(17).set_code("R6618")
+        .set_text("'x < -3.5 or x > 3.5' can be replaced with 'abs(x) > 3.5'"),
+        lazy_problem().set_line(19).set_code("R6618")
+        .set_text("'-0.96 > sum(y) or sum(y) > 0.96' can be replaced with 'abs(sum(y)) > 0.96'"),
+        lazy_problem().set_line(20).set_code("R6618")
+        .set_text("'-0.96 > sum(y) or 0.96 < sum(y)' can be replaced with 'abs(sum(y)) > 0.96'"),
+        lazy_problem().set_line(28).set_code("R6618")
+        .set_text("'x + 1 < -9 or x + 1 > 9' can be replaced with 'abs(x + 1) > 9'"),
+        lazy_problem().set_line(34).set_code("R6618")
+        .set_text("'x > 5 or x > 4 or x <= -7 or x >= 3 or x < -5 or x <= -3' can be replaced with 'abs(x) >= 3'"),
+        lazy_problem().set_line(42).set_code("R6618")
+        .set_text("'x > 7 or x < -7' can be replaced with 'abs(x) > 7'"),
+        lazy_problem().set_line(43).set_code("R6618")
+        .set_text("'x + len(y) > 4 or x + len(y) < -4' can be replaced with 'abs(x + len(y)) > 4'"),
+    ]),
+])
+def test_simplification_of_and(lines: List[str], expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=simplifiable-and-with-abs")],
+        expected_output
+    )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    (TEST_FILE_FOR_SIMPLIFICATION_OF_BOOLOP, [
+        lazy_problem().set_line(14).set_code("R6619")
+        .set_text("'x >= -2 or x <= 2' can be replaced with 'True'"),
+        lazy_problem().set_line(15).set_code("R6619")
+        .set_text("'x > 0 or x < 0' can be replaced with 'x != 0'"),
+        lazy_problem().set_line(16).set_code("R6619")
+        .set_text("'x >= 1 or x > 1' can be replaced with 'x >= 1'"),
+        lazy_problem().set_line(18).set_code("R6619")
+        .set_text("'x <= 7.59 or x >= -7.59' can be replaced with 'True'"),
+        lazy_problem().set_line(22).set_code("R6619")
+        .set_text("'x <= 2 and x < -5' can be replaced with 'x < -5'"),
+        lazy_problem().set_line(23).set_code("R6619")
+        .set_text("'x < 2 and x <= -5' can be replaced with 'x <= -5'"),
+        lazy_problem().set_line(32).set_code("R6619")
+        .set_text("'float(sum(y)) >= 5.01 and float(sum(y)) > 5' can be replaced with 'float(sum(y)) >= 5.01'"),
+        lazy_problem().set_line(33).set_code("R6619")
+        .set_text("'x > 5 or x > 4 or x > 3 or x < -5 or x <= -7 or x <= -3' can be replaced with 'x <= -3 or x > 3'"),
+        lazy_problem().set_line(35).set_code("R6619")
+        .set_text("'x > 5 or x > 4 or x > 3 or x < -5 or x <= -7 or x > -3' can be replaced with 'x < -5 or x > -3'"),
+        lazy_problem().set_line(36).set_code("R6619")
+        .set_text("'x > 5 or x > 4 or x > 3 or x < -5 or x <= -7 or x > -5' can be replaced with 'x != -5'"),
+        lazy_problem().set_line(37).set_code("R6619")
+        .set_text("'x < 7 and x < 8 and x > 13' can be replaced with 'False'"),
+        lazy_problem().set_line(40).set_code("R6619")
+        .set_text("'max(map(min, dd)) < 7 and max(map(min, dd)) > -9 and max(map(min, dd)) < 14.2 and max(map(min, dd)) >= -7' can be replaced with 'max(map(min, dd)) < 7 and max(map(min, dd)) >= -7'"),
+        lazy_problem().set_line(42).set_code("R6619")
+        .set_text("'len(y) >= -0.5 and len(y) < 5 and len(y) > 7 and len(y) > -5' can be replaced with 'False'"),
+        lazy_problem().set_line(42).set_code("R6619")
+        .set_text("'x < -5 and x > 5 and x >= -7' can be replaced with 'False'"),
+    ]),
+])
+def test_redundant_compare(lines: List[str], expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=redundant-compare-in-condition")],
         expected_output
     )
