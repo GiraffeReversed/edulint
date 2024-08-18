@@ -32,6 +32,11 @@ test:
 		export PYTHONPATH=${EDULINT_PATH} && \
 		python3 -m pytest -n4 -k "${ARGS}" ${EDULINT_PATH}/tests/
 
+cov:
+	. ${EDULINT_VENV_PATH}/bin/activate && \
+		export PYTHONPATH=${EDULINT_PATH} && \
+		python3 -m pytest -n8 --cov-report html  --cov=edulint ${EDULINT_PATH}/tests/
+
 check: mypy test
 
 run:

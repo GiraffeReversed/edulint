@@ -4,4 +4,5 @@ build
 mypy
 packaging
 py-spy
+pytest-cov
 # additional in test/requirements.txt
