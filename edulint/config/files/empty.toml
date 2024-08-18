@@ -15,7 +15,7 @@ disable = "all"
 good-names = "_"
 
 [flake8]
-ignore = "F,E,W,C"
+ignore = "A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z"
 
 [translations.python-specific.pylint]
 enable = [
