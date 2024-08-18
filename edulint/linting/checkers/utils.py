@@ -90,6 +90,16 @@ def is_pure_builtin(node: nodes.NodeNG) -> bool:
     return is_builtin(node) and inferred and inferred.name in EXPR_FUNCTIONS
 
 
+def variable_contains_impure_function(node: nodes.Name) -> bool:
+    # Note: I am not sure about this yet.
+    inferred = utils.safe_infer(node)
+    return (
+        inferred is None
+        or inferred is Uninferable
+        or (inferred.is_function and not is_pure_builtin(inferred))
+    )
+
+
 def is_multi_assign(node: nodes.NodeNG) -> bool:
     return hasattr(node, "targets")
 
