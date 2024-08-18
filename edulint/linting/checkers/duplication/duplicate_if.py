@@ -517,14 +517,14 @@ def get_fixed_by_ternary(tests, core, avars):
 ### if into block
 
 HEADER_ATTRIBUTES = {
-    nodes.For: [["target"], ["iter"]],
-    nodes.While: [["test"]],
+    nodes.For: ["target", "iter"],
+    nodes.While: ["test"],
     # nodes.If: ["test"],
-    nodes.FunctionDef: [["name"], ["args"]],
-    nodes.ExceptHandler: [["name", "type"]],
-    nodes.TryExcept: [["body", "handlers"]],
-    nodes.TryFinally: [["body", "finalbody"]],
-    nodes.With: [["items"]],
+    nodes.FunctionDef: ["name", "args"],
+    nodes.ExceptHandler: ["name", "type"],
+    nodes.TryExcept: [],
+    nodes.TryFinally: [],
+    nodes.With: ["items"],
 }
 
 BODY_ATTRIBUTES = {
@@ -543,10 +543,9 @@ def if_can_be_moved(core, avars):
     if type(core) not in HEADER_ATTRIBUTES.keys():
         return False
 
-    for attr_group in HEADER_ATTRIBUTES[type(core)]:
-        if all(contains_avar(getattr(core, attr), avars) for attr in attr_group):
-            return False
-    return True
+    return not any(
+        contains_avar(getattr(core, attr), avars) for attr in HEADER_ATTRIBUTES[type(core)]
+    )
 
 
 def get_fixed_by_moving_if_rec(tests, core, avars):
@@ -576,11 +575,15 @@ def get_fixed_by_moving_if_rec(tests, core, avars):
     assert contains_avar(core, avars) and if_can_be_moved(core, avars)
     new_core = type(core)()
 
-    for attr in [attr for attr_group in HEADER_ATTRIBUTES[type(core)] for attr in attr_group]:
+    for attr in HEADER_ATTRIBUTES[type(core)]:
         setattr(new_core, attr, getattr(core, attr))
 
     for attr in BODY_ATTRIBUTES[type(core)]:
-        new_body = get_fixed_by_moving_if_rec(tests, getattr(core, attr), avars)
+        attrval = getattr(core, attr)
+        if contains_avar(attrval, avars):
+            new_body = get_fixed_by_moving_if_rec(tests, getattr(core, attr), avars)
+        else:
+            new_body = attrval
         setattr(new_core, attr, new_body)
 
     return new_core

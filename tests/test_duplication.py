@@ -543,6 +543,7 @@ def test_if_into_variables(filename: str, expected_output: List[Problem]) -> Non
 @pytest.mark.parametrize("filename,expected_output", [
     ("0bf69cc1a5-p4_geometry.py", []),
     ("163aadb1dd-p4_geometry.py", []),
+    ("3867ee9889-split.py", [lazy_problem().set_line(33)]),
     ("5ce8692f42-p5_fibsum.py", []),
     ("769200244d-p6_workdays.py", [lazy_problem().set_line(66)]),
     ("7e1dd5c338-p1_digit_sum.py", []),
@@ -573,6 +574,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
 @pytest.mark.parametrize("filename,expected_output", [
     ("0bf69cc1a5-p4_geometry.py", []),
     ("163aadb1dd-p4_geometry.py", []),
+    ("3867ee9889-split.py", []),
     ("5ce8692f42-p5_fibsum.py", []),
     ("769200244d-p6_workdays.py", [lazy_problem().set_line(66)]),
     ("7e1dd5c338-p1_digit_sum.py", []),
@@ -585,6 +587,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     ("custom_if_calls_to_variables.py", []),
     ("fd637a2984-p6_workdays.py", []),
     ("fdc1570861-p6_workdays.py", []),
+    ("ksi_12_136_aatb.py", [lazy_problem().set_line(4)]),
     ("tarot_card_reader.py", []),
     ("uc_73_0198_15_17.py", [lazy_problem().set_line(6)]), # dubious
     ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
