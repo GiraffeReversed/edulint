@@ -357,46 +357,6 @@ def restructure_twisted_ifs(tests, inner_if: nodes.If, avars):
     return if_
 
 
-@check_enabled("nested-if-to-restructured")
-def get_fixed_by_restructuring_nested(tests, core, avars):
-    if len(core) != 1 or not isinstance(core[0], nodes.If):
-        return None
-
-    inner_if = core[0]
-
-    if contains_avar(inner_if.test, avars):
-        return None
-
-    if_ = nodes.If()
-    if_.test = inner_if.test
-    to_complete = []
-
-    if not contains_avar(inner_if.body, avars):
-        if_.body = inner_if.body
-        if_.orelse = to_complete
-        to_extract = inner_if.orelse
-
-    elif not contains_avar(inner_if.orelse, avars):
-        if_.body = to_complete
-        if_.orelse = inner_if.orelse
-        to_extract = inner_if.body
-
-    else:
-        return None
-
-    new_inner_if, if_bodies = create_ifs(tests)
-    to_complete.append(new_inner_if)
-
-    for i in range(len(avars[0].subs)):
-        if_bodies[i].extend(get_sub_variant(to_extract, i))
-
-    return (
-        get_token_count(if_),
-        get_statements_count(if_, include_defs=False, include_name_main=False),
-        (),
-    )
-
-
 @check_enabled("twisted-if-to-restructured")
 def get_fixed_by_restructuring_twisted(tests, core, avars):
     if len(tests) > 1 or len(core) != 1 or not isinstance(core[0], nodes.If):
@@ -519,8 +479,7 @@ def get_fixed_by_ternary(tests, core, avars):
 HEADER_ATTRIBUTES = {
     nodes.For: ["target", "iter"],
     nodes.While: ["test"],
-    # nodes.If: ["test"],
-    nodes.FunctionDef: ["name", "args"],
+    nodes.If: ["test"],
     nodes.ExceptHandler: ["name", "type"],
     nodes.TryExcept: [],
     nodes.TryFinally: [],
@@ -530,8 +489,7 @@ HEADER_ATTRIBUTES = {
 BODY_ATTRIBUTES = {
     nodes.For: ["body", "orelse"],
     nodes.While: ["body", "orelse"],
-    # nodes.If: ["body", "orelse"],
-    nodes.FunctionDef: ["body"],
+    nodes.If: ["body", "orelse"],
     nodes.ExceptHandler: ["body"],
     nodes.TryExcept: ["body", "handlers", "orelse"],
     nodes.TryFinally: ["body", "finalbody"],
@@ -543,8 +501,12 @@ def if_can_be_moved(core, avars):
     if type(core) not in HEADER_ATTRIBUTES.keys():
         return False
 
-    return not any(
-        contains_avar(getattr(core, attr), avars) for attr in HEADER_ATTRIBUTES[type(core)]
+    # avar in header
+    if any(contains_avar(getattr(core, attr), avars) for attr in HEADER_ATTRIBUTES[type(core)]):
+        return False
+
+    return (
+        sum(contains_avar(getattr(core, attr), avars) for attr in BODY_ATTRIBUTES[type(core)]) == 1
     )
 
 
@@ -755,7 +717,6 @@ def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> 
     tvs_change = test_variables_change(tests, core, avars)
 
     for fix_function in (
-        get_fixed_by_restructuring_nested if not tvs_change else None,
         get_fixed_by_restructuring_twisted if not tvs_change else None,
         get_fixed_by_moving_if if not tvs_change else None,
         get_fixed_by_ternary if not called_avar and not tvs_change else None,

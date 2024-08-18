@@ -359,44 +359,6 @@ def test_twisted_to_restructured(filename: str, expected_output: List[Problem]) 
         expected_output
     )
 
-@pytest.mark.parametrize("lines,expected_output", [
-    ([  # 0
-        "def fun(c1, c2):",
-        "    if c1:",
-        "        if c2:",
-        "            print('hello')",
-        "            print('kind')",
-        "        else:",
-        "            print('cruel')",
-        "            print('world')",
-        "    else:",
-        "        if c2:",
-        "            print('hello')",
-        "            print('foo')",
-        "        else:",
-        "            print('cruel')",
-        "            print('world')",
-
-    ], [lazy_problem().set_line(2)]),
-])
-def test_nested_to_restructured_custom(lines: List[str], expected_output: List[Problem]) -> None:
-    create_apply_and_lint(
-        lines,
-        [Arg(Option.PYLINT, "--enable=nested-if-to-restructured")],
-        expected_output
-    )
-
-@pytest.mark.parametrize("filename,expected_output", [
-    ("30c8bd0ad7-p6_cellular.py", []),
-    ("uc_28_6710_05_14.py", []),
-    ("cf_479_c_0.py", [lazy_problem().set_line(12)]),
-])
-def test_nested_to_restructured(filename: str, expected_output: List[Problem]) -> None:
-    apply_and_lint(
-        filename,
-        [Arg(Option.PYLINT, "--enable=nested-if-to-restructured")],
-        expected_output
-    )
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("ut_80_2861_19_63.py", [lazy_problem().set_line(3).set_end_line(10)]),
@@ -572,9 +534,38 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     )
 
 
+@pytest.mark.parametrize("lines,expected_output", [
+    ([  # 0
+        "def fun(c1, c2):",
+        "    if c1:",
+        "        if c2:",
+        "            print('hello')",
+        "            print('kind')",
+        "        else:",
+        "            print('cruel')",
+        "            print('world')",
+        "    else:",
+        "        if c2:",
+        "            print('hello')",
+        "            print('foo')",
+        "        else:",
+        "            print('cruel')",
+        "            print('world')",
+
+    ], [lazy_problem().set_line(2)]),
+])
+def test_if_into_block_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=if-into-block")],
+        expected_output
+    )
+
 @pytest.mark.parametrize("filename,expected_output", [
     ("0bf69cc1a5-p4_geometry.py", []),
     ("163aadb1dd-p4_geometry.py", []),
+    ("2a6a841f84-task_2.py", [lazy_problem().set_line(36)]),
+    ("30c8bd0ad7-p6_cellular.py", []),
     ("3867ee9889-split.py", []),
     ("5ce8692f42-p5_fibsum.py", []),
     ("769200244d-p6_workdays.py", [lazy_problem().set_line(66)]),
@@ -583,6 +574,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     ("9668dff756-p6_workdays.py", []),
     ("ccf4a9f103-p6_workdays.py", []),
     ("cf_1503_a_14.py", []),
+    ("cf_479_c_0.py", [lazy_problem().set_line(12)]),
     ("cf_621_b_47.py", []),
     ("cf_911_e_11.py", []),
     ("custom_if_calls_to_variables.py", []),
@@ -590,6 +582,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     ("fdc1570861-p6_workdays.py", []),
     ("ksi_12_136_aatb.py", [lazy_problem().set_line(4)]),
     ("tarot_card_reader.py", []),
+    ("uc_28_6710_05_14.py", []),
     ("uc_73_0198_15_17.py", [lazy_problem().set_line(6)]), # dubious
     ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
     ("uc_73_3819_50_56.py", [lazy_problem().set_line(3)]), # multi-step
@@ -602,7 +595,7 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
 def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=if-into-block,twisted-if-to-restructured,nested-if-to-restructured")],
+        [Arg(Option.PYLINT, "--enable=if-into-block")],
         expected_output
     )
 

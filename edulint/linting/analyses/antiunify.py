@@ -257,7 +257,7 @@ class Antiunify:
 def contains_avar(node: Union[nodes.NodeNG, List[nodes.NodeNG]], avars):
     if isinstance(node, nodes.NodeNG):
         ns = [node]
-    elif len(node) == 0:
+    elif not isinstance(node, (list, tuple)) or len(node) == 0:
         return False
     elif not isinstance(node[0], nodes.NodeNG):
         ns = [n for subn in node for n in subn]
