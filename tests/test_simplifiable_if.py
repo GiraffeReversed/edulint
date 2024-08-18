@@ -666,3 +666,39 @@ def test_redundant_compare_with_variables(lines: List[str], expected_output: Lis
         [Arg(Option.PYLINT, "--enable=redundant-compare-avoidable-with-max-min")],
         expected_output,
     )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "x = 1",
+        "y = 7",
+        "lst = [2, 3, 0, 8]",
+        "x % 2 != 1 and y % 2 != 1 or x % 2 == 1 and y % 2 == 1",
+        "x % 4 == 0 and y % 4 == 0 or x % 4 == 1 and y % 4 == 1 or x % 4 != 0 and y % 4 != 0 or x % 4 == 2 and y % 4 == 2 or x % 4 == 3 and y % 4 == 3",
+        "len(lst) % 2 == 0 and (y - 2) % 2 == 0 or 1 == (y - 2) % 2 and len(lst) % 2 == 1 or (y - 2) % 2 == 0 and 0 == len(lst) % 2",
+        "(x % 3 == 0 and 0 != y % 3) or (y % 3 == 0 and x % 3 != 0) or (x % 3 != 1 and y % 3 == 1) or (x % 3 == 1 and y % 3 == 2)",
+        "x % 5 != 1 and y % 5 != 3 or x % 5 != 1 and y % 5 == 3 or x % 5 != 2 and y % 5 != 4",
+        "x % 5 != 1 and y % 5 != 3 or x % 5 != 1 and y % 5 == 3 or x % 5 == 1 and y % 5 != 3 or x % 5 != 2 and y % 5 != 4",
+        "x % 2 != 0 and y % 2 == 0 or 0 == x % 3 and y % 3 == 0 or y % 3 == 1 and x % 3 == 1 or x % 2 == 0 and y % 2 == 1 or x % 2 != 1 and y % 2 == 1 or y % 3 == 2 and x % 3 == 2"
+    ], [
+        lazy_problem().set_line(4)
+        .set_text("'x % 2 != 1 and y % 2 != 1 or x % 2 == 1 and y % 2 == 1' can be replaced with 'x % 2 == y % 2'"),
+        lazy_problem().set_line(5)
+        .set_text("'x % 4 == 0 and y % 4 == 0 or x % 4 == 1 and y % 4 == 1 or x % 4 == 2 and y % 4 == 2 or x % 4 == 3 and y % 4 == 3' can be replaced with 'x % 4 == y % 4'"),
+        lazy_problem().set_line(6)
+        .set_text("'len(lst) % 2 == 0 and (y - 2) % 2 == 0 or 1 == (y - 2) % 2 and len(lst) % 2 == 1 or (y - 2) % 2 == 0 and 0 == len(lst) % 2' can be replaced with 'len(lst) % 2 == (y - 2) % 2'"),
+        lazy_problem().set_line(7)
+        .set_text("'x % 3 == 0 and 0 != y % 3 or y % 3 == 0 and x % 3 != 0 or x % 3 != 1 and y % 3 == 1 or x % 3 == 1 and y % 3 == 2' can be replaced with 'x % 3 != y % 3'"),
+        lazy_problem().set_line(9)
+        .set_text("'x % 5 != 1 and y % 5 != 3 or x % 5 != 1 and y % 5 == 3 or x % 5 == 1 and y % 5 != 3 or x % 5 != 2 and y % 5 != 4' can be replaced with 'True'"),
+        lazy_problem().set_line(10)
+        .set_text("'x % 2 != 0 and y % 2 == 0 or x % 2 == 0 and y % 2 == 1 or x % 2 != 1 and y % 2 == 1' can be replaced with 'x % 2 != y % 2'"),
+        lazy_problem().set_line(10)
+        .set_text("'0 == x % 3 and y % 3 == 0 or y % 3 == 1 and x % 3 == 1 or y % 3 == 2 and x % 3 == 2' can be replaced with 'x % 3 == y % 3'"),
+    ]),
+])
+def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=simplifiable-test-by-equals")],
+        expected_output,
+    )
