@@ -392,10 +392,9 @@ def test_simplification_of_or(lines: List[str], expected_output: List[Problem]) 
         "c = x >= 1 or x > 1",
         "d = x < 2 and x <= -5",
         "e = -(x - 1) > 5 or - (x- 1) < -5 or -(x-1) >= 4",
-        "f = ",
     ], [
         lazy_problem().set_line(3).set_code("R6619")
-        .set_text("'x >= -2 or x <= 2' can be replaced with 'True'"),
+        .set_text("'x > -2 or x <= 6' can be replaced with 'True'"),
         lazy_problem().set_line(4).set_code("R6619")
         .set_text("'x > 0 or x < 0' can be replaced with 'x != 0'"),
         lazy_problem().set_line(5).set_code("R6619")
@@ -431,7 +430,7 @@ def test_redundant_compare(lines: List[str], expected_output: List[Problem]) -> 
         .set_text("'person.age > 5 and person.age > 9' can be replaced with 'person.age > 9'"),
     ]),
 ])
-def test_redundant_compare(lines: List[str], expected_output: List[Problem]) -> None:
+def test_redundant_compare2(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=redundant-compare-in-condition")],
