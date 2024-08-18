@@ -40,7 +40,12 @@ class Comparisons(Enum):
 
 
 # I use this to represent all the pairs of type 'x % 2 == 0 and y % 2 != 1'
-# expression_pair is the ('x', 'y'), modulo is 2, comparisons is [{0}, {}] and comparisons_pairs is ['x % 2 == 0 and y % 2 != 1']
+# expression_pair is the ('x', 'y'), modulo is 2, comparisons_for_equality is {},
+# comparisons_for_inequality is [{0}, {}],
+# comparisons_for_true is [{0}, {}] and
+# comparisons_pairs is [('x % 2 == 0 and y % 2 != 1', Comparisons.OTHER)]
+# Note that we have some redundancy here, but this makes the code easier later and
+# this is not some code that would be run all the time, in fact it is quite rare.
 class PairsOfModComparisonsWithNum:
     def __init__(
         self,
@@ -1021,11 +1026,16 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             return None
 
         mod = get_const_value(left.right)
+        val = get_const_value(right)
 
-        if not isinstance(mod, int):
+        if not isinstance(mod, int) or not is_modulo_residue(val, mod):
             return None
 
-        return self._add_parentheses_to_operations(left.left), mod, cmp, get_const_value(right)
+        if mod == 2 and cmp == "!=":
+            cmp = "=="
+            val = 1 - val
+
+        return self._add_parentheses_to_operations(left.left), mod, cmp, val
 
     def _destructure_mod_and_number_comps(
         self, left: nodes.Compare, right: nodes.Compare
@@ -1064,9 +1074,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         mod: int,
         comparison_pair_string: str,
     ) -> None:
-        if not is_modulo_residue(val1, mod) or not is_modulo_residue(val2, mod):
-            return
-
         for pair in modulo_connected_with_and:
             if pair.modulo != mod:
                 continue
