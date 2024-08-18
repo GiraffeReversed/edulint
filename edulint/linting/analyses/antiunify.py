@@ -419,7 +419,7 @@ def set_parents(parent: nodes.NodeNG, node: Any, recursive):
         for elem in node:
             set_parents(parent, elem, recursive)
 
-    elif node is not None and not isinstance(node, (str, bool, int, float, bytes)):
+    elif node is not None and not isinstance(node, (str, bool, int, float, bytes, type(Ellipsis))):
         assert False, f"unreachable, but {type(node)}"
 
 

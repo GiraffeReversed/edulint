@@ -232,6 +232,7 @@ def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]
     ("117cb0510a-midterm.py", [lazy_problem().set_line(6).set_end_line(17)]),
     ("1687aeed39-hw4.py", []),
     ("7e1dd5c338-p2_tortoise.py", []),
+    ("APS_Automated_Data_Reporting.py", []),
     ("b3b13aa3f7-p5_merge.py", [lazy_problem().set_line(37)]),
     ("cf_1462_e_86.py", []),
     ("cf_20_b_30.py", []),

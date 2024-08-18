@@ -2,7 +2,7 @@ from typing import List
 
 from astroid import nodes  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, cprint  # noqa: F401
+from edulint.linting.analyses.antiunify import antiunify, core_as_string, cprint  # noqa: F401
 from edulint.linting.analyses.reaching_definitions import vars_in
 from edulint.linting.checkers.utils import (
     get_statements_count,
@@ -185,8 +185,8 @@ def iter_use_from_partition(partition):
     ) or (
         exclusive_value is None
         and const_value is not None
-        and binop_core.right.as_string() != const_value.as_string()
-        and binop_core.left.as_string() != const_value.as_string()
+        and core_as_string(binop_core.right) != const_value.as_string()
+        and core_as_string(binop_core.left) != const_value.as_string()
     ):
         return None
 
