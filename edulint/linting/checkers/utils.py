@@ -1,4 +1,16 @@
-from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, Tuple, cast, Callable
+from typing import (
+    Any,
+    TypeVar,
+    Generic,
+    List,
+    Iterable,
+    Union,
+    Optional,
+    Tuple,
+    cast,
+    Callable,
+    Dict,
+)
 from functools import reduce
 from astroid import nodes, Uninferable  # type: ignore
 from astroid.const import Context
@@ -6,6 +18,8 @@ import sys
 import inspect
 import operator
 from pylint.checkers import utils  # type: ignore
+from z3 import ExprRef, ArithRef, Bool, Int, Real
+from enum import Enum
 
 from edulint.linting.analyses.data_dependency import node_to_var
 
@@ -185,6 +199,83 @@ def is_pure_expression(node: nodes.NodeNG) -> bool:
             return False
 
     return True
+
+
+def is_number(node: nodes.NodeNG) -> bool:
+    const_val = get_const_value(node)
+    return isinstance(const_val, (int, float)) and not isinstance(const_val, bool)
+
+
+NOT_ALLOWED_COMPARES_IN_Z3 = {"in", "not in", "is", "is not"}
+NOT_ALLOWED_OPERATIONS_IN_Z3 = {"<<", ">>", "|", "&", "^", "@", "**"}
+
+
+def analyze_condition_for_types_of_variables(
+    node: nodes.NodeNG, existing_z3_variables: Dict[str, ArithRef], is_direct_child_of_
+) -> bool:
+    # Supposes that node is pure. And we exclude bit operations, because Z3 supports them only on bitvectors.
+    # Returns False if the condition has some not allowed operations in Z3 or operations that are too difficult for Z3 and would take a lot of time (like the '**' operator)
+    if (
+        (
+            isinstance(node, nodes.BinOp)
+            and (
+                node.op in NOT_ALLOWED_OPERATIONS_IN_Z3
+                or (node.op == "%" and not is_number(node.right))
+            )
+        )
+        or (
+            isinstance(node, nodes.Compare)
+            and (len(node.ops) != 1 or node.ops[0][0] in NOT_ALLOWED_COMPARES_IN_Z3)
+        )
+        or (isinstance(node, nodes.UnaryOp) and node.op == "~")
+    ):
+        return False
+
+    if isinstance(node, nodes.BinOp) and node.op == "%":
+        return analyze_condition_for_types_of_variables(child, existing_z3_variables)
+
+    if isinstance(node, (nodes.BoolOp, nodes.Compare, nodes.UnaryOp, nodes.BinOp)):
+        for child in node.get_children():
+            if not analyze_condition_for_types_of_variables(child, existing_z3_variables):
+                return False
+
+        return True
+
+    # TODO - implement the actual variable type analysis
+
+    return True
+
+
+def convert_condition_to_z3_expression(
+    node: nodes.NodeNG, existing_z3_variables: Dict[str, ArithRef]
+) -> Optional[ExprRef]:
+    # We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if
+
+    #            isinstance(node, nodes.Name)
+    #         or isinstance(node, nodes.Const)
+    #         or isinstance(node, nodes.BinOp)
+    #         or isinstance(node, nodes.BoolOp)
+    #         or isinstance(node, nodes.UnaryOp)
+    #         or isinstance(node, nodes.Compare)
+    #         or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
+    #         or isinstance(node, nodes.Attribute)
+    #         or (
+    #             isinstance(node, nodes.Call)
+    #             and len(node.keywords) == 0
+    #             and len(node.kwargs) == 0
+    #             and len(node.starargs) == 0
+    #             and is_pure_builtin(node.func)
+    #         )
+
+    if isinstance(node, nodes.Name):
+        if node.name in existing_z3_variables:
+            var = existing_z3_variables[node.name]
+            return var if var.sort() else var != 0
+
+
+def implies(node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
+    # TODO
+    return False
 
 
 def is_multi_assign(node: nodes.NodeNG) -> bool:
