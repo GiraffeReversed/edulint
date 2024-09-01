@@ -150,10 +150,12 @@ def name_to_var(name: str, node: nodes.NodeNG):
     raise ValueError(f"no variable named '{name}' in node '{node.as_string()}'")
 
 
-def node_to_var(node, loc):
+def node_to_var(node: nodes.NodeNG):
+    loc = get_cfg_loc(node)
     for var, event in loc.var_events.all():
         if event.node == node:
             return var
+    raise ValueError(f"no variable for node '{node.as_string()}'")
 
 
 ### event checkers
