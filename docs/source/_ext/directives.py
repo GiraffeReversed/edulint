@@ -191,7 +191,7 @@ class MessageTable(Directive):
                 if arg.startswith("--enable=")
                 for c in arg[len("--enable=") :].split(",")
                 # do not document the checker that is enabled so that Pylint always has something to detect
-                if c != "R1725"
+                if c != "noop"
             ]
         else:
             # TODO do properly (not only PYLINT, not only enable)

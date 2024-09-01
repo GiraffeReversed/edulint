@@ -20,6 +20,11 @@ from edulint.linting.checkers.utils import (
 class Local(BaseChecker):
     name = "local-defects"
     msgs = {
+        "R6600": (
+            "Should never be emitted",
+            "noop",
+            "Never emitted, just to use if all other checks are disabled",
+        ),
         "R6601": (
             "Use %s.append(%s) instead of %s.",
             "use-append",
