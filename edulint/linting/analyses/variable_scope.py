@@ -1,28 +1,9 @@
-from dataclasses import dataclass
 from typing import Dict, List, TypeVar, Union, Optional, Iterator
 
 from astroid import nodes
 
+from edulint.linting.analyses.var_events import VarName, ScopeNode
 from edulint.linting.checkers.utils import BaseVisitor, is_builtin
-
-
-ScopeNode = Union[
-    nodes.Module,
-    nodes.FunctionDef,
-    nodes.ClassDef,
-    nodes.Lambda,
-    nodes.GeneratorExp,
-    nodes.ListComp,
-    nodes.DictComp,
-    nodes.SetComp,
-]
-VarName = str
-
-
-@dataclass(frozen=True)
-class Variable:
-    name: VarName
-    scope: ScopeNode
 
 
 T = TypeVar("T")

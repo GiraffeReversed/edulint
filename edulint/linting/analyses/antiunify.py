@@ -348,9 +348,7 @@ def sub_to_variable(avar, i):
     event_nodes = list(
         {
             (var.scope, event.node)
-            for var, events in sub_loc.var_events.items()
-            if var.name == sub
-            for event in events
+            for var, event in sub_loc.var_events.for_name(sub)
             if event.type in MODIFYING_EVENTS
         }
     )

@@ -1,24 +1,12 @@
-from collections import namedtuple
 from typing import Union, Optional
-from enum import Enum, auto
 import re
 
 from astroid import nodes
 
 from edulint.linting.analyses.cfg.utils import get_cfg_loc
-from edulint.linting.analyses.variable_scope import ScopeListener, VarName, Variable
+from edulint.linting.analyses.variable_scope import ScopeListener
 from edulint.linting.checkers.utils import is_builtin
-
-
-class VarEventType(Enum):
-    ASSIGN = auto()
-    REASSIGN = auto()
-    MODIFY = auto()
-    READ = auto()
-    DELETE = auto()
-
-
-VarEvent = namedtuple("VarEvent", ["node", "type"])
+from edulint.linting.analyses.var_events import VarEventType, VarName, Variable, VarEvent
 
 
 class VarModificationAnalysis:
@@ -63,7 +51,7 @@ class VarEventListener(ScopeListener[None]):
         #     name, name_node, loc.node
         # ), f"but {name_node.as_string()}, {loc.node.as_string()}"
         if scope is not None:
-            loc.var_events[Variable(name, scope)].append(VarEvent(name_node, action))
+            loc.var_events.add(Variable(name, scope), VarEvent(name_node, action))
 
     # @override
     def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG, offset: int = 0) -> None:

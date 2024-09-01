@@ -103,7 +103,7 @@ def skip_stmt(node: nodes.NodeNG) -> bool:
         or (isinstance(node, (nodes.Import, nodes.ImportFrom)) and node.parent == node.root())
         or (
             isinstance(node, (nodes.Assign, nodes.AugAssign, nodes.AnnAssign))
-            and len(node.cfg_loc.uses) == 0
+            and sum(len(event.uses) for _var, event in node.cfg_loc.var_events.all()) == 0
         )
     )
 
