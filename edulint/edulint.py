@@ -195,11 +195,13 @@ def explain_messages(args):
                 if mid != args.message_ids[0]:
                     print("\n")
                 print(f"## {mid}")
-            print("### Why is it a problem?")
-            print(expl["why"].strip())
-            print()
-            print("### How to solve it?")
-            print(expl["examples"].strip())
+            if expl["why"].strip():
+                print("### Why is it a problem?")
+                print(expl["why"].strip())
+                print()
+            if expl["examples"].strip():
+                print("### How to solve it?")
+                print(expl["examples"].strip())
 
     if args.json:
         data = {"explanations": mid_expls}
