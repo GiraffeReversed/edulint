@@ -320,7 +320,12 @@ def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
     return loc, None
 
 
-def syntactic_children_locs(syntactic: nodes.NodeNG, include_stmt_locs: bool = False):
+def syntactic_children_locs(
+    syntactic: nodes.NodeNG,
+    include_stmt_locs: bool = False,
+    explore_functions: bool = False,
+    explore_classes: bool = False,
+):
     if isinstance(syntactic, nodes.NodeNG):
         node = syntactic
     else:
@@ -328,11 +333,17 @@ def syntactic_children_locs(syntactic: nodes.NodeNG, include_stmt_locs: bool = F
 
     assert hasattr(node, "cfg_loc")
 
-    yield from syntactic_children_locs_from(node.cfg_loc, syntactic, include_stmt_locs)
+    yield from syntactic_children_locs_from(
+        node.cfg_loc, syntactic, include_stmt_locs, explore_functions, explore_classes
+    )
 
 
 def syntactic_children_locs_from(
-    loc: CFGLoc, syntactic: nodes.NodeNG, include_stmt_locs: bool = False
+    loc: CFGLoc,
+    syntactic: nodes.NodeNG,
+    include_stmt_locs: bool = False,
+    explore_functions: bool = False,
+    explore_classes: bool = False,
 ) -> Generator[CFGLoc, None, None]:
 
     if isinstance(loc, CFGLoc):
@@ -347,11 +358,27 @@ def syntactic_children_locs_from(
             for i in range(from_pos, to_pos):
                 loc = block.locs[i]
                 if not include_stmt_locs:
-                    yield loc
+                    locs = [loc]
                 else:
-                    for stmt_loc in get_stmt_locs(loc):
-                        if stmt_loc is not None:
-                            yield stmt_loc
+                    locs = [stmt_loc for stmt_loc in get_stmt_locs(loc) if stmt_loc is not None]
+
+                for loc in locs:
+                    yield loc
+
+                    if isinstance(loc.node, nodes.FunctionDef) and explore_functions:
+                        functions = [loc.node]
+                    elif isinstance(loc.node, nodes.ClassDef) and explore_classes:
+                        functions = [n for n in loc.node.body if isinstance(n, nodes.FunctionDef)]
+                    else:
+                        functions = []
+
+                    for function in functions:
+                        yield from successors_from_loc(
+                            function.args.cfg_loc,
+                            include_start=True,
+                            explore_functions=explore_functions,
+                            explore_classes=explore_classes,
+                        )
 
 
 def get_first_locs_after(locs: List[CFGLoc]):
