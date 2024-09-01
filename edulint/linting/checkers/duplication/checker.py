@@ -309,9 +309,11 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "moving if into a for loop, for example).",
         ),
         "R6557": (
-            "Restructure twisted ifs",
+            "The branches of the 'if' statement are similar. Use condition '%s' "
+            "to avoid the duplication.",
             "similar-if-to-untwisted",
-            "",
+            "Emitted when an 'if' statement has an if statement in each branch and "
+            "the nested statements have the same branches, only swapped.",
         ),
         "R6558": (
             "Extract ifs to ternary",

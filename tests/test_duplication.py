@@ -358,7 +358,10 @@ def test_similar_block_to_loop_custom(lines: List[str], expected_output: List[Pr
         "            print('hello')",
         "            print('kind')",
 
-    ], [lazy_problem().set_line(2)]),
+    ], [
+        lazy_problem().set_line(2)
+        .set_text("The branches of the 'if' statement are similar. Use condition 'c1 and c2 or not c1 and not c2' to avoid the duplication.")
+    ]),
 ])
 def test_similar_if_to_untwisted_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
@@ -368,7 +371,10 @@ def test_similar_if_to_untwisted_custom(lines: List[str], expected_output: List[
     )
 
 @pytest.mark.parametrize("filename,expected_output", [
-    ("cf_1316_b_41.py", [lazy_problem().set_line(12)]),
+    ("cf_1316_b_41.py", [
+        lazy_problem().set_line(12)
+        .set_text("The branches of the 'if' statement are similar. Use condition 'n % 2 == 0 and i % 2 == 0 or not n % 2 == 0 and not i % 2 == 0' to avoid the duplication.")
+    ]),
 ])
 def test_similar_if_to_untwisted(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(

@@ -388,10 +388,11 @@ def get_fixed_by_restructuring_twisted(tests, core, avars):
     ):
         return None
 
-    pp_test = new_node(nodes.BoolOp, op="and", values=[outer_test, inner_test])
+    inner_test_variant = get_sub_variant(inner_test, 0)
+    pp_test = new_node(nodes.BoolOp, op="and", values=[outer_test, inner_test_variant])
 
     neg_outer_test = new_node(nodes.UnaryOp, op="not", operand=outer_test)
-    neg_inner_test = new_node(nodes.UnaryOp, op="not", operand=inner_test)
+    neg_inner_test = new_node(nodes.UnaryOp, op="not", operand=inner_test_variant)
 
     nn_test = new_node(nodes.BoolOp, op="and", values=[neg_outer_test, neg_inner_test])
 
@@ -407,7 +408,7 @@ def get_fixed_by_restructuring_twisted(tests, core, avars):
     return (
         get_token_count(if_),
         get_statements_count(if_, include_defs=False, include_name_main=False),
-        (),
+        (test.as_string(),),
     )
 
 
