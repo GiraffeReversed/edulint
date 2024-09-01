@@ -1,7 +1,7 @@
 # EduLint
 
 [![Pypi](https://img.shields.io/pypi/v/edulint)](https://pypi.org/project/edulint/)
-![Python versions](https://img.shields.io/badge/python-3.8%20--%203.11-blue)
+![Python versions](https://img.shields.io/badge/python-3.8%20--%203.12-blue)
 ![Tests](https://img.shields.io/github/actions/workflow/status/GiraffeReversed/edulint/test.yaml)
 [![ReadTheDocs](https://img.shields.io/readthedocs/edulint)](https://edulint.readthedocs.io/)
 [![Docker image](https://img.shields.io/docker/image-size/edulint/edulint-cli/latest?label=Docker%20image%20size)](https://hub.docker.com/r/edulint/edulint-cli)
@@ -69,8 +69,6 @@ Are you interested in sponsoring this project, want to collaborate on an academi
 
 #### Python version
 
-Supported: 3.8 <= Python <= 3.11
-
-Python 3.12 mostly works, but we've detected a few edge cases that will need fixes. Also, some of the newer Python syntax operators might not be fully supported yet, but it is on the roadmap.
+Supported: Python 3.8+ (tested up-to Python 3.12)
 
 Python 3.7 is no-longer officially supported, as Python 3.7 is already EOL. Last version that supported it was Edulint v3.6.1. Be aware that some linting results may be different between 3.7 and 3.8 due to different parsing between package `typed-ast` (<=3.7) and Python's native `ast` (>=3.8).
