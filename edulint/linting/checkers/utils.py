@@ -6,6 +6,8 @@ import inspect
 import operator
 from pylint.checkers import utils  # type: ignore
 
+from edulint.linting.analyses.data_dependency import node_to_var
+
 POSTINIT_ARGS = {
     klass: (
         {
@@ -99,13 +101,14 @@ for name, obj in inspect.getmembers(nodes, inspect.isclass):
     setattr(BaseVisitor, f"visit_{obj.__name__.lower()}", generic_visit)
 
 
-# rightfully stolen from
+# solution using inference at
 # https://github.com/PyCQA/pylint/blob/ca80f03a43bc39e4cc2c67dc99817b3c9f13b8a6/pylint/checkers/refactoring/recommendation_checker.py
 def is_builtin(node: nodes.NodeNG, function: Optional[str] = None) -> bool:
-    inferred = utils.safe_infer(node)
-    if not inferred:
-        return False
-    return utils.is_builtin_object(inferred) and function is None or inferred.name == function
+    assert function is None or utils.is_builtin(function)
+    node_var = node_to_var(node)
+    return node_var is None and (
+        function is None or (isinstance(node, nodes.Name) and node.name == function)
+    )
 
 
 PURE_FUNCTIONS = {
