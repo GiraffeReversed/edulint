@@ -47,8 +47,10 @@ def essor_blocks_from_locs(
     include_start: bool,
     include_end: bool,
 ) -> Iterator[Tuple[CFGBlock, int, int]]:
-    def dfs_rec(current_block: CFGBlock, from_pos: int, to_pos: int, is_first: bool):
 
+    def triage_block(
+        current_block: CFGBlock, from_pos: int, to_pos: int, is_first: bool
+    ) -> Tuple[bool, bool, Tuple[int, int]]:
         stop_on_current_block = stop_on_block is not None and stop_on_block(
             current_block, from_pos, to_pos
         )
@@ -58,7 +60,7 @@ def essor_blocks_from_locs(
             and (not include_start or not is_first)
             and stop_on_loc is None
         ):
-            return
+            return True, False, (None, None)
 
         if (stop_on_block is None or stop_on_current_block) and stop_on_loc is not None:
             if direction == Direction.SUCCESSORS:
@@ -71,33 +73,49 @@ def essor_blocks_from_locs(
                 if stop_on_loc is not None and stop_on_loc(current_loc):
                     if include_end:
                         if direction == Direction.SUCCESSORS:
-                            yield current_block, from_pos, i + 1
+                            to_pos = i + 1
                         else:
-                            yield current_block, i, to_pos
+                            from_pos = i
                     else:
                         if direction == Direction.SUCCESSORS:
-                            yield current_block, from_pos, i
+                            to_pos = i
                         else:
-                            yield current_block, i + 1, to_pos
-                    return
+                            from_pos = i + 1
+                    return True, True, (from_pos, to_pos)
 
-        # stop_on_loc is None or no stop in this block
-        if from_pos != to_pos:
-            yield current_block, from_pos, to_pos
+        return stop_on_current_block, True, (from_pos, to_pos)
 
-        if stop_on_current_block:
-            return
+    def dfs_iter(current_block: CFGBlock, from_pos: int, to_pos: int, is_first: bool):
+        stack = [(current_block, from_pos, to_pos, is_first, 0)]
 
-        if (direction == Direction.SUCCESSORS and to_pos == len(current_block.locs)) or (
-            direction == Direction.PREDECESSORS and from_pos == 0
-        ):
-            for essor in Direction.get_essors(current_block, direction):
+        while stack:
+            current_block, from_pos, to_pos, is_first, essor_i = stack.pop()
+
+            if essor_i == 0:
+                should_stop, should_yield, (from_pos, to_pos) = triage_block(
+                    current_block, from_pos, to_pos, is_first
+                )
+                if should_yield and from_pos != to_pos:
+                    yield current_block, from_pos, to_pos
+                if should_stop:
+                    continue
+
+            if (direction == Direction.SUCCESSORS and essor_i >= len(current_block.successors)) or (
+                direction == Direction.PREDECESSORS and essor_i >= len(current_block.predecessors)
+            ):
+                continue
+            stack.append((current_block, from_pos, to_pos, is_first, essor_i + 1))
+
+            if (direction == Direction.SUCCESSORS and to_pos == len(current_block.locs)) or (
+                direction == Direction.PREDECESSORS and from_pos == 0
+            ):
+                essor = list(Direction.get_essors(current_block, direction))[essor_i]
                 if len(essor.locs) == 0:
                     continue
 
                 elif essor not in visited:
                     visited[essor] = 0, len(essor.locs)
-                    yield from dfs_rec(essor, 0, len(essor.locs), is_first=False)
+                    stack.append((essor, 0, len(essor.locs), False, 0))
 
                 else:
                     vfrom, vto = visited[essor]
@@ -114,7 +132,7 @@ def essor_blocks_from_locs(
                         new_to_pos = len(essor.locs)
 
                     visited[essor] = 0, len(essor.locs)
-                    yield from dfs_rec(essor, new_from_pos, new_to_pos, is_first=False)
+                    stack.append((essor, new_from_pos, new_to_pos, False, 0))
 
     visited = {}
     for loc in locs:
@@ -130,7 +148,7 @@ def essor_blocks_from_locs(
                 to_pos = loc.pos + 1 if include_start else loc.pos
 
             visited[loc.block] = from_pos, to_pos
-            yield from dfs_rec(loc.block, from_pos, to_pos, is_first=True)
+            yield from dfs_iter(loc.block, from_pos, to_pos, is_first=True)
         else:
             vfrom, vto = vblock
             if vfrom <= loc.pos < vto:
@@ -147,7 +165,7 @@ def essor_blocks_from_locs(
                 to_pos = loc.pos + 1 if include_start else loc.pos
                 visited[loc.block] = vfrom, to_pos
 
-            yield from dfs_rec(loc.block, from_pos, to_pos, is_first=True)
+            yield from dfs_iter(loc.block, from_pos, to_pos, is_first=True)
 
 
 def successor_blocks_from_locs(
