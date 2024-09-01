@@ -257,9 +257,10 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
     name = "no-duplicate-code"
     msgs = {
         "R6501": (
-            "Identical if branches",
+            "The branches of the 'if' statement are identical. Remove the 'if' if it is on purpose, "
+            "or change the branches if not.",
             "identical-if-branches",
-            "",
+            "Emitted when all branches of an 'if' statement contain identical code.",
         ),
         "R6502": (
             "Identical code inside all if's branches, move %d lines %s the if.",
@@ -273,9 +274,10 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "joined by or in their conditions.",
         ),
         "R6551": (
-            "Extract to a common function (%d repetitions of %d statements).",
+            "There are %d repetitions of %d similar statements, starting on lines %s. "
+            "Extract them to a helper function.",
             "similar-block-to-function",
-            "",
+            "Emitted when similar blocks can be deduplicated using a helper function.",
         ),
         "R6552": (
             "There are %d repetitions of %d similar statements, which can be simplified using a loop. "
@@ -291,14 +293,15 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "the extra iterations can be performed by iterating the outer loop more times.",
         ),
         "R6554": (
-            "Use existing function %s",
+            "Call the existing function '%s' instead of repeating its body.",
             "similar-block-to-call",
-            "",
+            "Emitted when a block can be replaced by a call to an existing function.",
         ),
         "R6555": (
-            "Use condition directly",
+            "Use condition directly instead of literals 'True'/'False'.",
             "similar-if-to-use",
-            "",
+            "Emitted when the two branches of an 'if' statement differ only in True/False, "
+            "so the if's condition can be used directly.",
         ),
         "R6556": (
             "The branches of the 'if' statement are similar. Move the 'if' into the branches, "
