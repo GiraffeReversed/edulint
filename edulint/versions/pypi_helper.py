@@ -38,6 +38,8 @@ def _only_last_patch_of_each_minor(versions: List[Version]) -> List[Version]:
 def get_versions(package_name: str = 'edulint') -> List[Version]:
     edulint_info = requests.get(f"https://pypi.org/pypi/{package_name}/json", timeout=3).json()
     version_ids: List[Version] = _fully_released_versions(edulint_info)
+    if package_name == "pylint":
+        version_ids = [version for version in version_ids if version.major >= 3]
     return version_ids
 
 
