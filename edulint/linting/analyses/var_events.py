@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Optional
 
 from astroid import nodes
 
@@ -83,3 +83,17 @@ class VarEvents:
 
     def __getitem__(self, key):
         return self.var_events[key]
+
+
+def strip_to_name(
+    node: nodes.NodeNG,
+) -> Optional[Union[nodes.Name, nodes.AssignName, nodes.DelName]]:
+    while True:
+        if isinstance(node, nodes.Subscript):
+            node = node.value
+        elif type(node) in (nodes.Attribute, nodes.AssignAttr, nodes.DelAttr):
+            node = node.expr
+        else:
+            break
+
+    return node if isinstance(node, (nodes.Name, nodes.AssignName, nodes.DelName)) else None
