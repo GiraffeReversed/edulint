@@ -572,6 +572,7 @@ Some renaming suggestions:
 
 [E129] # visually indented line with same indent as next logical line
 examples = """
+```py
 def problematic(c1, c2):
     if c1 and \
         c2:  # <- once indented code (four spaces)
@@ -593,4 +594,331 @@ def good3(c1, c2):
         c2
     ):
         # code indented as usual (four spaces)
+```
+"""
+
+[R6211] # simplifiable-with-abs
+why = "If the condition uses 'abs', it is more clear what it tests. Function 'abs' takes a number and returns its absolute value."
+examples = """
+```py
+def problematic(n):
+    return n < -5 or n > 5
+
+def good(n):
+    return abs(n) > 5
+```
+"""
+
+[R6212] # redundant-compare-in-condition
+examples = """
+```py
+def problematic(m, n):
+    if m > 5 and m > 1:
+        # code
+
+def good1(m, n):
+    if m > 5:
+        # code
+
+def good2(m, n):
+    if m > 5 and n > 1:
+        # code
+```
+"""
+
+[R6213] # redundant-compare-avoidable-with-max-min
+examples = """
+```py
+def problematic(x, m, n):
+    if x > m and x > n:
+        # code
+
+
+def good(x, m, n):
+    if x > max(m, n):
+        # code
+```
+"""
+
+[R6214] # using-compare-instead-of-equal
+examples = """
+```py
+def problematic(x):
+    if x >= 0 and x <= 0:
+        # code
+
+def good(x):
+    if x == 0:
+        # code
+```
+"""
+
+[R6215] # simplifiable-test-by-equals
+examples = """
+```py
+def problematic(x, y):
+    if x % 2 == 0 and y % 2 == 0 or x % 2 == 1 and y % 2 == 1:
+        # code
+
+def good(x, y):
+    if x % 2 == y % 2:
+        # code
+```
+"""
+
+[R6501] # identical-if-branches
+examples = """
+```py
+def problematic(x, y):
+    if x > y:
+        print(x)
+    else:
+        print(x)
+
+def good1(x, y):
+    print(x)
+
+def good2(x, y):
+    if x > y:
+        print(x)
+    else:
+        print(y)
+```
+"""
+
+[R6502] # identical-branch-part
+why = "Repeating identical lines makes code harder to read, because the reader has to check that the lines are indeed identical."
+examples = """
+```py
+def problematic(x):
+    if x > 10:
+        print("x is greater than 10")
+        result = x * 2
+    elif x == 10:
+        print("x is exactly 10")
+        result = x * 2
+    else:
+        result = x * 2
+
+    # code using result
+
+def good(x):
+    if x > 10:
+        print("x is greater than 10")
+    elif x == 10:
+        print("x is exactly 10")
+    result = x * 2
+
+    # code using result
+```
+"""
+
+[R6552] # similar-block-to-loop
+examples = """
+```py
+def problematic(text):
+    vowel_count = count_letter(text, 'a')
+    vowel_count += count_letter(text, 'e')
+    vowel_count += count_letter(text, 'i')
+    vowel_count += count_letter(text, 'o')
+    vowel_count += count_letter(text, 'u')
+    vowel_count += count_letter(text, 'y')
+    return vowel_count
+
+def good(text):
+    vovel_count = 0
+    for letter in ('a', 'e', 'i', 'o', 'u', 'y'):
+        vowel_count += count_letter(text, letter)
+    return vowel_count
+
+
+def problematic(n):
+    if len(row) != 9:
+        return False
+    if 1 not in row:
+        return False
+    if 2 not in row:
+        return False
+    if 3 not in row:
+        return False
+    # ...
+    if 9 not in row:
+        return False
+    return True
+
+def good(n):
+    if len(row) != 9:
+        return False
+    for num in range(1, 10):  # or range(9) and use num + 1
+        if num not in row:
+            return False
+    return True
+```
+"""
+[R6553] # similar-block-to-loop-merge
+examples = """
+```py
+def problematic():
+    for i in range(5):
+        forward(30)
+        right(90)
+        forward(30)
+        left(90)
+        forward(30)
+        right(90)
+        forward(30)
+        left(90)
+
+def good():
+    for i in range(10):
+        forward(30)
+        right(90)
+        forward(30)
+        left(90)
+```
+"""
+
+[R6555] # similar-block-to-use
+examples = """
+```py
+def process_number(num, is_first): ...
+
+def problematic(numbers):
+    for i in range(numbers):
+        if i == 0:
+            process_number(numbers[i], True)
+        else:
+            process_number(numbers[i], False)
+
+def good(numbers):
+    for i in range(numbers):
+        process_number(number[i], i == 0)
+```
+"""
+
+[R6556] # similar-if-into-block
+examples = """
+```py
+def problematic(lst1, lst2):
+    diff = abs(len(lst1) - len(lst2))
+    if len(lst1) > len(lst2):
+        for j in range(diff):
+            lst2.append(None)
+    else:
+        for j in range(diff):
+           lst1.append(None)
+
+def good(lst1, lst2):
+    diff = abs(len(lst1) - len(lst2))
+    for j in range(diff):
+        if len(lst1) > len(lst2):
+            lst2.append(None)
+        else:
+           lst1.append(None)
+```
+"""
+[R6557] # similar-if-to-untwisted
+examples = """
+```py
+def problematic(i, j):
+    if i % 2 == 0:
+        if j % 2 == 0:
+            print("#", end=" ")
+        else:
+            print(".", end=" ")
+    else:
+        if j % 2 == 0:
+            print(".", end=" ")
+        else:
+            print("#", end=" ")
+
+def good(i, j):
+    if (i % 2 == 0 and j % 2 == 0) or (i % 2 != 0 and j % 2 != 0):
+        print("#", end=" ")
+    else:
+        print(".", end=" ")
+```
+"""
+[R6558] # similar-if-to-expr
+examples = """
+```py
+def problematic(lst1, lst2):
+    if len(lst1) > len(lst2):
+        longer = lst1
+    else:
+        longer = lst2
+    # code using longer
+
+def good(lst1, lst2):
+    longer = lst1 if len(lst1) > len(lst2) else lst2
+    # code using longer
+```
+"""
+[R6559] # similar-if-to-extracted
+examples = """
+```
+def problematic(year):
+    for month in range(1, 13):
+        if month == 1 or month == 3 or month == 5 \
+           or month == 7 or month == 8 \
+           or month == 10 or month == 12:
+            for day in range(1, 32):
+                process_date(year, month, day)
+
+        elif month == 2 and ((year % 4 == 0 and year % 100 != 0) or
+                             (year % 400 == 0)):
+            for day in range(1, 30):
+                process_date(year, month, day)
+
+        elif month == 2:
+            for day in range(1, 29):
+                process_date(year, month, day)
+
+        else:
+            for day in range(1, 31):
+                process_date(year, month, day)
+
+### use a helper variable
+def good1(year):
+    for month in range(1, 13):
+        if month == 1 or month == 3 or month == 5 \
+           or month == 7 or month == 8 \
+           or month == 10 or month == 12:
+            days_in_month = 31
+
+        elif month == 2 and ((year % 4 == 0 and year % 100 != 0) or
+                             (year % 400 == 0)):
+            days_in_month = 29
+
+        elif month == 2:
+            days_in_month = 28
+
+        else:
+            days_in_month = 30
+
+        for day in range(1, days_in_month + 1):
+            process_date(year, month, day)
+
+
+### or a helper function
+def get_days_in_month(year, month):
+        if month == 1 or month == 3 or month == 5 \
+           or month == 7 or month == 8 \
+           or month == 10 or month == 12:
+            return 31
+
+        if month == 2 and ((year % 4 == 0 and year % 100 != 0) or
+                             (year % 400 == 0)):
+            return 29
+
+        if month == 2:
+            return 28
+
+        return 30
+
+def good2(year):
+    for month in range(1, 13):
+        for day in range(1, get_days_in_month(year, month) + 1):
+            process_date(year, month, day)
+```
 """
