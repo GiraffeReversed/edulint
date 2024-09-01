@@ -7,6 +7,11 @@ from astroid import nodes
 from edulint.linting.analyses.cfg.graph import CFGBlock, CFGLoc
 
 
+def unwrap(loc: CFGLoc) -> CFGLoc:
+    """unwraps nodes that are not part of the CFG (for, if, while, ...)"""
+    return loc.block.locs[loc.pos]
+
+
 class Direction(Enum):
     SUCCESSORS = 1
     PREDECESSORS = -1
@@ -113,8 +118,7 @@ def essor_blocks_from_locs(
 
     visited = {}
     for loc in locs:
-        # to unwrap nodes that are not part of the CFG (for, if, while, ...)
-        loc = loc.block.locs[loc.pos]
+        loc = unwrap(loc)
         vblock = visited.get(loc.block)
 
         if vblock is None:
@@ -396,7 +400,18 @@ def get_locs_in_and_after_from(
 
     block_locs = defaultdict(list)
     for loc in sorted(locs, key=lambda loc: loc.pos):
-        block_locs[loc.block].append(loc)
+        unwrapped = unwrap(loc)
+        if unwrapped == loc:
+            block_locs[loc.block].append(loc)
+            continue
+
+        for i in range(unwrapped.pos, len(unwrapped.block.locs)):
+            subloc = unwrapped.block.locs[i]
+            assert subloc.node != loc.node
+            if loc.node in subloc.node.node_ancestors():
+                block_locs[loc.block].append(subloc)
+            else:
+                break
 
     for succ_block, from_pos, to_pos in successor_blocks_from_locs(
         [same_block_locs[0] for same_block_locs in block_froms.values()],
