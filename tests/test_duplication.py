@@ -81,6 +81,7 @@ def test_identical_if_branches_part(filename: str, expected_output: List[Problem
     )
 
 @pytest.mark.parametrize("filename,expected_output", [
+    ("810ed6038b-hw5.py", [lazy_problem().set_line(91)]),
     ("uc_88_6816_15_15.py", [lazy_problem().set_line(5)]),
 ])
 def test_identical_if_branches(filename: str, expected_output: List[Problem]) -> None:

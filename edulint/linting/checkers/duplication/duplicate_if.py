@@ -634,7 +634,7 @@ def identical_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -
     return identical_seq_ifs(checker, ends_with_else, ifs)
 
 
-def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> Tuple[bool, bool]:
+def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> bool:
     if not ends_with_else:
         return False
 
@@ -655,6 +655,10 @@ def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> 
 
     if contains_other_duplication(core, avars):
         return False
+
+    if len(avars) == 0:
+        checker.add_message("identical-if-branches", node=ifs[0])
+        return True
 
     tokens_before = get_token_count(ifs[0])
     stmts_before = get_statements_count(ifs[0], include_defs=False, include_name_main=True)
