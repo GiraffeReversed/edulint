@@ -288,7 +288,9 @@ def get_nice_iters(avars, to_aunify):
     sequences = [avar.subs for avar in avars]
     if len(sequences) == 0:
         range_node = new_node(
-            nodes.Call, func=new_node(nodes.Name, name="range"), args=[nodes.Const(len(to_aunify))]
+            nodes.Call,
+            func=new_node(nodes.Name, name="range"),
+            args=[new_node(nodes.Const, value=len(to_aunify))],
         )
         return [range_node], {}
 
@@ -316,8 +318,7 @@ def get_nice_iters(avars, to_aunify):
             return None
         some_iter, _use = iter_uses[0]
 
-        collection = nodes.Tuple()
-        collection.elts = [to_node(n, avars[0]) for n in some_iter]
+        collection = new_node(nodes.Tuple, elts=[to_node(n, avars[0]) for n in some_iter])
         return [collection], [use for _iter, use in iter_uses]
 
     if len({r[0] for r in ranges}) > 2:

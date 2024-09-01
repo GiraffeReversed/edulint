@@ -2,7 +2,7 @@ from typing import List
 
 from astroid import nodes  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, cprint  # noqa: F401
+from edulint.linting.analyses.antiunify import antiunify, new_node, cprint  # noqa: F401
 from edulint.linting.analyses.reaching_definitions import (
     get_vars_defined_before,
     get_vars_used_after,
@@ -42,42 +42,49 @@ def get_fixed_by_function(to_aunify, core, avars):
     calls = []
     for i in range(len(to_aunify)):
         params = [s[i] for s in seen]
-        call = nodes.Call()
-        call.func = nodes.Name("AUX")
-        call.args = [to_node(param) for param in params] + [
-            nodes.Name(varname) for varname, _scope in extra_args.keys()
-        ]
+        call = new_node(
+            nodes.Call,
+            func=new_node(nodes.Name, name="AUX"),
+            args=[to_node(param) for param in params]
+            + [new_node(nodes.Name, name=varname) for (varname, _scope) in extra_args.keys()],
+        )
         if return_vals_needed + control_needed == 0:
             calls.append(call)
         else:
-            assign = nodes.Assign()
-            assign.targets = [
-                nodes.AssignName(f"<r{i}>") for i in range(control_needed + return_vals_needed)
-            ]
-            assign.value = call
+            assign = new_node(
+                nodes.Assign,
+                targets=[
+                    new_node(nodes.AssignName, name=f"<r{i}>")
+                    for i in range(control_needed + return_vals_needed)
+                ],
+                value=call,
+            )
             calls.append(assign)
 
             # generate management for returned control flow
             for i in range(control_needed):
-                test = nodes.BinOp("is")
-                test.postinit(left=nodes.Name(f"<r{i}>"), right=nodes.Const(None))
-                if_ = nodes.If()
-                if_.test = test
-                if_.body = [nodes.Return()]  # placeholder for a control
+                test = new_node(
+                    nodes.BinOp,
+                    op="is",
+                    left=new_node(nodes.Name, name=f"<r{i}>"),
+                    right=new_node(nodes.Const, value=None),
+                )
+                if_ = new_node(
+                    nodes.If, test=test, body=[new_node(nodes.Return)]
+                )  # placeholder for a control
                 calls.append(if_)
 
     # generate function
-    fun_def = nodes.FunctionDef(name="AUX")
-    fun_def.args = nodes.Arguments()
-    fun_def.args.postinit(
-        args=[nodes.AssignName(avar.name) for avar in seen.values()]
-        + [nodes.AssignName(varname) for varname, _scope in extra_args.keys()],
-        defaults=None,
-        kwonlyargs=[],
-        kw_defaults=None,
-        annotations=[],
+    fun_def = new_node(
+        nodes.FunctionDef,
+        name="AUX",
+        args=new_node(
+            nodes.Arguments,
+            args=[new_node(nodes.AssignName, name=avar.name) for avar in seen.values()]
+            + [new_node(nodes.AssignName, name=varname) for (varname, _scope) in extra_args.keys()],
+        ),
+        body=core if isinstance(core, list) else [core],
     )
-    fun_def.body = core if isinstance(core, list) else [core]
 
     return Fixed(
         "similar-to-function",

@@ -6,6 +6,8 @@ import inspect
 import operator
 from pylint.checkers import utils  # type: ignore
 
+from edulint.linting.analyses.antiunify import new_node
+
 EXPRESSION_TYPES = (
     nodes.Subscript,
     nodes.Attribute,
@@ -131,8 +133,8 @@ def get_range_params(
     ):
         return None
 
-    default_start = nodes.Const(0)
-    default_step = nodes.Const(1)
+    default_start = new_node(nodes.Const, value=0)
+    default_step = new_node(nodes.Const, value=1)
 
     if len(node.args) == 1:
         return default_start, node.args[0], default_step

@@ -471,9 +471,7 @@ def antiunify(
     except DisallowedAntiunification:
         return None
 
-    wrapper = nodes.Module("tmp")
-    wrapper.id = "tmp"
-    wrapper.body = core if isinstance(core, list) else [core]
+    wrapper = new_node(nodes.Module, name="tmp", body=core if isinstance(core, list) else [core])
     wrapper.accept(CFGVisitor())
 
     core, avars = remove_renamed_identical_vars(core, avars)
