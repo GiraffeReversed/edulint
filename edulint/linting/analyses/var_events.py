@@ -35,6 +35,7 @@ class VarEventType(Enum):
 
 @dataclass
 class VarEvent:
+    var: Variable
     node: nodes.NodeNG
     type: VarEventType
     definitions: List["VarEvent"] = field(default_factory=list)
@@ -44,6 +45,7 @@ class VarEvent:
         return (
             "VarEvent("
             f"node={self.node!r}, "
+            f"var={self.var.name}, "
             f"type={self.type.name}, "
             f"len(definitions)={len(self.definitions)}, "
             f"len(uses)={len(self.uses)}"

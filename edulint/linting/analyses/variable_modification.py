@@ -56,7 +56,8 @@ class VarEventListener(ScopeListener[None]):
         #     name, name_node, loc.node
         # ), f"but {name_node.as_string()}, {loc.node.as_string()}"
         if scope is not None:
-            loc.var_events.add(Variable(name, scope), VarEvent(name_node, action))
+            var = Variable(name, scope)
+            loc.var_events.add(var, VarEvent(var, name_node, action))
 
     # @override
     def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG, offset: int = 0) -> None:
