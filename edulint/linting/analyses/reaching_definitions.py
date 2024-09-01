@@ -7,6 +7,7 @@ from edulint.linting.analyses.cfg.graph import CFGLoc, CFGBlock
 from edulint.linting.analyses.cfg.utils import (
     successor_blocks_from_locs,
     predecessors_from_loc,
+    syntactic_children_locs,
     syntactic_children_locs_from,
     get_cfg_loc,
 )
@@ -21,6 +22,9 @@ KILLING_EVENTS = (
     VarEventType.MODIFY,
 )
 GENERATING_EVENTS = (VarEventType.READ, VarEventType.MODIFY)
+
+
+### collectors
 
 
 def collect_gens_kill(
@@ -120,6 +124,9 @@ def collect_reaching_definitions(
                         collect_reaching_definitions(class_node.args, computed_kills[block])
 
 
+### var getters
+
+
 def vars_in(
     node: Union[nodes.NodeNG, List[nodes.NodeNG]], event_types: Optional[Set[VarEventType]] = None
 ) -> Dict[Variable, List[nodes.NodeNG]]:
@@ -133,6 +140,25 @@ def vars_in(
     return result
 
 
+def name_to_var(name: str, node: nodes.NodeNG):
+    start = get_cfg_loc(node)
+    for loc in syntactic_children_locs_from(start, node):
+        for var, events in loc.var_events.items():
+            event_scope = events[0].node.scope()
+            if var.name == name and event_scope == node.scope():
+                return var
+    raise ValueError(f"no variable named '{name}' in node '{node.as_string()}'")
+
+
+def node_to_var(node, loc):
+    for var, event in loc.var_events.all():
+        if event.node == node:
+            return var
+
+
+### event checkers
+
+
 def is_changed_between(var: Variable, before_loc: CFGLoc, after_locs: List[CFGLoc]) -> bool:
     for after_loc in after_locs:
         for loc in predecessors_from_loc(
@@ -144,11 +170,26 @@ def is_changed_between(var: Variable, before_loc: CFGLoc, after_locs: List[CFGLo
     return False
 
 
-def node_to_var(node, loc):
-    for var, event in loc.var_events.all():
-        if event.node == node:
-            return var
-    assert False, "unreachable"
+def get_events_for(
+    vars: List[Variable],
+    nodes: List[nodes.NodeNG],
+    event_types: Optional[List[VarEventType]] = None,
+):
+    if len(nodes) == 0:
+        return
+
+    for loc in syntactic_children_locs(nodes, explore_functions=True, explore_classes=True):
+        for var in vars:
+            for event in loc.var_events.for_var(var):
+                if event_types is None or event.type in event_types:
+                    yield event
+
+
+def modified_in(vars: List[Variable], nodes: List[nodes.NodeNG]) -> bool:
+    # just check whether there is such an event
+    for _ in get_events_for(vars, nodes, MODIFYING_EVENTS):
+        return True
+    return False
 
 
 def get_vars_defined_before(core) -> Dict[Variable, Set[nodes.NodeNG]]:
