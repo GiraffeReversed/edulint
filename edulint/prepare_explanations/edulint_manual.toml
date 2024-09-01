@@ -326,6 +326,8 @@ def good_and_efficient(numbers):
             odd_numbers.append(num)
     return odd_numbers
 ```
+
+Be careful that this detector does not catch every case when you modify the structure you iterate over. If the detector does not report anything, it does not mean there is no issue in your code.
 """
 
 [R6301] # no-while-true
@@ -495,9 +497,22 @@ examples = "Instead of `[[]] * 3` use for example `[[] for i in range(3)]`."
 why = "Early return is a pattern in which you first handle simple situations before moving on to complicated ones. It cleans up the control flow (simple situations usually represent invalid or trivial input) and usually allows the complicated code to be less indented, which makes it easier to read."
 examples = """
 ```py
+def short_problematic():
+    if test:
+        # long code
+    else:
+        return 0
+
+def short_good():
+    if not test:  # <-- note that the condition needs to be negated
+        return 0
+    # long code
+```
+
+```py
 # a function that transforms score to grade
 
-def problematic(score):
+def long_problematic(score):
     if 0 <= score and score <= 100:
         if score >= 90:
             return "A"
@@ -512,8 +527,8 @@ def problematic(score):
     else:
         return None
 
-def good(score):
-    if score < 0 or score > 100:
+def long_good(score):
+    if score < 0 or score > 100:  # <-- condition is again negated
         return None
 
     if score >= 90:

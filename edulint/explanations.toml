@@ -6406,7 +6406,7 @@ examples = """
 **Problematic code**
 
 ```py
-print(\"Hello\")  # [trailing-whitespace]
+print(\"Hello\")  # [trailing-whitespace]   
 #                                       ^^^ trailing whitespaces
 
 ```
@@ -6916,7 +6916,7 @@ if input():
 
 [C2401]
 why = """
-It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad.
+It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad. 
 If your programming guideline defines that you are programming in English, then there should be no need for non ASCII characters in Python Names. If not you can simply disable this check."""
 examples = """
 **Problematic code**
@@ -6936,7 +6936,7 @@ apple_count = 4444
 
 [C2403]
 why = """
-It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad.
+It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad. 
 If your programming guideline defines that you are programming in English, then there should be no need for non ASCII characters in Python Names. If not you can simply disable this check."""
 examples = """
 **Problematic code**
@@ -9075,6 +9075,8 @@ def good_and_efficient(numbers):
             odd_numbers.append(num)
     return odd_numbers
 ```
+
+Be careful that this detector does not catch every case when you modify the structure you iterate over. If the detector does not report anything, it does not mean there is no issue in your code.
 """
 
 [R6306]
@@ -9227,9 +9229,22 @@ examples = "Instead of `[[]] * 3` use for example `[[] for i in range(3)]`."
 why = "Early return is a pattern in which you first handle simple situations before moving on to complicated ones. It cleans up the control flow (simple situations usually represent invalid or trivial input) and usually allows the complicated code to be less indented, which makes it easier to read."
 examples = """
 ```py
+def short_problematic():
+    if test:
+        # long code
+    else:
+        return 0
+
+def short_good():
+    if not test:  # <-- note that the condition needs to be negated
+        return 0
+    # long code
+```
+
+```py
 # a function that transforms score to grade
 
-def problematic(score):
+def long_problematic(score):
     if 0 <= score and score <= 100:
         if score >= 90:
             return \"A\"
@@ -9244,8 +9259,8 @@ def problematic(score):
     else:
         return None
 
-def good(score):
-    if score < 0 or score > 100:
+def long_good(score):
+    if score < 0 or score > 100:  # <-- condition is again negated
         return None
 
     if score >= 90:
