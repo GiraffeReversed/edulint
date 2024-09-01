@@ -41,12 +41,12 @@ check: mypy test
 
 run:
 	export PYTHONPATH=${EDULINT_PATH} && \
-		python3 -m edulint --disable-version-check --disable-explanations-update ${ARGS}
+		python3 -m edulint check --disable-version-check --disable-explanations-update ${ARGS}
 
 perf:
 	export PYTHONPATH=${EDULINT_PATH} && \
 		time py-spy record -s -n -r1000 -o profile.ss -f speedscope -- \
-		python3 -m edulint \
+		python3 -m edulint check \
 		--disable-version-check --disable-explanations-update \
 		-o ignore-infile-config-for=edulint \
 		${ARGS} \
@@ -66,6 +66,6 @@ lint_data:
 	for week in `ls $$DATA_DIR`; do \
 		echo $$week; \
 		export PYTHONPATH=${EDULINT_PATH} && \
-			python3 -m edulint -o "${OPTIONS}" $$EXTRA $$DATA_DIR/$$week/*.py > $$LINTINGS_DIR/$$week.$$EXT; \
+			python3 -m edulint check -o "${OPTIONS}" $$EXTRA $$DATA_DIR/$$week/*.py > $$LINTINGS_DIR/$$week.$$EXT; \
 	done;
 

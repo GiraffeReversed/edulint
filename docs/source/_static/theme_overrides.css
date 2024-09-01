@@ -6,3 +6,7 @@
 .wy-table-responsive table th {
     white-space: normal;
 }
+
+#message-explanations pre {
+    white-space: pre-wrap !important;
+}

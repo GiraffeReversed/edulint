@@ -32,7 +32,7 @@ To start using EduLint, open an interactive shell and run:
 
 .. code::
 
-   python3 -m edulint path/to/code/to/check.py
+   python3 -m edulint check path/to/code/to/check.py
 
 .. note::
    Multiple filenames can be passed and linted at once. If a directory is passed, it is traversed and all :code:`.py` files it contains are linted.

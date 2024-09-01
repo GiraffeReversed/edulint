@@ -5,7 +5,7 @@ import sys
 import json
 
 def run(monkeypatch, capsys, argv) -> str:
-    monkeypatch.setattr("sys.argv", ["script"] + argv)
+    monkeypatch.setattr("sys.argv", ["script", "check"] + argv)
     main()
     captured = capsys.readouterr()
 

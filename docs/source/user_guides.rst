@@ -51,7 +51,7 @@ The command used for evaluation should look as follows:
 
 .. code:: bash
 
-    python3 -m edulint -o config-file=<selected-config-file> -o ignore-infile-config-for=all <file-or-directory>
+    python3 -m edulint check -o config-file=<selected-config-file> -o ignore-infile-config-for=all <file-or-directory>
 
 It is necessary to specify the config file to use, even if it is already specified in the checked file itself. The :code:`ignore-infile-config-for=all` will ignore even EduLint's configuration.
 

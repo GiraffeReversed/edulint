@@ -65,13 +65,13 @@ When configuring through CLI, pass the configuration through the option ``--opti
 
 .. code::
 
-   python3 -m edulint --option set-groups=enhancement -o pylint=--enable=no-self-use code/to/check.py
+   python3 -m edulint check --option set-groups=enhancement -o pylint=--enable=no-self-use code/to/check.py
 
 It is also possible to pass multiple options in one ``--option`` argument.
 
 .. code::
 
-   python3 -m edulint --option "set-groups=enhancement pylint=--enable=no-self-use" code/to/check.py
+   python3 -m edulint check --option "set-groups=enhancement pylint=--enable=no-self-use" code/to/check.py
 
 .. _configuration files:
 

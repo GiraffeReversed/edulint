@@ -29,7 +29,7 @@ python3 -m pip install --user edulint
 Once installed, you can run it as a Python module:
 
 ```sh
-python3 -m edulint <file-to-lint>
+python3 -m edulint check <file-to-lint>
 ```
 
 Read the [documentation](https://edulint.readthedocs.io/) for more options and configuration details.

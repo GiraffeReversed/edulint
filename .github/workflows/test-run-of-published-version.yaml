@@ -4,8 +4,7 @@ on:
   # push:  # This is used for tests using `act`
   workflow_call:
   schedule:
-    - cron:  '42 19 * * *'
-
+    - cron: "42 19 * * *"
 
 jobs:
   test:
@@ -31,7 +30,7 @@ jobs:
       - name: Lint a test file with OK code
         run: |
           echo "print('test')" > /tmp/ok.py
-          python -m edulint /tmp/ok.py || test $? -eq 0
+          python -m edulint check /tmp/ok.py || test $? -eq 0
 
       - name: Lint a test file with simple code quality defect
         run: |
@@ -39,7 +38,7 @@ jobs:
           python -m /tmp/with_simple_defect.py || test $? -eq 1  # TODO: Change this to a special return code for a "defect found" situation.
 
       - name: Lint a test file with bigger code quality defect
-        run:  |
+        run: |
           wget -O /tmp/with_bigger_defects.py https://raw.githubusercontent.com/GiraffeReversed/edulint/main/setup.py
           # There is no significance in using setup.py, it's just a file that will always be on that URL.
           # TODO: Change the test file for a more complex example.

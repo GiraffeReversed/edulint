@@ -1,3 +1,4 @@
+import edulint
 from edulint.options import Option
 from edulint.option_parses import OptionParse, get_option_parses
 from edulint.config.config import get_config_many, get_cmd_args, ImmutableConfig
@@ -5,7 +6,7 @@ from edulint.config.language_translations import LangTranslations
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
 from edulint.versions.version_checker import PackageInfoManager
-from edulint.explanations import update_explanations
+from edulint.explanations import update_explanations, get_explanations
 from typing import List, Dict, Tuple, Any
 import argparse
 import os
@@ -54,12 +55,36 @@ def format_options_help(option_parses: Dict[Option, OptionParse]) -> str:
 
 
 def setup_argparse(option_parses: Dict[Option, OptionParse]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        prog="edulint",
+    main_parser = argparse.ArgumentParser(prog="edulint")
+
+    shared_options_parser = argparse.ArgumentParser(add_help=False)
+    shared_options_parser.add_argument(
+        "--json", action="store_true", help="should output problems in json format"
+    )
+    shared_options_parser.add_argument(
+        "--disable-version-check",
+        action="store_true",
+        default=False,
+        help="EduLint checks for a newer version at most once per hour. If newer version is available in pip, "
+        "it will print a message to stderr. Specifying this flag disables the check completely.",
+    )
+    shared_options_parser.add_argument(
+        "--disable-explanations-update",
+        action="store_true",
+        default=False,
+        help="EduLint periodically updates explanations. Specifying this flag disables the updates.",
+    )
+
+    subparsers = main_parser.add_subparsers(dest="command")
+    subparsers.required = True
+
+    check_parser = subparsers.add_parser(
+        "check",
         description="Lints provided code.",
         formatter_class=argparse.RawTextHelpFormatter,
+        parents=[shared_options_parser],
     )
-    parser.add_argument(
+    check_parser.add_argument(
         "-o",
         "--option",
         metavar="OPTION",
@@ -68,27 +93,25 @@ def setup_argparse(option_parses: Dict[Option, OptionParse]) -> argparse.Namespa
         action="append",
         help=format_options_help(option_parses),
     )
-    parser.add_argument(
+    check_parser.add_argument(
         "files_or_dirs",
         metavar="FILE-OR-DIRECTORY",
         nargs="+",
         help="the file(s) or directory(ies) to lint",
     )
-    parser.add_argument("--json", action="store_true", help="should output problems in json format")
-    parser.add_argument(
-        "--disable-version-check",
-        action="store_true",
-        default=False,
-        help="EduLint checks for a newer version at most once per hour. If newer version is available in pip, "
-        "it will print a message to stderr. Specifying this flag disables the check completely.",
+
+    explain_parser = subparsers.add_parser(
+        "explain", description="Explains check by message ID", parents=[shared_options_parser]
     )
-    parser.add_argument(
-        "--disable-explanations-update",
-        action="store_true",
-        default=False,
-        help="EduLint periodically updates explanations. Specifying this flag disables the updates.",
+    explain_parser.add_argument(
+        "message_ids", metavar="MESSAGE-ID", nargs="+", help="message id (e.g., E0001)"
     )
-    return parser.parse_args()
+
+    _version_parser = subparsers.add_parser(
+        "version", description="Shows installed EduLint version", parents=[shared_options_parser]
+    )
+
+    return main_parser.parse_args()
 
 
 def to_json(
@@ -125,15 +148,7 @@ def _update_check():
         )
 
 
-@logger.catch
-def main() -> int:
-    setup_logger()
-    option_parses = get_option_parses()
-    args = setup_argparse(option_parses)
-    check_for_updates(args.disable_version_check)
-    update_explanations(
-        args.disable_explanations_update
-    )  # get_explanations also can trigger update, but we're not calling it anywhere else.
+def check_code(args, option_parses):
     cmd_args = get_cmd_args(args)
 
     file_configs = get_config_many(args.files_or_dirs, cmd_args, option_parses=option_parses)
@@ -160,3 +175,51 @@ def main() -> int:
             print(problem)
 
     return 0 if len(sorted_results) == 0 else 1
+
+
+def explain_messages(args):
+    explanations = get_explanations()
+    mid_expls = {}
+    for mid in args.message_ids:
+        expl = explanations.get(mid)
+        if expl is None:
+            logger.warning(f"Message {mid} does not have an explanation")
+        elif args.json:
+            mid_expls[mid] = expl
+        else:
+            if len(args.message_ids) > 1:
+                if mid != args.message_ids[0]:
+                    print("\n")
+                print(f"## {mid}")
+            print("### Why is it a problem?")
+            print(expl["why"].strip())
+            print()
+            print("### How to solve it?")
+            print(expl["examples"].strip())
+
+    if args.json:
+        data = {"explanations": mid_expls}
+        print(json.dumps(data, indent=2))
+
+    return 0
+
+
+@logger.catch
+def main() -> int:
+    setup_logger()
+    option_parses = get_option_parses()
+    args = setup_argparse(option_parses)
+
+    check_for_updates(args.disable_version_check)
+    update_explanations(
+        args.disable_explanations_update
+    )  # get_explanations also can trigger update, but we're not calling it anywhere else.
+
+    if args.command == "check":
+        return check_code(args, option_parses)
+    if args.command == "explain":
+        return explain_messages(args)
+    if args.command == "version":
+        print(f"edulint version {edulint.__version__}")
+        return 0
+    assert False, "unreachable, but " + args.command
