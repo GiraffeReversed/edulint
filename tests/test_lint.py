@@ -451,6 +451,7 @@ class TestNoGlobals:
         ]),
         ("088952-p2_extremes.py", []),
         ("cf_119.py", []),
+        ("cf_18.py", [lazy_problem().set_line(13)]),
         ("s10265-d_mancala.py", []),
     ])
     def test_no_globals_files(self, filename: str, expected_output: List[Problem]) -> None:

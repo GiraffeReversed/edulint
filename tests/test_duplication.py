@@ -210,6 +210,7 @@ def test_duplicate_sequence(filename: str, expected_output: List[Problem]) -> No
     ("0ba2fdc810-p6_cellular.py", []),  # not good advice
     ("730a1a0d05-p6_workdays.py", []),  # not good advice
     ("7e1dd5c338-p2_tortoise.py", []),
+    ("a5c583d460-hw1.py", []),
     ("c69c0646b0-p4_triangle.py", []),
     ("d8b80cabe6-p6_workdays.py", []),  # is in if
     ("fdc1570861-p6_workdays.py", []),  # is in if
@@ -626,6 +627,7 @@ def test_similar_if_into_block_custom(lines: List[str], expected_output: List[Pr
     ]),
     ("tarot_card_reader.py", []),
     ("uc_28_6710_05_14.py", []),
+    ("uc_4380_12_21.py", []),
     ("uc_73_0198_15_17.py", [lazy_problem().set_line(6)]), # dubious
     ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
     ("uc_73_3819_50_56.py", [
