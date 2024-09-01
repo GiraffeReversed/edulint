@@ -51,6 +51,8 @@ def new_node(node_type, **attr_vals):
     elif node_type == nodes.Module:
         node = node_type(**attr_vals_before)
     else:
+        if node_type == nodes.ImportFrom:
+            attr_vals_before["fromname"] = attr_vals_before.pop("modname")
         node = node_type(
             lineno=0, col_offset=0, end_lineno=0, end_col_offset=0, parent=None, **attr_vals_before
         )
