@@ -51,9 +51,20 @@ class ScopeListener(BaseVisitor[T]):
 
         self.stack[scope_index].pop(name)
 
+    @staticmethod
+    def statements_before_definitions(node: Union[nodes.Module, nodes.FunctionDef]):
+        sooner = []
+        later = []
+        for child in node.body:
+            if not isinstance(child, (nodes.FunctionDef, nodes.ClassDef)):
+                sooner.append(child)
+            else:
+                later.append(child)
+        return sooner + later
+
     @in_new_scope
     def visit_module(self, node: nodes.Module) -> T:
-        return self.visit_many(node.get_children())
+        return self.visit_many(ScopeListener.statements_before_definitions(node))
 
     @in_new_scope
     def visit_functiondef(self, node: nodes.FunctionDef) -> T:
@@ -68,7 +79,7 @@ class ScopeListener(BaseVisitor[T]):
         if node.args.vararg is not None:
             self._init_var_in_scope(node.args.vararg, node.args)
 
-        return self.visit_many(node.body)
+        return self.visit_many(ScopeListener.statements_before_definitions(node))
 
     @in_new_scope
     def visit_classdef(self, node: nodes.ClassDef) -> T:

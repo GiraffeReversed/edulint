@@ -147,7 +147,7 @@ def name_to_var(name: str, node: nodes.NodeNG):
             event_scope = events[0].node.scope()
             if var.name == name and event_scope == node.scope():
                 return var
-    raise ValueError(f"no variable named '{name}' in node '{node.as_string()}'")
+    return None
 
 
 def node_to_var(node: nodes.NodeNG):
@@ -155,7 +155,7 @@ def node_to_var(node: nodes.NodeNG):
     for var, event in loc.var_events.all():
         if event.node == node:
             return var
-    raise ValueError(f"no variable for node '{node.as_string()}'")
+    return None
 
 
 ### event checkers
