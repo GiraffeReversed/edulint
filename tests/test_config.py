@@ -15,7 +15,7 @@ from edulint.config.config import (
 )
 from edulint.config.option_sets import OptionSet, OptionSets
 from edulint.linting.tweakers import get_tweakers
-from utils import get_tests_path, remote_empty_config_url
+from test_utils import get_tests_path, remote_empty_config_url
 from typing import List, Set, Dict, Tuple, Optional
 from pathlib import Path
 

@@ -4,7 +4,7 @@ from edulint.linters import Linter
 from edulint.options import Option
 from edulint.config.arg import Arg
 from edulint.linting.problem import Problem
-from utils import lazy_problem, apply_and_lint, create_apply_and_lint, just_lint, get_tests_path
+from test_utils import lazy_problem, apply_and_lint, create_apply_and_lint, just_lint, get_tests_path
 from typing import List
 
 
