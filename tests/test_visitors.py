@@ -1,9 +1,7 @@
-from edulint.linting.checkers.modified_listener import ModifiedListener
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.analyses.cfg.utils import successors_from_loc
 from edulint.linting.analyses.variable_modification import VarModificationAnalysis, VarEventType
 from edulint.linting.analyses.data_dependency import name_to_var, modified_in, node_to_var
-from edulint.linting.checkers.utils import get_name
 
 from typing import List, Tuple, Dict
 import astroid  # type: ignore
@@ -100,130 +98,6 @@ def test_split_n_lines(program: str, init_lines: int, before_types: List[type], 
 
     compare(before, before_types)
     compare(after, after_types)
-
-
-@pytest.mark.parametrize("program,init_lines,modified", [
-    (["x = 5"], 1, {"x": False}),
-    ([
-        "x = 5",
-        "x += 1"
-    ], 1, {"x": True}),
-    ([
-        "x = 5",
-        "x = 1"
-    ], 1, {"x": True}),
-    ([
-        "x = 5",
-        "y = 1",
-        "x += 1"
-    ], 2, {"x": True, "y": False}),
-    ([
-        "for x in range(10):",
-        "    for x in range(11):",
-        "        pass"
-    ], 1, {"x": True}),
-    ([
-        "for x in range(10):",
-        "    for y in range(11):",
-        "        pass"
-    ], 1, {"x": False}),
-    ([
-        "x = 0",
-        "def foo():",
-        "    global x",
-        "    x = 1"
-    ], 1, {"x": True}),
-    ([
-        "x = 0",
-        "def foo():",
-        "    global x",
-        "    x += 1"
-    ], 1, {"x": True}),
-    ([
-        "x = 0",
-        "def foo():",
-        "    nonlocal x",
-        "    x = 1"
-    ], 1, {"x": True}),
-    ([
-        "x = 0",
-        "def foo():",
-        "    x = 1",
-        "    def bar():",
-        "        nonlocal x",
-        "        x = 2"
-    ], 1, {"x": False}),
-    ([
-        "x = []",
-        "def foo():",
-        "    x.append(1)"
-    ], 1, {"x": True}),
-    ([
-        "x = []",
-        "def foo():",
-        "    x[0] = 1"
-    ], 1, {"x": True}),
-    ([
-        "x = None",
-        "def foo():",
-        "    x.y = 1"
-    ], 1, {"x": True}),
-    ([
-        "x = None",
-        "def foo():",
-        "    x.y.z = 1"
-    ], 1, {"x": True}),
-    ([
-        "x = None",
-        "def foo():",
-        "    x[0].y[1].z = 1"
-    ], 1, {"x": True}),
-    ([
-        "x = None",
-        "def foo():",
-        "    x = []",
-        "    x.append(0)"
-    ], 1, {"x": False}),
-    ([
-        "x = None",
-        "def foo():",
-        "    x, y = [], 0",
-        "    x.append(0)"
-    ], 1, {"x": False}),
-    ([
-        "x = None",
-        "def foo():",
-        "    (x, y) = [], 0",
-        "    x.append(0)"
-    ], 1, {"x": False}),
-    ([
-        "x = None",
-        "def foo(x):",
-        "    x.append(0)"
-    ], 1, {"x": False}),
-    ([
-        "x = None",
-        "def foo(x: List[int] = []):",
-        "    x.append(0)"
-    ], 1, {"x": False}),
-])
-def test_modified_listener(program: List[str], init_lines: int, modified: Dict[str, bool]):
-    module = astroid.parse("\n".join(program))
-    before, after = split_n_lines(module.body, init_lines)
-
-    def extract_vars(nodes: List[astns.NodeNG]) -> List[astns.NodeNG]:
-        result = []
-        for node in nodes:
-            if hasattr(node, "target"):
-                result.append(node.target)
-            if hasattr(node, "targets"):
-                result.extend(node.targets)
-        return result
-
-    watched = extract_vars(before)
-    listener: ModifiedListener = ModifiedListener(watched)
-    listener.visit_many(after)
-    assert {get_name(n): listener.was_modified(n, allow_definition=False) for n in watched} == modified
 
 
 @pytest.mark.parametrize("program,init_lines,modified", [
