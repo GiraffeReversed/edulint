@@ -222,19 +222,6 @@ def test_similar_block_to_function(filename: str, expected_output: List[Problem]
         expected_output
     )
 
-@pytest.mark.parametrize("filename,expected_output", [
-    ("7e1dd5c338-p2_tortoise.py", []),
-    ("c69c0646b0-p4_triangle.py", []),
-    ("fdc1570861-p6_workdays.py", [lazy_problem().set_line(47)]),
-    ("hw34406.py", []),
-    ("uc_4_2117_13_17.py", []),
-])
-def test_similar_if_to_function(filename: str, expected_output: List[Problem]) -> None:
-    apply_and_lint(
-        filename,
-        [Arg(Option.PYLINT, "--enable=similar-if-to-function")],
-        expected_output
-    )
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("0642a5c1d7-hw4.py", []),  # dubious
@@ -529,7 +516,7 @@ def test_similar_block_to_call(filename: str, expected_output: List[Problem]) ->
 def test_similar_if_to_variables(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=similar-if-to-variables")],
+        [Arg(Option.PYLINT, "--enable=similar-if-to-extracted")],
         expected_output
     )
 
@@ -674,12 +661,12 @@ def test_similar_if_to_use(filename: str, expected_output: List[Problem]) -> Non
     ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-block-to-loop").set_line(75)]),
     ("406561e0ae-workdays.py", []),  # contains duplication, but no good advice
     ("53647f4477-hw3.py", [
-        lazy_problem().set_symbol("similar-if-to-variables").set_line(91),
+        lazy_problem().set_symbol("similar-if-to-extracted").set_line(91),
         lazy_problem().set_symbol("similar-if-to-expr").set_line(105)
     ]),
     ("63257195a0-p6_workdays.py", []),  # contains duplication, but no good advice
     ("cf_1086_a_14.py", []),
-    ("cf_1113_c_27.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(16)]),
+    ("cf_1113_c_27.py", [lazy_problem().set_symbol("similar-if-to-extracted").set_line(16)]),
     ("cf_1399_e_0.py", [lazy_problem().set_symbol("similar-if-into-block").set_line(44)]),
     ("cf_1551_d_11.py", [
         lazy_problem().set_symbol("similar-if-to-untwisted").set_line(17),
@@ -692,11 +679,12 @@ def test_similar_if_to_use(filename: str, expected_output: List[Problem]) -> Non
     ]),
     # contains more duplication, but no good advice
     ("cf_994_c_10.py", [lazy_problem().set_symbol("identical-seq-ifs").set_line(26)]),
+    ("fdc1570861-p6_workdays.py", [lazy_problem().set_symbol("similar-if-to-extracted").set_line(47)]),
     # TODO suggest moving print into the for below
-    ("uc_11_8337_17_22.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(3)]),
-    ("uc_13_1073_17_21.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(2)]),
-    ("uc_28_6562_15_18.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(4)]),
-    ("uc_28_7857_02_17.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(3)]),
+    ("uc_11_8337_17_22.py", [lazy_problem().set_symbol("similar-if-to-extracted").set_line(3)]),
+    ("uc_13_1073_17_21.py", [lazy_problem().set_symbol("similar-if-to-extracted").set_line(2)]),
+    ("uc_28_6562_15_18.py", [lazy_problem().set_symbol("similar-if-to-extracted").set_line(4)]),
+    ("uc_28_7857_02_17.py", [lazy_problem().set_symbol("similar-if-to-extracted").set_line(3)]),
     ("uc_40_4468_31_23.py", []),
     # TODO suggest breaking up the string
     ("uc_56_4519_12_10.py", []),

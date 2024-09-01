@@ -323,14 +323,11 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "using the if expression.",
         ),
         "R6559": (
-            "Extract ifs to variables",
-            "similar-if-to-variables",
-            "",
-        ),
-        "R6560": (
-            "Extract to a common function (%d repetitions of %d statements).",
-            "similar-if-to-function",
-            "",
+            "The branches of the 'if' statement are similar. Use helper variables to store the "
+            "values that differ between the branches, or create a helper function.",
+            "similar-if-to-extracted",
+            "Emitted when the duplication between if statement's branches can be avoided "
+            "using helper variables or functions.",
         ),
     }
 

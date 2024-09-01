@@ -9,13 +9,7 @@ from edulint.linting.analyses.antiunify import (
     contains_avar,
 )
 from edulint.linting.analyses.variable_modification import VarEventType
-from edulint.linting.analyses.reaching_definitions import (
-    vars_in,
-    is_changed_between,
-    get_vars_defined_before,
-    get_vars_used_after,
-    get_control_statements,
-)
+from edulint.linting.analyses.reaching_definitions import vars_in, is_changed_between
 from edulint.linting.analyses.cfg.utils import get_cfg_loc
 from edulint.linting.checkers.utils import (
     is_parents_elif,
@@ -604,7 +598,7 @@ def get_fixed_by_moving_if(tests, core, avars):
 ### if to variables
 
 
-@check_enabled("similar-if-to-variables")
+@check_enabled("similar-if-to-extracted")
 def get_fixed_by_vars(tests, core, avars):
     root, if_bodies = create_ifs(tests)
     seen = {}
@@ -627,84 +621,6 @@ def get_fixed_by_vars(tests, core, avars):
         get_statements_count(root, include_defs=False, include_name_main=True)
         + get_statements_count(core, include_defs=False, include_name_main=True),
         (),
-    )
-
-
-### if to function
-
-
-@check_enabled("similar-if-to-function")
-def get_fixed_by_function(tests, core, avars):
-    root, if_bodies = create_ifs(tests)
-
-    # compute necessary arguments from different values
-    seen = {}
-    for avar in avars:
-        var_vals = tuple(avar.subs)
-        old_avar = seen.get(var_vals, avar)
-
-        if old_avar != avar:
-            continue
-        seen[var_vals] = avar
-
-    # compute extras
-    extra_args = get_vars_defined_before(core)
-    return_vals_needed = len(get_vars_used_after(core))
-    control_needed = len(get_control_statements(core))
-
-    # generate calls in ifs
-    vals = [[s[i] for s in seen] for i in range(len(tests) + 1)]
-    for if_vals, body in zip(vals, if_bodies):
-        call = new_node(nodes.Call)
-        call.func = new_node(nodes.Name, name="AUX")
-        call.args = [to_node(val) for val in if_vals] + [
-            new_node(nodes.Name, name=var.name) for var in extra_args.keys()
-        ]
-        if return_vals_needed + control_needed == 0:
-            body.append(call)
-        else:
-            assign = new_node(nodes.Assign)
-            assign.targets = [
-                new_node(nodes.AssignName, name=f"<r{i}>")
-                for i in range(control_needed + return_vals_needed)
-            ]
-            assign.value = call
-            body.append(assign)
-
-    # generate function
-    fun_def = new_node(nodes.FunctionDef, name="AUX")
-    fun_def.args = new_node(
-        nodes.Arguments,
-        args=[new_node(nodes.AssignName, name=avar.name) for avar in seen.values()]
-        + [new_node(nodes.AssignName, name=var.name) for var in extra_args.keys()],
-    )
-    fun_def.body = core if isinstance(core, list) else [core]
-
-    # generate management for returned values
-    if control_needed > 0:
-        root = [root]
-        for i in range(control_needed):
-            test = new_node(
-                nodes.BinOp,
-                op="is",
-                left=new_node(nodes.Name, name=f"<r{i}>"),
-                right=new_node(nodes.Const, value=None),
-            )
-            if_ = new_node(
-                nodes.If,
-                test=test,
-                body=[new_node(nodes.Return)],  # return is placeholder for a control
-            )
-            root.append(if_)
-
-    return (
-        get_token_count(root) + get_token_count(fun_def),
-        get_statements_count(root, include_defs=False, include_name_main=True)
-        + get_statements_count(fun_def, include_defs=False, include_name_main=True),
-        (
-            len(tests) + 1,
-            get_statements_count(core, include_defs=False, include_name_main=True),
-        ),
     )
 
 
@@ -753,7 +669,6 @@ def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> 
         get_fixed_by_moving_if if not tvs_change else None,
         get_fixed_by_ternary if not called_avar and not tvs_change else None,
         get_fixed_by_vars if not called_avar else None,
-        get_fixed_by_function if not called_avar else None,
     ):
         if fix_function is None:
             continue
