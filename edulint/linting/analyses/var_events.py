@@ -40,6 +40,16 @@ class VarEvent:
     definitions: List["VarEvent"] = field(default_factory=list)
     uses: List["VarEvent"] = field(default_factory=list)
 
+    def __repr__(self) -> str:
+        return (
+            "VarEvent("
+            f"node={self.node!r}, "
+            f"type={self.type.name}, "
+            f"len(definitions)={len(self.definitions)}, "
+            f"len(uses)={len(self.uses)}"
+            ")"
+        )
+
 
 @dataclass
 class VarEvents:
