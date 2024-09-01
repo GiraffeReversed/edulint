@@ -22,11 +22,15 @@ def patch_ast_transforms():
         ast = old_get_ast(self, filepath, modname, data)
         if ast is not None:
             ast.accept(CFGVisitor())
-            if len(ast.cfg_loc.block.locs) > 0:
+            if len(ast.cfg_loc.block.locs) == 0:
+                ast.cfg_loc.var_events.successful = False
+            else:
                 try:
                     VarModificationAnalysis().collect(ast)
                     collect_reaching_definitions(ast)
+                    ast.cfg_loc.var_events.successful = True
                 except UnknowableLocalsException as e:
+                    ast.cfg_loc.var_events.successful = False
                     logger.warning(str(e))
         return ast
 

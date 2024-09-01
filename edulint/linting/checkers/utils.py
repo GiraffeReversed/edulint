@@ -27,6 +27,15 @@ POSTINIT_ARGS = {
 }
 
 
+def requires_data_dependency_analysis(func):
+    def inner(self, node: nodes.NodeNG, *args, **kwargs):
+        if not node.root().cfg_loc.var_events.successful:
+            return
+        func(self, node, *args, **kwargs)
+
+    return inner
+
+
 def new_node(node_type, **attr_vals):
     attr_vals_before = {
         attr: val for attr, val in attr_vals.items() if attr not in POSTINIT_ARGS[node_type].keys()

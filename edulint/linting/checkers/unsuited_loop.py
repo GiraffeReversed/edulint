@@ -7,7 +7,12 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import get_range_params, get_const_value, is_builtin
+from edulint.linting.checkers.utils import (
+    get_range_params,
+    get_const_value,
+    is_builtin,
+    requires_data_dependency_analysis,
+)
 from edulint.linting.analyses.cfg.utils import successors_from_loc, get_cfg_loc, CFGLoc
 from edulint.linting.analyses.var_events import VarEventType, Variable, VarEvent, strip_to_name
 from edulint.linting.analyses.data_dependency import (
@@ -75,6 +80,7 @@ class UnsuitedLoop(BaseChecker):
         if isinstance(first, nodes.If) and isinstance(first.body[-1], nodes.Break):
             self.add_message("no-while-true", node=node, args=(first.test.as_string(),))
 
+    @requires_data_dependency_analysis
     def _check_use_for_loop(self, node: nodes.While) -> None:
         # TODO allow different increments?
         def adds_or_subtracts_one(node: nodes.NodeNG) -> bool:
@@ -272,6 +278,7 @@ class UnsuitedLoop(BaseChecker):
             node = node.next_sibling()
         return node
 
+    @requires_data_dependency_analysis
     def _check_modifying_iterable(self, node: nodes.For) -> None:
         iterated = node.iter
         if not isinstance(iterated, nodes.Name):  # TODO allow any node type
@@ -299,6 +306,7 @@ class UnsuitedLoop(BaseChecker):
                     "modifying-iterated-structure", node=event.node.parent, args=iterated_var.name
                 )
 
+    @requires_data_dependency_analysis
     def _check_control_variable_changes(self, node: nodes.For) -> None:
         range_params = get_range_params(node.iter)
         if range_params is None or not isinstance(node.target, nodes.AssignName):
@@ -321,6 +329,7 @@ class UnsuitedLoop(BaseChecker):
                     "changing-control-variable", node=event.node.parent, args=(control_var.name)
                 )
 
+    @requires_data_dependency_analysis
     def _check_improve_for_loop(self, node: nodes.For) -> None:
         def is_for_range_len(node: nodes.For) -> Tuple[bool, nodes.NodeNG]:
             range_params = get_range_params(node.iter)
