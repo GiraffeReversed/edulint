@@ -6406,7 +6406,7 @@ examples = """
 **Problematic code**
 
 ```py
-print(\"Hello\")  # [trailing-whitespace]   
+print(\"Hello\")  # [trailing-whitespace]
 #                                       ^^^ trailing whitespaces
 
 ```
@@ -6894,13 +6894,13 @@ f_string_order = f\"{menu[0]} and {menu[1]}: {menu[2]:0.2f} ¤\"
 
 <a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/convention/consider-using-f-string.html\">Additional information</a>"""
 
-[C0113]
+[C0117]
 why = "It looks like the boolean expression contains an unneeded negation."
 examples = """
 **Problematic code**
 
 ```py
-if not not input():  # [unneeded-not]
+if not not input():  # [unnecessary-negation]
     pass
 
 ```
@@ -6916,7 +6916,7 @@ if input():
 
 [C2401]
 why = """
-It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad. 
+It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad.
 If your programming guideline defines that you are programming in English, then there should be no need for non ASCII characters in Python Names. If not you can simply disable this check."""
 examples = """
 **Problematic code**
@@ -6936,7 +6936,7 @@ apple_count = 4444
 
 [C2403]
 why = """
-It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad. 
+It looks like the name contains at least one non-ASCII unicode character. See https://peps.python.org/pep-0672/#confusing-features for a background why this could be bad.
 If your programming guideline defines that you are programming in English, then there should be no need for non ASCII characters in Python Names. If not you can simply disable this check."""
 examples = """
 **Problematic code**

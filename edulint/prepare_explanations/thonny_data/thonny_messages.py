@@ -48,9 +48,9 @@ checks_by_id = {
         "tho_xpln": "",
         "usage": "skip",
     },
-    "C0113": {
-        "msg_id": "C0113",
-        "msg_sym": "unneeded-not",
+    "C0117": {
+        "msg_id": "C0117",
+        "msg_sym": "unnecessary-negation",
         "msg_text": 'Consider changing "%s" to "%s"',
         "msg_xpln": "Used when a boolean expression contains an unneeded negation.",
         "tho_xpln": "",

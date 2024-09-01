@@ -18,7 +18,7 @@ enable = [
     "trailing-comma-tuple",
     "unnecessary-dict-index-lookup",
     "unnecessary-pass",
-    "unneeded-not",
+    "unnecessary-negation",
     "unreachable",
     "used-before-assignment",
     "disallowed-name",

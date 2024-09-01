@@ -7632,12 +7632,12 @@
         },
         {
             "checker": "refactoring",
-            "id": "C0113",
-            "name": "unneeded-not",
+            "id": "C0117",
+            "name": "unnecessary-negation",
             "definition": {
                 "checker_name": "refactoring",
-                "msgid": "C0113",
-                "symbol": "unneeded-not",
+                "msgid": "C0117",
+                "symbol": "unnecessary-negation",
                 "msg": "Consider changing \"%s\" to \"%s\"",
                 "description": "Used when a boolean expression contains an unneeded negation.",
                 "scope": "node-based-msg",
@@ -7646,7 +7646,7 @@
                 "old_names": []
             },
             "good_code": "if input():\n    pass\n",
-            "bad_code": "if not not input():  # [unneeded-not]\n    pass\n",
+            "bad_code": "if not not input():  # [unnecessary-negation]\n    pass\n",
             "details": "",
             "related_links": "",
             "checker_module_name": "pylint.checkers.refactoring.not_checker",
