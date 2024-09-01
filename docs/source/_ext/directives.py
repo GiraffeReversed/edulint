@@ -258,9 +258,11 @@ class CheckersBlock(Directive):
     def _iterate_checkers():
         custom_checkers_dir = os.path.dirname(custom_checkers.__file__)
         for _, name, _ in iter_modules([custom_checkers_dir]):
+            if name == "duplication":
+                name = "duplication/checker"
             module_path = os.path.join(custom_checkers_dir, name) + ".py"
             spec = importlib.util.spec_from_file_location(
-                f"edulint.linting.checkers.{name}", module_path
+                f"edulint.linting.checkers.{name.replace('/', '.')}", module_path
             )
 
             module = importlib.util.module_from_spec(spec)
