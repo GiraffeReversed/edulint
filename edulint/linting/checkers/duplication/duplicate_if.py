@@ -4,6 +4,7 @@ from astroid import nodes  # type: ignore
 
 from edulint.linting.analyses.antiunify import (
     antiunify,
+    new_node,
     cprint,  # noqa: F401
     get_sub_variant,
     contains_avar,
@@ -94,14 +95,14 @@ def extract_from_siblings(node: nodes.If, seq_ifs: List[nodes.NodeNG]) -> None:
 
 
 def create_ifs(tests: List[nodes.NodeNG]) -> Tuple[nodes.If, List[nodes.NodeNG]]:
-    root = nodes.If()
+    root = new_node(nodes.If)
     if_ = root
     if_bodies = []
     for i, test in enumerate(tests):
         if_.test = test
         if_bodies.append(if_.body)
         if i != len(tests) - 1:
-            elif_ = nodes.If()
+            elif_ = new_node(nodes.If)
             if_.orelse = [elif_]
             # elif_.parent = if_
             if_ = elif_
@@ -387,24 +388,21 @@ def get_fixed_by_restructuring_twisted(tests, core, avars):
     ):
         return None
 
-    pp_test = nodes.BoolOp(op="and")
-    pp_test.values = [outer_test, inner_test]
+    pp_test = new_node(nodes.BoolOp, op="and", values=[outer_test, inner_test])
 
-    neg_outer_test = nodes.UnaryOp(op="not")
-    neg_outer_test.operand = outer_test
-    neg_inner_test = nodes.UnaryOp(op="not")
-    neg_inner_test.operand = inner_test
+    neg_outer_test = new_node(nodes.UnaryOp, op="not", operand=outer_test)
+    neg_inner_test = new_node(nodes.UnaryOp, op="not", operand=inner_test)
 
-    nn_test = nodes.BoolOp(op="and")
-    nn_test.values = [neg_outer_test, neg_inner_test]
+    nn_test = new_node(nodes.BoolOp, op="and", values=[neg_outer_test, neg_inner_test])
 
-    test = nodes.BoolOp(op="or")
-    test.values = [pp_test, nn_test]
+    test = new_node(nodes.BoolOp, op="or", values=[pp_test, nn_test])
 
-    if_ = nodes.If()
-    if_.test = test
-    if_.body = inner_if.sub_locs[0].node.body
-    if_.orelse = inner_if.sub_locs[0].node.orelse
+    if_ = new_node(
+        nodes.If,
+        test=test,
+        body=inner_if.sub_locs[0].node.body,
+        orelse=inner_if.sub_locs[0].node.orelse,
+    )
 
     return (
         get_token_count(if_),
@@ -486,8 +484,7 @@ def get_fixed_by_ternary(tests, core, avars):
         assert len(avar.subs) == len(tests) + 1
         expr = to_node(avar.subs[-1], avar)
         for test, avar_val in reversed(list(zip(tests, avar.subs))):
-            new = nodes.IfExp()
-            new.postinit(test=test, body=to_node(avar_val, avar), orelse=expr)
+            new = new_node(nodes.IfExp, test=test, body=to_node(avar_val, avar), orelse=expr)
             expr = new
 
         exprs.append(expr)
@@ -506,8 +503,7 @@ HEADER_ATTRIBUTES = {
     nodes.While: ["test"],
     nodes.If: ["test"],
     nodes.ExceptHandler: ["name", "type"],
-    nodes.TryExcept: [],
-    nodes.TryFinally: [],
+    nodes.Try: [],
     nodes.With: ["items"],
 }
 
@@ -516,8 +512,7 @@ BODY_ATTRIBUTES = {
     nodes.While: ["body", "orelse"],
     nodes.If: ["body", "orelse"],
     nodes.ExceptHandler: ["body"],
-    nodes.TryExcept: ["body", "handlers", "orelse"],
-    nodes.TryFinally: ["body", "finalbody"],
+    nodes.Try: ["body", "handlers", "orelse", "finalbody"],
     nodes.With: ["body"],
 }
 
@@ -560,7 +555,7 @@ def get_fixed_by_moving_if_rec(tests, core, avars):
         return core[:min_] + [root] + core[max_ + 1 :]
 
     assert contains_avar(core, avars) and if_can_be_moved(core, avars)
-    new_core = type(core)()
+    new_core = new_node(type(core))
 
     for attr in HEADER_ATTRIBUTES[type(core)]:
         setattr(new_core, attr, getattr(core, attr))
@@ -614,8 +609,8 @@ def get_fixed_by_vars(tests, core, avars):
         seen[var_vals] = avar.name
 
         for val, body in zip(var_vals, if_bodies):
-            assign = nodes.Assign()
-            assign.targets = [nodes.AssignName(avar.name)]
+            assign = new_node(nodes.Assign)
+            assign.targets = [new_node(nodes.AssignName, name=avar.name)]
             assign.value = to_node(val, avar)
             body.append(assign)
 
@@ -652,31 +647,28 @@ def get_fixed_by_function(tests, core, avars):
     # generate calls in ifs
     vals = [[s[i] for s in seen] for i in range(len(tests) + 1)]
     for if_vals, body in zip(vals, if_bodies):
-        call = nodes.Call()
-        call.func = nodes.Name("AUX")
+        call = new_node(nodes.Call)
+        call.func = new_node(nodes.Name, name="AUX")
         call.args = [to_node(val) for val in if_vals] + [
-            nodes.Name(varname) for varname, _scope in extra_args.keys()
+            new_node(nodes.Name, name=varname) for varname, _scope in extra_args.keys()
         ]
         if return_vals_needed + control_needed == 0:
             body.append(call)
         else:
-            assign = nodes.Assign()
+            assign = new_node(nodes.Assign)
             assign.targets = [
-                nodes.AssignName(f"<r{i}>") for i in range(control_needed + return_vals_needed)
+                new_node(nodes.AssignName, name=f"<r{i}>")
+                for i in range(control_needed + return_vals_needed)
             ]
             assign.value = call
             body.append(assign)
 
     # generate function
-    fun_def = nodes.FunctionDef(name="AUX")
-    fun_def.args = nodes.Arguments()
-    fun_def.args.postinit(
-        args=[nodes.AssignName(avar.name) for avar in seen.values()]
-        + [nodes.AssignName(varname) for varname, _scope in extra_args.keys()],
-        defaults=None,
-        kwonlyargs=[],
-        kw_defaults=None,
-        annotations=[],
+    fun_def = new_node(nodes.FunctionDef, name="AUX")
+    fun_def.args = new_node(
+        nodes.Arguments,
+        args=[new_node(nodes.AssignName, name=avar.name) for avar in seen.values()]
+        + [new_node(nodes.AssignName, name=varname) for varname, _scope in extra_args.keys()],
     )
     fun_def.body = core if isinstance(core, list) else [core]
 
@@ -684,11 +676,17 @@ def get_fixed_by_function(tests, core, avars):
     if control_needed > 0:
         root = [root]
         for i in range(control_needed):
-            test = nodes.BinOp("is")
-            test.postinit(left=nodes.Name(f"<r{i}>"), right=nodes.Const(None))
-            if_ = nodes.If()
-            if_.test = test
-            if_.body = [nodes.Return()]  # placeholder for a control
+            test = new_node(
+                nodes.BinOp,
+                op="is",
+                left=new_node(nodes.Name, name=f"<r{i}>"),
+                right=new_node(nodes.Const, value=None),
+            )
+            if_ = new_node(
+                nodes.If,
+                test=test,
+                body=[new_node(nodes.Return)],  # return is placeholder for a control
+            )
             root.append(if_)
 
     return (

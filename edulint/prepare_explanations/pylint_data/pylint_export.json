@@ -6829,13 +6829,13 @@
             "default_enabled": false
         },
         {
-            "checker": "compare-to-empty-string",
+            "checker": "use-implicit-booleaness-not-comparison-to-string",
             "id": "C1901",
-            "name": "compare-to-empty-string",
+            "name": "use-implicit-booleaness-not-comparison-to-string",
             "definition": {
-                "checker_name": "compare-to-empty-string",
+                "checker_name": "use-implicit-booleaness-not-comparison-to-string",
                 "msgid": "C1901",
-                "symbol": "compare-to-empty-string",
+                "symbol": "use-implicit-booleaness-not-comparison-to-string",
                 "msg": "Avoid comparisons to empty string",
                 "description": "Used when Pylint detects comparison to an empty string constant.",
                 "scope": "node-based-msg",
@@ -6844,7 +6844,7 @@
                 "old_names": []
             },
             "good_code": "x = \"\"\ny = \"hello\"\n\nif not x:\n    print(\"x is an empty string\")\n\nif y:\n    print(\"y is not an empty string\")\n",
-            "bad_code": "x = \"\"\ny = \"hello\"\n\nif x == \"\":  # [compare-to-empty-string]\n    print(\"x is an empty string\")\n\nif y != \"\":  # [compare-to-empty-string]\n    print(\"y is not an empty string\")\n",
+            "bad_code": "x = \"\"\ny = \"hello\"\n\nif x == \"\":  # [use-implicit-booleaness-not-comparison-to-string]\n    print(\"x is an empty string\")\n\nif y != \"\":  # [use-implicit-booleaness-not-comparison-to-string]\n    print(\"y is not an empty string\")\n",
             "details": "",
             "related_links": "",
             "checker_module_name": "pylint.extensions.emptystring",
@@ -6853,13 +6853,13 @@
             "default_enabled": false
         },
         {
-            "checker": "compare-to-zero",
+            "checker": "use-implicit-booleaness-not-comparison-to-zero",
             "id": "C2001",
-            "name": "compare-to-zero",
+            "name": "use-implicit-booleaness-not-comparison-to-zero",
             "definition": {
-                "checker_name": "compare-to-zero",
+                "checker_name": "use-implicit-booleaness-not-comparison-to-zero",
                 "msgid": "C2001",
-                "symbol": "compare-to-zero",
+                "symbol": "use-implicit-booleaness-not-comparison-to-zero",
                 "msg": "Avoid comparisons to zero",
                 "description": "Used when Pylint detects comparison to a 0 constant.",
                 "scope": "node-based-msg",
@@ -6868,7 +6868,7 @@
                 "old_names": []
             },
             "good_code": "x = 0\ny = 1\n\nif not x:\n    print(\"x is equal to zero\")\n\nif y:\n    print(\"y is not equal to zero\")\n",
-            "bad_code": "x = 0\ny = 1\n\nif x == 0:   # [compare-to-zero]\n    print(\"x is equal to zero\")\n\nif y != 0:   # [compare-to-zero]\n    print(\"y is not equal to zero\")\n",
+            "bad_code": "x = 0\ny = 1\n\nif x == 0:   # [use-implicit-booleaness-not-comparison-to-zero]\n    print(\"x is equal to zero\")\n\nif y != 0:   # [use-implicit-booleaness-not-comparison-to-zero]\n    print(\"y is not equal to zero\")\n",
             "details": "",
             "related_links": "",
             "checker_module_name": "pylint.extensions.comparetozero",

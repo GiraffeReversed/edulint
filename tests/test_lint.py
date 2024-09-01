@@ -47,7 +47,11 @@ from typing import List
                 lazy_problem().set_code("R6101").set_line(171),
             ],
         ),
-        ("z202817-zkouska.py", [Arg(Option.PYLINT, "--disable=all")], []),
+        (
+            "z202817-zkouska.py",
+            [Arg(Option.CONFIG_FILE, "empty"), Arg(Option.PYLINT, "--enable=R6609")],
+            [lazy_problem().set_code("R6609").set_line(10)]
+        ),
         (
             "002814-p1_trapezoid.py",
             [],
@@ -109,19 +113,19 @@ def test_lint_file_in_folder() -> None:
         ),
         (
             "z202817-zkouska.py",
-            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.SET_GROUPS, "python-specific")],
+            [Arg(Option.PYLINT, "--disable=R,W"), Arg(Option.SET_GROUPS, "python-specific")],
             [
                 lazy_problem().set_code("C0123").set_line(172),
             ],
         ),
         (
             "z202817-zkouska.py",
-            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.SET_GROUPS, "")],
+            [Arg(Option.PYLINT, "--disable=R,W,C"), Arg(Option.SET_GROUPS, "")],
             [],
         ),
         (
             "hw34406.py",
-            [Arg(Option.PYLINT, "--disable=all"), Arg(Option.SET_GROUPS, "complexity")],
+            [Arg(Option.PYLINT, "--disable=R,W,C"), Arg(Option.SET_GROUPS, "complexity")],
             [
                 lazy_problem().set_line(240).set_code("R0913"),
                 lazy_problem().set_line(266).set_code("R0911"),

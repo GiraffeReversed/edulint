@@ -310,7 +310,7 @@ def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
     ):
         return None, parent.cfg_loc
 
-    if isinstance(parent, nodes.TryExcept) and loc.node == parent.body[0]:
+    if isinstance(parent, nodes.Try) and loc.node == parent.body[0]:
         return loc, parent.cfg_loc
 
     return loc, None

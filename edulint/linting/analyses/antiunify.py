@@ -1,5 +1,7 @@
-from typing import Dict, Union, Tuple, List, Any, Iterator, Callable, Optional
+from typing import Union, Tuple, List, Any, Iterator, Callable, Optional
 import copy
+import inspect
+from enum import Enum
 
 from astroid import nodes
 
@@ -12,8 +14,59 @@ from edulint.linting.analyses.reaching_definitions import (
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.checkers.utils import eprint
 
+POSTINIT_ARGS = {
+    klass: (
+        {
+            param.name: (
+                list
+                if param.annotation != inspect.Parameter.empty
+                and param.annotation.lower().startswith("list")
+                else lambda: None
+            )
+            for param in inspect.signature(klass.postinit).parameters.values()
+            if param.name != "self"
+        }
+        if klass != nodes.Const and hasattr(klass, "postinit")
+        else {}
+    )
+    for klass in nodes.ALL_NODE_CLASSES
+}
 
-subitution = Dict[str, Union[nodes.NodeNG, Tuple[str, nodes.NodeNG]]]
+
+def new_node(node_type, **attr_vals):
+    attr_vals_before = {
+        attr: val for attr, val in attr_vals.items() if attr not in POSTINIT_ARGS[node_type].keys()
+    }
+    attr_vals_after = {
+        attr: attr_vals.get(attr, default()) for attr, default in POSTINIT_ARGS[node_type].items()
+    }
+
+    if node_type == nodes.Arguments:
+        attr_vals_before["kwarg"] = attr_vals_before.get("kwarg", "")
+        attr_vals_before["vararg"] = attr_vals_before.get("vararg", "")
+        node = node_type(parent=None, **attr_vals_before)
+    else:
+        node = node_type(
+            lineno=0, col_offset=0, end_lineno=0, end_col_offset=0, parent=None, **attr_vals_before
+        )
+
+    # try:
+    if not isinstance(node, nodes.Const) and hasattr(node, "postinit"):
+        # signature = inspect.signature(node.postinit)
+
+        # args = []
+        # for param in signature.parameters.values():
+        #     if param.annotation.lower().startswith("list"):
+        #         args.append([])
+        #     else:
+        #         args.append(None)
+
+        # node.postinit(*args)
+        node.postinit(**attr_vals_after)
+    # except AttributeError:
+    #     pass
+
+    return node
 
 
 class AunifyVar(nodes.Name):
@@ -75,6 +128,8 @@ ASTROID_EXTRA_FIELDS = {
         "names",
     ),
     nodes.Import: ("names",),
+    nodes.Keyword: ("arg",),
+    nodes.Subscript: ("ctx",),
 }
 
 
@@ -145,10 +200,24 @@ class Antiunify:
         # astroid.nodes of same type
         some = to_aunify[0]
         all_fields = get_all_fields(some)
-        if isinstance(some, (nodes.Const, nodes.Nonlocal, nodes.Global, nodes.ImportFrom)):
-            return self._aunify_by_attrs(to_aunify, all_fields, [], stop_on)
+        # if isinstance(
+        #     some,
+        #     (
+        #         nodes.Const,
+        #         nodes.Nonlocal,
+        #         nodes.Global,
+        #         nodes.ImportFrom,
+        #         nodes.AssignName,
+        #         nodes.AugAssign,
+        #         nodes.BinOp,
+        #         nodes.BoolOp,
+        #         nodes.Name,
+        #     ),
+        # ):
+        #     return self._aunify_by_attrs(to_aunify, all_fields, [], stop_on)
 
-        return self._aunify_by_attrs(to_aunify, [], all_fields, stop_on)
+        # return self._aunify_by_attrs(to_aunify, [], all_fields, stop_on)
+        return self._aunify_by_attrs(to_aunify, all_fields, stop_on)
 
     def _antiunify_lists(
         self,
@@ -208,21 +277,26 @@ class Antiunify:
     def _aunify_by_attrs(
         self,
         to_aunify,
-        attrs_before: List[str],
-        attrs_after: List[str],
+        # attrs_before: List[str],
+        # attrs_after: List[str],
+        attrs: List[str],
         stop_on: Callable[[List[AunifyVar]], bool],
     ):
         some = to_aunify[0]
         assert all(isinstance(n, type(some)) for n in to_aunify)
 
-        attr_cores_before, avars_before = self._aunify_many_attrs(attrs_before, to_aunify, stop_on)
+        attr_cores, avars = self._aunify_many_attrs(attrs, to_aunify, stop_on)
 
-        if isinstance(some, (nodes.Arguments, nodes.Comprehension)):
-            core = type(some)()
-        else:
-            if isinstance(some, nodes.ImportFrom):
-                attr_cores_before["fromname"] = attr_cores_before.pop("modname")
-            core = type(some)(lineno=0, **attr_cores_before)
+        # attr_cores_before = {}
+        # attr_cores_after = {}
+        # init_args =
+        # for attr in attrs:
+        #     if isinstance(getattr(some, attr), (nodes.NodeNG, list)):
+        #         attr_cores_after[attr] = attr_cores[attr]
+        #     else:
+        #         attr_cores_before[attr] = attr_cores[attr]
+
+        core = new_node(type(some), **attr_cores)
 
         # pylint overloads __getitem__ on constants, so hasattr would fail
         try:
@@ -239,15 +313,17 @@ class Antiunify:
         except AssertionError:
             pass
 
-        for attr_core_before in attr_cores_before.values():
-            set_parents(core, attr_core_before, recursive=False)
+        # for attr_core_before in attr_cores_before.values():
+        #     set_parents(core, attr_core_before, recursive=False)
 
-        attr_cores_after, avars_after = self._aunify_many_attrs(attrs_after, to_aunify, stop_on)
-        for attr, attr_core_after in attr_cores_after.items():
-            setattr(core, attr, attr_core_after)
-            set_parents(core, attr_core_after, recursive=False)
+        # # attr_cores_after, avars_after = self._aunify_many_attrs(attrs_after, to_aunify, stop_on)
+        # for attr, attr_core_after in attr_cores_after.items():
+        #     setattr(core, attr, attr_core_after)
+        #     set_parents(core, attr_core_after, recursive=False)
+        for attr_core in attr_cores.values():
+            set_parents(core, attr_core, recursive=False)
 
-        avars = avars_before + avars_after
+        # avars = avars_before + avars_after
         if stop_on(avars):
             raise DisallowedAntiunification()
 
@@ -419,7 +495,9 @@ def set_parents(parent: nodes.NodeNG, node: Any, recursive):
         for elem in node:
             set_parents(parent, elem, recursive)
 
-    elif node is not None and not isinstance(node, (str, bool, int, float, bytes, type(Ellipsis))):
+    elif node is not None and not isinstance(
+        node, (str, bool, int, float, bytes, type(Ellipsis), Enum)
+    ):
         assert False, f"unreachable, but {type(node)}"
 
 
@@ -437,13 +515,21 @@ def get_sub_variant(core, index: int):
         attr_variants = {
             attr: get_sub_variant(getattr(core, attr), index) for attr in get_all_fields(core)
         }
-        if isinstance(core, (nodes.Const, nodes.Nonlocal, nodes.Global, nodes.ImportFrom)):
-            variant = type(core)(**attr_variants)
-        else:
-            variant = type(core)()
+        # if isinstance(core, (nodes.Const, nodes.Nonlocal, nodes.Global, nodes.ImportFrom)):
+        #     variant = new_core_node(type(core), attr_variants)
+        # else:
+        #     variant = new_core_node(type(core))
+        # attr_before = {}
+        # attr_after = {}
+        # for attr, val in attr_variants.items():
+        #     if isinstance(val, (nodes.NodeNG, list)):
+        #         attr_after[attr] = val
+        #     else:
+        #         attr_before[attr] = val
+        variant = new_node(type(core), **attr_variants)
 
         for attr, attr_variant in attr_variants.items():
-            setattr(variant, attr, attr_variant)
+            # setattr(variant, attr, attr_variant)
             set_parents(variant, attr_variant, recursive=False)
 
     try:

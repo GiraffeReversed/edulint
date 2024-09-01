@@ -219,7 +219,7 @@ class ImproperLoop(BaseChecker):
 
     @staticmethod
     def _get_block_line(node: nodes.NodeNG) -> nodes.NodeNG:
-        while not isinstance(node, nodes.Statement):
+        while not node.is_statement:
             node = node.parent
         return node
 

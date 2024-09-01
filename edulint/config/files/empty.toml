@@ -12,6 +12,7 @@ load-plugins = [
     "edulint.linting.checkers.duplication.checker",
 ]
 disable = "all"
+enable = "R1725" # pylint fails with usage error (returns 32) if it is run with all checks disabled
 good-names = "_"
 
 [flake8]

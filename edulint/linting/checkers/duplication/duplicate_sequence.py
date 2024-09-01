@@ -2,7 +2,12 @@ from typing import List
 
 from astroid import nodes  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, core_as_string, cprint  # noqa: F401
+from edulint.linting.analyses.antiunify import (
+    antiunify,
+    core_as_string,
+    new_node,
+    cprint,  # noqa: F401
+)
 from edulint.linting.analyses.reaching_definitions import vars_in
 from edulint.linting.checkers.utils import (
     get_statements_count,
@@ -51,18 +56,17 @@ def to_range_args(sequence):
 def to_range_node(range_args):
     start, step, stop = range_args
 
-    range = nodes.Call()
-    range.func = nodes.Name("range")
-    start_node = nodes.Const(start)
-    stop_node = nodes.Const(step)
-    step_node = nodes.Const(step)
+    range_ = new_node(nodes.Call, func=new_node(nodes.Name, name="range"))
+    start_node = new_node(nodes.Const, value=start)
+    stop_node = new_node(nodes.Const, value=step)
+    step_node = new_node(nodes.Const, value=step)
     if step != 1:
-        range.args = [start_node, stop_node, step_node]
+        range_.args = [start_node, stop_node, step_node]
     elif start != 0:
-        range.args = [start_node, stop_node]
+        range_.args = [start_node, stop_node]
     else:
-        range.args = [stop_node]
-    return range
+        range_.args = [stop_node]
+    return range_
 
 
 ### nice sequence helpers
@@ -110,17 +114,15 @@ def from_chars(avar, sequence):
         return sequence, avar
 
     # chr(ord(min_char) + ID)
-    ord_call = nodes.Call()
-    ord_call.func = nodes.Name("ord")
-    ord_call.args = [nodes.Const(min_char)]
+    ord_call = new_node(
+        nodes.Call,
+        func=new_node(nodes.Name, name="ord"),
+        args=[new_node(nodes.Const, value=min_char)],
+    )
 
-    binop = nodes.BinOp("+")
-    binop.left = ord_call
-    binop.right = avar
+    binop = new_node(nodes.BinOp, op="+", left=ord_call, right=avar)
 
-    chr_call = nodes.Call()
-    chr_call.func = nodes.Name("chr")
-    chr_call.args = [binop]
+    chr_call = new_node(nodes.Call, func=new_node(nodes.Name, name="chr"), args=[binop])
 
     return sequence, chr_call
 
@@ -273,15 +275,9 @@ def consolidate_ranges(ranges):
     uses = []
     for (start, stop, step), use in ranges:
         if step != 1:
-            new = nodes.BinOp("*")
-            new.left = use
-            new.right = nodes.Const(step)
-            use = new
+            use = new_node(nodes.BinOp, op="*", left=use, right=new_node(nodes.Const, value=step))
         if start != 0:
-            new = nodes.BinOp("+")
-            new.left = use
-            new.right = nodes.Const(start)
-            use = new
+            use = new_node(nodes.BinOp, op="+", left=use, right=new_node(nodes.Const, value=start))
         uses.append(use)
 
     start, stop, step = 0, (stop - stop) // step + 1, 1
@@ -291,9 +287,9 @@ def consolidate_ranges(ranges):
 def get_nice_iters(avars, to_aunify):
     sequences = [avar.subs for avar in avars]
     if len(sequences) == 0:
-        range_node = nodes.Call()
-        range_node.func = nodes.Name("range")
-        range_node.args = [nodes.Const(len(to_aunify))]
+        range_node = new_node(
+            nodes.Call, func=new_node(nodes.Name, name="range"), args=[nodes.Const(len(to_aunify))]
+        )
         return [range_node], {}
 
     iter_uses = []
@@ -338,7 +334,7 @@ def get_iter(iters):
 
 
 def get_target(_avars, _iters):
-    return nodes.AssignName("i")
+    return new_node(nodes.AssignName, name="i")
 
 
 def get_fixed_by_merging_with_parent_loop(to_aunify, core, avars):
@@ -390,10 +386,7 @@ def get_fixed_by_loop(to_aunify, core, avars):
     iters, uses = result
     assert len(iters) == 1
 
-    for_ = nodes.For()
-    for_.iter = get_iter(iters)
-    for_.target = get_target(avars, iters)
-    for_.body = core
+    for_ = new_node(nodes.For, iter=get_iter(iters), target=get_target(avars, iters), body=core)
 
     return Fixed(
         "similar-to-loop",

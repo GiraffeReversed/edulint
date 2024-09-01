@@ -1,0 +1,25 @@
+[pylint]
+enable = [
+    "redefined-builtin",        # Redefining built-in %r
+    "use-elif",                 # Use elif
+    "unused-argument",          # Unused argument %r
+    "redefined-outer-name",     # Redefining name %r from outer scope (line %s)
+    "redundant-arithmetic",     # Redundant arithmetic: %s
+    "no-loop-else",             # Do not use %s loop with else.
+    "pointless-statement",      # Statement seems to have no effect
+    "self-assigning-variable",  # Assigning the same variable %r to itself
+    "remove-for",               # The for loop makes %s.
+    "non-ascii-name",           # %s name "%s" contains a non-ASCII character, consider renaming it.
+    "comparison-with-callable", # Comparing against a callable, did you omit the parenthesis?
+    "function-redefined",       # %s already defined line %s
+]
+
+[flake8]
+select = [
+    "F841", # local variable name is assigned to but never used
+    "E741", # do not use variables named ‘l’, ‘O’, or ‘I’
+    "F811", # redefinition of unused name from line N
+    "E227", # missing whitespace around bitwise or shift operator
+    "F823", # local variable name … referenced before assignment
+    "E743", # do not define functions named ‘l’, ‘O’, or ‘I’
+]

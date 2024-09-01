@@ -328,7 +328,7 @@ class CFGVisitor:
         unreachable_block = self._current_cfg.create_block()
         self._current_block = unreachable_block
 
-    def visit_tryexcept(self, node: nodes.TryExcept) -> None:
+    def visit_try(self, node: nodes.Try) -> None:
         # When only creating cfgs for functions, _current_cfg will only be None outside of functions
         if self._current_cfg is None:
             return
@@ -341,8 +341,9 @@ class CFGVisitor:
         # Initialize a temporary block to later merge with end_body
         self._current_block = self._current_cfg.create_block()
         temp = self._current_block
+        finally_block = self._current_cfg.create_block()
         end_block = self._current_cfg.create_block()
-        # Case where Raise is not handled in tryexcept
+        # Case where Raise is not handled in the try block
         self._control_boundaries.append((node, {nodes.Raise.__name__: end_block}))
         cbs_added = 1
 
@@ -377,17 +378,17 @@ class CFGVisitor:
             else:
                 h.add_CF_statement(handler)
 
-            self._current_cfg.link_or_merge(end_handler, end_block)
+            self._current_cfg.link_or_merge(end_handler, finally_block)
             after_body.append(h)
 
         if node.orelse == []:
-            after_body.append(end_block)
+            after_body.append(finally_block)
         else:
             self._current_block = self._current_cfg.create_block()
             after_body.append(self._current_block)
             for child in node.orelse:
                 child.accept(self)
-            self._current_cfg.link_or_merge(self._current_block, end_block)
+            self._current_cfg.link_or_merge(self._current_block, finally_block)
 
         # Construct the try body so reset current block to this node's block
         self._current_block = node_block
@@ -406,6 +407,7 @@ class CFGVisitor:
 
         self._current_cfg.link_or_merge(temp, end_body)
         self._current_cfg.multiple_link_or_merge(end_body, after_body)
+        self._current_cfg.link_or_merge(finally_block, end_block)
         self._current_block = end_block
 
     def visit_with(self, node: nodes.With) -> None:

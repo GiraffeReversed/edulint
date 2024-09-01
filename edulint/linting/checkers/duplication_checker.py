@@ -183,7 +183,7 @@ class CollectBlocksVisitor(BaseVisitor[None]):
         self.blocks.append(node.body)
         self.visit_many(node.body)
 
-    def visit_tryexcept(self, node: nodes.TryExcept) -> None:
+    def visit_try(self, node: nodes.Try) -> None:
         self.blocks.append(node.body)
 
         if len(node.handlers) > 0:
@@ -192,9 +192,13 @@ class CollectBlocksVisitor(BaseVisitor[None]):
         if len(node.orelse) > 0:
             self.blocks.append(node.orelse)
 
+        if len(node.finalbody) > 0:
+            self.blocks.append(node.finalbody)
+
         self.visit_many(node.body)
         self.visit_many([stmt for h in node.handlers for stmt in h.body])
         self.visit_many(node.orelse)
+        self.visit_many(node.finalbody)
 
     def visit_functiondef(self, node: nodes.FunctionDef) -> None:
         self.blocks.append(node.body)

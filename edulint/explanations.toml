@@ -6216,10 +6216,10 @@ examples = """
 x = \"\"
 y = \"hello\"
 
-if x == \"\":  # [compare-to-empty-string]
+if x == \"\":  # [use-implicit-booleaness-not-comparison-to-string]
     print(\"x is an empty string\")
 
-if y != \"\":  # [compare-to-empty-string]
+if y != \"\":  # [use-implicit-booleaness-not-comparison-to-string]
     print(\"y is not an empty string\")
 
 ```
@@ -6248,10 +6248,10 @@ examples = """
 x = 0
 y = 1
 
-if x == 0:   # [compare-to-zero]
+if x == 0:   # [use-implicit-booleaness-not-comparison-to-zero]
     print(\"x is equal to zero\")
 
-if y != 0:   # [compare-to-zero]
+if y != 0:   # [use-implicit-booleaness-not-comparison-to-zero]
     print(\"y is not equal to zero\")
 
 ```

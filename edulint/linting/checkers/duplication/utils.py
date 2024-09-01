@@ -3,7 +3,7 @@ from typing import Tuple, List, Generator
 
 from astroid import nodes
 
-from edulint.linting.analyses.antiunify import AunifyVar, cprint  # noqa: F401
+from edulint.linting.analyses.antiunify import AunifyVar, new_node, cprint  # noqa: F401
 
 
 Fixed = namedtuple("Fixed", ["symbol", "tokens", "statements", "message_args"])
@@ -92,8 +92,8 @@ def to_node(val, avar=None) -> nodes.NodeNG:
     if isinstance(val, nodes.NodeNG):
         return val
     if avar is not None and isinstance(avar.parent, nodes.Name):
-        return nodes.Name(val)
-    return nodes.Const(val)
+        return new_node(nodes.Name, name=val)
+    return new_node(nodes.Const, value=val)
 
 
 def to_parent(val: AunifyVar) -> nodes.NodeNG:

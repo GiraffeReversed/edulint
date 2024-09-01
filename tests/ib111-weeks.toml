@@ -1,4 +1,4 @@
-config = "default"
+config-file = "default"
 
 [translations.ib111-week-00]
 pylint = "--disable=consider-using-in,consider-swap-variables"

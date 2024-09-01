@@ -298,11 +298,14 @@ def get_statements_count(
     if isinstance(node, nodes.Module):
         return count(node.body)
 
-    if isinstance(node, nodes.TryExcept):
-        return 2 + count(node.body) + sum(count(h.body) for h in node.handlers) + count(node.orelse)
-
-    if isinstance(node, nodes.TryFinally):
-        return 2 + count(node.body) + count(node.finalbody)
+    if isinstance(node, (nodes.Try, nodes.TryStar)):
+        return (
+            2
+            + count(node.body)
+            + sum(count(h.body) for h in node.handlers)
+            + count(node.orelse)
+            + count(node.finalbody)
+        )
 
     if isinstance(node, nodes.With):
         return 1 + count(node.body)

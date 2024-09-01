@@ -226,7 +226,7 @@ class CFGBlock:
         elif isinstance(statement, nodes.For):
             pos = len(self.locs) - 1
             assert self.locs[pos].node == statement.iter
-        elif isinstance(statement, nodes.TryExcept):
+        elif isinstance(statement, (nodes.Try, nodes.TryStar)):
             pos = 0
             statement_loc = statement.body[0].cfg_loc
             assert self.locs[pos].node == statement_loc.block.locs[statement_loc.pos].node
