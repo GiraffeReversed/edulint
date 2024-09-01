@@ -32,10 +32,7 @@ def test_while_true_break(lines: List[str], expected_output: List[Problem]) -> N
         "while i < n:",
         "    print('foo' + str(i))",
         "    i += 1",
-    ], [
-        lazy_problem().set_line(3)
-        .set_text("Use for loop.")
-    ]),
+    ], [lazy_problem().set_line(3)]),
 ])
 def test_use_for_loop_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
@@ -106,8 +103,8 @@ def test_tighter_bounds_files(filename: str, expected_output: List[Problem]) -> 
     ("012986-nested.py", [lazy_problem().set_line(35)]),
     ("013450-next.py", []),
     ("014286-coins.py", []),
-    ("014556-prime.py", [lazy_problem().set_line(13).set_text("Use for loop.")]),
-    ("014962-sequence.py", [lazy_problem().set_line(18).set_text("Use for loop.")]),
+    ("014556-prime.py", [lazy_problem().set_line(13)]),
+    ("014962-sequence.py", [lazy_problem().set_line(18)]),
     ("015794-amicable.py", [lazy_problem().set_line(14)]),
     ("016119-coins.py", [lazy_problem().set_line(22)]),
     ("017667-coins.py", []),

@@ -49,7 +49,7 @@ class UnsuitedLoop(BaseChecker):
             "Emitted when the control variable of a for loop is being changed.",
         ),
         "R6305": (
-            "Use for loop.",
+            "You should use for loop instead of this form of while loop.",
             "use-for-loop",
             "Emitted when a while loop can be transformed into a for loop.",
         ),
