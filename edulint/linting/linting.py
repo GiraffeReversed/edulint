@@ -62,14 +62,21 @@ def pylint_to_problem(
 
     def get_used_filename(path: str) -> str:
         path = Path(path)
+        abs_path = path.resolve()
         for fd in [Path(path) for path in files_or_dirs]:
-            abs_path = path.absolute()
-            abs_fd = fd.absolute()
+            abs_fd = fd.resolve()
             if abs_fd == abs_path or abs_fd in abs_path.parents:
                 if fd.is_absolute():
-                    return path.absolute()
+                    return abs_path
                 else:
-                    return fd / path.relative_to(fd)
+                    cwd_parts = Path.cwd().parts
+                    abs_path_parts = abs_path.parts
+
+                    for i in range(min(len(cwd_parts), len(abs_path_parts))):
+                        if cwd_parts[i] != abs_path_parts[i]:
+                            break
+
+                    return Path(*[".."] * (len(cwd_parts) - i), *abs_path_parts[i:])
         assert False, "unreachable"
 
     code_enabler = enablers.get(raw["messageId"])
