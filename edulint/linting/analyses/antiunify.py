@@ -146,23 +146,7 @@ class Antiunify:
         # astroid.nodes of same type
         some = to_aunify[0]
         all_fields = get_all_fields(some)
-        # if isinstance(
-        #     some,
-        #     (
-        #         nodes.Const,
-        #         nodes.Nonlocal,
-        #         nodes.Global,
-        #         nodes.ImportFrom,
-        #         nodes.AssignName,
-        #         nodes.AugAssign,
-        #         nodes.BinOp,
-        #         nodes.BoolOp,
-        #         nodes.Name,
-        #     ),
-        # ):
-        #     return self._aunify_by_attrs(to_aunify, all_fields, [], stop_on)
 
-        # return self._aunify_by_attrs(to_aunify, [], all_fields, stop_on)
         return self._aunify_by_attrs(to_aunify, all_fields, stop_on)
 
     def _antiunify_lists(
@@ -223,8 +207,6 @@ class Antiunify:
     def _aunify_by_attrs(
         self,
         to_aunify,
-        # attrs_before: List[str],
-        # attrs_after: List[str],
         attrs: List[str],
         stop_on: Callable[[List[AunifyVar]], bool],
     ):
@@ -232,15 +214,6 @@ class Antiunify:
         assert all(isinstance(n, type(some)) for n in to_aunify)
 
         attr_cores, avars = self._aunify_many_attrs(attrs, to_aunify, stop_on)
-
-        # attr_cores_before = {}
-        # attr_cores_after = {}
-        # init_args =
-        # for attr in attrs:
-        #     if isinstance(getattr(some, attr), (nodes.NodeNG, list)):
-        #         attr_cores_after[attr] = attr_cores[attr]
-        #     else:
-        #         attr_cores_before[attr] = attr_cores[attr]
 
         core = new_node(type(some), **attr_cores)
 
@@ -259,17 +232,9 @@ class Antiunify:
         except AssertionError:
             pass
 
-        # for attr_core_before in attr_cores_before.values():
-        #     set_parents(core, attr_core_before, recursive=False)
-
-        # # attr_cores_after, avars_after = self._aunify_many_attrs(attrs_after, to_aunify, stop_on)
-        # for attr, attr_core_after in attr_cores_after.items():
-        #     setattr(core, attr, attr_core_after)
-        #     set_parents(core, attr_core_after, recursive=False)
         for attr_core in attr_cores.values():
             set_parents(core, attr_core, recursive=False)
 
-        # avars = avars_before + avars_after
         if stop_on(avars):
             raise DisallowedAntiunification()
 
@@ -457,21 +422,9 @@ def get_sub_variant(core, index: int):
         attr_variants = {
             attr: get_sub_variant(getattr(core, attr), index) for attr in get_all_fields(core)
         }
-        # if isinstance(core, (nodes.Const, nodes.Nonlocal, nodes.Global, nodes.ImportFrom)):
-        #     variant = new_core_node(type(core), attr_variants)
-        # else:
-        #     variant = new_core_node(type(core))
-        # attr_before = {}
-        # attr_after = {}
-        # for attr, val in attr_variants.items():
-        #     if isinstance(val, (nodes.NodeNG, list)):
-        #         attr_after[attr] = val
-        #     else:
-        #         attr_before[attr] = val
         variant = new_node(type(core), **attr_variants)
 
         for attr, attr_variant in attr_variants.items():
-            # setattr(variant, attr, attr_variant)
             set_parents(variant, attr_variant, recursive=False)
 
     try:
