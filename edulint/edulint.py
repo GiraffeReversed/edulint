@@ -142,10 +142,14 @@ def _update_check():
     )  # nt is Windows
     version_ttl = 600
     if PackageInfoManager.is_update_waiting("edulint", ttl=version_ttl):
-        logger.warning(
-            f"Update for EduLint ({PackageInfoManager.get_latest_version('edulint', version_ttl)}) is available. "
-            f"You can upgrade using `{python_executable} -m pip install --upgrade --user edulint`"
-        )
+        try:
+            logger.warning(
+                f"Update for EduLint ({PackageInfoManager.get_latest_version('edulint', version_ttl)}) is available. "
+                f"You can upgrade using `{python_executable} -m pip install --upgrade --user edulint`"
+            )
+        except ValueError as e:
+            if not (len(e.args) > 0 and e.args[0] == "I/O operation on closed file."):
+                raise e
 
 
 def check_code(args, option_parses):
