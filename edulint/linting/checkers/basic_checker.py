@@ -8,7 +8,8 @@ if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
 from edulint.linting.checkers.utils import get_statements_count
-from edulint.linting.checkers.modified_listener import ModifiedListener
+from edulint.linting.analyses.cfg.utils import successors_from_loc
+from edulint.linting.analyses.var_events import VarEventType
 
 
 class NoGlobalVars(BaseChecker):
@@ -21,38 +22,37 @@ class NoGlobalVars(BaseChecker):
         ),
     }
 
-    def __init__(self, linter: "PyLinter"):
-        super().__init__(linter)
-        self.to_check = {}
-
-    def visit_assignname(self, node: nodes.AssignName) -> None:
-        frame = node.frame()
-        if not isinstance(frame, nodes.Module):
+    def visit_module(self, node: nodes.Module):
+        if len(node.body) == 0:
             return
 
-        if frame not in self.to_check:
-            self.to_check[frame] = {}
+        toplevel_vars = {}
+        for loc in successors_from_loc(node.body[0].cfg_loc, include_start=True):
+            toplevel = loc.node
+            if isinstance(toplevel, (nodes.Import, nodes.ImportFrom)):
+                continue
 
-        if node.name in self.to_check[frame].keys():
+            for var, event in toplevel.cfg_loc.var_events.all():
+                if var.scope == node and event.type in (VarEventType.ASSIGN, VarEventType.REASSIGN):
+                    toplevel_vars[var] = event
+
+        if len(toplevel_vars) == 0:
             return
 
-        self.to_check[frame][node.name] = node
-
-    def close(self) -> None:
-        for frame, vars_ in self.to_check.items():
-            listener = ModifiedListener(list(vars_.values()))
-            listener.visit(frame)
-            for node in vars_.values():
-                if listener.was_modified(node, allow_definition=True):
-                    nonglobal_modifiers = [
-                        n for n in listener.get_all_modifiers(node) if n.scope() != node.scope()
-                    ]
-                    if nonglobal_modifiers:
+        for loc in successors_from_loc(
+            node.cfg_loc, include_start=True, explore_functions=True, explore_classes=True
+        ):
+            for var, events in loc.var_events.items():
+                if var not in toplevel_vars:
+                    continue
+                for event in events:
+                    if event.type != VarEventType.READ and event.node.parent.scope() != node:
                         self.add_message(
                             "no-global-vars",
-                            node=node,
-                            args=(node.name, nonglobal_modifiers[0].lineno),
+                            node=toplevel_vars[var].node,
+                            args=(var.name, event.node.lineno),
                         )
+                        toplevel_vars.pop(var)
 
 
 class LongCodeChecker(BaseChecker):

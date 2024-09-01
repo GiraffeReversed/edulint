@@ -372,70 +372,57 @@ class TestPyTA:
 
 
 class TestNoGlobals:
-    @pytest.mark.parametrize(
-        "lines,expected_output",
-        [
-            (
-                ["x = 0", "def foo():", "    global x", "    x = 1"],
-                [
-                    lazy_problem()
-                    .set_line(1)
-                    .set_text(
-                        "Do not use global variables; you use x, modifying it for example at line 4."
-                    )
-                ],
-            ),
-            (
-                ["x = 0", "def foo():", "    nonlocal x", "    x = 1"],
-                [
-                    lazy_problem()
-                    .set_line(1)
-                    .set_text(
-                        "Do not use global variables; you use x, modifying it for example at line 4."
-                    )
-                ],
-            ),
-            (
-                [
-                    "x = 0",
-                    "def foo():",
-                    "    x = 1",
-                    "    def bar():",
-                    "        nonlocal x",
-                    "        x = 2",
-                ],
-                [],
-            ),
-            (
-                ["x = []", "def foo():", "    x.append(1)"],
-                [
-                    lazy_problem()
-                    .set_line(1)
-                    .set_text(
-                        "Do not use global variables; you use x, modifying it for example at line 3."
-                    )
-                ],
-            ),
-            (
-                ["x = None", "def foo():", "    x.y = 1"],
-                [
-                    lazy_problem()
-                    .set_line(1)
-                    .set_text(
-                        "Do not use global variables; you use x, modifying it for example at line 3."
-                    )
-                ],
-            ),
-            (
-                [
-                    "if __name__ == '__main__':",
-                    "    test = 1",
-                    "    test = 2",
-                ],
-                [],
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("lines,expected_output", [
+        ([
+            "x = 0",
+            "def foo():",
+            "    global x",
+            "    x = 1"
+        ], [
+            lazy_problem() .set_line(1)
+            .set_text( "Do not use global variables; you use x, modifying it for example at line 4.")
+        ]),
+        ([
+            "x = 0",
+            "def foo():",
+            "    nonlocal x",
+            "    x = 1"
+        ], [
+            lazy_problem().set_line(1)
+            .set_text("Do not use global variables; you use x, modifying it for example at line 4.")
+        ]),
+        ([
+            "x = 0",
+            "def foo():",
+            "    x = 1",
+            "    def bar():",
+            "        nonlocal x",
+            "        x = 2",
+            ], [],
+        ),
+        ([
+            "x = []",
+            "def foo():",
+            "    x.append(1)"
+        ], [
+            lazy_problem().set_line(1)
+            .set_text("Do not use global variables; you use x, modifying it for example at line 3.")
+        ]),
+        ([
+            "x = None",
+            "def foo():",
+            "    x.y = 1"
+        ], [
+            lazy_problem().set_line(1)
+            .set_text("Do not use global variables; you use x, modifying it for example at line 3.")
+        ]),
+        ([
+            "if __name__ == '__main__':",
+            "    test = 1",
+            "    test = 2",
+        ], []
+        )
+    ])
     def test_no_globals_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
         create_apply_and_lint(
             lines,
@@ -443,44 +430,29 @@ class TestNoGlobals:
             [p.set_code("R6401") for p in expected_output],
         )
 
-    @pytest.mark.parametrize(
-        "filename,expected_output",
-        [
-            ("054141-p1_database.py", []),
-            ("054103-p1_database.py", []),
-            ("hw14699.py", []),
-            (
-                "014466-fibfibsum.py",
-                [
-                    lazy_problem()
-                    .set_code("R6401")
-                    .set_line(11)
-                    .set_text(
-                        "Do not use global variables; you use fib, modifying it for example at line 18."
-                    )
-                ],
-            ),
-            (
-                "021752-cards.py",
-                [
-                    lazy_problem()
-                    .set_code("R6401")
-                    .set_line(7)
-                    .set_text(
-                        "Do not use global variables; you use first_num, modifying it for example at line 27."
-                    ),
-                    lazy_problem()
-                    .set_code("R6401")
-                    .set_line(8)
-                    .set_text(
-                        "Do not use global variables; you use digits, modifying it for example at line 20."
-                    ),
-                ],
-            ),
-            ("088952-p2_extremes.py", []),
-            ("s10265-d_mancala.py", []),
-        ],
-    )
+    @pytest.mark.parametrize("filename,expected_output", [
+        ("00af22d431-p1_config.py", []),
+        ("054141-p1_database.py", []),
+        ("054103-p1_database.py", []),
+        ("58c81369b3.py", [lazy_problem().set_line(6)]),
+        ("cf_1.py", []),
+        ("cf_96.py", [lazy_problem().set_line(72)]),
+        ("f1dadb36fe-hw3.py", []),
+        ("hw14699.py", []),
+        ("014466-fibfibsum.py", [
+            lazy_problem().set_line(11)
+            .set_text("Do not use global variables; you use fib, modifying it for example at line 18.")
+        ]),
+        ("021752-cards.py", [
+            lazy_problem().set_line(7)
+            .set_text("Do not use global variables; you use first_num, modifying it for example at line 27."),
+            lazy_problem().set_line(8)
+            .set_text("Do not use global variables; you use digits, modifying it for example at line 20."),
+        ]),
+        ("088952-p2_extremes.py", []),
+        ("cf_119.py", []),
+        ("s10265-d_mancala.py", []),
+    ])
     def test_no_globals_files(self, filename: str, expected_output: List[Problem]) -> None:
         apply_and_lint(
             filename, [Arg(Option.PYLINT, "--enable=no-global-variables")], expected_output
