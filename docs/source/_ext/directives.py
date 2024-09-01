@@ -40,12 +40,12 @@ def get_description_from(url, heading):
     soup = BeautifulSoup(descriptions_html.text, "html.parser")
 
     result = {}
-    for h4 in soup.find_all(heading):
-        for dt in h4.parent.find_all("dt"):
-            if " " not in dt.string:
+    for h in soup.find_all(heading):
+        for dt in h.parent.find_all("dt"):
+            if " " not in dt.text:
                 continue
 
-            name, pcode = dt.string.split(" ", 1)
+            name, pcode = dt.text.strip(":").split(" ", 1)
             code = pcode.strip(" ()")
 
             dd = dt.next_sibling.next_sibling
@@ -61,10 +61,10 @@ def get_description_from(url, heading):
 
 def get_descriptions():
     features = get_description_from(
-        "https://pylint.readthedocs.io/en/v2.14.5/user_guide/checkers/features.html", "h4"
+        "https://pylint.readthedocs.io/en/v3.2.6/user_guide/checkers/features.html", "h4"
     )
     extensions = get_description_from(
-        "https://pylint.readthedocs.io/en/v2.14.5/user_guide/checkers/extensions.html", "h3"
+        "https://pylint.readthedocs.io/en/v3.2.6/user_guide/checkers/extensions.html", "h3"
     )
 
     extensions.update(features)
