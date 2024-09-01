@@ -17,8 +17,8 @@ from edulint.linting.checkers.utils import (
 )
 
 
-class Short(BaseChecker):
-    name = "short-problems"
+class Local(BaseChecker):
+    name = "local-defects"
     msgs = {
         "R6601": (
             "Use %s.append(%s) instead of %s.",
@@ -557,4 +557,4 @@ def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
     :param linter: The linter to register the checker to.
     """
-    linter.register_checker(Short(linter))
+    linter.register_checker(Local(linter))
