@@ -1,5 +1,4 @@
 from astroid import nodes, Context  # type: ignore
-from collections import defaultdict
 from enum import Enum, auto
 from functools import reduce
 from typing import TYPE_CHECKING, List, Iterator, Union, Tuple
@@ -19,6 +18,7 @@ from edulint.linting.analyses.data_dependency import (
     node_to_var,
     MODIFYING_EVENTS,
     get_events_for,
+    get_events_by_var,
 )
 
 
@@ -185,9 +185,7 @@ class UnsuitedLoop(BaseChecker):
         if len(test_vars) == 0:
             return
 
-        events_by_var = defaultdict(list)
-        for event in get_events_for(test_vars, node.body, MODIFYING_EVENTS):
-            events_by_var[event.var].append(event)
+        events_by_var = get_events_by_var(test_vars, node.body, MODIFYING_EVENTS)
 
         if len(events_by_var) != 1:
             return

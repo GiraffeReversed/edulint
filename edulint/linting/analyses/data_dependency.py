@@ -187,6 +187,17 @@ def get_events_for(
                     yield event
 
 
+def get_events_by_var(
+    vars: List[Variable],
+    nodes: List[nodes.NodeNG],
+    event_types: Optional[List[VarEventType]] = None,
+):
+    result = defaultdict(list)
+    for event in get_events_for(vars, nodes, event_types):
+        result[event.var].append(event)
+    return result
+
+
 def modified_in(vars: List[Variable], nodes: List[nodes.NodeNG]) -> bool:
     # just check whether there is such an event
     for _ in get_events_for(vars, nodes, MODIFYING_EVENTS):
