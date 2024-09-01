@@ -251,141 +251,192 @@ def test_changing_control_var_files(filename: str, expected_output: List[Problem
     )
 
 
-class TestImproveFor:
-    @pytest.mark.parametrize(
-        "lines,expected_output",
-        [
-            (
-                [
-                    "A = list(range(10))",
-                    "B = []",
-                    "for x in range(len(A)):",
-                    "    for y in range(len(A)):",
-                    "        B.append(A[x])",
-                    "        B.append(y)",
-                ],
-                [
-                    lazy_problem()
-                    .set_code("R6307")
-                    .set_line(3)
-                    .set_text('Iterate directly: "for var in A" (with appropriate name for "var")'),
-                ],
-            ),
-            (["A = list(range(10))", "for i in range(5, len(A)):", "    print(A[i])"], []),
-            (["A = list(range(10))", "a = 5", "for i in range(a, len(A)):", "    print(A[i])"], []),
-            (
-                [
-                    "A = list(range(10))",
-                    "a = 5",
-                    "for i in range(a, len(A)):",
-                    "    print(i, A[i])",
-                ],
-                [],
-            ),
-            (
-                [
-                    "A = list(range(10))",
-                    "B = []",
-                    "for x in range(len(A)):",
-                    "    x += 1",
-                    "    B.append(A[x])",
-                    "    B.append(A[x + 1])",
-                ],
-                [],
-            ),
-            (
-                [
-                    "A = list(range(10))",
-                    "B = []",
-                    "for x in range(len(A)):",
-                    "    B.append(A[x + 1])",
-                ],
-                [],
-            ),
-            (
-                ["A = list(range(10))", "for x in range(len(A)):", "    A[x] = A[x] + 1"],
-                [
-                    lazy_problem()
-                    .set_code("R6308")
-                    .set_line(2)
-                    .set_text(
-                        'Iterate using enumerate: "for x, var in enumerate(A)" (with appropriate name for "var")'
-                    ),
-                ],
-            ),
-            (
-                [
-                    "A = list(range(10))",
-                    "B = []",
-                    "for x in range(len(A)):",
-                    "    for x in range(len(B)):",
-                    "        B.append(A[x])",
-                ],
-                [],
-            ),
-        ],
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "A = list(range(10))",
+        "B = []",
+        "for x in range(len(A)):",
+        "    for y in range(len(A)):",
+        "        B.append(A[x])",
+        "        B.append(y)",
+    ], [
+        lazy_problem().set_line(3)
+        .set_text('Iterate directly: "for var in A" (with appropriate name for "var")'),
+    ]),
+    ([
+        "A = list(range(10))",
+        "for i in range(5, len(A)):",
+        "    print(A[i])"
+    ], []),
+    ([
+        "A = list(range(10))",
+        "a = 5",
+        "for i in range(a, len(A)):",
+        "    print(A[i])"
+    ], []),
+    ([
+        "A = list(range(10))",
+        "a = 5",
+        "for i in range(a, len(A)):",
+        "    print(i, A[i])",
+    ], []),
+    ([
+        "A = list(range(10))",
+        "B = []",
+        "for x in range(len(A)):",
+        "    x += 1",
+        "    B.append(A[x])",
+        "    B.append(A[x + 1])",
+    ], []),
+    ([
+        "A = list(range(10))",
+        "B = []",
+        "for x in range(len(A)):",
+        "    B.append(A[x + 1])",
+    ], []),
+    ([
+        "A = list(range(10))",
+        "for x in range(len(A)):",
+        "    A[x] = A[x] + 1"
+    ], []),
+    ([
+        "A = list(range(10))",
+        "B = []",
+        "for x in range(len(A)):",
+        "    for x in range(len(B)):",
+        "        B.append(A[x])",
+    ], []),
+])
+def test_use_foreach_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines, [Arg(Option.PYLINT, "--enable=use-foreach")], expected_output
     )
-    def test_improve_for_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        create_apply_and_lint(
-            lines, [Arg(Option.PYLINT, "--enable=use-foreach,use-enumerate")], expected_output
-        )
 
-    @pytest.mark.parametrize(
-        "filename,args,expected_output",
-        [
-            ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=use-foreach")], []),
-            (
-                "015080-p4_geometry.py",
-                [
-                    Arg(Option.PYLINT, "--enable=use-foreach"),
-                    Arg(Option.PYLINT, "--disable=W0622,R1705,R1703,R6201,R6202"),
-                ],
-                [],
-            ),
-            (
-                "014771-p2_nested.py",
-                [Arg(Option.PYLINT, "--enable=use-foreach")],
-                [
-                    lazy_problem()
-                    .set_code("R6307")
-                    .set_line(25)
-                    .set_text('Iterate directly: "for var in A" (with appropriate name for "var")'),
-                    lazy_problem()
-                    .set_code("R6307")
-                    .set_line(35)
-                    .set_text('Iterate directly: "for var in A" (with appropriate name for "var")'),
-                ],
-            ),
-            ("045294-p4_vigenere.py", [Arg(Option.PYLINT, "--enable=use-foreach")], []),
-            (
-                "umime_count_a.py",
-                [
-                    Arg(Option.PYLINT, "--enable=use-foreach,use-enumerate"),
-                    Arg(Option.FLAKE8, "--extend-ignore=E225"),
-                ],
-                [
-                    lazy_problem()
-                    .set_code("R6307")
-                    .set_line(3)
-                    .set_text(
-                        'Iterate directly: "for var in text" (with appropriate name for "var")'
-                    ),
-                ],
-            ),
-            ("03-d4_points.py", [Arg(Option.PYLINT, "--enable=use-enumerate")], []),
-            (
-                "046542-polybius.py",
-                [Arg(Option.PYLINT, "--enable=use-foreach,use-enumerate")],
-                [
-                    lazy_problem().set_line(44),
-                    lazy_problem().set_line(45),
-                    lazy_problem().set_line(67),
-                    lazy_problem().set_line(68),
-                ],
-            ),
-        ],
+@pytest.mark.parametrize("filename,expected_output", [
+    ("00bcea235f.py", [lazy_problem().set_line(23)]),
+    ("014771-p2_nested.py", [
+            lazy_problem().set_line(25)
+            .set_text('Iterate directly: "for var in A" (with appropriate name for "var")'),
+            lazy_problem().set_line(35)
+            .set_text('Iterate directly: "for var in A" (with appropriate name for "var")'),
+    ]),
+    ("015080-p4_geometry.py", []),
+    ("01c9f86c74-task_2.py", []),
+    ("03-d4_points.py", []),
+    ("045294-p4_vigenere.py", []),
+    ("046542-polybius.py", [lazy_problem().set_line(67)]),
+    ("05784ba6f8.py", [lazy_problem().set_line(46)]),
+    ("105119-p5_template.py", []),
+    ("35a73a1aa0.py", []),
+    ("5e3d9ea337-greater.py", []),
+    ("b313a82293.py", [
+        lazy_problem().set_line(25),
+        lazy_problem().set_line(26),
+        lazy_problem().set_line(33),
+    ]),
+    ("be217c2c64-midterm_alt.py", []),
+    ("d9f34aa130-fixpoint.py", [lazy_problem().set_line(31)]),
+    ("umime_count_a.py", [
+        lazy_problem().set_line(3)
+        .set_text('Iterate directly: "for var in text" (with appropriate name for "var")'),
+    ]),
+])
+def test_use_foreach(filename: str, expected_output: List[Problem]):
+    apply_and_lint(filename, [Arg(Option.PYLINT, "--enable=use-foreach")], expected_output)
+
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "A = list(range(10))",
+        "B = []",
+        "for x in range(len(A)):",
+        "    for y in range(len(A)):",
+        "        B.append(A[x])",
+        "        B.append(y)",
+    ], []),
+    ([
+        "A = list(range(10))",
+        "for i in range(5, len(A)):",
+        "    print(A[i])"
+    ], []),
+    ([
+        "A = list(range(10))",
+        "a = 5",
+        "for i in range(a, len(A)):",
+        "    print(A[i])"
+    ], []),
+    ([
+        "A = list(range(10))",
+        "a = 5",
+        "for i in range(a, len(A)):",
+        "    print(i, A[i])",
+    ], []),
+    ([
+        "A = list(range(10))",
+        "B = []",
+        "for x in range(len(A)):",
+        "    x += 1",
+        "    B.append(A[x])",
+        "    B.append(A[x + 1])",
+    ], []),
+    ([
+        "A = list(range(10))",
+        "B = []",
+        "for x in range(len(A)):",
+        "    B.append(A[x + 1])",
+    ], []),
+    ([
+        "A = list(range(10))",
+        "for x in range(len(A)):",
+        "    A[x] = A[x] + 1"
+    ], [  # unnecessary?
+            # lazy_problem()
+            # .set_line(2)
+            # .set_text(
+            #     'Iterate using enumerate: "for x, var in enumerate(A)" (with appropriate name for "var")'
+            # ),
+    ]),
+    ([
+        "A = list(range(10))",
+        "for x in range(len(A)):",
+        "    print(x, A[x])"
+    ], [
+        lazy_problem().set_line(2)
+        .set_text('Iterate using enumerate: "for x, var in enumerate(A)" (with appropriate name for "var")'),
+    ]),
+    ([
+        "A = list(range(10))",
+        "B = []",
+        "for x in range(len(A)):",
+        "    for x in range(len(B)):",
+        "        B.append(A[x])",
+    ], [])
+])
+def test_use_enumerate_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines, [Arg(Option.PYLINT, "--enable=use-enumerate")], expected_output
     )
-    def test_improve_for(
-        self, filename: str, args: List[Arg], expected_output: List[Problem]
-    ) -> None:
-        apply_and_lint(filename, args, expected_output)
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("014771-p2_nested.py", []),
+    ("015080-p4_geometry.py", []),
+    ("01c9f86c74-task_2.py", []),
+    ("03-d4_points.py", []),
+    ("041378925b-f_tetris.py", [lazy_problem().set_line(134), lazy_problem().set_line(135)]),
+    ("045294-p4_vigenere.py", []),
+    ("046542-polybius.py", [
+        lazy_problem().set_line(44),
+        lazy_problem().set_line(45),
+        lazy_problem().set_line(46),  # multi-step
+        lazy_problem().set_line(68),
+        lazy_problem().set_line(69),  # multi-step
+    ]),
+    ("105119-p5_template.py", []),
+    ("35a73a1aa0.py", []),
+    ("7097dd29de-p1_lists.py", [lazy_problem().set_line(46)]),
+    ("be217c2c64-midterm_alt.py", []),
+    ("d9f34aa130-fixpoint.py", []),
+    ("umime_count_a.py", []),
+])
+def test_use_enumerate(filename: str, expected_output: List[Problem]):
+    apply_and_lint(filename, [Arg(Option.PYLINT, "--enable=use-enumerate")], expected_output)

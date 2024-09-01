@@ -11,7 +11,7 @@ from edulint.linting.analyses.cfg.utils import (
     syntactic_children_locs_from,
     get_cfg_loc,
 )
-from edulint.linting.analyses.var_events import VarEventType, Variable, VarEvent
+from edulint.linting.analyses.var_events import VarEventType, Variable, VarEvent, strip_to_name
 
 
 MODIFYING_EVENTS = (VarEventType.ASSIGN, VarEventType.REASSIGN, VarEventType.MODIFY)
@@ -132,11 +132,16 @@ def vars_in(
 ) -> Dict[Variable, List[nodes.NodeNG]]:
     result = {}
 
-    first = node[0] if isinstance(node, list) else node
-    for loc in syntactic_children_locs_from(get_cfg_loc(first), node):
+    if isinstance(node, nodes.NodeNG):
+        loc_node = get_cfg_loc(node).node
+    else:
+        loc_node = node
+
+    for loc in syntactic_children_locs(loc_node):
         for var, event in loc.var_events.all():
             if event_types is None or event.type in event_types:
-                result[var] = event.node
+                if loc_node == node or (event.node == node or node in event.node.node_ancestors()):
+                    result[var] = event.node
     return result
 
 
@@ -156,6 +161,49 @@ def node_to_var(node: nodes.NodeNG):
         if event.node == node:
             return var
     return None
+
+
+def _get_matching_superpart(var_node: nodes.NodeNG, super_node: nodes.NodeNG):
+    stripped = strip_to_name(super_node)
+    while stripped != super_node:
+        stripped = stripped.parent
+        var_node = var_node.parent
+
+        if not isinstance(var_node, type(stripped)):
+            return None
+
+        if isinstance(stripped, (nodes.Attribute, nodes.AssignAttr, nodes.DelAttr)):
+            if stripped.attrname != var_node.attrname:
+                return None
+
+        elif isinstance(stripped, nodes.Subscript):
+            stripped_vars = set(vars_in(stripped.slice).keys())
+            node_vars = set(vars_in(var_node.slice).keys())
+            stripped_events = get_events_by_var(stripped_vars, [stripped.slice])
+            node_events = get_events_by_var(node_vars, [var_node.slice])
+            if list(stripped_events.keys()) != list(node_events.keys()):
+                return None
+
+            for var in stripped_events.keys():
+                if [e.definitions for e in stripped_events[var]] != [
+                    e.definitions for e in node_events[var]
+                ]:
+                    return None
+        else:
+            assert False, "unreachable, but " + str(type(stripped))
+    return var_node
+
+
+def filter_events_for(node: nodes.Attribute, events: List[VarEvent]) -> List[VarEvent]:
+    if isinstance(node, (nodes.Name, nodes.AssignName)):
+        return events
+
+    result = []
+    for event in events:
+        superpart = _get_matching_superpart(event.node, node)
+        if superpart is not None:
+            result.append(VarEvent(event.var, superpart, event.type, None, None))
+    return result
 
 
 ### event checkers
@@ -180,10 +228,15 @@ def get_events_for(
     if len(nodes) == 0:
         return
 
-    for loc in syntactic_children_locs(nodes, explore_functions=True, explore_classes=True):
+    loc_nodes = [get_cfg_loc(n).node for n in nodes]
+    check_ancestors = all(n == ln for n, ln in zip(nodes, loc_nodes))
+    for loc in syntactic_children_locs(loc_nodes, explore_functions=True, explore_classes=True):
         for var in vars:
             for event in loc.var_events.for_var(var):
-                if event_types is None or event.type in event_types:
+                if (event_types is None or event.type in event_types) and (
+                    not check_ancestors
+                    or any(event.node == n or n in event.node.node_ancestors() for n in nodes)
+                ):
                     yield event
 
 

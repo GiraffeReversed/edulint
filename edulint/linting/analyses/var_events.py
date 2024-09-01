@@ -38,8 +38,8 @@ class VarEvent:
     var: Variable
     node: nodes.NodeNG
     type: VarEventType
-    definitions: List["VarEvent"] = field(default_factory=list)
-    uses: List["VarEvent"] = field(default_factory=list)
+    definitions: Optional[List["VarEvent"]] = field(default_factory=list)
+    uses: Optional[List["VarEvent"]] = field(default_factory=list)
 
     def __repr__(self) -> str:
         return (
@@ -106,3 +106,21 @@ def strip_to_name(
             break
 
     return node if isinstance(node, (nodes.Name, nodes.AssignName, nodes.DelName)) else None
+
+
+def unstrip(
+    node: Union[nodes.Name, nodes.AssignName, nodes.DelName],
+) -> Union[
+    nodes.Name,
+    nodes.AssignName,
+    nodes.DelName,
+    nodes.Subscript,
+    nodes.Attribute,
+    nodes.AssignAttr,
+    nodes.DelAttr,
+]:
+    while isinstance(
+        node.parent, (nodes.Subscript, nodes.Attribute, nodes.AssignAttr, nodes.DelAttr)
+    ):
+        node = node.parent
+    return node
