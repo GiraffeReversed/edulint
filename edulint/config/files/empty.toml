@@ -14,6 +14,7 @@ load-plugins = [
 disable = "all"
 enable = "R1725" # pylint fails with usage error (returns 32) if it is run with all checks disabled
 good-names = "_"
+module-naming-style = "any"
 
 [flake8]
 ignore = "A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z"

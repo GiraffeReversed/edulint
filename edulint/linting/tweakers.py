@@ -30,25 +30,6 @@ class Tweaker:
         return self.reword(self, problem) if self.reword else problem.text
 
 
-def invalid_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
-    match = self.match(problem)
-    if match.group(1).lower() == "module":
-        return False
-
-    name = match.group(2)
-    style = match.group(3)
-
-    if style == "snake_case naming style":
-        return name[0].isupper() or any(
-            ch1.islower() and ch2.isupper() for ch1, ch2 in zip(name, name[1:])
-        )
-
-    if style == "PascalCase naming style":
-        return name[0].islower() or "_" in name
-
-    return True
-
-
 def disallowed_name_keep(self: Tweaker, problem: Problem, args: List[ImmutableArg]) -> bool:
     if (
         len(args) == 1
@@ -134,9 +115,6 @@ def singleton_bool_comparison_reword(self: Tweaker, problem: Problem) -> bool:
 Tweakers = Dict[Tuple[Linter, str], Tweaker]
 
 TWEAKERS = {
-    (Linter.PYLINT, "C0103"): Tweaker(  # invalid-name
-        set(), re.compile(r"^(.*) name \"(.*)\" doesn't conform to (.*)$"), invalid_name_keep
-    ),
     (Linter.PYLINT, "C0104"): Tweaker(  # disallowed-name
         set([Option.ALLOWED_ONECHAR_NAMES]),
         re.compile(r"Disallowed name \"(.*)\""),

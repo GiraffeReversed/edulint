@@ -18,10 +18,6 @@ Tweakers
 
    * - Tweaked message
      - Effects
-   * - :link_pylint:`invalid-name`
-     -
-      * does not emit messages about invalid module name
-      * emits messages only about variable names that do indeed break :code:`snake_case`
    * - :link_pylint:`disallowed-name`
      -
       * when :link_option:`allowed-onechar-names` is enabled, complains on all single-character variable names, encouraging choosing a different name
