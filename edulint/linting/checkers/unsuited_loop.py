@@ -1,5 +1,6 @@
 from astroid import nodes  # type: ignore
-from typing import TYPE_CHECKING, List, Tuple, Iterator, Set, Optional
+from collections import defaultdict
+from typing import TYPE_CHECKING, List, Iterator
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -7,8 +8,15 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import get_name, get_range_params, get_const_value
+from edulint.linting.analyses.cfg.utils import successors_from_loc, get_cfg_loc, CFGLoc
 from edulint.linting.checkers.modified_listener import ModifiedListener
+from edulint.linting.analyses.var_events import VarEventType, Variable
+from edulint.linting.analyses.data_dependency import (
+    vars_in,
+    node_to_var,
+    MODIFYING_EVENTS,
+    get_events_for,
+)
 
 
 class UnsuitedLoop(BaseChecker):
@@ -55,28 +63,6 @@ class UnsuitedLoop(BaseChecker):
             self.add_message("no-while-true", node=node, args=(first.test.as_string(),))
 
     def _check_use_for_loop(self, node: nodes.While) -> None:
-        def get_relevant_vals(
-            node: nodes.NodeNG, result: Optional[Set[nodes.NodeNG]] = None
-        ) -> Tuple[bool, Set[nodes.NodeNG]]:
-            result = result if result is not None else set()
-
-            if isinstance(node, nodes.Const):
-                return True, result
-            if isinstance(node, nodes.Name):
-                result.add(node)
-                return True, result
-            if isinstance(node, nodes.BinOp):
-                v1 = get_relevant_vals(node.left, result)
-                v2 = get_relevant_vals(node.right, result)
-                return v1 and v2, result
-            if (
-                isinstance(node, nodes.Call)
-                and node.func.as_string() == "len"
-                and len(node.args) == 1
-            ):
-                return get_relevant_vals(node.args[0], result)
-            return False, result
-
         # TODO allow different increments?
         def adds_or_subtracts_one(node: nodes.NodeNG) -> bool:
             if not isinstance(node, nodes.AssignName):
@@ -99,6 +85,65 @@ class UnsuitedLoop(BaseChecker):
                 )
             return False
 
+        def var_can_be_from_range(var: Variable, test: nodes.NodeNG) -> bool:
+            events = list(get_events_for([var], [test]))
+            return len(events) == 1 and events[0].node.parent == test
+
+        def stop_on_event_node_wrap(events):
+            event_nodes = {get_cfg_loc(e.node).node for e in events}
+
+            def stop_on(loc: CFGLoc):
+                return (
+                    loc is None
+                    or isinstance(loc.node, (nodes.Break, nodes.Return))
+                    or loc.node in event_nodes
+                )
+
+            return stop_on
+
+        def event_on_every_path(node: nodes.While, events):
+            if node.next_sibling() is None:
+                node.cfg_loc.block.locs.append(None)
+
+            result = True
+            for loc in successors_from_loc(
+                node.body[0].cfg_loc,
+                stop_on_loc=stop_on_event_node_wrap(events),
+                include_start=True,
+                include_end=True,
+                explore_functions=True,
+                explore_classes=True,
+            ):
+                if (
+                    loc is None
+                    or node not in loc.node.node_ancestors()
+                    or (
+                        isinstance(loc.node, (nodes.Break, nodes.Return))
+                        and any(
+                            node not in use.node.node_ancestors()
+                            for event in events
+                            for use in event.uses
+                        )
+                    )
+                ):
+                    result = False
+                    break
+            if node.cfg_loc.block.locs[-1] is None:
+                node.cfg_loc.block.locs.pop()
+
+            return result
+
+        def event_in_loop(parent_loop: nodes.While, event):
+            parent = event.node
+            while parent != parent_loop:
+                if isinstance(parent, (nodes.For, nodes.While)):
+                    return True
+                parent = parent.parent
+            return False
+
+        def modification_after_modification(events):
+            return any(e.uses != events[0].uses for e in events)
+
         test = node.test
         if (
             not isinstance(test, nodes.Compare)
@@ -107,41 +152,26 @@ class UnsuitedLoop(BaseChecker):
         ):
             return
 
-        lt, rt = test.left, test.ops[0][1]
-        lt_decomposable, lt_vals = get_relevant_vals(lt)
-        rt_decomposable, rt_vals = get_relevant_vals(rt)
-        if not lt_decomposable or not rt_decomposable:
+        test_vars = list(vars_in(test).keys())
+        if len(test_vars) == 0:
             return
 
-        all_vals = lt_vals | rt_vals
-        listener: ModifiedListener[None] = ModifiedListener(list(all_vals))
-        listener.visit_many(node.body)
+        events_by_var = defaultdict(list)
+        for event in get_events_for(test_vars, node.body, MODIFYING_EVENTS):
+            events_by_var[event.var].append(event)
 
-        all_modifiers = [(val in lt_vals, listener.get_all_modifiers(val)) for val in all_vals]
-        nonempty_modifiers = [
-            (from_lt, modifiers) for (from_lt, modifiers) in all_modifiers if len(modifiers) > 0
-        ]
-
-        if len(nonempty_modifiers) != 1:
+        if len(events_by_var) != 1:
             return
 
-        from_lt, only_modifiers = nonempty_modifiers[0]
-        if len(only_modifiers) != 1:
-            return
-
-        only_modifier = only_modifiers[0]
-
+        only_var, events = next(iter(events_by_var.items()))
         if (
-            self._get_block_line(only_modifier).parent != node
-            or not adds_or_subtracts_one(only_modifier)
-            or (
-                only_modifier.as_string() != lt.as_string()
-                and only_modifier.as_string() != rt.as_string()
-            )
+            var_can_be_from_range(only_var, test)
+            and all(adds_or_subtracts_one(e.node) for e in events)
+            and not modification_after_modification(events)
+            and not any(event_in_loop(node, e) for e in events)
+            and event_on_every_path(node, events)
         ):
-            return
-
-        self.add_message("use-for-loop", node=node)
+            self.add_message("use-for-loop", node=node)
 
     @only_required_for_messages("no-while-true", "use-for-loop")
     def visit_while(self, node: nodes.While) -> None:

@@ -113,6 +113,16 @@ def test_tighter_bounds_files(filename: str, expected_output: List[Problem]) -> 
     ("017667-coins.py", []),
     ("023140-credit.py", []),
     ("043611-swap_columns.py", []),
+    ("05ad83ee13-p5_credit.py", []),
+    ("064fe05979.py", []),
+    ("11fa2efd2c-exam1.py", []),  # would force using for control after loop
+    ("3949eabe39-hw3.py", []),
+    ("5ac87a0e60-hw3.py", [lazy_problem().set_line(152), lazy_problem().set_line(164)]),
+    ("62398f5c25.py", [lazy_problem().set_line(111)]),
+    ("b2c113956e-d_mancala.py", [lazy_problem().set_line(31)]),
+    ("uc_1597_09_16.py", []),
+    ("uc_3776_30_15.py", []),
+    ("uc_7004_17_14.py", [lazy_problem().set_line(3)]),
 ])
 def test_use_for_loop_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
