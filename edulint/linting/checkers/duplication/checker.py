@@ -309,7 +309,7 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
         ),
         "R6558": (
             "Extract ifs to ternary",
-            "similar-if-to-ternary",
+            "similar-if-to-expr",
             "",
         ),
         "R6559": (

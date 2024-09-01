@@ -543,10 +543,10 @@ def test_similar_if_to_variables(filename: str, expected_output: List[Problem]) 
     ("uc_82_1702_19_11.py", []),
     ("uc_87_5303_19_15.py", []),
 ])
-def test_similar_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_if_to_expr(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=similar-if-to-ternary")],
+        [Arg(Option.PYLINT, "--enable=similar-if-to-expr")],
         expected_output
     )
 
@@ -634,7 +634,7 @@ def test_similar_if_to_use(filename: str, expected_output: List[Problem]) -> Non
     ("406561e0ae-workdays.py", []),  # contains duplication, but no good advice
     ("53647f4477-hw3.py", [
         lazy_problem().set_symbol("similar-if-to-variables").set_line(91),
-        lazy_problem().set_symbol("similar-if-to-ternary").set_line(105)
+        lazy_problem().set_symbol("similar-if-to-expr").set_line(105)
     ]),
     ("63257195a0-p6_workdays.py", []),  # contains duplication, but no good advice
     ("cf_1086_a_14.py", []),
@@ -644,7 +644,7 @@ def test_similar_if_to_use(filename: str, expected_output: List[Problem]) -> Non
         lazy_problem().set_symbol("similar-if-to-untwisted").set_line(17),
         lazy_problem().set_symbol("similar-if-to-untwisted").set_line(34),
         lazy_problem().set_symbol("similar-if-to-untwisted").set_line(51),
-        lazy_problem().set_symbol("similar-if-to-ternary").set_line(70),
+        lazy_problem().set_symbol("similar-if-to-expr").set_line(70),
         lazy_problem().set_symbol("similar-if-to-untwisted").set_line(82),
         lazy_problem().set_symbol("similar-if-to-untwisted").set_line(99),
         lazy_problem().set_symbol("similar-if-to-untwisted").set_line(116),

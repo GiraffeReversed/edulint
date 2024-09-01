@@ -466,7 +466,7 @@ def is_part_of_complex_expression(avars) -> bool:
     return False
 
 
-@check_enabled("similar-if-to-ternary")
+@check_enabled("similar-if-to-expr")
 def get_fixed_by_ternary(tests, core, avars):
     # the condition would get too complicated
     if len(tests) > 1 and any(isinstance(test, nodes.BoolOp) for test in tests):
