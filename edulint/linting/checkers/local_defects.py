@@ -316,8 +316,12 @@ class Local(BaseChecker):
             if target == bin_op.left.as_string():
                 add_message(target, bin_op.right)
             elif bin_op.op in "+*|&" and target == bin_op.right.as_string():
-                if not isinstance(left_value, nodes.Const) or not isinstance(
-                    left_value.value, (str, bytes, tuple)
+                if not (
+                    isinstance(left_value, nodes.Const)
+                    and isinstance(left_value.value, (str, bytes, tuple))
+                ) and not (
+                    isinstance(right_value, nodes.Const)
+                    and isinstance(right_value.value, (str, bytes, tuple))
                 ):
                     add_message(target, bin_op.left)
 
