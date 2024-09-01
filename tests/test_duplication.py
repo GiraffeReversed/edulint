@@ -71,12 +71,12 @@ from typing import List
         .set_text("Identical code inside all if's branches, move 3 lines after the if.")
     ]),
     ("hw48505.py", []),
-    ("uc_92_9765_21_23.py", [lazy_problem().set_code("R6851").set_line(2)]),
+    ("uc_92_9765_21_23.py", [lazy_problem().set_line(2)]),
 ])
-def test_identical_before_after_branch(filename: str, expected_output: List[Problem]) -> None:
+def test_identical_if_branches_part(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=identical-before-after-branch")],
+        [Arg(Option.PYLINT, "--enable=identical-if-branches-part")],
         expected_output
     )
 
@@ -144,7 +144,10 @@ def test_identical_seq_ifs(filename: str, expected_output: List[Problem]) -> Non
 def test_duplicate_exprs(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=duplicate-exprs")],
+        [
+            Arg(Option.PYLINT, "--load-plugins=edulint.linting.checkers.old_duplication_checker"),
+            Arg(Option.PYLINT, "--enable=duplicate-exprs")
+        ],
         expected_output
     )
 
@@ -164,7 +167,10 @@ def test_duplicate_exprs(filename: str, expected_output: List[Problem]) -> None:
 def test_duplicate_blocks(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=duplicate-blocks")],
+        [
+            Arg(Option.PYLINT, "--load-plugins=edulint.linting.checkers.old_duplication_checker"),
+            Arg(Option.PYLINT, "--enable=duplicate-blocks")
+        ],
         expected_output
     )
 
@@ -191,7 +197,10 @@ def test_duplicate_blocks(filename: str, expected_output: List[Problem]) -> None
 def test_duplicate_sequence(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=duplicate-sequence")],
+        [
+            Arg(Option.PYLINT, "--load-plugins=edulint.linting.checkers.old_duplication_checker"),
+            Arg(Option.PYLINT, "--enable=duplicate-sequence")
+        ],
         expected_output
     )
 
@@ -206,10 +215,10 @@ def test_duplicate_sequence(filename: str, expected_output: List[Problem]) -> No
     ("hw34406.py", []),  # is in if
     ("uc_4_2117_13_17.py", []),
 ])
-def test_similar_to_function(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_block_to_function(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=similar-to-function")],
+        [Arg(Option.PYLINT, "--enable=similar-block-to-function")],
         expected_output
     )
 
@@ -220,10 +229,10 @@ def test_similar_to_function(filename: str, expected_output: List[Problem]) -> N
     ("hw34406.py", []),
     ("uc_4_2117_13_17.py", []),
 ])
-def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_if_to_function(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=similar-to-function-in-if")],
+        [Arg(Option.PYLINT, "--enable=similar-if-to-function")],
         expected_output
     )
 
@@ -250,10 +259,10 @@ def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]
     ("ut_98_8463_20_35.py", [lazy_problem().set_source(Linter.PYLINT)]),
     ("voter_pennant_twirl_mayday.py", [lazy_problem().set_line(36)]),
 ])
-def test_similar_to_loop(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_block_to_loop(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=similar-to-loop")],
+        [Arg(Option.PYLINT, "--enable=similar-block-to-loop")],
         expected_output
     )
 
@@ -315,10 +324,10 @@ def test_similar_to_loop(filename: str, expected_output: List[Problem]) -> None:
         "f(v * 5)",
     ], [lazy_problem().set_line(2)]),
 ])
-def test_similar_to_loop_custom(lines: List[str], expected_output: List[Problem]) -> None:
+def test_similar_block_to_loop_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--enable=similar-to-loop")],
+        [Arg(Option.PYLINT, "--enable=similar-block-to-loop")],
         expected_output
     )
 
@@ -342,20 +351,20 @@ def test_similar_to_loop_custom(lines: List[str], expected_output: List[Problem]
 
     ], [lazy_problem().set_line(2)]),
 ])
-def test_twisted_to_restructured_custom(lines: List[str], expected_output: List[Problem]) -> None:
+def test_similar_if_to_untwisted_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--enable=twisted-if-to-restructured")],
+        [Arg(Option.PYLINT, "--enable=similar-if-to-untwisted")],
         expected_output
     )
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("cf_1316_b_41.py", [lazy_problem().set_line(12)]),
 ])
-def test_twisted_to_restructured(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_if_to_untwisted(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=twisted-if-to-restructured")],
+        [Arg(Option.PYLINT, "--enable=similar-if-to-untwisted")],
         expected_output
     )
 
@@ -364,10 +373,10 @@ def test_twisted_to_restructured(filename: str, expected_output: List[Problem]) 
     ("ut_80_2861_19_63.py", [lazy_problem().set_line(3).set_end_line(10)]),
     ("ut_57_4473_30_10.py", [lazy_problem().set_line(2)]),
 ])
-def test_similar_to_loop_merge(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_block_to_loop_merge(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=similar-to-loop-merge")],
+        [Arg(Option.PYLINT, "--enable=similar-block-to-loop-merge")],
         expected_output
     )
 
@@ -386,10 +395,10 @@ def test_similar_to_loop_merge(filename: str, expected_output: List[Problem]) ->
     ]),
     ("ut_92_5508_03_10.py", [lazy_problem().set_line(7)]),
 ])
-def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_block_to_call(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=similar-to-call")],
+        [Arg(Option.PYLINT, "--enable=similar-block-to-call")],
         expected_output
     )
 
@@ -465,10 +474,10 @@ def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
 #         "print(z)"
 #     ], [lazy_problem().set_line(6)]),
 # ])
-# def test_similar_to_call_custom(lines: List[str], expected_output: List[Problem]) -> None:
+# def test_similar_block_to_call_custom(lines: List[str], expected_output: List[Problem]) -> None:
 #     create_apply_and_lint(
 #         lines,
-#         [Arg(Option.PYLINT, "--enable=similar-to-call")],
+#         [Arg(Option.PYLINT, "--enable=similar-block-to-call")],
 #         expected_output
 #     )
 
@@ -499,10 +508,10 @@ def test_similar_to_call(filename: str, expected_output: List[Problem]) -> None:
     ("uc_73_8593_19_21.py", []),
     ("uc_74_7627_27_19.py", [lazy_problem().set_line(6), lazy_problem().set_line(14)]),
 ])
-def test_if_into_variables(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_if_to_variables(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=if-to-variables")],
+        [Arg(Option.PYLINT, "--enable=similar-if-to-variables")],
         expected_output
     )
 
@@ -534,10 +543,10 @@ def test_if_into_variables(filename: str, expected_output: List[Problem]) -> Non
     ("uc_82_1702_19_11.py", []),
     ("uc_87_5303_19_15.py", []),
 ])
-def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=if-to-ternary")],
+        [Arg(Option.PYLINT, "--enable=similar-if-to-ternary")],
         expected_output
     )
 
@@ -562,10 +571,10 @@ def test_if_to_ternary(filename: str, expected_output: List[Problem]) -> None:
 
     ], [lazy_problem().set_line(2)]),
 ])
-def test_if_into_block_custom(lines: List[str], expected_output: List[Problem]) -> None:
+def test_similar_if_into_block_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--enable=if-into-block")],
+        [Arg(Option.PYLINT, "--enable=similar-if-into-block")],
         expected_output
     )
 
@@ -600,10 +609,10 @@ def test_if_into_block_custom(lines: List[str], expected_output: List[Problem]) 
     ("uc_73_7863_14_44.py", [lazy_problem().set_line(3)]), # multi-step
     ("uc_73_8593_19_21.py", []),
 ])
-def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_if_into_block(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=if-into-block")],
+        [Arg(Option.PYLINT, "--enable=similar-if-into-block")],
         expected_output
     )
 
@@ -612,45 +621,45 @@ def test_if_into_block(filename: str, expected_output: List[Problem]) -> None:
     ("014823-p4_geometry.py", []),
     ("m2630.py", []),
 ])
-def test_if_to_use(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_if_to_use(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=if-to-use")],
+        [Arg(Option.PYLINT, "--enable=similar-if-to-use")],
         expected_output
     )
 
 
 @pytest.mark.parametrize("filename,expected_output", [
-    ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-to-loop").set_line(75)]),
+    ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-block-to-loop").set_line(75)]),
     ("406561e0ae-workdays.py", []),  # contains duplication, but no good advice
     ("53647f4477-hw3.py", [
-        lazy_problem().set_symbol("if-to-variables").set_line(91),
-        lazy_problem().set_symbol("if-to-ternary").set_line(105)
+        lazy_problem().set_symbol("similar-if-to-variables").set_line(91),
+        lazy_problem().set_symbol("similar-if-to-ternary").set_line(105)
     ]),
     ("63257195a0-p6_workdays.py", []),  # contains duplication, but no good advice
     ("cf_1086_a_14.py", []),
-    ("cf_1113_c_27.py", [lazy_problem().set_symbol("if-to-variables").set_line(16)]),
-    ("cf_1399_e_0.py", [lazy_problem().set_symbol("if-into-block").set_line(44)]),
+    ("cf_1113_c_27.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(16)]),
+    ("cf_1399_e_0.py", [lazy_problem().set_symbol("similar-if-into-block").set_line(44)]),
     ("cf_1551_d_11.py", [
-        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(17),
-        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(34),
-        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(51),
-        lazy_problem().set_symbol("if-to-ternary").set_line(70),
-        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(82),
-        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(99),
-        lazy_problem().set_symbol("twisted-if-to-restructured").set_line(116),
+        lazy_problem().set_symbol("similar-if-to-untwisted").set_line(17),
+        lazy_problem().set_symbol("similar-if-to-untwisted").set_line(34),
+        lazy_problem().set_symbol("similar-if-to-untwisted").set_line(51),
+        lazy_problem().set_symbol("similar-if-to-ternary").set_line(70),
+        lazy_problem().set_symbol("similar-if-to-untwisted").set_line(82),
+        lazy_problem().set_symbol("similar-if-to-untwisted").set_line(99),
+        lazy_problem().set_symbol("similar-if-to-untwisted").set_line(116),
     ]),
     # contains more duplication, but no good advice
     ("cf_994_c_10.py", [lazy_problem().set_symbol("identical-seq-ifs").set_line(26)]),
     # TODO suggest moving print into the for below
-    ("uc_11_8337_17_22.py", [lazy_problem().set_symbol("if-to-variables").set_line(3)]),
-    ("uc_13_1073_17_21.py", [lazy_problem().set_symbol("if-to-variables").set_line(2)]),
-    ("uc_28_6562_15_18.py", [lazy_problem().set_symbol("if-to-variables").set_line(4)]),
-    ("uc_28_7857_02_17.py", [lazy_problem().set_symbol("if-to-variables").set_line(3)]),
+    ("uc_11_8337_17_22.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(3)]),
+    ("uc_13_1073_17_21.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(2)]),
+    ("uc_28_6562_15_18.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(4)]),
+    ("uc_28_7857_02_17.py", [lazy_problem().set_symbol("similar-if-to-variables").set_line(3)]),
     ("uc_40_4468_31_23.py", []),
     # TODO suggest breaking up the string
     ("uc_56_4519_12_10.py", []),
-    ("uc_73_6644_16_22.py", [lazy_problem().set_symbol("if-into-block").set_line(14)]),
+    ("uc_73_6644_16_22.py", [lazy_problem().set_symbol("similar-if-into-block").set_line(14)]),
     ("uc_74_7627_27_19.py", [lazy_problem().set_line(6), lazy_problem().set_line(14)]),
     # TODO suggest breaking up the string
     ("uc_82_1702_19_11.py", []),
@@ -659,7 +668,7 @@ def test_if_to_use(filename: str, expected_output: List[Problem]) -> None:
 def test_interactions(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=big-no-duplicate-code")],
+        [Arg(Option.PYLINT, "--enable=no-duplicate-code")],
         expected_output
     )
 

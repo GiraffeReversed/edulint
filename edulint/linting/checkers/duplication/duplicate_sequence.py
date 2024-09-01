@@ -373,7 +373,7 @@ def get_fixed_by_merging_with_parent_loop(to_aunify, core, avars):
         else f"{stop.as_string()} * {len(to_aunify)}"
     )
     return Fixed(
-        "similar-to-loop-merge",
+        "similar-block-to-loop-merge",
         get_token_count(core),
         get_statements_count(core, include_defs=False, include_name_main=True),
         (new_iter,),
@@ -390,7 +390,7 @@ def get_fixed_by_loop(to_aunify, core, avars):
     for_ = new_node(nodes.For, iter=get_iter(iters), target=get_target(avars, iters), body=core)
 
     return Fixed(
-        "similar-to-loop",
+        "similar-block-to-loop",
         get_token_count(for_),
         get_statements_count(for_, include_defs=False, include_name_main=True),
         (

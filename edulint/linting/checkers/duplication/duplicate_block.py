@@ -92,7 +92,7 @@ def get_fixed_by_function(to_aunify, core, avars):
     )
 
     return Fixed(
-        "similar-to-function",
+        "similar-block-to-function",
         get_token_count(calls) + get_token_count(fun_def),
         get_statements_count(calls, include_defs=False, include_name_main=True)
         + get_statements_count(fun_def, include_defs=False, include_name_main=True),
@@ -207,7 +207,7 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
     first = other_body[0]
     last = other_body[-1]
     self.add_message(
-        "similar-to-call",
+        "similar-block-to-call",
         line=first.fromlineno,
         col_offset=first.col_offset,
         end_lineno=last.tolineno,

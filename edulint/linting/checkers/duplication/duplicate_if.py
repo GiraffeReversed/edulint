@@ -215,7 +215,7 @@ def identical_before_after_branch(checker, ends_with_else: bool, ifs: List[nodes
         lines_difference = get_lines_between(first, last, including_last=True)
 
         checker.add_message(
-            "identical-before-after-branch",
+            "identical-if-branches-part",
             node=defect_node,
             args=(lines_difference, "before" if forward else "after"),
         )
@@ -356,7 +356,7 @@ def restructure_twisted_ifs(tests, inner_if: nodes.If, avars):
     return if_
 
 
-@check_enabled("twisted-if-to-restructured")
+@check_enabled("similar-if-to-untwisted")
 def get_fixed_by_restructuring_twisted(tests, core, avars):
     if len(tests) > 1 or len(core) != 1 or not isinstance(core[0], nodes.If):
         return None
@@ -414,7 +414,7 @@ def get_fixed_by_restructuring_twisted(tests, core, avars):
 ### if to use
 
 
-@check_enabled("if-to-use")
+@check_enabled("similar-if-to-use")
 def get_fixed_by_if_to_use(tests, core, avars):
     if len(tests) > 1 or len(avars) > 1:
         return None
@@ -466,7 +466,7 @@ def is_part_of_complex_expression(avars) -> bool:
     return False
 
 
-@check_enabled("if-to-ternary")
+@check_enabled("similar-if-to-ternary")
 def get_fixed_by_ternary(tests, core, avars):
     # the condition would get too complicated
     if len(tests) > 1 and any(isinstance(test, nodes.BoolOp) for test in tests):
@@ -571,7 +571,7 @@ def get_fixed_by_moving_if_rec(tests, core, avars):
     return new_core
 
 
-@check_enabled("if-into-block")
+@check_enabled("similar-if-into-block")
 def get_fixed_by_moving_if(tests, core, avars):
     # too restrictive -- the change may be before the avar but after the place
     # where the if would be inserted
@@ -596,7 +596,7 @@ def get_fixed_by_moving_if(tests, core, avars):
 ### if to variables
 
 
-@check_enabled("if-to-variables")
+@check_enabled("similar-if-to-variables")
 def get_fixed_by_vars(tests, core, avars):
     root, if_bodies = create_ifs(tests)
     seen = {}
@@ -625,7 +625,7 @@ def get_fixed_by_vars(tests, core, avars):
 ### if to function
 
 
-@check_enabled("similar-to-function-in-if")
+@check_enabled("similar-if-to-function")
 def get_fixed_by_function(tests, core, avars):
     root, if_bodies = create_ifs(tests)
 

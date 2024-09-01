@@ -139,8 +139,8 @@ def get_duplicate_nodes(ns: List[nodes.NodeNG]) -> Set[nodes.NodeNG]:
 def is_similar_to_loop(checker, siblings: List[nodes.NodeNG]) -> bool:
     if (
         (
-            not checker.linter.is_message_enabled("similar-to-loop")
-            and not checker.linter.is_message_enabled("similar-to-loop-merge")
+            not checker.linter.is_message_enabled("similar-block-to-loop")
+            and not checker.linter.is_message_enabled("similar-block-to-loop-merge")
         )
         or len(siblings) < 3
         or any(isinstance(node, nodes.FunctionDef) for node in siblings)
@@ -170,7 +170,7 @@ def get_similar_to_block_candidates(
 ):
     if not checker.linter.is_message_enabled(
         "similar-to-function"
-    ) and not checker.linter.is_message_enabled("similar-to-call"):
+    ) and not checker.linter.is_message_enabled("similar-block-to-call"):
         return
 
     fst = stmt_nodes[i]
@@ -256,86 +256,70 @@ def is_any_similar_to_block(checker, duplicate: Set[nodes.NodeNG], candidates):
 class NoDuplicateCode(BaseChecker):  # type: ignore
     name = "no-duplicate-code"
     msgs = {
-        "R6801": (
-            # "Lines %i to %i are similar to lines %i through %i. Extract them to a common function.",
-            "Extract to a common function (%d repetitions of %d statements).",
-            "similar-to-function",
+        "R6501": (
+            "Identical if branches",
+            "identical-if-branches",
             "",
         ),
-        "R6802": (
-            "Extract code into loop (%d repetitions of %d statements)",
-            "similar-to-loop",
-            "",
-        ),
-        "R6803": (
-            "Use existing function %s",
-            "similar-to-call",
-            "",
-        ),
-        "R6804": (
-            "Extract ifs to ternary",
-            "if-to-ternary",
-            "",
-        ),
-        "R6805": (
-            "Combine",
-            "seq-into-similar",
-            "",
-        ),
-        "R6806": (
-            "Extract ifs to variables",
-            "if-to-variables",
-            "",
-        ),
-        "R6807": (
-            "Move if into block",
-            "if-into-block",
-            "",
-        ),
-        "R6808": (
-            "Merge with parent loop %s",
-            "similar-to-loop-merge",
-            "",
-        ),
-        "R6809": (
-            "Extract to a common function (%d repetitions of %d statements).",
-            "similar-to-function-in-if",
-            "",
-        ),
-        "R6810": (
-            "Use condition directly",
-            "if-to-use",
-            "",
-        ),
-        "R6811": (
-            "Restructure twisted ifs",
-            "twisted-if-to-restructured",
-            "",
-        ),
-        "R6851": (
+        "R6502": (
             "Identical code inside all if's branches, move %d lines %s the if.",
-            "identical-before-after-branch",
+            "identical-if-branches-part",
             "Emitted when identical code starts or ends all branches of an if statement.",
         ),
-        "R6852": (
+        "R6503": (
             "Identical code inside %d consecutive ifs, join their conditions using 'or'.",
             "identical-seq-ifs",
             "Emitted when several consecutive if statements have identical bodies and thus can be "
             "joined by or in their conditions.",
         ),
-        "R6853": (
-            "A complex expression '%s' used repeatedly (on lines %s). Extract it to a local variable.",
-            "identical-exprs-to-variable",
-            "Emitted when an overly complex expression is used multiple times.",
+        "R6551": (
+            "Extract to a common function (%d repetitions of %d statements).",
+            "similar-block-to-function",
+            "",
         ),
-        "R6854": (
-            "A complex expression '%s' used repeatedly (on lines %s). Extract it to a local variable.",
-            "identical-exprs-to-function",
-            "Emitted when an overly complex expression is used multiple times.",
+        "R6552": (
+            "Extract code into loop (%d repetitions of %d statements)",
+            "similar-block-to-loop",
+            "",
         ),
-        "R6855": (
-            "Identical if branches",
-            "identical-if-branches",
+        "R6553": (
+            "Merge with parent loop %s",
+            "similar-block-to-loop-merge",
+            "",
+        ),
+        "R6554": (
+            "Use existing function %s",
+            "similar-block-to-call",
+            "",
+        ),
+        "R6555": (
+            "Use condition directly",
+            "similar-if-to-use",
+            "",
+        ),
+        "R6556": (
+            "Move if into block",
+            "similar-if-into-block",
+            "",
+        ),
+        "R6557": (
+            "Restructure twisted ifs",
+            "similar-if-to-untwisted",
+            "",
+        ),
+        "R6558": (
+            "Extract ifs to ternary",
+            "similar-if-to-ternary",
+            "",
+        ),
+        "R6559": (
+            "Extract ifs to variables",
+            "similar-if-to-variables",
+            "",
+        ),
+        "R6560": (
+            "Extract to a common function (%d repetitions of %d statements).",
+            "similar-if-to-function",
             "",
         ),
     }
