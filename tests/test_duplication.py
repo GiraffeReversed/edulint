@@ -241,7 +241,7 @@ def test_similar_to_function_in_if(filename: str, expected_output: List[Problem]
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
     ("uc_52_2125_16_10.py", []),
     ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11)]),
-    ("ut_57_4473_30_10.py", [lazy_problem().set_line(2)]),
+    ("ut_57_4473_30_10.py", []),  # does not suggest to-loop on mergeable loops
     ("ut_57_5508_21_10.py", [lazy_problem().set_line(1)]),
     ("ut_57_9336_15_20.py", [lazy_problem().set_line(1)]),
     ("ut_80_2230_13_11.py", []),
@@ -362,6 +362,7 @@ def test_twisted_to_restructured(filename: str, expected_output: List[Problem]) 
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("ut_80_2861_19_63.py", [lazy_problem().set_line(3).set_end_line(10)]),
+    ("ut_57_4473_30_10.py", [lazy_problem().set_line(2)]),
 ])
 def test_similar_to_loop_merge(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
