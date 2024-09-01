@@ -53,6 +53,7 @@ class NoGlobalVars(BaseChecker):
                             args=(var.name, event.node.lineno),
                         )
                         toplevel_vars.pop(var)
+                        break
 
 
 class LongCodeChecker(BaseChecker):
