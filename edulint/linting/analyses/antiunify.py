@@ -77,6 +77,7 @@ ASTROID_EXTRA_FIELDS = {
     nodes.Keyword: ("arg",),
     nodes.Subscript: ("ctx",),
     nodes.Starred: ("ctx",),
+    nodes.DelName: ("name",),
 }
 
 
