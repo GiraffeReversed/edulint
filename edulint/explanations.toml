@@ -7221,34 +7221,26 @@ class Worm:
 """
 
 [R6101]
-why = "You should use Python foreach-style loop instead of iterating through indices because it's easier to read, and less prone to off-by-one errors. Also, you do not have to index the list, since you can use the value directly."
-examples = """
-```py
-fruits = ['apple', 'banana', 'cherry']
-
-def problematic(fruits):
-    for i in range(len(fruits)):
-        print(fruits[i])
-
-def good(fruits):
-    for fruit in fruits:
-        print(fruit)
-```
-"""
+why = "It looks like dictionary values can be replaced by namedtuples or dataclass instances."
+examples = "<a href=\"https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/consider-using-namedtuple-or-dataclass.html\">Additional information</a>"
 
 [R6102]
-why = "You should use enumerate instead of iterating through indices because it's more concise. It prevents you from introducing off-by-one errors and allows you to name the items"
+why = "Only for style consistency! Emitted where an in-place defined ``list`` can be replaced by a ``tuple``. Due to optimizations by CPython, there is no performance benefit from it."
 examples = """
+**Problematic code**
+
 ```py
-fruits = ['apple', 'banana', 'cherry']
+for i in [1, 2, 3]:  # [consider-using-tuple]
+    print(i)
 
-def problematic(fruits):
-    for i in range(len(fruits)):
-        print(i, fruits[i])
+```
 
-def good(fruits):
-    for i, fruit in enumerate(fruits):
-        print(i, fruit)
+**How to fix it**
+
+```py
+for i in (1, 2, 3):
+    print(i)
+
 ```
 """
 
@@ -8831,6 +8823,38 @@ why = "Used for calls to dict.viewkeys(), viewvalues() or viewitems(). Python 3 
 why = "Using augmented assign is not only shorter, but also clearer and less prone to errors."
 examples = "For example, instead of writing `x = x + 1`, you can write `x += 1`. Works for almost any operator."
 
+[R6308]
+why = "You should use enumerate instead of iterating through indices because it's more concise. It prevents you from introducing off-by-one errors and allows you to name the items"
+examples = """
+```py
+fruits = ['apple', 'banana', 'cherry']
+
+def problematic(fruits):
+    for i in range(len(fruits)):
+        print(i, fruits[i])
+
+def good(fruits):
+    for i, fruit in enumerate(fruits):
+        print(i, fruit)
+```
+"""
+
+[R6307]
+why = "You should use Python foreach-style loop instead of iterating through indices because it's easier to read, and less prone to off-by-one errors. Also, you do not have to index the list, since you can use the value directly."
+examples = """
+```py
+fruits = ['apple', 'banana', 'cherry']
+
+def problematic(fruits):
+    for i in range(len(fruits)):
+        print(fruits[i])
+
+def good(fruits):
+    for fruit in fruits:
+        print(fruit)
+```
+"""
+
 [R6207]
 why = "You should use single `if` statement with conditions joined by `and` instead of nested `if` statements because code with nested `if`s is harder to trace: the reader has to check there is no `else` or other code after the inner `if`."
 examples = """
@@ -9288,4 +9312,26 @@ def good(lst, i, n):
     for j in range(n):
         # body (possibly altering value of lst[i])
 ```
+"""
+
+[E129]
+examples = """
+def problematic(c1, c2):
+    if c1 and c2:  # <- once indented code (four spaces)
+        # code indented as usual (four spaces)
+
+def good1(c1, c2):
+    if c1 and c2: <- aligned with condition start on the previous line (three spaces, not four)
+        # code indented as usual (four spaces)
+
+def good2(c1, c2):
+    if c1 and c2: <- double indentation (eight spaces)
+        # code indented as usual (four spaces)
+
+def good3(c1, c2):
+    if (
+        c1 and
+        c2
+    ):
+        # code indented as usual (four spaces)
 """

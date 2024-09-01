@@ -54,7 +54,7 @@ def good(char: str):
 why = "Using augmented assign is not only shorter, but also clearer and less prone to errors."
 examples = "For example, instead of writing `x = x + 1`, you can write `x += 1`. Works for almost any operator."
 
-[R6102] # use-enumerate
+[R6308] # use-enumerate
 why = "You should use enumerate instead of iterating through indices because it's more concise. It prevents you from introducing off-by-one errors and allows you to name the items"
 examples = """
 ```py
@@ -70,7 +70,7 @@ def good(fruits):
 ```
 """
 
-[R6101] # use-foreach
+[R6307] # use-foreach
 why = "You should use Python foreach-style loop instead of iterating through indices because it's easier to read, and less prone to off-by-one errors. Also, you do not have to index the list, since you can use the value directly."
 examples = """
 ```py

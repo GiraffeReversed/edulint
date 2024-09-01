@@ -3,10 +3,10 @@ from typing import Dict, Set
 
 OVERRIDERS = {
     # overriden: { overriders }
-    "C0104": {"R6101", "R6609", "F841", "W0613"},
-    # C0104=diallowed-name; R6101=use-for-each; R6609=augmenting-assignment
+    "C0104": {"R6307", "R6609", "F841", "W0613"},
+    # C0104=diallowed-name; R6307=use-for-each; R6609=augmenting-assignment
     #                       F841=unused variable; W0613=unused-argument
-    "C0103": {"R6101", "R6609", "F841", "W0613"},
+    "C0103": {"R6307", "R6609", "F841", "W0613"},
     # C0103=invalid-name
     "E225": {"R6609"},
     # E225=missing whitespace around operator

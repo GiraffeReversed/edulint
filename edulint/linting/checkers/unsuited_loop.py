@@ -1,6 +1,8 @@
-from astroid import nodes  # type: ignore
+from astroid import nodes, Context  # type: ignore
 from collections import defaultdict
-from typing import TYPE_CHECKING, List, Iterator
+from enum import Enum, auto
+from functools import reduce
+from typing import TYPE_CHECKING, List, Iterator, Union, Tuple
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -8,6 +10,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
+from edulint.linting.checkers.utils import get_range_params, get_const_value, get_name, is_builtin
 from edulint.linting.analyses.cfg.utils import successors_from_loc, get_cfg_loc, CFGLoc
 from edulint.linting.checkers.modified_listener import ModifiedListener
 from edulint.linting.analyses.var_events import VarEventType, Variable
@@ -17,6 +20,20 @@ from edulint.linting.analyses.data_dependency import (
     MODIFYING_EVENTS,
     get_events_for,
 )
+
+
+class UsesIndex(Enum):
+    OUTSIDE_SUBSCRIPT = auto()
+    INSIDE_SUBSCRIPT = auto()
+    NEVER = auto()
+
+    @classmethod
+    def combine(cls, lt: "UsesIndex", rt: "UsesIndex") -> "UsesIndex":
+        if lt == cls.INSIDE_SUBSCRIPT or rt == cls.INSIDE_SUBSCRIPT:
+            return cls.INSIDE_SUBSCRIPT
+        if lt == cls.OUTSIDE_SUBSCRIPT or rt == cls.OUTSIDE_SUBSCRIPT:
+            return cls.OUTSIDE_SUBSCRIPT
+        return cls.NEVER
 
 
 class UnsuitedLoop(BaseChecker):
@@ -51,6 +68,18 @@ class UnsuitedLoop(BaseChecker):
             "Inner for loop shadows outer for loop's control variable %s.",
             "loop-shadows-control-variable",
             "Emitted when a for loop shadows control variable of an outer for loop.",
+        ),
+        "R6307": (
+            'Iterate directly: "for var in %s" (with appropriate name for "var")',
+            "use-foreach",
+            "Emitted when a for-range loop is used while a for-each loop would suffice.",
+            {"old_names": [("R6101", "old-use-foreach")]},
+        ),
+        "R6308": (
+            'Iterate using enumerate: "for %s, var in enumerate(%s)" (with appropriate name for "var")',
+            "use-enumerate",
+            "Emitted when a for-range loop is used with the element at each index is accessed as well.",
+            {"old_names": [("R6102", "old-use-enumerate")]},
         ),
     }
 
@@ -301,16 +330,168 @@ class UnsuitedLoop(BaseChecker):
                     "changing-control-variable", node=event.node.parent, args=(control_var.name)
                 )
 
+    class StructureIndexedVisitor(ModifiedListener[Tuple[bool, bool]]):
+        default = (False, False)
+
+        def combine(self, results: List[Tuple[bool, bool]]) -> Tuple[bool, bool]:
+            return any(loaded for loaded, _stored in results), any(
+                stored for _loaded, stored in results
+            )
+
+        def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):
+            super().__init__([structure, index])
+            self.structure = structure
+            self.index = index
+
+        def visit_subscript(self, subscript: nodes.Subscript) -> Tuple[bool, bool]:
+            sub_loaded, sub_stored = self.visit_many(subscript.get_children())
+
+            if self.was_reassigned(self.structure, allow_definition=False) or self.was_reassigned(
+                self.index, allow_definition=False
+            ):
+                return False, False
+
+            used = (
+                subscript.value.as_string() == self.structure.as_string()
+                and isinstance(subscript.slice, nodes.Name)
+                and subscript.slice.as_string() == self.index.as_string()
+            )
+
+            if subscript.ctx == Context.Store:
+                return sub_loaded, sub_stored or used
+
+            if subscript.ctx == Context.Load:
+                return sub_loaded or used, sub_stored
+
+            assert subscript.ctx == Context.Del
+            return sub_loaded, sub_stored or used
+
+    class StructureIndexedByAnyOtherVisitor(ModifiedListener[bool]):
+        default = False
+
+        def combine(self, results: List[bool]) -> bool:
+            return any(results)
+
+        def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):
+            super().__init__([structure, index])
+            self.structure = structure
+            self.index = index
+
+        def visit_subscript(self, subscript: nodes.Subscript) -> bool:
+            sub_indexed = self.visit_many(subscript.get_children())
+
+            if self.was_reassigned(self.structure, allow_definition=False) or self.was_reassigned(
+                self.index, allow_definition=False
+            ):
+                return True
+
+            return sub_indexed or (
+                subscript.value.as_string() == self.structure.as_string()
+                and (
+                    not isinstance(subscript.slice, nodes.Name)
+                    or subscript.slice.as_string() != self.index.as_string()
+                )
+            )
+
+    class IndexUsedVisitor(ModifiedListener[UsesIndex]):
+        default = UsesIndex.NEVER
+
+        def combine(self, results: List[UsesIndex]) -> UsesIndex:
+            return reduce(UsesIndex.combine, results, UsesIndex.NEVER)
+
+        def __init__(self, structure: Union[nodes.Name, nodes.Attribute], index: nodes.Name):
+            super().__init__([structure, index])
+            self.structure = structure
+            self.index = index
+
+        def visit_name(self, name: nodes.Name) -> UsesIndex:
+            if name.name != self.index.name:
+                return UsesIndex.NEVER
+
+            parent = name.parent
+            if (
+                isinstance(parent, nodes.Subscript)
+                and parent.value.as_string() != self.structure.as_string()
+            ):
+                return UsesIndex.INSIDE_SUBSCRIPT
+
+            if (
+                not isinstance(name.parent, nodes.Subscript)
+                or not isinstance(self.structure, type(name.parent.value))
+                or self.was_reassigned(name, allow_definition=False)
+            ):
+                return UsesIndex.OUTSIDE_SUBSCRIPT
+
+            subscript = name.parent
+            if not (
+                (
+                    isinstance(subscript.value, nodes.Name)
+                    and subscript.value.name == self.structure.name
+                )
+                or (
+                    isinstance(subscript.value, nodes.Attribute)
+                    and subscript.value.attrname == self.structure.attrname
+                )
+            ):
+                return UsesIndex.OUTSIDE_SUBSCRIPT
+
+            if isinstance(subscript.parent, nodes.Assign) and subscript in subscript.parent.targets:
+                return UsesIndex.OUTSIDE_SUBSCRIPT
+
+            return UsesIndex.NEVER
+
+    def _check_improve_for_loop(self, node: nodes.For) -> None:
+        range_params = get_range_params(node.iter)
+        if range_params is None:
+            return
+
+        start, stop, step = range_params
+        if (
+            not isinstance(start, nodes.Const)
+            or start.value != 0
+            or not isinstance(stop, nodes.Call)
+            or not is_builtin(stop.func, "len")
+            or len(stop.args) != 1
+            or not isinstance(step, nodes.Const)
+            or step.value != 1
+        ):
+            return
+
+        structure = stop.args[0]
+        index = node.target
+        if not isinstance(structure, nodes.Name) and not isinstance(structure, nodes.Attribute):
+            return
+
+        loaded, stored = self.StructureIndexedVisitor(structure, node.target).visit_many(node.body)
+        if not loaded:
+            return
+
+        structure_name = get_name(structure)
+        uses_index = self.IndexUsedVisitor(structure, node.target).visit_many(node.body)
+
+        if uses_index == UsesIndex.INSIDE_SUBSCRIPT or self.StructureIndexedByAnyOtherVisitor(
+            structure, index
+        ).visit_many(node.body):
+            return
+        elif stored or uses_index == UsesIndex.OUTSIDE_SUBSCRIPT:
+            self.add_message("use-enumerate", args=(index.name, structure_name), node=node)
+        else:
+            assert uses_index == UsesIndex.NEVER
+            self.add_message("use-foreach", args=structure_name, node=node)
+
     @only_required_for_messages(
         "use-tighter-boundaries",
         "modifying-iterated-structure",
         "changing-control-variable",
         "loop-shadows-control-variable",
+        "use-enumerate",
+        "use-foreach",
     )
     def visit_for(self, node: nodes.For) -> None:
         self._check_use_tighter_bounds(node)
         self._check_modifying_iterable(node)
         self._check_control_variable_changes(node)
+        self._check_improve_for_loop(node)
 
 
 def register(linter: "PyLinter") -> None:

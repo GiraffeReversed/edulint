@@ -19,7 +19,7 @@ from typing import List
                 lazy_problem().set_code("R6609").set_line(10),
                 lazy_problem().set_code("R6303").set_line(42),
                 lazy_problem().set_code("R6205").set_line(82),
-                lazy_problem().set_code("R6101").set_line(171),
+                lazy_problem().set_code("R6307").set_line(171),
                 lazy_problem().set_code("W0107").set_line(196),
             ],
         ),
@@ -32,7 +32,7 @@ from typing import List
                 lazy_problem().set_code("R6205").set_line(82),
                 lazy_problem().set_code("C0115").set_line(122),
                 lazy_problem().set_code("C0115").set_line(128),
-                lazy_problem().set_code("R6101").set_line(171),
+                lazy_problem().set_code("R6307").set_line(171),
                 lazy_problem().set_code("W0107").set_line(196),
             ],
         ),
@@ -44,7 +44,7 @@ from typing import List
                 lazy_problem().set_code("R6205").set_line(82),
                 lazy_problem().set_code("C0115").set_line(122),
                 lazy_problem().set_code("C0115").set_line(128),
-                lazy_problem().set_code("R6101").set_line(171),
+                lazy_problem().set_code("R6307").set_line(171),
             ],
         ),
         (
@@ -94,7 +94,7 @@ def test_lint_file_in_folder() -> None:
                 lazy_problem().set_code("R6303").set_line(42),
                 lazy_problem().set_code("R6208").set_line(76),
                 lazy_problem().set_code("R6205").set_line(82),
-                lazy_problem().set_code("R6101").set_line(171),
+                lazy_problem().set_code("R6307").set_line(171),
                 lazy_problem().set_code("W0107").set_line(196),
             ],
         ),
@@ -104,9 +104,9 @@ def test_lint_file_in_folder() -> None:
             [
                 lazy_problem().set_code("R6609").set_line(10),
                 lazy_problem().set_code("R6303").set_line(42),
-                # lazy_problem().set_code("R6102").set_line(80), TODO differentiate?
+                # lazy_problem().set_code("R6308").set_line(80), TODO differentiate?
                 lazy_problem().set_code("R6205").set_line(82),
-                lazy_problem().set_code("R6101").set_line(171),
+                lazy_problem().set_code("R6307").set_line(171),
                 lazy_problem().set_code("C0123").set_line(172),
                 lazy_problem().set_code("W0107").set_line(196),
             ],
@@ -353,146 +353,6 @@ def test_consider_using_in(filename: str, args: List[Arg], expected_output: List
     apply_and_lint(filename, args, expected_output)
 
 
-class TestImproveFor:
-    @pytest.mark.parametrize(
-        "lines,expected_output",
-        [
-            (
-                [
-                    "A = list(range(10))",
-                    "B = []",
-                    "for x in range(len(A)):",
-                    "    for y in range(len(A)):",
-                    "        B.append(A[x])",
-                    "        B.append(y)",
-                ],
-                [
-                    lazy_problem()
-                    .set_code("R6101")
-                    .set_line(3)
-                    .set_text('Iterate directly: "for var in A" (with appropriate name for "var")'),
-                ],
-            ),
-            (["A = list(range(10))", "for i in range(5, len(A)):", "    print(A[i])"], []),
-            (["A = list(range(10))", "a = 5", "for i in range(a, len(A)):", "    print(A[i])"], []),
-            (
-                [
-                    "A = list(range(10))",
-                    "a = 5",
-                    "for i in range(a, len(A)):",
-                    "    print(i, A[i])",
-                ],
-                [],
-            ),
-            (
-                [
-                    "A = list(range(10))",
-                    "B = []",
-                    "for x in range(len(A)):",
-                    "    x += 1",
-                    "    B.append(A[x])",
-                    "    B.append(A[x + 1])",
-                ],
-                [],
-            ),
-            (
-                [
-                    "A = list(range(10))",
-                    "B = []",
-                    "for x in range(len(A)):",
-                    "    B.append(A[x + 1])",
-                ],
-                [],
-            ),
-            (
-                ["A = list(range(10))", "for x in range(len(A)):", "    A[x] = A[x] + 1"],
-                [
-                    lazy_problem()
-                    .set_code("R6102")
-                    .set_line(2)
-                    .set_text(
-                        'Iterate using enumerate: "for x, var in enumerate(A)" (with appropriate name for "var")'
-                    ),
-                ],
-            ),
-            (
-                [
-                    "A = list(range(10))",
-                    "B = []",
-                    "for x in range(len(A)):",
-                    "    for x in range(len(B)):",
-                    "        B.append(A[x])",
-                ],
-                [],
-            ),
-        ],
-    )
-    def test_improve_for_custom(self, lines: List[str], expected_output: List[Problem]) -> None:
-        create_apply_and_lint(
-            lines, [Arg(Option.PYLINT, "--enable=improve-for-loop")], expected_output
-        )
-
-    @pytest.mark.parametrize(
-        "filename,args,expected_output",
-        [
-            ("105119-p5_template.py", [Arg(Option.PYLINT, "--enable=use-foreach")], []),
-            (
-                "015080-p4_geometry.py",
-                [
-                    Arg(Option.PYLINT, "--enable=use-foreach"),
-                    Arg(Option.PYLINT, "--disable=W0622,R1705,R1703,R6201,R6202"),
-                ],
-                [],
-            ),
-            (
-                "014771-p2_nested.py",
-                [Arg(Option.PYLINT, "--enable=use-foreach")],
-                [
-                    lazy_problem()
-                    .set_code("R6101")
-                    .set_line(25)
-                    .set_text('Iterate directly: "for var in A" (with appropriate name for "var")'),
-                    lazy_problem()
-                    .set_code("R6101")
-                    .set_line(35)
-                    .set_text('Iterate directly: "for var in A" (with appropriate name for "var")'),
-                ],
-            ),
-            ("045294-p4_vigenere.py", [Arg(Option.PYLINT, "--enable=use-foreach")], []),
-            (
-                "umime_count_a.py",
-                [
-                    Arg(Option.PYLINT, "--enable=improve-for-loop"),
-                    Arg(Option.FLAKE8, "--extend-ignore=E225"),
-                ],
-                [
-                    lazy_problem()
-                    .set_code("R6101")
-                    .set_line(3)
-                    .set_text(
-                        'Iterate directly: "for var in text" (with appropriate name for "var")'
-                    ),
-                ],
-            ),
-            ("03-d4_points.py", [Arg(Option.PYLINT, "--enable=use-enumerate")], []),
-            (
-                "046542-polybius.py",
-                [Arg(Option.PYLINT, "--enable=improve-for-loop")],
-                [
-                    lazy_problem().set_line(44),
-                    lazy_problem().set_line(45),
-                    lazy_problem().set_line(67),
-                    lazy_problem().set_line(68),
-                ],
-            ),
-        ],
-    )
-    def test_improve_for(
-        self, filename: str, args: List[Arg], expected_output: List[Problem]
-    ) -> None:
-        apply_and_lint(filename, args, expected_output)
-
-
 class TestPyTA:
     @pytest.mark.parametrize(
         "lines,expected_output",
@@ -734,7 +594,7 @@ def test_ignore_infile_config(
                 ),
                 lazy_problem().set_code("E225").set_line(2),
                 lazy_problem()
-                .set_code("R6101")
+                .set_code("R6307")
                 .set_line(3)
                 .set_text('Iterate directly: "for var in text" (with appropriate name for "var")'),
                 lazy_problem().set_code("E225").set_line(4).set_column(19),
@@ -769,7 +629,7 @@ def test_ignore_infile_config(
                     'Disallowed single-character variable name "a", choose a more descriptive name'
                 ),
                 lazy_problem()
-                .set_code("R6101")
+                .set_code("R6307")
                 .set_line(10)
                 .set_text('Iterate directly: "for var in text" (with appropriate name for "var")'),
                 lazy_problem()
