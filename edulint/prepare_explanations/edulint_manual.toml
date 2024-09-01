@@ -569,3 +569,28 @@ Some renaming suggestions:
 - `max` -> `maximum`, `highest`, ...
 - `len` -> `size`, `length`, ...
 """
+
+[E129] # visually indented line with same indent as next logical line
+examples = """
+def problematic(c1, c2):
+    if c1 and \
+        c2:  # <- once indented code (four spaces)
+        # code indented as usual (four spaces)
+
+def good1(c1, c2):
+    if c1 and \
+       c2: <- aligned with condition start on the previous line (three spaces, not four)
+        # code indented as usual (four spaces)
+
+def good2(c1, c2):
+    if c1 and \
+            c2: <- double indentation (eight spaces)
+        # code indented as usual (four spaces)
+
+def good3(c1, c2):
+    if (
+        c1 and
+        c2
+    ):
+        # code indented as usual (four spaces)
+"""
