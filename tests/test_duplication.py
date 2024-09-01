@@ -539,7 +539,10 @@ def test_similar_if_to_variables(filename: str, expected_output: List[Problem]) 
     ("163aadb1dd-p4_geometry.py", []),
     ("3867ee9889-split.py", []),
     ("5ce8692f42-p5_fibsum.py", []),
-    ("769200244d-p6_workdays.py", [lazy_problem().set_line(66)]),
+    ("769200244d-p6_workdays.py", [
+        lazy_problem().set_line(66)
+        .set_text("The branches of the 'if' statement are similar. Use if expression to decide between the different values (i.e., \"29 if gap_year(year) else 28\").")
+    ]),
     ("7e1dd5c338-p1_digit_sum.py", []),
     ("7e1dd5c338-p5_credit.py", []),
     ("9668dff756-p6_workdays.py", []),
@@ -551,10 +554,15 @@ def test_similar_if_to_variables(filename: str, expected_output: List[Problem]) 
     ("uc_40_4468_31_23.py", []),
     ("uc_56_4519_12_10.py", []),
     ("uc_73_0198_15_17.py", []),
-    ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
+    ("uc_73_2551_11_17.py", [
+        lazy_problem().set_line(3)
+        .set_text("The branches of the 'if' statement are similar. Use if expression to decide between the different values (i.e., \"'#' if i // m % 2 == 0 else '.'\").")
+    ]),
     ("uc_73_3819_50_56.py", [lazy_problem().set_line(6), lazy_problem().set_line(16)]),
     ("uc_73_3819-20_56.py", [lazy_problem().set_line(7), lazy_problem().set_line(18)]),
-    ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]),
+    ("uc_73_3897_10_43.py", [
+        lazy_problem().set_line(3).set_text("The branches of the 'if' statement are similar. Use if expression to decide between the different values (i.e., \"0 if i % 2 == 0 else 1\").")
+    ]),
     ("uc_73_5468_12_52.py", []),
     ("uc_73_7863_14_44.py", []),
     ("uc_73_8593_19_21.py", []),

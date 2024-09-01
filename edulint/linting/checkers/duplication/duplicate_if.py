@@ -493,7 +493,7 @@ def get_fixed_by_ternary(tests, core, avars):
     return (
         get_token_count(core) - len(avars) + get_token_count(exprs),  # subtract aunify vars
         get_statements_count(core, include_defs=False, include_name_main=True),
-        (),
+        (exprs[0].as_string(),),
     )
 
 

@@ -316,9 +316,11 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "the nested statements have the same branches, only swapped.",
         ),
         "R6558": (
-            "Extract ifs to ternary",
+            "The branches of the 'if' statement are similar. Use if expression to decide between "
+            'the different values (i.e., "%s").',
             "similar-if-to-expr",
-            "",
+            "Emitted when the duplication between if statement's branches can be avoided "
+            "using the if expression.",
         ),
         "R6559": (
             "Extract ifs to variables",
