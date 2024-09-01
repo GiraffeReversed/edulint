@@ -179,6 +179,8 @@ def test_use_for_loop_files(filename: str, expected_output: List[Problem]) -> No
         lazy_problem().set_line(22)
     ]),
     ("035794-partition.py", []),
+    ("2902f19359.py", []),
+    ("eba554ae42-HW4.py", [lazy_problem().set_line(189)]),
     ("hw24328.py", [
         lazy_problem().set_line(52)
         .set_text("Iterated structure row is being modified inside the for loop body. "
@@ -194,7 +196,6 @@ def test_use_for_loop_files(filename: str, expected_output: List[Problem]) -> No
         .set_text("Iterated structure traders is being modified inside the for loop body. "
                   "Use while loop or iterate over a copy.")
     ]),
-    ("2902f19359.py", []),
 ])
 def test_modifying_iterated_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
