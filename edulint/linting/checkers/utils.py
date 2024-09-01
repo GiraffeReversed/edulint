@@ -6,7 +6,49 @@ import inspect
 import operator
 from pylint.checkers import utils  # type: ignore
 
-from edulint.linting.analyses.antiunify import new_node
+POSTINIT_ARGS = {
+    klass: (
+        {
+            param.name: (
+                list
+                if param.annotation != inspect.Parameter.empty
+                and param.annotation.lower().startswith("list")
+                else lambda: None
+            )
+            for param in inspect.signature(klass.postinit).parameters.values()
+            if param.name != "self"
+        }
+        if klass != nodes.Const and hasattr(klass, "postinit")
+        else {}
+    )
+    for klass in nodes.ALL_NODE_CLASSES
+}
+
+
+def new_node(node_type, **attr_vals):
+    attr_vals_before = {
+        attr: val for attr, val in attr_vals.items() if attr not in POSTINIT_ARGS[node_type].keys()
+    }
+    attr_vals_after = {
+        attr: attr_vals.get(attr, default()) for attr, default in POSTINIT_ARGS[node_type].items()
+    }
+
+    if node_type == nodes.Arguments:
+        attr_vals_before["kwarg"] = attr_vals_before.get("kwarg", "")
+        attr_vals_before["vararg"] = attr_vals_before.get("vararg", "")
+        node = node_type(parent=None, **attr_vals_before)
+    elif node_type == nodes.Module:
+        node = node_type(**attr_vals_before)
+    else:
+        node = node_type(
+            lineno=0, col_offset=0, end_lineno=0, end_col_offset=0, parent=None, **attr_vals_before
+        )
+
+    if not isinstance(node, nodes.Const) and hasattr(node, "postinit"):
+        node.postinit(**attr_vals_after)
+
+    return node
+
 
 EXPRESSION_TYPES = (
     nodes.Subscript,

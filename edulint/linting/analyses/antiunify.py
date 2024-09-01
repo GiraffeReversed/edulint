@@ -1,72 +1,18 @@
 from typing import Union, Tuple, List, Any, Iterator, Callable, Optional
 import copy
-import inspect
 from enum import Enum
 
 from astroid import nodes
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs_from, get_cfg_loc
 from edulint.linting.analyses.reaching_definitions import (
+    Variable,
     get_vars_defined_before,
     get_vars_used_after,
     MODIFYING_EVENTS,
 )
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
-from edulint.linting.checkers.utils import eprint
-
-POSTINIT_ARGS = {
-    klass: (
-        {
-            param.name: (
-                list
-                if param.annotation != inspect.Parameter.empty
-                and param.annotation.lower().startswith("list")
-                else lambda: None
-            )
-            for param in inspect.signature(klass.postinit).parameters.values()
-            if param.name != "self"
-        }
-        if klass != nodes.Const and hasattr(klass, "postinit")
-        else {}
-    )
-    for klass in nodes.ALL_NODE_CLASSES
-}
-
-
-def new_node(node_type, **attr_vals):
-    attr_vals_before = {
-        attr: val for attr, val in attr_vals.items() if attr not in POSTINIT_ARGS[node_type].keys()
-    }
-    attr_vals_after = {
-        attr: attr_vals.get(attr, default()) for attr, default in POSTINIT_ARGS[node_type].items()
-    }
-
-    if node_type == nodes.Arguments:
-        attr_vals_before["kwarg"] = attr_vals_before.get("kwarg", "")
-        attr_vals_before["vararg"] = attr_vals_before.get("vararg", "")
-        node = node_type(parent=None, **attr_vals_before)
-    else:
-        node = node_type(
-            lineno=0, col_offset=0, end_lineno=0, end_col_offset=0, parent=None, **attr_vals_before
-        )
-
-    # try:
-    if not isinstance(node, nodes.Const) and hasattr(node, "postinit"):
-        # signature = inspect.signature(node.postinit)
-
-        # args = []
-        # for param in signature.parameters.values():
-        #     if param.annotation.lower().startswith("list"):
-        #         args.append([])
-        #     else:
-        #         args.append(None)
-
-        # node.postinit(*args)
-        node.postinit(**attr_vals_after)
-    # except AttributeError:
-    #     pass
-
-    return node
+from edulint.linting.checkers.utils import new_node, eprint
 
 
 class AunifyVar(nodes.Name):
@@ -401,22 +347,22 @@ def sub_to_variable(avar, i):
 
     event_nodes = list(
         {
-            (scope, event.node)
-            for (varname, scope), events in sub_loc.var_events.items()
-            if varname == sub
+            (var.scope, event.node)
+            for var, events in sub_loc.var_events.items()
+            if var.name == sub
             for event in events
             if event.type in MODIFYING_EVENTS
         }
     )
     if len(event_nodes) == 1:
-        return sub, event_nodes[0][0]
+        return Variable(sub, event_nodes[0][0])
     assert len(event_nodes) > 1
 
     sub_node = get_avar_parent_in_sub(avar_loc.node, sub_loc.node, avar)
 
     for scope, node in event_nodes:
         if node == sub_node:
-            return sub, scope
+            return Variable(sub, scope)
 
     assert False, f"unreachable, but {sub}"
 

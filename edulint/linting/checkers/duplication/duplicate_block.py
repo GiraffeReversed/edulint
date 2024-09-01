@@ -2,13 +2,18 @@ from typing import List
 
 from astroid import nodes  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, new_node, cprint  # noqa: F401
+from edulint.linting.analyses.antiunify import antiunify, cprint  # noqa: F401
 from edulint.linting.analyses.reaching_definitions import (
     get_vars_defined_before,
     get_vars_used_after,
     get_control_statements,
 )
-from edulint.linting.checkers.utils import get_statements_count, get_token_count, EXPRESSION_TYPES
+from edulint.linting.checkers.utils import (
+    get_statements_count,
+    get_token_count,
+    EXPRESSION_TYPES,
+    new_node,
+)
 from edulint.linting.checkers.duplication.utils import (
     Fixed,
     length_mismatch,

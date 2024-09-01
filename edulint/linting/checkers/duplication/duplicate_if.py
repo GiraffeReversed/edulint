@@ -4,7 +4,6 @@ from astroid import nodes  # type: ignore
 
 from edulint.linting.analyses.antiunify import (
     antiunify,
-    new_node,
     cprint,  # noqa: F401
     get_sub_variant,
     contains_avar,
@@ -26,6 +25,7 @@ from edulint.linting.checkers.utils import (
     has_else_block,
     is_negation,
     are_identical,
+    new_node,
 )
 from edulint.linting.checkers.duplication.utils import (
     Fixed,
