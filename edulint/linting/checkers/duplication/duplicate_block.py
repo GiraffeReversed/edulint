@@ -22,6 +22,7 @@ from edulint.linting.checkers.duplication.utils import (
     assignment_to_aunify_var,
     saves_enough_tokens,
     to_node,
+    to_start_lines,
 )
 
 ### similar to function
@@ -99,6 +100,7 @@ def get_fixed_by_function(to_aunify, core, avars):
         (
             len(to_aunify),
             get_statements_count(core, include_defs=False, include_name_main=True),
+            to_start_lines(to_aunify),
         ),
     )
 
