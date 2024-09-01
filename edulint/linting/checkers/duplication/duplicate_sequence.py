@@ -23,6 +23,7 @@ from edulint.linting.checkers.duplication.utils import (
     assignment_to_aunify_var,
     saves_enough_tokens,
     to_node,
+    to_start_lines,
 )
 
 
@@ -379,7 +380,7 @@ def get_fixed_by_merging_with_parent_loop(to_aunify, core, avars):
         "similar-block-to-loop-merge",
         get_token_count(core),
         get_statements_count(core, include_defs=False, include_name_main=True),
-        (new_iter,),
+        (to_start_lines(to_aunify), new_iter),
     )
 
 

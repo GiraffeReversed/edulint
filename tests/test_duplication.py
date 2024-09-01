@@ -379,7 +379,10 @@ def test_similar_if_to_untwisted(filename: str, expected_output: List[Problem]) 
 
 
 @pytest.mark.parametrize("filename,expected_output", [
-    ("ut_80_2861_19_63.py", [lazy_problem().set_line(3).set_end_line(10)]),
+    ("ut_80_2861_19_63.py", [
+        lazy_problem().set_line(3).set_end_line(10)
+        .set_text("The body of the loop contains duplicate blocks, starting on lines 3, 7. Avoid the duplication by repeating the outer loop 8 times.")
+    ]),
     ("ut_57_4473_30_10.py", [lazy_problem().set_line(2)]),
 ])
 def test_similar_block_to_loop_merge(filename: str, expected_output: List[Problem]) -> None:

@@ -115,3 +115,7 @@ def get_common_parent(ns: List[nodes.NodeNG]) -> bool:
         if parent in other_parents:
             return parent
     return None
+
+
+def to_start_lines(to_aunify: List[List[nodes.NodeNG]]) -> str:
+    return ", ".join(str(n[0].fromlineno) for n in to_aunify)

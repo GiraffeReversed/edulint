@@ -284,9 +284,11 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "Emitted when similar sequential blocks can be deduplicated using a loop.",
         ),
         "R6553": (
-            "Merge with parent loop %s",
+            "The body of the loop contains duplicate blocks, starting on lines %s. "
+            "Avoid the duplication by repeating the outer loop %s times.",
             "similar-block-to-loop-merge",
-            "",
+            "Emitted when the body can be simplified using a loop and "
+            "the extra iterations can be performed by iterating the outer loop more times.",
         ),
         "R6554": (
             "Use existing function %s",
