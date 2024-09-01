@@ -50,7 +50,7 @@ def pylint_to_problem(
     assert isinstance(raw["path"], str), f'got {type(raw["path"])} for path'
     assert isinstance(raw["line"], int), f'got {type(raw["line"])} for line'
     assert isinstance(raw["column"], int), f'got {type(raw["column"])} for column'
-    assert isinstance(raw["message-id"], str), f'got {type(raw["message-id"])} for message-id'
+    assert isinstance(raw["messageId"], str), f'got {type(raw["messageId"])} for messageId'
     assert isinstance(raw["message"], str), f'got {type(raw["message"])} for message'
     assert (
         isinstance(raw["endLine"], int) or raw["endLine"] is None
@@ -72,7 +72,7 @@ def pylint_to_problem(
                     return fd / path.relative_to(fd)
         assert False, "unreachable"
 
-    code_enabler = enablers.get(raw["message-id"])
+    code_enabler = enablers.get(raw["messageId"])
     symbol_enabler = enablers.get(raw["symbol"])
 
     return Problem(
@@ -81,7 +81,7 @@ def pylint_to_problem(
         get_proper_path(get_used_filename(raw["path"])),
         raw["line"],
         raw["column"],
-        raw["message-id"],
+        raw["messageId"],
         raw["message"],
         raw["endLine"],
         raw["endColumn"],
@@ -89,14 +89,8 @@ def pylint_to_problem(
     )
 
 
-def lint_any(
-    linter: Linter,
-    files_or_dirs: List[str],
-    linter_args: List[str],
-    config_arg: ImmutableT,
-    result_getter: Callable[[Any], Any],
-    out_to_problem: Callable[[Dict[str, str], ProblemJson], Problem],
-    enablers: Dict[str, str],
+def lint_in_subprocess(
+    linter: Linter, files_or_dirs: List[str], linter_args: List[str], config_arg: ImmutableT
 ) -> List[Problem]:
     command = [sys.executable, "-m", str(linter)] + linter_args + list(config_arg) + files_or_dirs  # type: ignore
     return_code, outs, errs = ProcessHandler.run(command, timeout=1000)
@@ -105,6 +99,18 @@ def lint_any(
         logger.critical("{linter} was likely killed by timeout", linter=linter)
         raise TimeoutError(f"Timeout from {linter}")
 
+    return return_code, outs, errs
+
+
+def process_results(
+    linter: Linter,
+    return_code: int,
+    outs: str,
+    errs: str,
+    result_getter: Callable[[Any], Any],
+    out_to_problem: Callable[[Dict[str, str], ProblemJson], Problem],
+    enablers: Dict[str, str],
+) -> List[Problem]:
     errs = errs.strip()
     if errs:
         logger.error(errs)
@@ -139,11 +145,15 @@ def lint_edulint(files_or_dirs: List[str], config: ImmutableConfig) -> List[Prob
 
 def lint_flake8(files_or_dirs: List[str], config: ImmutableConfig) -> List[Problem]:
     flake8_args = ["--format=json"]
-    return lint_any(
+    return_code, outs, errs = lint_in_subprocess(
+        Linter.FLAKE8, files_or_dirs, flake8_args, config[Option.FLAKE8]
+    )
+
+    return process_results(
         Linter.FLAKE8,
-        files_or_dirs,
-        flake8_args,
-        config[Option.FLAKE8],
+        return_code,
+        outs,
+        errs,
         lambda r: [problem for problems in r.values() for problem in problems],
         flake8_to_problem,
         config.enablers,
@@ -151,14 +161,33 @@ def lint_flake8(files_or_dirs: List[str], config: ImmutableConfig) -> List[Probl
 
 
 def lint_pylint(files_or_dirs: List[str], config: ImmutableConfig) -> List[Problem]:
-    pylint_args = ["--output-format=json", "--recursive=y"]
+    pylint_args = ["--recursive=y"] + list(config[Option.PYLINT]) + files_or_dirs
 
-    return lint_any(
+    from io import StringIO
+    from pylint.lint import Run
+    from pylint.reporters.json_reporter import JSON2Reporter
+
+    output = StringIO()
+    reporter = JSON2Reporter(output)
+
+    new_stderr = StringIO()
+    old_stderr = sys.stderr
+    sys.stderr = new_stderr
+
+    try:
+        Run(pylint_args, reporter=reporter, exit=False)
+        return_code = 0
+    except SystemExit as e:
+        return_code = e.code
+
+    sys.stderr = old_stderr
+
+    return process_results(
         Linter.PYLINT,
-        files_or_dirs,
-        pylint_args,
-        config[Option.PYLINT],
-        lambda r: r,
+        return_code,
+        output.getvalue(),
+        new_stderr.getvalue(),
+        lambda r: r["messages"],
         partial(pylint_to_problem, files_or_dirs),
         config.enablers,
     )
