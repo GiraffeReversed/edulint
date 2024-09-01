@@ -1,4 +1,5 @@
-from typing import Dict, List, TypeVar, Union, Optional, Iterator, Tuple
+from dataclasses import dataclass
+from typing import Dict, List, TypeVar, Union, Optional, Iterator
 
 from astroid import nodes
 
@@ -16,7 +17,13 @@ ScopeNode = Union[
     nodes.SetComp,
 ]
 VarName = str
-Variable = Tuple[VarName, ScopeNode]
+
+
+@dataclass(frozen=True)
+class Variable:
+    name: VarName
+    scope: ScopeNode
+
 
 T = TypeVar("T")
 

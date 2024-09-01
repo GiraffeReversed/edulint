@@ -650,7 +650,7 @@ def get_fixed_by_function(tests, core, avars):
         call = new_node(nodes.Call)
         call.func = new_node(nodes.Name, name="AUX")
         call.args = [to_node(val) for val in if_vals] + [
-            new_node(nodes.Name, name=varname) for varname, _scope in extra_args.keys()
+            new_node(nodes.Name, name=var.name) for var in extra_args.keys()
         ]
         if return_vals_needed + control_needed == 0:
             body.append(call)
@@ -668,7 +668,7 @@ def get_fixed_by_function(tests, core, avars):
     fun_def.args = new_node(
         nodes.Arguments,
         args=[new_node(nodes.AssignName, name=avar.name) for avar in seen.values()]
-        + [new_node(nodes.AssignName, name=varname) for varname, _scope in extra_args.keys()],
+        + [new_node(nodes.AssignName, name=var.name) for var in extra_args.keys()],
     )
     fun_def.body = core if isinstance(core, list) else [core]
 

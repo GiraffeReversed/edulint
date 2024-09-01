@@ -133,10 +133,10 @@ def vars_in(
 
     first = node[0] if isinstance(node, list) else node
     for loc in syntactic_children_locs_from(get_cfg_loc(first), node):
-        for (varname, scope), events in loc.var_events.items():
+        for var, events in loc.var_events.items():
             for event in events:
                 if event_types is None or event.type in event_types:
-                    result[(varname, scope)] = event.node
+                    result[var] = event.node
     return result
 
 

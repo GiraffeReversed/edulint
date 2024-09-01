@@ -6,7 +6,7 @@ import re
 from astroid import nodes
 
 from edulint.linting.analyses.cfg.utils import get_cfg_loc
-from edulint.linting.analyses.variable_scope import ScopeListener, VarName
+from edulint.linting.analyses.variable_scope import ScopeListener, VarName, Variable
 from edulint.linting.checkers.utils import is_builtin
 
 
@@ -63,7 +63,7 @@ class VarEventListener(ScopeListener[None]):
         #     name, name_node, loc.node
         # ), f"but {name_node.as_string()}, {loc.node.as_string()}"
         if scope is not None:
-            loc.var_events[(name, scope)].append(VarEvent(name_node, action))
+            loc.var_events[Variable(name, scope)].append(VarEvent(name_node, action))
 
     # @override
     def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG, offset: int = 0) -> None:

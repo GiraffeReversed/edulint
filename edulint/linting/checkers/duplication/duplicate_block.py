@@ -51,7 +51,7 @@ def get_fixed_by_function(to_aunify, core, avars):
             nodes.Call,
             func=new_node(nodes.Name, name="AUX"),
             args=[to_node(param) for param in params]
-            + [new_node(nodes.Name, name=varname) for (varname, _scope) in extra_args.keys()],
+            + [new_node(nodes.Name, name=var.name) for var in extra_args.keys()],
         )
         if return_vals_needed + control_needed == 0:
             calls.append(call)
@@ -86,7 +86,7 @@ def get_fixed_by_function(to_aunify, core, avars):
         args=new_node(
             nodes.Arguments,
             args=[new_node(nodes.AssignName, name=avar.name) for avar in seen.values()]
-            + [new_node(nodes.AssignName, name=varname) for (varname, _scope) in extra_args.keys()],
+            + [new_node(nodes.AssignName, name=var.name) for var in extra_args.keys()],
         ),
         body=core if isinstance(core, list) else [core],
     )
