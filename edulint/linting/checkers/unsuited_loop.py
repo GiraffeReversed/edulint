@@ -263,61 +263,42 @@ class UnsuitedLoop(BaseChecker):
 
     def _check_modifying_iterable(self, node: nodes.For) -> None:
         iterated = node.iter
-        if type(iterated) not in (nodes.Name, nodes.Attribute):  # TODO allow any node type
+        if not isinstance(iterated, nodes.Name):  # TODO allow any node type
             return
 
-        listener: ModifiedListener[None] = ModifiedListener([iterated])
-        listener.visit_many(node.body)
+        iterated_var = node_to_var(iterated)
+        if iterated_var is None:
+            return
 
-        for modifier in listener.get_sure_modifiers(iterated):
-            if isinstance(modifier, nodes.Call) and type(
-                self._get_last_block_line(modifier)
-            ) not in (
-                nodes.Break,
-                nodes.Return,
+        # TODO reassigning iterated structure?
+        for event in get_events_for([iterated_var], node.body, (VarEventType.MODIFY,)):
+            if isinstance(event.node.parent, nodes.Call) and not isinstance(
+                self._get_last_block_line(event.node), (nodes.Break, nodes.Return)
             ):
                 self.add_message(
-                    "modifying-iterated-structure", node=modifier, args=(get_name(iterated),)
+                    "modifying-iterated-structure", node=event.node.parent, args=iterated_var.name
                 )
 
     def _check_control_variable_changes(self, node: nodes.For) -> None:
-        def is_last_block(node: nodes.NodeNG, for_: nodes.For) -> bool:
-            stmt = self._get_block_line(node)
-            while not isinstance(node, nodes.Module):
-                if type(stmt) in (nodes.For, nodes.While):
-                    return False
-                if stmt == for_.body[-1]:
-                    return True
-                last_block_stmt = self._get_last_block_line(stmt)
-                if stmt != last_block_stmt:
-                    return False
-                stmt = last_block_stmt.parent
-            return False
-
         range_params = get_range_params(node.iter)
-        if range_params is None:
+        if range_params is None or not isinstance(node.target, nodes.AssignName):
             return
 
-        control_var = node.target
-        if control_var.as_string().startswith("_"):
+        control_var = node_to_var(node.target)
+        assert control_var is not None
+        if control_var.name.startswith("_"):
             return
 
-        listener: ModifiedListener[None] = ModifiedListener([control_var])
-        listener.visit_many(node.body)
-
-        for modifier in listener.get_all_modifiers(control_var):
-            mod_statement = self._get_block_line(modifier)
-            if (
-                isinstance(mod_statement, nodes.For)
-                and mod_statement.target.as_string() == control_var.as_string()
-            ):
+        for event in get_events_for([control_var], node.body, MODIFYING_EVENTS):
+            if isinstance(event.node.parent, nodes.For) and event.node == event.node.parent.target:
                 self.add_message(
-                    "loop-shadows-control-variable", node=mod_statement, args=(modifier.as_string())
+                    "loop-shadows-control-variable", node=event.node, args=control_var.name
                 )
                 continue
-            if is_last_block(mod_statement, node):
+
+            if len(event.uses) == 0:
                 self.add_message(
-                    "changing-control-variable", node=mod_statement, args=(control_var.as_string(),)
+                    "changing-control-variable", node=event.node.parent, args=(control_var.name)
                 )
 
     @only_required_for_messages(
