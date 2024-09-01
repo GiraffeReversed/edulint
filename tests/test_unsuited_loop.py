@@ -122,6 +122,44 @@ def test_use_for_loop_files(filename: str, expected_output: List[Problem]) -> No
     )
 
 
+# OBJ_DEF = [
+#     "class Obj:",
+#     "    def __init__(self):",
+#     "        self.elems = []",
+# ]
+
+# @pytest.mark.parametrize("lines,expected_output", [
+#     (OBJ_DEF + [
+#         "obj = Obj()",
+#         "for v in obj.elems:",
+#         "    obj.elems.append('x')",
+#     ], [lazy_problem().set_line(6)]),
+#     (OBJ_DEF + [
+#         "obj = Obj()",
+#         "for v in obj.elems:",
+#         "    obj = Obj()",
+#         "    obj.elems.append('y')"
+#     ], []),
+#     (OBJ_DEF + [
+#         "obj = Obj()",
+#         "for v in obj.elems:",
+#         "    obj.elems = []",
+#     ], [lazy_problem().set_line(6)]),
+#     (OBJ_DEF + [
+#         "obj = Obj()",
+#         "for v in obj.elems:",
+#         "    obj.elems.append('x')",
+#         "    obj = Obj()",
+#         "    obj.elems.append('y')"
+#     ], [lazy_problem().set_line(6)]),
+# ])
+# def test_modifying_iterated_custom(lines: List[str], expected_output: List[Problem]) -> None:
+#     create_apply_and_lint(
+#         lines,
+#         [Arg(Option.PYLINT, "--enable=modifying-iterated-structure")],
+#         [problem.set_code("R6303") for problem in expected_output]
+#     )
+
 @pytest.mark.parametrize("filename,expected_output", [
     ("034636-right_cellular.py", []),
     ("104526-subset_sum.py", [
