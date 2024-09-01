@@ -490,21 +490,32 @@ class Local(BaseChecker):
                 )
             return isinstance(node, (nodes.Return, nodes.Break, nodes.Continue))
 
-        if is_parents_elif(node):
+        def large_terminated_if_elif_block(node: nodes.NodeNG) -> bool:
+            return (
+                isinstance(node, nodes.If)
+                and ends_block(node.body[-1])
+                and get_statements_count(node.body, include_defs=True, include_name_main=True) > 2
+                and (
+                    len(node.orelse) == 0
+                    or (len(node.orelse) == 1 and large_terminated_if_elif_block(node.orelse[0]))
+                )
+            )
+
+        prev_sibling = node.previous_sibling()
+        if is_parents_elif(node) or large_terminated_if_elif_block(prev_sibling):
             return
 
         if len(node.orelse) > 0:
-            if get_statements_count(node.orelse, include_defs=True, include_name_main=True) > 2:
-                return
-            last = node.orelse[-1]
+            last_block = node.orelse
         elif ends_block(node.body[-1]):
-            last = node.next_sibling()
+            last_block = [node.next_sibling()]
         else:
             return
 
         if (
-            ends_block(last)
-            and get_statements_count(node.body, include_defs=True, include_name_main=True) > 3
+            ends_block(last_block[-1])
+            and get_statements_count(last_block, include_defs=True, include_name_main=True) <= 2
+            and get_statements_count(node.body, include_defs=True, include_name_main=True) >= 4
         ):
             self.add_message("use-early-return", node=node)
 

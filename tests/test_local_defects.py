@@ -267,10 +267,15 @@ def test_ord_files(filename: str, expected_output: List[Problem]) -> None:
         lazy_problem().set_code("R6611").set_line(41).set_text("Use else instead of elif."),
         lazy_problem().set_code("R6612").set_line(44).set_text("Unreachable else."),
     ]),
+    ("3ee0761302-p4_geometry.py", []),
+    ("4594fad43b-p4_triangle.py", []),
+    ("66479c3d7d-p4_geometry.py", []),
+    ("7922cc0638-p6_next.py", [lazy_problem().set_code("R6616").set_line(20)]),
     ("104174-ipv4_restore.py", [
         lazy_problem().set_code("R6610").set_line(38).set_text("Do not multiply list with mutable content.")
     ]),
     ("104584-p4_digits.py", []),
+    ("calc_with_vars.py", []),
     ("hw14358.py", [
         lazy_problem().set_code("R6609").set_line(31).set_text("Use augmented assignment: 'b += 1'"),
         lazy_problem().set_code("R6609").set_line(34).set_text("Use augmented assignment: 'a += 1'"),
