@@ -238,18 +238,27 @@ def test_similar_if_to_function(filename: str, expected_output: List[Problem]) -
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("0642a5c1d7-hw4.py", []),  # dubious
-    ("117cb0510a-midterm.py", [lazy_problem().set_line(6).set_end_line(17)]),
+    ("117cb0510a-midterm.py", [
+        lazy_problem().set_line(6).set_end_line(17)
+        .set_text("There are 3 repetitions of 4 similar statements, which can be simplified using a loop. Consider iterating over '(2, 3, 5)'.")
+    ]),
     ("1687aeed39-hw4.py", []),
     ("7e1dd5c338-p2_tortoise.py", []),
     ("APS_Automated_Data_Reporting.py", []),
-    ("b3b13aa3f7-p5_merge.py", [lazy_problem().set_line(37)]),
+    ("b3b13aa3f7-p5_merge.py", [
+        lazy_problem().set_line(37)
+        .set_text("There are 3 repetitions of 7 similar statements, which can be simplified using a loop. Consider iterating over 'range(3)'.")
+    ]),
     ("cf_1462_e_86.py", []),
     ("cf_20_b_30.py", []),
-    ("cf_373_a_21.py", [lazy_problem().set_line(17)]),
+    ("cf_373_a_21.py", [
+        lazy_problem().set_line(17)
+        .set_text("There are 9 repetitions of 1 similar statements, which can be simplified using a loop. Consider iterating over 'range(9)'.")
+    ]),
     ("uc_10_7828_23_16.py", []),
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
     ("uc_52_2125_16_10.py", []),
-    ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11)]),
+    ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11).set_text("There are 6 repetitions of 1 similar statements, which can be simplified using a loop. Consider iterating over '('a', 'e', 'i', 'o', 'u', 'y')'.")]),
     ("ut_57_4473_30_10.py", []),  # does not suggest to-loop on mergeable loops
     ("ut_57_5508_21_10.py", [lazy_problem().set_line(1)]),
     ("ut_57_9336_15_20.py", [lazy_problem().set_line(1)]),
@@ -257,7 +266,7 @@ def test_similar_if_to_function(filename: str, expected_output: List[Problem]) -
     ("ut_80_3906_24_11.py", [lazy_problem().set_source(Linter.PYLINT)]),  # report only one missing loop, others are misshapen
     ("ut_80_8916_12_20.py", [lazy_problem().set_source(Linter.PYLINT)]),
     ("ut_98_8463_20_35.py", [lazy_problem().set_source(Linter.PYLINT)]),
-    ("voter_pennant_twirl_mayday.py", [lazy_problem().set_line(36)]),
+    ("voter_pennant_twirl_mayday.py", [lazy_problem().set_line(36).set_text("There are 6 repetitions of 1 similar statements, which can be simplified using a loop. Consider iterating over 'range(6)'.")]),
 ])
 def test_similar_block_to_loop(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(

@@ -278,9 +278,10 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "",
         ),
         "R6552": (
-            "Extract code into loop (%d repetitions of %d statements)",
+            "There are %d repetitions of %d similar statements, which can be simplified using a loop. "
+            "Consider iterating over '%s'.",
             "similar-block-to-loop",
-            "",
+            "Emitted when similar sequential blocks can be deduplicated using a loop.",
         ),
         "R6553": (
             "Merge with parent loop %s",

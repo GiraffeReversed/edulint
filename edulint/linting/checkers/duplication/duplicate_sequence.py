@@ -54,11 +54,11 @@ def to_range_args(sequence):
 
 
 def to_range_node(range_args):
-    start, step, stop = range_args
+    start, stop, step = range_args
 
     range_ = new_node(nodes.Call, func=new_node(nodes.Name, name="range"))
     start_node = new_node(nodes.Const, value=start)
-    stop_node = new_node(nodes.Const, value=step)
+    stop_node = new_node(nodes.Const, value=stop)
     step_node = new_node(nodes.Const, value=step)
     if step != 1:
         range_.args = [start_node, stop_node, step_node]
@@ -280,7 +280,7 @@ def consolidate_ranges(ranges):
             use = new_node(nodes.BinOp, op="+", left=use, right=new_node(nodes.Const, value=start))
         uses.append(use)
 
-    start, stop, step = 0, (stop - stop) // step + 1, 1
+    start, stop, step = 0, (stop - start - 1) // step + 1, 1
     return [to_range_node((start, stop, step))], uses
 
 
@@ -316,7 +316,10 @@ def get_nice_iters(avars, to_aunify):
         }
         if len(str_iters) != 1:
             return None
-        some_iter, _use = iter_uses[0]
+        some_iter, use = iter_uses[0]
+        if isinstance(use, nodes.Call) and use.func.name == "chr":
+            start = use.args[0].left.args[0].value
+            some_iter = [chr(ord(start) + v) for v in some_iter]
 
         collection = new_node(nodes.Tuple, elts=[to_node(n, avars[0]) for n in some_iter])
         return [collection], [use for _iter, use in iter_uses]
@@ -387,7 +390,8 @@ def get_fixed_by_loop(to_aunify, core, avars):
     iters, uses = result
     assert len(iters) == 1
 
-    for_ = new_node(nodes.For, iter=get_iter(iters), target=get_target(avars, iters), body=core)
+    iterable = get_iter(iters)
+    for_ = new_node(nodes.For, iter=iterable, target=get_target(avars, iters), body=core)
 
     return Fixed(
         "similar-block-to-loop",
@@ -396,6 +400,7 @@ def get_fixed_by_loop(to_aunify, core, avars):
         (
             len(to_aunify),
             get_statements_count(to_aunify[0], include_defs=False, include_name_main=True),
+            iterable.as_string(),
         ),
     )
 
