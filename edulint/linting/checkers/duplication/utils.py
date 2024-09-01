@@ -67,7 +67,7 @@ def is_duplication_candidate(stmtss) -> bool:
 
 def saves_enough_tokens(tokens_before: int, stmts_before: int, fixed: Fixed):
     if fixed.symbol in ("similar-if-to-untwisted", "similar-if-into-block", "similar-if-to-use"):
-        return True
+        return fixed.statements <= stmts_before and fixed.tokens < tokens_before
     return fixed.statements <= stmts_before + 1 and fixed.tokens < 0.8 * tokens_before
 
 
