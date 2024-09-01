@@ -581,7 +581,10 @@ def test_similar_if_to_expr(filename: str, expected_output: List[Problem]) -> No
         "            print('cruel')",
         "            print('world')",
 
-    ], [lazy_problem().set_line(2)]),
+    ], [
+        lazy_problem().set_line(2)
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 5, 12.")
+    ]),
 ])
 def test_similar_if_into_block_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
@@ -593,11 +596,17 @@ def test_similar_if_into_block_custom(lines: List[str], expected_output: List[Pr
 @pytest.mark.parametrize("filename,expected_output", [
     ("0bf69cc1a5-p4_geometry.py", []),
     ("163aadb1dd-p4_geometry.py", []),
-    ("2a6a841f84-task_2.py", [lazy_problem().set_line(36)]),
+    ("2a6a841f84-task_2.py", [
+        lazy_problem().set_line(36)
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 40, 47.")
+    ]),
     ("30c8bd0ad7-p6_cellular.py", []),
     ("3867ee9889-split.py", []),
     ("5ce8692f42-p5_fibsum.py", []),
-    ("769200244d-p6_workdays.py", [lazy_problem().set_line(66)]),
+    ("769200244d-p6_workdays.py", [
+        lazy_problem().set_line(66)
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 75-76, 88-89.")
+    ]),
     ("7e1dd5c338-p1_digit_sum.py", []),
     ("7e1dd5c338-p5_credit.py", []),
     ("9668dff756-p6_workdays.py", []),
@@ -609,12 +618,18 @@ def test_similar_if_into_block_custom(lines: List[str], expected_output: List[Pr
     ("custom_if_calls_to_variables.py", []),
     ("fd637a2984-p6_workdays.py", []),
     ("fdc1570861-p6_workdays.py", []),
-    ("ksi_12_136_aatb.py", [lazy_problem().set_line(4)]),
+    ("ksi_12_136_aatb.py", [
+        lazy_problem().set_line(4)
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 6, 11.")
+    ]),
     ("tarot_card_reader.py", []),
     ("uc_28_6710_05_14.py", []),
     ("uc_73_0198_15_17.py", [lazy_problem().set_line(6)]), # dubious
     ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
-    ("uc_73_3819_50_56.py", [lazy_problem().set_line(3)]), # multi-step
+    ("uc_73_3819_50_56.py", [
+        lazy_problem().set_line(3)
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 6-11, 16-21.")
+    ]), # multi-step
     ("uc_73_3819-20_56.py", [lazy_problem().set_line(3)]), #, lazy_problem().set_line(7)]),
     ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]), # multi-step
     ("uc_73_5468_12_52.py", []),

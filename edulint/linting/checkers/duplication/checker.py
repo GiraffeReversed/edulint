@@ -301,9 +301,12 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "",
         ),
         "R6556": (
-            "Move if into block",
+            "The branches of the 'if' statement are similar. Move the 'if' into the branches, "
+            "so that it only contains lines %s.",
             "similar-if-into-block",
-            "",
+            "Emitted when an 'if' statement wraps too long part of a block "
+            "(similar to identical-if-branches-part, but this one can suggest "
+            "moving if into a for loop, for example).",
         ),
         "R6557": (
             "Restructure twisted ifs",

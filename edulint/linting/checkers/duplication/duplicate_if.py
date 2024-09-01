@@ -545,14 +545,19 @@ def get_fixed_by_moving_if_rec(tests, core, avars):
         max_ = avar_indices[-1]
 
         if min_ == max_ and if_can_be_moved(core[min_], avars):
-            root = get_fixed_by_moving_if_rec(tests, core[min_], avars)
+            root, lines = get_fixed_by_moving_if_rec(tests, core[min_], avars)
         else:
             new_body = core[min_ : max_ + 1]
             root, if_bodies = create_ifs(tests)
             for if_body in if_bodies:
                 if_body.extend(new_body)
+            lines = [
+                (new_body[0].sub_locs[i].node.fromlineno, new_body[-1].sub_locs[i].node.tolineno)
+                for i in range(len(new_body[0].sub_locs))
+            ]
+            lines = [f"{start}" if start == end else f"{start}-{end}" for start, end in lines]
 
-        return core[:min_] + [root] + core[max_ + 1 :]
+        return core[:min_] + [root] + core[max_ + 1 :], lines
 
     assert contains_avar(core, avars) and if_can_be_moved(core, avars)
     new_core = new_node(type(core))
@@ -560,15 +565,17 @@ def get_fixed_by_moving_if_rec(tests, core, avars):
     for attr in HEADER_ATTRIBUTES[type(core)]:
         setattr(new_core, attr, getattr(core, attr))
 
+    lines = []
     for attr in BODY_ATTRIBUTES[type(core)]:
         attrval = getattr(core, attr)
         if contains_avar(attrval, avars):
-            new_body = get_fixed_by_moving_if_rec(tests, getattr(core, attr), avars)
+            new_body, sublines = get_fixed_by_moving_if_rec(tests, getattr(core, attr), avars)
+            lines.extend(sublines)
         else:
             new_body = attrval
         setattr(new_core, attr, new_body)
 
-    return new_core
+    return new_core, lines
 
 
 @check_enabled("similar-if-into-block")
@@ -580,7 +587,7 @@ def get_fixed_by_moving_if(tests, core, avars):
     ):
         return None
 
-    fixed = get_fixed_by_moving_if_rec(tests, core, avars)
+    fixed, lines = get_fixed_by_moving_if_rec(tests, core, avars)
     return (
         get_token_count(fixed)
         + sum(
@@ -589,7 +596,7 @@ def get_fixed_by_moving_if(tests, core, avars):
             for v in avar.subs
         ),
         get_statements_count(fixed, include_defs=True, include_name_main=False),
-        (),
+        (", ".join(lines),),
     )
 
 
