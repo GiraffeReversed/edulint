@@ -52,6 +52,13 @@ class VarEvent:
             ")"
         )
 
+    def is_direct_modify(self):
+        """Method called on the var, e.g., append, insert"""
+        assert self.type == VarEventType.MODIFY
+        return isinstance(self.node.parent, nodes.Attribute) and isinstance(
+            self.node.parent.parent, nodes.Call
+        )
+
 
 @dataclass
 class VarEvents:

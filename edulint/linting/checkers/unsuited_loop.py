@@ -299,7 +299,7 @@ class UnsuitedLoop(BaseChecker):
 
         # TODO reassigning iterated structure?
         for event in get_events_for([iterated_var], node.body, (VarEventType.MODIFY,)):
-            if isinstance(event.node.parent, nodes.Call) and not isinstance(
+            if event.is_direct_modify() and not isinstance(
                 self._get_last_block_line(event.node), (nodes.Break, nodes.Return)
             ):
                 self.add_message(

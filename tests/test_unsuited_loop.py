@@ -194,6 +194,7 @@ def test_use_for_loop_files(filename: str, expected_output: List[Problem]) -> No
         .set_text("Iterated structure traders is being modified inside the for loop body. "
                   "Use while loop or iterate over a copy.")
     ]),
+    ("2902f19359.py", []),
 ])
 def test_modifying_iterated_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(

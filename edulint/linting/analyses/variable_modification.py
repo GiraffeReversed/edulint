@@ -81,7 +81,7 @@ class VarEventListener(ScopeListener[None]):
             return
 
         if isinstance(node, (nodes.AssignAttr, nodes.Subscript)):
-            self._add_var_event(stripped.name, node, VarEventType.MODIFY)
+            self._add_var_event(stripped.name, stripped, VarEventType.MODIFY)
 
     # @override
     def visit_augassign(self, node: nodes.AugAssign) -> None:
@@ -101,14 +101,14 @@ class VarEventListener(ScopeListener[None]):
             and VarEventListener.NON_PURE_METHODS.match(node.attrname)
             and stripped is not None
         ):
-            self._add_var_event(stripped.name, node, VarEventType.MODIFY)
+            self._add_var_event(stripped.name, stripped, VarEventType.MODIFY)
 
         return self.visit_many(node.get_children())
 
     def visit_assignattr(self, node: nodes.AssignAttr) -> None:
         stripped = strip_to_name(node)
         if stripped is not None:
-            self._add_var_event(stripped.name, node, VarEventType.MODIFY)
+            self._add_var_event(stripped.name, stripped, VarEventType.MODIFY)
 
         return self.visit_many(node.get_children())
 
@@ -116,4 +116,4 @@ class VarEventListener(ScopeListener[None]):
         stripped = strip_to_name(node)
         if stripped is None:
             return
-        self._add_var_event(stripped.name, node, VarEventType.MODIFY)
+        self._add_var_event(stripped.name, stripped, VarEventType.MODIFY)
