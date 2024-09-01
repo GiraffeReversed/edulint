@@ -8,7 +8,7 @@ from pylint.lint import PyLinter
 
 from edulint.linting.analyses.variable_scope import UnknowableLocalsException
 from edulint.linting.analyses.variable_modification import VarModificationAnalysis
-from edulint.linting.analyses.reaching_definitions import collect_reaching_definitions
+from edulint.linting.analyses.data_dependency import collect_reaching_definitions
 
 from edulint.linting.analyses.antiunify import AunifyVar
 from edulint.linting.analyses.cfg.visitor import CFGVisitor

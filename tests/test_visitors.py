@@ -2,7 +2,7 @@ from edulint.linting.checkers.basic_checker import ModifiedListener
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.analyses.cfg.utils import successors_from_loc
 from edulint.linting.analyses.variable_modification import VarModificationAnalysis, VarEventType
-from edulint.linting.analyses.reaching_definitions import name_to_var, modified_in, node_to_var
+from edulint.linting.analyses.data_dependency import name_to_var, modified_in, node_to_var
 from edulint.linting.checkers.utils import get_name
 
 from typing import List, Tuple, Dict

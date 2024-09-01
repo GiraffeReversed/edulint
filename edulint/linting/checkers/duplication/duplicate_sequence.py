@@ -8,7 +8,7 @@ from edulint.linting.analyses.antiunify import (
     new_node,
     cprint,  # noqa: F401
 )
-from edulint.linting.analyses.reaching_definitions import vars_in
+from edulint.linting.analyses.data_dependency import vars_in
 from edulint.linting.checkers.utils import (
     get_statements_count,
     get_token_count,

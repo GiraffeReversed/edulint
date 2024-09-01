@@ -9,7 +9,7 @@ from edulint.linting.analyses.antiunify import (
     contains_avar,
 )
 from edulint.linting.analyses.variable_modification import VarEventType
-from edulint.linting.analyses.reaching_definitions import vars_in, is_changed_between
+from edulint.linting.analyses.data_dependency import vars_in, is_changed_between
 from edulint.linting.analyses.cfg.utils import get_cfg_loc
 from edulint.linting.checkers.utils import (
     is_parents_elif,

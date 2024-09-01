@@ -3,7 +3,7 @@ from typing import List
 from astroid import nodes  # type: ignore
 
 from edulint.linting.analyses.antiunify import antiunify, cprint  # noqa: F401
-from edulint.linting.analyses.reaching_definitions import (
+from edulint.linting.analyses.data_dependency import (
     get_vars_defined_before,
     get_vars_used_after,
     get_control_statements,

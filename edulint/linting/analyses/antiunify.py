@@ -5,7 +5,7 @@ from enum import Enum
 from astroid import nodes
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs_from, get_cfg_loc
-from edulint.linting.analyses.reaching_definitions import (
+from edulint.linting.analyses.data_dependency import (
     Variable,
     get_vars_defined_before,
     get_vars_used_after,
