@@ -8,7 +8,6 @@ load-plugins = [
     "edulint.linting.checkers.improper_loop",
     "edulint.linting.checkers.simplifiable_if",
     "edulint.linting.checkers.python_ta_checkers",
-    "edulint.linting.checkers.duplication_checker",
     "edulint.linting.checkers.duplication.checker",
 ]
 disable = "all"

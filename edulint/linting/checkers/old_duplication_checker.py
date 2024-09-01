@@ -220,32 +220,32 @@ class CollectBlocksVisitor(BaseVisitor[None]):
 
 
 class NoDuplicateCode(BaseChecker):  # type: ignore
-    name = "no-duplicate-code"
+    name = "old-no-duplicate-code"
     msgs = {
-        "R6502": (
+        "R6595": (
             "Identical code inside all if's branches, move %d lines %s the if.",
             "duplicate-if-branches",
             "Emitted when identical code starts or ends all branches of an if statement.",
         ),
-        "R6503": (
+        "R6596": (
             "Identical code inside %d consecutive ifs, join their conditions using 'or'.",
             "duplicate-seq-ifs",
             "Emitted when several consecutive if statements have identical bodies and thus can be "
             "joined by or in their conditions.",
         ),
-        "R6504": (
+        "R6597": (
             "A complex expression '%s' used repeatedly (on lines %s). Extract it to a local variable or "
             "create a helper function.",
             "duplicate-exprs",
             "Emitted when an overly complex expression is used multiple times.",
         ),
-        "R6505": (
+        "R6598": (
             "Duplicate blocks starting on lines %s. Extract the code to a helper function.",
             "duplicate-blocks",
             "Emitted when there are duplicate blocks of code as a body of an if/elif/else/for/while/with/try-except "
             "block.",
         ),
-        "R6506": (
+        "R6599": (
             "Duplicate sequence of %d repetitions of %d lines of code. Use a loop to avoid this.",
             "duplicate-sequence",
             "Emitted when there is a sequence of similar sub-blocks inside a block that can be replaced by a loop.",

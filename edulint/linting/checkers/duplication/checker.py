@@ -254,7 +254,7 @@ def is_any_similar_to_block(checker, duplicate: Set[nodes.NodeNG], candidates):
 
 
 class NoDuplicateCode(BaseChecker):  # type: ignore
-    name = "big-no-duplicate-code"
+    name = "no-duplicate-code"
     msgs = {
         "R6801": (
             # "Lines %i to %i are similar to lines %i through %i. Extract them to a common function.",
