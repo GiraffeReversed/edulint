@@ -5,7 +5,7 @@ load-plugins = [
     "edulint.linting.analyses.patcher",
     "edulint.linting.checkers.basic_checker",
     "edulint.linting.checkers.local_defects",
-    "edulint.linting.checkers.improper_loop",
+    "edulint.linting.checkers.unsuited_loop",
     "edulint.linting.checkers.simplifiable_if",
     "edulint.linting.checkers.python_ta_checkers",
     "edulint.linting.checkers.duplication.checker",

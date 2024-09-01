@@ -11,8 +11,8 @@ from edulint.linting.checkers.utils import get_name, get_range_params, get_const
 from edulint.linting.checkers.modified_listener import ModifiedListener
 
 
-class ImproperLoop(BaseChecker):
-    name = "improper-loop"
+class UnsuitedLoop(BaseChecker):
+    name = "unsuited-loop"
     msgs = {
         "R6301": (
             "The while condition can be replaced with '<negated %s>'",
@@ -225,7 +225,7 @@ class ImproperLoop(BaseChecker):
 
     @staticmethod
     def _get_last_block_line(node: nodes.NodeNG) -> nodes.NodeNG:
-        node = ImproperLoop._get_block_line(node)
+        node = UnsuitedLoop._get_block_line(node)
 
         while node.next_sibling() is not None:
             node = node.next_sibling()
@@ -306,4 +306,4 @@ def register(linter: "PyLinter") -> None:
     """This required method auto registers the checker during initialization.
     :param linter: The linter to register the checker to.
     """
-    linter.register_checker(ImproperLoop(linter))
+    linter.register_checker(UnsuitedLoop(linter))
