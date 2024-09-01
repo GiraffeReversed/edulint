@@ -37,6 +37,12 @@ To start using EduLint, open an interactive shell and run:
 .. note::
    Multiple filenames can be passed and linted at once. If a directory is passed, it is traversed and all :code:`.py` files it contains are linted.
 
+EduLint can also produce the output as a JSON by passing the :code:`--json` option.
+
+.. code::
+
+   python3 -m edulint check path/to/code/to/check.py --json
+
 .. _thonny plugin:
 
 Use Thonny plugin
