@@ -22,7 +22,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install Edulint
-        run: python -m pip install --upgrade pip || pip install edulint
+        run: python -m pip install --upgrade pip; pip install edulint
 
       - name: Log python package versions
         run: pip freeze
@@ -30,7 +30,7 @@ jobs:
       - name: Lint a test file with OK code
         run: |
           echo "print('test')" > /tmp/ok.py
-          python -m edulint check /tmp/ok.py || test $? -eq 0
+          python -m edulint check /tmp/ok.py # Github step implicitly tests for `$? -eq 0`
 
       - name: Lint a test file with simple code quality defect
         run: |
