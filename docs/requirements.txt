@@ -4,7 +4,7 @@ sphinxcontrib-jquery
 beautifulsoup4
 flake8
 flake8-json
-pylint>=2.15.10,<3  # 3 is tested to be incompatible
+pylint>=3
 dataclasses-json
 tomli
 loguru
