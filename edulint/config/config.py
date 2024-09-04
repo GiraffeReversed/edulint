@@ -15,7 +15,7 @@ from edulint.option_parses import (
     LANG_TRANSLATIONS_LABEL,
     DEFAULT_ENABLER_LABEL,
 )
-from edulint.config.file_config import load_toml_file, get_config_type, ConfigFileType
+from edulint.config.file_config import load_toml_file, get_path_relative_to
 from edulint.config.option_sets import OptionSets, OptionSet, parse_option_sets
 from edulint.config.language_translations import (
     LangTranslations,
@@ -281,18 +281,14 @@ def parse_cmd_config(args: List[str], option_parses: Dict[Option, OptionParse]) 
     return Config("cmd", parsed, option_parses)
 
 
-def resolve_relative_config_path(path: str, config: Config) -> None:
-    config_path = config.get_last_value(Option.CONFIG_FILE, use_default=False)
+def resolve_relative_option_path(path: str, config: Config, option: Option) -> None:
+    config_path = config.get_last_value(option, use_default=False)
     if config_path is None:
         return
 
-    config_type = get_config_type(config_path)
-    if config_type != ConfigFileType.LOCAL or os.path.isabs(config_path):
-        return
-
-    assert config.option_parses[Option.CONFIG_FILE].combine == Combine.REPLACE
-    config_abspath = os.path.abspath(os.path.join(os.path.dirname(path), config_path))
-    config.config.append(ProcessedArg(Option.CONFIG_FILE, config_abspath))
+    assert config.option_parses[option].combine == Combine.REPLACE
+    config_abspath = get_path_relative_to(config_path, path)
+    config.config.append(ProcessedArg(option, config_abspath))
 
 
 def resolve_ignore_infile_config(parsed: List[UnprocessedArg], config: Config) -> Config:
@@ -316,7 +312,8 @@ def parse_infile_config(path: str, option_parses: Dict[Option, OptionParse]) -> 
     parsed = parse_args(extracted, option_parses)
     infile_config = Config("in-file", parsed, option_parses)
 
-    resolve_relative_config_path(path, infile_config)
+    resolve_relative_option_path(path, infile_config, Option.CONFIG_FILE)
+    resolve_relative_option_path(path, infile_config, Option.LANGUAGE_FILE)
 
     return resolve_ignore_infile_config(parsed, infile_config)
 
@@ -329,7 +326,8 @@ def parse_config_file(
         if not isinstance(rec_config, str):
             print_invalid_type_message(Option.CONFIG_FILE, rec_config)
             rec_config = BASE_CONFIG
-        return parse_config_file(rec_config, option_parses)
+        rec_config_abspath = get_path_relative_to(rec_config, path)
+        return parse_config_file(rec_config_abspath, option_parses)
 
     config_dict = load_toml_file(path)
     if config_dict is None:
@@ -360,6 +358,9 @@ def parse_config_file(
                 option is None or option == Option.CONFIG_FILE
             ):  # config is handled as the first option
                 continue
+
+            if option == Option.LANGUAGE_FILE:
+                val = get_path_relative_to(val, path)
 
             if not isinstance(val, dict):
                 to_process = [val]

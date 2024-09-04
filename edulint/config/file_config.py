@@ -61,6 +61,15 @@ def get_config_type(path_or_url: str) -> ConfigFileType:
     return ConfigFileType.LOCAL
 
 
+def get_path_relative_to(filepath: str, parent_filepath: str):
+    config_type = get_config_type(filepath)
+    if config_type != ConfigFileType.LOCAL or os.path.isabs(filepath):
+        return filepath
+
+    assert not os.path.isdir(parent_filepath)
+    return os.path.abspath(os.path.join(os.path.dirname(parent_filepath), filepath))
+
+
 def _load_file_from_uri(path_or_url: str) -> str:
     config_type = get_config_type(path_or_url)
 
