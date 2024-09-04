@@ -30,6 +30,7 @@ Do you have any problem or could use a new feature? See `project's GitHub issues
    running
    configuration
    checkers
+   translations
    explanations
 
 .. Indices and tables

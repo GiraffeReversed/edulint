@@ -1,6 +1,8 @@
 Custom changes
 ^^^^^^^^^^^^^^
 
+.. _checkers:
+
 Custom checkers
 ---------------
 
