@@ -149,4 +149,6 @@ def parse_lang_translations(raw_lang_translations: Any) -> LangTranslations:
 
 def parse_lang_file(filename: str):
     lang_file_raw = load_toml_file(filename)
+    if lang_file_raw is None:
+        return {}
     return parse_lang_translations(lang_file_raw)
