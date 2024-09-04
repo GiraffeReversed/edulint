@@ -303,7 +303,8 @@ class CheckersBlock(Directive):
             topic = prepare_topic(name, name.replace("-", " ").title())
 
             table, tbody = prepare_table(["Message name", "Format", "Description"], [1, 3, 3])
-            for message_code, (message_format, message_name, desc) in checker_class.msgs.items():
+            for message_code, info in checker_class.msgs.items():
+                message_format, message_name, desc, *_ = info
                 tbody.append(prepare_row(message_name, nodes.literal(text=message_format), desc))
             topic.append(table)
 
