@@ -1,7 +1,6 @@
 from edulint.options import Option
-from edulint.option_parses import get_option_parses
 from edulint.config.arg import UnprocessedArg
-from edulint.config.config import parse_config_file, Config
+from edulint.config.config import Config, get_config_one
 from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_one
 from dataclasses import fields, replace
@@ -54,22 +53,26 @@ def remote_empty_config_url() -> str:
     return "https://raw.githubusercontent.com/GiraffeReversed/edulint/v2.9.2/edulint/config/files/empty.toml"
 
 
-def prepare_config(args: List[UnprocessedArg], from_empty: bool) -> Config:
+def prepare_config(filename: str, args: List[UnprocessedArg], from_empty: bool) -> Config:
     config_args = Config("test", args)
     config_path = (
         config_args.get_last_value(Option.CONFIG_FILE, use_default=True)
         if not from_empty
         else "empty"
     )
-    config_file_result = parse_config_file(config_path, get_option_parses())
-    assert config_file_result is not None
-    config_file, option_sets, lang_translations = config_file_result
-    return Config.combine(config_file, config_args).to_immutable(option_sets), lang_translations
+    config = get_config_one(
+        filename,
+        [f"{arg.option.to_name()}={arg.val}" if arg.val is not None else arg.option.to_name() for arg in args]
+        + [f"config-file={config_path}"]
+    )
+    assert config is not None
+    return config
 
 
 def just_lint(filename: str, args: List[UnprocessedArg], from_empty: bool = True) -> List[Problem]:
-    config = prepare_config(args, from_empty)
-    return lint_one(get_tests_path(filename), config)
+    path = get_tests_path(filename)
+    config = prepare_config(path, args, from_empty)
+    return lint_one(path, config)
 
 
 def apply_and_lint(
@@ -87,7 +90,7 @@ def create_apply_and_lint(
     expected_output: List[Problem],
     from_empty: bool = True,
 ) -> None:
-    tf = tempfile.NamedTemporaryFile("w+", delete=False)
+    tf = tempfile.NamedTemporaryFile("w+", delete=False, suffix=".py")
     try:
         tf.writelines([line + "\n" for line in lines])
         tf.close()
