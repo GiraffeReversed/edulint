@@ -686,7 +686,7 @@ def good2(x, y):
 ```
 """
 
-[R6502] # identical-branch-part
+[R6502] # identical-if-branches-part
 why = "Repeating identical lines makes code harder to read, because the reader has to check that the lines are indeed identical."
 examples = """
 ```py
