@@ -1,5 +1,12 @@
 # WIP
 
+- separated `similar-block-to-loop` to `similar-block-to-loop-range` and `similar-block-to-loop-collection`
+- added `edulint explain all` to get all available explanations
+- resolve config files and language files relative to the parent config/checked file
+- fix `use-for-loop`: missing check whether the variable is incremented towards the limit
+
+## v4.0.0
+
 ### breaking changes
 - upgrade dependencies to newest versions (most notably Pylint to >= 3, backwards incompatible)
     - for breaking changes in Pylint, see [its documentation](https://pylint.readthedocs.io/en/stable/whatsnew/3/3.0/index.html)
