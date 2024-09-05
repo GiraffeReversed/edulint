@@ -139,7 +139,8 @@ def get_duplicate_nodes(ns: List[nodes.NodeNG]) -> Set[nodes.NodeNG]:
 def is_similar_to_loop(checker, siblings: List[nodes.NodeNG]) -> bool:
     if (
         (
-            not checker.linter.is_message_enabled("similar-block-to-loop")
+            not checker.linter.is_message_enabled("similar-block-to-loop-range")
+            and not checker.linter.is_message_enabled("similar-block-to-loop-collection")
             and not checker.linter.is_message_enabled("similar-block-to-loop-merge")
         )
         or len(siblings) < 3
@@ -282,7 +283,13 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
         "R6552": (
             "There are %d repetitions of %d similar statements, which can be simplified using a loop. "
             "Consider iterating over '%s'.",
-            "similar-block-to-loop",
+            "similar-block-to-loop-range",
+            "Emitted when similar sequential blocks can be deduplicated using a loop.",
+        ),
+        "R6560": (
+            "There are %d repetitions of %d similar statements, which can be simplified using a loop. "
+            "Consider iterating over '%s'.",
+            "similar-block-to-loop-collection",
             "Emitted when similar sequential blocks can be deduplicated using a loop.",
         ),
         "R6553": (

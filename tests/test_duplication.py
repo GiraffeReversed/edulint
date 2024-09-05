@@ -227,10 +227,7 @@ def test_similar_block_to_function(filename: str, expected_output: List[Problem]
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("0642a5c1d7-hw4.py", []),  # dubious
-    ("117cb0510a-midterm.py", [
-        lazy_problem().set_line(6).set_end_line(17)
-        .set_text("There are 3 repetitions of 4 similar statements, which can be simplified using a loop. Consider iterating over '(2, 3, 5)'.")
-    ]),
+    ("117cb0510a-midterm.py", []),
     ("1687aeed39-hw4.py", []),
     ("7e1dd5c338-p2_tortoise.py", []),
     ("APS_Automated_Data_Reporting.py", []),
@@ -247,7 +244,7 @@ def test_similar_block_to_function(filename: str, expected_output: List[Problem]
     ("uc_10_7828_23_16.py", []),
     ("uc_4_0123_22_08.py", [lazy_problem().set_line(4).set_end_line(7)]),
     ("uc_52_2125_16_10.py", []),
-    ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11).set_text("There are 6 repetitions of 1 similar statements, which can be simplified using a loop. Consider iterating over '('a', 'e', 'i', 'o', 'u', 'y')'.")]),
+    ("uc_94_2813_13_57.py", []),
     ("ut_57_4473_30_10.py", []),  # does not suggest to-loop on mergeable loops
     ("ut_57_5508_21_10.py", [lazy_problem().set_line(1)]),
     ("ut_57_9336_15_20.py", [lazy_problem().set_line(1)]),
@@ -257,10 +254,43 @@ def test_similar_block_to_function(filename: str, expected_output: List[Problem]
     ("ut_98_8463_20_35.py", [lazy_problem().set_source(Linter.PYLINT)]),
     ("voter_pennant_twirl_mayday.py", [lazy_problem().set_line(36).set_text("There are 6 repetitions of 1 similar statements, which can be simplified using a loop. Consider iterating over 'range(6)'.")]),
 ])
-def test_similar_block_to_loop(filename: str, expected_output: List[Problem]) -> None:
+def test_similar_block_to_loop_range(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=similar-block-to-loop")],
+        [Arg(Option.PYLINT, "--enable=similar-block-to-loop-range")],
+        expected_output
+    )
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("0642a5c1d7-hw4.py", []),  # dubious
+    ("117cb0510a-midterm.py", [
+        lazy_problem().set_line(6).set_end_line(17)
+        .set_text("There are 3 repetitions of 4 similar statements, which can be simplified using a loop. Consider iterating over '(2, 3, 5)'.")
+    ]),
+    ("1687aeed39-hw4.py", []),
+    ("7e1dd5c338-p2_tortoise.py", []),
+    ("APS_Automated_Data_Reporting.py", []),
+    ("b3b13aa3f7-p5_merge.py", []),
+    ("cf_1462_e_86.py", []),
+    ("cf_20_b_30.py", []),
+    ("cf_373_a_21.py", []),
+    ("uc_10_7828_23_16.py", []),
+    ("uc_4_0123_22_08.py", []),
+    ("uc_52_2125_16_10.py", []),
+    ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11).set_text("There are 6 repetitions of 1 similar statements, which can be simplified using a loop. Consider iterating over '('a', 'e', 'i', 'o', 'u', 'y')'.")]),
+    ("ut_57_4473_30_10.py", []),  # does not suggest to-loop on mergeable loops
+    ("ut_57_5508_21_10.py", []),
+    ("ut_57_9336_15_20.py", []),
+    ("ut_80_2230_13_11.py", []),
+    ("ut_80_3906_24_11.py", []),  # report only one missing loop, others are misshapen
+    ("ut_80_8916_12_20.py", []),
+    ("ut_98_8463_20_35.py", []),
+    ("voter_pennant_twirl_mayday.py", []),
+])
+def test_similar_block_to_loop_collection(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=similar-block-to-loop-collection")],
         expected_output
     )
 
@@ -322,10 +352,10 @@ def test_similar_block_to_loop(filename: str, expected_output: List[Problem]) ->
         "f(v * 5)",
     ], [lazy_problem().set_line(2)]),
 ])
-def test_similar_block_to_loop_custom(lines: List[str], expected_output: List[Problem]) -> None:
+def test_similar_block_to_loop_range_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--enable=similar-block-to-loop")],
+        [Arg(Option.PYLINT, "--enable=similar-block-to-loop-range")],
         expected_output
     )
 
@@ -661,7 +691,7 @@ def test_similar_if_to_use(filename: str, expected_output: List[Problem]) -> Non
 
 
 @pytest.mark.parametrize("filename,expected_output", [
-    ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-block-to-loop").set_line(75)]),
+    ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-block-to-loop-collection").set_line(75)]),
     ("406561e0ae-workdays.py", []),  # contains duplication, but no good advice
     ("53647f4477-hw3.py", [
         lazy_problem().set_symbol("similar-if-to-extracted").set_line(91),

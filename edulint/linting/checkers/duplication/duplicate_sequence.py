@@ -394,8 +394,14 @@ def get_fixed_by_loop(to_aunify, core, avars):
     iterable = get_iter(iters)
     for_ = new_node(nodes.For, iter=iterable, target=get_target(avars, iters), body=core)
 
+    symbol = (
+        "similar-block-to-loop-range"
+        if isinstance(iterable, nodes.Call)
+        else "similar-block-to-loop-collection"
+    )
+
     return Fixed(
-        "similar-block-to-loop",
+        symbol,
         get_token_count(for_),
         get_statements_count(for_, include_defs=False, include_name_main=True),
         (

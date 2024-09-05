@@ -9457,22 +9457,6 @@ def good(x):
 [R6552]
 examples = """
 ```py
-def problematic(text):
-    vowel_count = count_letter(text, 'a')
-    vowel_count += count_letter(text, 'e')
-    vowel_count += count_letter(text, 'i')
-    vowel_count += count_letter(text, 'o')
-    vowel_count += count_letter(text, 'u')
-    vowel_count += count_letter(text, 'y')
-    return vowel_count
-
-def good(text):
-    vovel_count = 0
-    for letter in ('a', 'e', 'i', 'o', 'u', 'y'):
-        vowel_count += count_letter(text, letter)
-    return vowel_count
-
-
 def problematic(n):
     if len(row) != 9:
         return False
@@ -9494,6 +9478,26 @@ def good(n):
         if num not in row:
             return False
     return True
+```
+"""
+
+[R6560]
+examples = """
+```py
+def problematic(text):
+    vowel_count = count_letter(text, 'a')
+    vowel_count += count_letter(text, 'e')
+    vowel_count += count_letter(text, 'i')
+    vowel_count += count_letter(text, 'o')
+    vowel_count += count_letter(text, 'u')
+    vowel_count += count_letter(text, 'y')
+    return vowel_count
+
+def good(text):
+    vovel_count = 0
+    for letter in ['a', 'e', 'i', 'o', 'u', 'y']:
+        vowel_count += count_letter(text, letter)
+    return vowel_count
 ```
 """
 

@@ -713,25 +713,9 @@ def good(x):
 ```
 """
 
-[R6552] # similar-block-to-loop
+[R6552] # similar-block-to-loop-range
 examples = """
 ```py
-def problematic(text):
-    vowel_count = count_letter(text, 'a')
-    vowel_count += count_letter(text, 'e')
-    vowel_count += count_letter(text, 'i')
-    vowel_count += count_letter(text, 'o')
-    vowel_count += count_letter(text, 'u')
-    vowel_count += count_letter(text, 'y')
-    return vowel_count
-
-def good(text):
-    vovel_count = 0
-    for letter in ('a', 'e', 'i', 'o', 'u', 'y'):
-        vowel_count += count_letter(text, letter)
-    return vowel_count
-
-
 def problematic(n):
     if len(row) != 9:
         return False
@@ -755,6 +739,27 @@ def good(n):
     return True
 ```
 """
+
+[R6560] # similar-block-to-loop-collection
+examples = """
+```py
+def problematic(text):
+    vowel_count = count_letter(text, 'a')
+    vowel_count += count_letter(text, 'e')
+    vowel_count += count_letter(text, 'i')
+    vowel_count += count_letter(text, 'o')
+    vowel_count += count_letter(text, 'u')
+    vowel_count += count_letter(text, 'y')
+    return vowel_count
+
+def good(text):
+    vovel_count = 0
+    for letter in ['a', 'e', 'i', 'o', 'u', 'y']:
+        vowel_count += count_letter(text, letter)
+    return vowel_count
+```
+"""
+
 [R6553] # similar-block-to-loop-merge
 examples = """
 ```py
