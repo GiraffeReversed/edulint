@@ -104,7 +104,10 @@ def setup_argparse(option_parses: Dict[Option, OptionParse]) -> argparse.Namespa
         "explain", description="Explains check by message ID", parents=[shared_options_parser]
     )
     explain_parser.add_argument(
-        "message_ids", metavar="MESSAGE-ID", nargs="+", help="message id (e.g., E0001)"
+        "message_ids",
+        metavar="MESSAGE-ID",
+        nargs="+",
+        help="message id (e.g., E0001); use 'all' as a message id to get all explanations",
     )
 
     _version_parser = subparsers.add_parser(
@@ -183,8 +186,13 @@ def check_code(args, option_parses):
 
 def explain_messages(args):
     explanations = get_explanations()
+    if any(id_.lower() == "all" for id_ in args.message_ids):
+        message_ids = explanations.keys()
+    else:
+        message_ids = args.message_ids
+
     mid_expls = {}
-    for mid in args.message_ids:
+    for mid in message_ids:
         expl = explanations.get(mid)
         if expl is None:
             logger.warning(f"Message {mid} does not have an explanation")

@@ -59,3 +59,5 @@ This command outputs the following text to the standard output.
         }
       }
     }
+
+To get all of the available explanations, run :code:`python3 -m edulint explain all`.
