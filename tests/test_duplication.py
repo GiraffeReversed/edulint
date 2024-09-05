@@ -265,7 +265,7 @@ def test_similar_block_to_loop_range(filename: str, expected_output: List[Proble
     ("0642a5c1d7-hw4.py", []),  # dubious
     ("117cb0510a-midterm.py", [
         lazy_problem().set_line(6).set_end_line(17)
-        .set_text("There are 3 repetitions of 4 similar statements, which can be simplified using a loop. Consider iterating over '(2, 3, 5)'.")
+        .set_text("There are 3 repetitions of 4 similar statements, which can be simplified using a loop. Consider iterating over '[2, 3, 5]'.")
     ]),
     ("1687aeed39-hw4.py", []),
     ("7e1dd5c338-p2_tortoise.py", []),
@@ -277,7 +277,7 @@ def test_similar_block_to_loop_range(filename: str, expected_output: List[Proble
     ("uc_10_7828_23_16.py", []),
     ("uc_4_0123_22_08.py", []),
     ("uc_52_2125_16_10.py", []),
-    ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11).set_text("There are 6 repetitions of 1 similar statements, which can be simplified using a loop. Consider iterating over '('a', 'e', 'i', 'o', 'u', 'y')'.")]),
+    ("uc_94_2813_13_57.py", [lazy_problem().set_line(6).set_end_line(11).set_text("There are 6 repetitions of 1 similar statements, which can be simplified using a loop. Consider iterating over '['a', 'e', 'i', 'o', 'u', 'y']'.")]),
     ("ut_57_4473_30_10.py", []),  # does not suggest to-loop on mergeable loops
     ("ut_57_5508_21_10.py", []),
     ("ut_57_9336_15_20.py", []),

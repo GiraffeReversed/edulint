@@ -322,7 +322,7 @@ def get_nice_iters(avars, to_aunify):
             start = use.args[0].left.args[0].value
             some_iter = [chr(ord(start) + v) for v in some_iter]
 
-        collection = new_node(nodes.Tuple, elts=[to_node(n, avars[0]) for n in some_iter])
+        collection = new_node(nodes.List, elts=[to_node(n, avars[0]) for n in some_iter])
         return [collection], [use for _iter, use in iter_uses]
 
     if len({r[0] for r in ranges}) > 2:
