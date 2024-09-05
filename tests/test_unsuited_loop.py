@@ -117,6 +117,7 @@ def test_tighter_bounds_files(filename: str, expected_output: List[Problem]) -> 
     ("5ac87a0e60-hw3.py", [lazy_problem().set_line(152), lazy_problem().set_line(164)]),
     ("62398f5c25.py", [lazy_problem().set_line(111)]),
     ("b2c113956e-d_mancala.py", [lazy_problem().set_line(31)]),
+    ("f56a8957e2-p3_triples.py", []),
     ("uc_1597_09_16.py", []),
     ("uc_3776_30_15.py", []),
     ("uc_7004_17_14.py", [lazy_problem().set_line(3)]),

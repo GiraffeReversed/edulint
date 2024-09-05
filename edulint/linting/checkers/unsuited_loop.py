@@ -1,5 +1,6 @@
 from astroid import nodes, Context  # type: ignore
-from typing import TYPE_CHECKING, List, Iterator, Tuple
+from functools import reduce
+from typing import TYPE_CHECKING, List, Iterator, Tuple, Optional
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -83,26 +84,28 @@ class UnsuitedLoop(BaseChecker):
     @requires_data_dependency_analysis
     def _check_use_for_loop(self, node: nodes.While) -> None:
         # TODO allow different increments?
-        def adds_or_subtracts_one(node: nodes.NodeNG) -> bool:
+        def get_change_value(node: nodes.NodeNG) -> Optional[int]:
             if not isinstance(node, nodes.AssignName):
-                return False
+                return None
 
             expr = node.parent
-            if isinstance(expr, nodes.AugAssign):
-                return expr.op in ("+=", "-=") and get_const_value(expr.value) == 1
+            const = None
+            op = None
+            if isinstance(expr, nodes.AugAssign) and expr.op in ("+=", "-="):
+                const = get_const_value(expr.value)
+                op = expr.op[0]
             if isinstance(expr, nodes.Assign) and isinstance(expr.value, nodes.BinOp):
                 binop = expr.value
-                return binop.op in ("+", "-") and (
-                    (
-                        binop.left.as_string() == node.as_string()
-                        and get_const_value(binop.right) == 1
-                    )
-                    or (
-                        binop.right.as_string() == node.as_string()
-                        and get_const_value(binop.left) == 1
-                    )
-                )
-            return False
+                if binop.op in ("+", "-"):
+                    op = binop.op
+                    if binop.left.as_string() == node.as_string():
+                        const = get_const_value(binop.right)
+                    if binop.right.as_string() == node.as_string():
+                        const = get_const_value(binop.left)
+            if const is None:
+                return None
+
+            return const if op == "+" else -const
 
         def var_can_be_from_range(var: Variable, test: nodes.NodeNG) -> bool:
             events = list(get_events_for([var], [test]))
@@ -163,6 +166,13 @@ class UnsuitedLoop(BaseChecker):
         def modification_after_modification(events):
             return any(e.uses != events[0].uses for e in events)
 
+        def changes_towards_limit(test, only_var, change):
+            lt, (op, rt) = test.left, test.ops[0]
+            if only_var in vars_in(lt):
+                return change > 0 and op in ("<", "<=") or change < 0 and op in (">", ">=")
+            assert only_var in vars_in(rt)
+            return change < 0 and op in ("<", "<=") or change > 0 and op in (">", ">=")
+
         test = node.test
         if (
             not isinstance(test, nodes.Compare)
@@ -181,9 +191,16 @@ class UnsuitedLoop(BaseChecker):
             return
 
         only_var, events = next(iter(events_by_var.items()))
+        change = reduce(
+            lambda r, c: c if c is not None and r is not None and c == r else None,
+            [get_change_value(e.node) for e in events],
+        )
+        if change not in (1, -1):
+            return
+
         if (
             var_can_be_from_range(only_var, test)
-            and all(adds_or_subtracts_one(e.node) for e in events)
+            and changes_towards_limit(test, only_var, change)
             and not modification_after_modification(events)
             and not any(event_in_loop(node, e) for e in events)
             and event_on_every_path(node, events)
