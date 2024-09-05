@@ -305,14 +305,15 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "Emitted when a block can be replaced by a call to an existing function.",
         ),
         "R6555": (
-            "Use condition directly instead of literals 'True'/'False'.",
+            "Consider using condition directly instead of literals 'True'/'False', "
+            "if the if's body has no effect on the condition's value.",
             "similar-if-to-use",
             "Emitted when the two branches of an 'if' statement differ only in True/False, "
             "so the if's condition can be used directly.",
         ),
         "R6556": (
             "The branches of the 'if' statement are similar. Move the 'if' into the branches, "
-            "so that it only contains lines %s.",
+            "so that it only contains lines %s, but only if the if's body has no effect on the condition's value.",
             "similar-if-into-block",
             "Emitted when an 'if' statement wraps too long part of a block "
             "(similar to identical-if-branches-part, but this one can suggest "
@@ -327,7 +328,7 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
         ),
         "R6558": (
             "The branches of the 'if' statement are similar. Use if expression to decide between "
-            'the different values (i.e., "%s").',
+            "the different values (i.e., \"%s\"), but only if the if's body has no effect on the condition's value.",
             "similar-if-to-expr",
             "Emitted when the duplication between if statement's branches can be avoided "
             "using the if expression.",

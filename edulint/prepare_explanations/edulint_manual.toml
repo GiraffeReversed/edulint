@@ -684,6 +684,19 @@ def good2(x, y):
     else:
         print(y)
 ```
+
+If the condition has side effects, make sure you still execute it.
+```py
+def problematic(lst, x):
+    if lst.pop() > 0:
+        print(x)
+    else:
+        print(x)
+
+def good(lst, x):
+    lst.pop()
+    print(x)
+```
 """
 
 [R6502] # identical-if-branches-part

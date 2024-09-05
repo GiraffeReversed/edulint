@@ -560,7 +560,7 @@ def test_similar_if_to_variables(filename: str, expected_output: List[Problem]) 
     ("5ce8692f42-p5_fibsum.py", []),
     ("769200244d-p6_workdays.py", [
         lazy_problem().set_line(66)
-        .set_text("The branches of the 'if' statement are similar. Use if expression to decide between the different values (i.e., \"29 if gap_year(year) else 28\").")
+        .set_text("The branches of the 'if' statement are similar. Use if expression to decide between the different values (i.e., \"29 if gap_year(year) else 28\"), but only if the if's body has no effect on the condition's value.")
     ]),
     ("7e1dd5c338-p1_digit_sum.py", []),
     ("7e1dd5c338-p5_credit.py", []),
@@ -575,12 +575,12 @@ def test_similar_if_to_variables(filename: str, expected_output: List[Problem]) 
     ("uc_73_0198_15_17.py", []),
     ("uc_73_2551_11_17.py", [
         lazy_problem().set_line(3)
-        .set_text("The branches of the 'if' statement are similar. Use if expression to decide between the different values (i.e., \"'#' if i // m % 2 == 0 else '.'\").")
+        .set_text("The branches of the 'if' statement are similar. Use if expression to decide between the different values (i.e., \"'#' if i // m % 2 == 0 else '.'\"), but only if the if's body has no effect on the condition's value.")
     ]),
     ("uc_73_3819_50_56.py", [lazy_problem().set_line(6), lazy_problem().set_line(16)]),
     ("uc_73_3819-20_56.py", [lazy_problem().set_line(7), lazy_problem().set_line(18)]),
     ("uc_73_3897_10_43.py", [
-        lazy_problem().set_line(3).set_text("The branches of the 'if' statement are similar. Use if expression to decide between the different values (i.e., \"0 if i % 2 == 0 else 1\").")
+        lazy_problem().set_line(3).set_text("The branches of the 'if' statement are similar. Use if expression to decide between the different values (i.e., \"0 if i % 2 == 0 else 1\"), but only if the if's body has no effect on the condition's value.")
     ]),
     ("uc_73_5468_12_52.py", []),
     ("uc_73_7863_14_44.py", []),
@@ -616,7 +616,7 @@ def test_similar_if_to_expr(filename: str, expected_output: List[Problem]) -> No
 
     ], [
         lazy_problem().set_line(2)
-        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 5, 12.")
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 5, 12, but only if the if's body has no effect on the condition's value.")
     ]),
 ])
 def test_similar_if_into_block_custom(lines: List[str], expected_output: List[Problem]) -> None:
@@ -631,14 +631,14 @@ def test_similar_if_into_block_custom(lines: List[str], expected_output: List[Pr
     ("163aadb1dd-p4_geometry.py", []),
     ("2a6a841f84-task_2.py", [
         lazy_problem().set_line(36)
-        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 40, 47.")
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 40, 47, but only if the if's body has no effect on the condition's value.")
     ]),
     ("30c8bd0ad7-p6_cellular.py", []),
     ("3867ee9889-split.py", []),
     ("5ce8692f42-p5_fibsum.py", []),
     ("769200244d-p6_workdays.py", [
         lazy_problem().set_line(66)
-        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 75-76, 88-89.")
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 75-76, 88-89, but only if the if's body has no effect on the condition's value.")
     ]),
     ("7e1dd5c338-p1_digit_sum.py", []),
     ("7e1dd5c338-p5_credit.py", []),
@@ -653,7 +653,7 @@ def test_similar_if_into_block_custom(lines: List[str], expected_output: List[Pr
     ("fdc1570861-p6_workdays.py", []),
     ("ksi_12_136_aatb.py", [
         lazy_problem().set_line(4)
-        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 6, 11.")
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 6, 11, but only if the if's body has no effect on the condition's value.")
     ]),
     ("tarot_card_reader.py", []),
     ("uc_28_6710_05_14.py", []),
@@ -662,7 +662,7 @@ def test_similar_if_into_block_custom(lines: List[str], expected_output: List[Pr
     ("uc_73_2551_11_17.py", [lazy_problem().set_line(3)]),
     ("uc_73_3819_50_56.py", [
         lazy_problem().set_line(3)
-        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 6-11, 16-21.")
+        .set_text("The branches of the 'if' statement are similar. Move the 'if' into the branches, so that it only contains lines 6-11, 16-21, but only if the if's body has no effect on the condition's value.")
     ]), # multi-step
     ("uc_73_3819-20_56.py", [lazy_problem().set_line(3)]), #, lazy_problem().set_line(7)]),
     ("uc_73_3897_10_43.py", [lazy_problem().set_line(3)]), # multi-step
