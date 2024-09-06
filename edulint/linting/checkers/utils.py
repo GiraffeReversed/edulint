@@ -10,6 +10,7 @@ from typing import (
     cast,
     Callable,
     Dict,
+    Set,
 )
 from functools import reduce
 from astroid import nodes, Uninferable  # type: ignore
@@ -206,42 +207,86 @@ def is_number(node: nodes.NodeNG) -> bool:
     return isinstance(const_val, (int, float)) and not isinstance(const_val, bool)
 
 
-NOT_ALLOWED_COMPARES_IN_Z3 = {"in", "not in", "is", "is not"}
-NOT_ALLOWED_OPERATIONS_IN_Z3 = {"<<", ">>", "|", "&", "^", "@", "**"}
+def is_int(node: nodes.NodeNG) -> bool:
+    const_val = get_const_value(node)
+    return isinstance(const_val, int) and not isinstance(const_val, bool)
 
 
-def analyze_condition_for_types_of_variables(
-    node: nodes.NodeNG, existing_z3_variables: Dict[str, ArithRef], is_direct_child_of_
+EXCLUDED_COMPARES_IN_Z3 = {"in", "not in", "is", "is not"}
+EXCLUDED_OPERATIONS_IN_Z3 = {"<<", ">>", "|", "&", "^", "@", "**"}
+
+
+def _not_allowed_node(
+    node: nodes.NodeNG, is_descendant_of_integer_operation: bool, parent: Optional[nodes.NodeNG]
 ) -> bool:
-    # Supposes that node is pure. And we exclude bit operations, because Z3 supports them only on bitvectors.
-    # Returns False if the condition has some not allowed operations in Z3 or operations that are too difficult for Z3 and would take a lot of time (like the '**' operator)
-    if (
+    return (
         (
             isinstance(node, nodes.BinOp)
             and (
-                node.op in NOT_ALLOWED_OPERATIONS_IN_Z3
-                or (node.op == "%" and not is_number(node.right))
+                node.op in EXCLUDED_OPERATIONS_IN_Z3
+                or (node.op == "%" and not is_int(node.right))
+                or (
+                    node.op == "/"
+                    and (is_descendant_of_integer_operation or not is_number(node.right))
+                )
+                or (node.op == "//" and not is_int(node.right))
             )
         )
         or (
             isinstance(node, nodes.Compare)
-            and (len(node.ops) != 1 or node.ops[0][0] in NOT_ALLOWED_COMPARES_IN_Z3)
+            and (
+                len(node.ops) != 1
+                or node.ops[0][0] in EXCLUDED_COMPARES_IN_Z3
+                or (parent is not None and not isinstance(parent, nodes.BoolOp))
+            )
         )
-        or (isinstance(node, nodes.UnaryOp) and node.op == "~")
-    ):
+        or (
+            isinstance(node, nodes.UnaryOp)
+            and (
+                node.op == "~"
+                or (
+                    node.op == "not" and parent is not None and not isinstance(parent, nodes.BoolOp)
+                )
+            )
+        )
+        or (
+            isinstance(node, nodes.BoolOp)
+            and parent is not None
+            and not isinstance(parent, nodes.BoolOp)
+        )
+    )
+
+
+def _analyze_condition_for_types_of_variables(
+    node: nodes.NodeNG,
+    int_variables: Set[str],
+    is_descendant_of_integer_operation: bool,
+    parent: Optional[nodes.NodeNG],
+) -> bool:
+    # Supposes that node is pure. And we exclude bit operations, because Z3 supports them only on bitvectors.
+    # Returns False if the condition has some not allowed operations in Z3 or operations that are too difficult
+    # for Z3 and would take a lot of time (like the '**' operator)
+    if _not_allowed_node(node, is_descendant_of_integer_operation, parent):
         return False
 
-    if isinstance(node, nodes.BinOp) and node.op == "%":
-        return analyze_condition_for_types_of_variables(child, existing_z3_variables)
+    if isinstance(node, nodes.BinOp) and (node.op == "%" or node.op == "//"):
+        return _analyze_condition_for_types_of_variables(node.left, int_variables, True, node)
 
     if isinstance(node, (nodes.BoolOp, nodes.Compare, nodes.UnaryOp, nodes.BinOp)):
         for child in node.get_children():
-            if not analyze_condition_for_types_of_variables(child, existing_z3_variables):
+            if not _analyze_condition_for_types_of_variables(
+                child, int_variables, is_descendant_of_integer_operation, node
+            ):
                 return False
 
         return True
 
-    # TODO - implement the actual variable type analysis
+    # Thanks to the purity of the original node we can work with all these types as variables.
+    if (
+        isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call))
+        and is_descendant_of_integer_operation
+    ):
+        int_variables.add(node.as_string())
 
     return True
 
