@@ -41,10 +41,10 @@ Don't want to install Python and Edulint as a Python package? You can also run i
 ```sh
 docker pull edulint/edulint-cli  # Optional
 
-docker run -v ${PWD}:/app edulint/edulint-cli some_file.py
+docker run -v ${PWD}:/app edulint/edulint-cli check some_file.py
 
 # Additional example that lints a file with absolute path /tmp/some_file.py
-docker run -v /tmp:/app edulint/edulint-cli /app/some_file.py
+docker run -v /tmp:/app edulint/edulint-cli check /app/some_file.py
 ```
 
 <!-- TODO: volume mapping can be :ro, though it's not necessary -->
@@ -55,10 +55,11 @@ It supports the same configuration options as the native Python package.
 
 - [x] Additional explanations for problems detected in code
 - [x] [Thonny plugin](https://github.com/GiraffeReversed/thonny-edulint)
-- [ ] More code quality defects (from WPS; detecting duplicate code)
-- [ ] Rewrite web to [React](https://github.com/GiraffeReversed/edulint-react-web) to allow for additional functionality (more settings, better teacher onboarding, …)
+- [x] More code quality defects (from WPS; detecting duplicate code)
+- [x] Rewrite web to [React](https://github.com/GiraffeReversed/edulint-react-web) 
+- [ ] Add additional functionality to web (more settings, better teacher onboarding, …)
 - [ ] Speed-up linting by switching to [Ruff](https://github.com/charliermarsh/ruff)
-- [ ] VS Code plugin
+- [ ] official VS Code plugin (3rd party plugin already exists: [Github](https://github.com/matousekm/edulint-vscode), [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=matousekm.edulint-vscode))
 
 
 ## Sponsorship and academic collaboration
