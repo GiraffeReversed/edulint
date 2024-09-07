@@ -203,11 +203,11 @@ def explain_messages(args):
                 if mid != args.message_ids[0]:
                     print("\n")
                 print(f"## {mid}")
-            if expl["why"].strip():
+            if expl.get("why", "").strip():
                 print("### Why is it a problem?")
                 print(expl["why"].strip())
                 print()
-            if expl["examples"].strip():
+            if expl.get("examples", "").strip():
                 print("### How to solve it?")
                 print(expl["examples"].strip())
 
