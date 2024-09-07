@@ -22,24 +22,37 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install Edulint
-        run: python -m pip install --upgrade pip; pip install edulint
+        run: python -m pip install --upgrade pip; python -m pip install edulint
 
       - name: Log python package versions
         run: pip freeze
 
-      - name: Lint a test file with OK code
+      - name: EduLint version
+        run: |
+          python -m edulint version
+
+      - name: EduLint explain - specific code (R6201)
+        run: |
+          python -m edulint explain R6201
+
+      - name: EduLint explain - all
+        run: |
+          python -m edulint explain all
+
+      - name: EduLint Check - OK code
         run: |
           echo "print('test')" > /tmp/ok.py
           python -m edulint check /tmp/ok.py # Github step implicitly tests for `$? -eq 0`
 
-      - name: Lint a test file with simple code quality defect
+      - name: EduLint Check - simple defect
         run: |
           echo -n "print('missing newline at the end of file')" > /tmp/with_simple_defect.py
-          python -m /tmp/with_simple_defect.py || test $? -eq 1  # TODO: Change this to a special return code for a "defect found" situation.
+          python -m edulint check /tmp/with_simple_defect.py || test $? -eq 1  # TODO: Change this to a special return code for a "defect found" situation.
 
-      - name: Lint a test file with bigger code quality defect
+      - name: EduLint Check - bigger file with defects
         run: |
           wget -O /tmp/with_bigger_defects.py https://raw.githubusercontent.com/GiraffeReversed/edulint/main/setup.py
           # There is no significance in using setup.py, it's just a file that will always be on that URL.
           # TODO: Change the test file for a more complex example.
-          python -m /tmp/with_bigger_defects.py || test $? -eq 1  # TODO: Change this to a special return code for a "defect found" situation.
+          python -m edulint check /tmp/with_bigger_defects.py || test $? -eq 1  # TODO: Change this to a special return code for a "defect found" situation.
+
