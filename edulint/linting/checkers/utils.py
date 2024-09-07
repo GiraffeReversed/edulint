@@ -10,7 +10,6 @@ from typing import (
     cast,
     Callable,
     Dict,
-    Set,
 )
 from functools import reduce
 from astroid import nodes, Uninferable  # type: ignore
@@ -257,9 +256,9 @@ def _not_allowed_node(
     )
 
 
-def _analyze_condition_for_types_of_variables(
+def _initialize_variables(
     node: nodes.NodeNG,
-    int_variables: Set[str],
+    initialized_variables: Dict[str, ArithRef],
     is_descendant_of_integer_operation: bool,
     parent: Optional[nodes.NodeNG],
 ) -> bool:
@@ -270,29 +269,42 @@ def _analyze_condition_for_types_of_variables(
         return False
 
     if isinstance(node, nodes.BinOp) and (node.op == "%" or node.op == "//"):
-        return _analyze_condition_for_types_of_variables(node.left, int_variables, True, node)
+        return _initialize_variables(node.left, initialized_variables, True, node)
 
     if isinstance(node, (nodes.BoolOp, nodes.Compare, nodes.UnaryOp, nodes.BinOp)):
         for child in node.get_children():
-            if not _analyze_condition_for_types_of_variables(
-                child, int_variables, is_descendant_of_integer_operation, node
+            if not _initialize_variables(
+                child, initialized_variables, is_descendant_of_integer_operation, node
             ):
                 return False
 
         return True
 
     # Thanks to the purity of the original node we can work with all these types as variables.
-    if (
-        isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call))
-        and is_descendant_of_integer_operation
-    ):
-        int_variables.add(node.as_string())
+    if isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call)):
+        variable_key = node.as_string()
+        variable = initialized_variables.get(variable_key)
+
+        if variable is None:
+            initialized_variables[variable_key] = (
+                Int(str(len(initialized_variables)))
+                if is_descendant_of_integer_operation
+                else Real(str(len(initialized_variables)))
+            )
+        elif is_descendant_of_integer_operation and variable.is_real():
+            initialized_variables[variable_key] = Int(variable.decl().name())
 
     return True
 
 
+def convert_condition_to_z3_expression_helper(
+    node: nodes.NodeNG, int_variables: Dict[str, ArithRef], variable_count: int
+) -> Tuple[Optional[ExprRef], int]:
+    pass
+
+
 def convert_condition_to_z3_expression(
-    node: nodes.NodeNG, existing_z3_variables: Dict[str, ArithRef]
+    node: nodes.NodeNG, int_variables: Dict[str, ArithRef]
 ) -> Optional[ExprRef]:
     # We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if
 
@@ -312,10 +324,8 @@ def convert_condition_to_z3_expression(
     #             and is_pure_builtin(node.func)
     #         )
 
-    if isinstance(node, nodes.Name):
-        if node.name in existing_z3_variables:
-            var = existing_z3_variables[node.name]
-            return var if var.sort() else var != 0
+    if isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call)):
+        pass
 
 
 def implies(node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
