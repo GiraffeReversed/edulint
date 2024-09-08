@@ -18,8 +18,7 @@ import sys
 import inspect
 import operator
 from pylint.checkers import utils  # type: ignore
-from z3 import ExprRef, ArithRef, Bool, Int, Real
-from enum import Enum
+from z3 import ExprRef, ArithRef, Int, Real, And, Or, IntVal, RealVal, BoolVal, is_int
 
 from edulint.linting.analyses.data_dependency import node_to_var
 
@@ -206,13 +205,21 @@ def is_number(node: nodes.NodeNG) -> bool:
     return isinstance(const_val, (int, float)) and not isinstance(const_val, bool)
 
 
-def is_int(node: nodes.NodeNG) -> bool:
+def is_integer(node: nodes.NodeNG) -> bool:
     const_val = get_const_value(node)
     return isinstance(const_val, int) and not isinstance(const_val, bool)
 
 
 EXCLUDED_COMPARES_IN_Z3 = {"in", "not in", "is", "is not"}
 EXCLUDED_OPERATIONS_IN_Z3 = {"<<", ">>", "|", "&", "^", "@", "**"}
+
+
+def _is_bool_node(node: Optional[nodes.NodeNG]) -> bool:
+    return (
+        node is None
+        or isinstance(node, nodes.BoolOp)
+        or (isinstance(node, nodes.UnaryOp) and node.op == "not")
+    )
 
 
 def _not_allowed_node(
@@ -222,13 +229,14 @@ def _not_allowed_node(
         (
             isinstance(node, nodes.BinOp)
             and (
-                node.op in EXCLUDED_OPERATIONS_IN_Z3
-                or (node.op == "%" and not is_int(node.right))
+                node.op is None
+                or node.op in EXCLUDED_OPERATIONS_IN_Z3
+                or (node.op == "%" and not is_integer(node.right))
                 or (
                     node.op == "/"
                     and (is_descendant_of_integer_operation or not is_number(node.right))
                 )
-                or (node.op == "//" and not is_int(node.right))
+                or (node.op == "//" and not is_integer(node.right))
             )
         )
         or (
@@ -236,23 +244,14 @@ def _not_allowed_node(
             and (
                 len(node.ops) != 1
                 or node.ops[0][0] in EXCLUDED_COMPARES_IN_Z3
-                or (parent is not None and not isinstance(parent, nodes.BoolOp))
+                or not _is_bool_node(parent)
             )
         )
         or (
             isinstance(node, nodes.UnaryOp)
-            and (
-                node.op == "~"
-                or (
-                    node.op == "not" and parent is not None and not isinstance(parent, nodes.BoolOp)
-                )
-            )
+            and (node.op == "~" or (node.op == "not" and not _is_bool_node(parent)))
         )
-        or (
-            isinstance(node, nodes.BoolOp)
-            and parent is not None
-            and not isinstance(parent, nodes.BoolOp)
-        )
+        or (isinstance(node, nodes.BoolOp) and (node.op is None or not _is_bool_node(parent)))
     )
 
 
@@ -297,35 +296,121 @@ def _initialize_variables(
     return True
 
 
-def convert_condition_to_z3_expression_helper(
-    node: nodes.NodeNG, int_variables: Dict[str, ArithRef], variable_count: int
-) -> Tuple[Optional[ExprRef], int]:
-    pass
+def _is_variable_in_pure_expression(node: nodes.NodeNG) -> bool:
+    # In pure expressions, the value of a function call should not change, nor should the value of any other types listed below.
+    return isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call))
+
+
+def _convert_to_bool_if_necessary(
+    node: nodes.NodeNG, parent: nodes.NodeNG, z3_node_representation: Optional[ExprRef]
+) -> Optional[ExprRef]:
+    if z3_node_representation is None:
+        return None
+
+    # Because in python when a number 'x' is converted to bool it is equivalent to converting it to 'x != 0'
+    if _is_bool_node(parent) and not (
+        _is_bool_node(node)
+        or isinstance(node, nodes.Compare)
+        or (isinstance(node, nodes.Const) and isinstance(node.value, bool))
+    ):
+        return z3_node_representation != 0
+
+    return z3_node_representation
+
+
+def _convert_const_to_z3(node: nodes.Const) -> Optional[ExprRef]:
+    if isinstance(node.value, bool):
+        return BoolVal(node.value)
+
+    if isinstance(node.value, int):
+        return IntVal(node.value)
+
+    if isinstance(node.value, float):
+        return RealVal(node.value)
+
+    return None
 
 
 def convert_condition_to_z3_expression(
-    node: nodes.NodeNG, int_variables: Dict[str, ArithRef]
+    node: Optional[nodes.NodeNG],
+    initialized_variables: Dict[str, ArithRef],
+    parent: Optional[nodes.NodeNG],
 ) -> Optional[ExprRef]:
     # We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if
 
-    #            isinstance(node, nodes.Name)
-    #         or isinstance(node, nodes.Const)
-    #         or isinstance(node, nodes.BinOp)
-    #         or isinstance(node, nodes.BoolOp)
-    #         or isinstance(node, nodes.UnaryOp)
-    #         or isinstance(node, nodes.Compare)
-    #         or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
-    #         or isinstance(node, nodes.Attribute)
-    #         or (
-    #             isinstance(node, nodes.Call)
-    #             and len(node.keywords) == 0
-    #             and len(node.kwargs) == 0
-    #             and len(node.starargs) == 0
-    #             and is_pure_builtin(node.func)
-    #         )
+    # TODO - erase this: I have no chance of knowing when the variable should be bool or when it should be a number (Real or Int)
 
-    if isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call)):
-        pass
+    if node is None:
+        return None
+
+    if _is_variable_in_pure_expression(node):
+        return _convert_to_bool_if_necessary(node, parent, initialized_variables[node.as_string()])
+
+    if isinstance(node, nodes.BoolOp):
+        operands = []
+        for operand in node.values:
+            expr = _convert_to_bool_if_necessary(
+                node,
+                parent,
+                convert_condition_to_z3_expression(operand, initialized_variables, node),
+            )
+            if expr is None:
+                return None
+
+            operands.append(expr)
+
+        return And(operands) if node.op == "and" else Or(operands)
+
+    if isinstance(node, nodes.Compare):
+        left = convert_condition_to_z3_expression(node.left, initialized_variables, node)
+        right = convert_condition_to_z3_expression(node.ops[0][1])
+        comparison = node.ops[0][0]
+
+        if left is None or right is None:
+            return None
+
+        if comparison == "==":
+            return left == right
+
+        if comparison == "!=":
+            return left != right
+
+        if comparison == "<":
+            return left < right
+
+        if comparison == "<=":
+            return left <= right
+
+        if comparison == ">":
+            return left > right
+
+        if comparison == ">=":
+            return left >= right
+
+        return None
+
+    if isinstance(node, nodes.BinOp):
+        left = convert_condition_to_z3_expression(node.left, initialized_variables, node)
+        if left is None or (node.op == "%" or node.op == "//") and not is_int(left):
+            return None
+
+        if node.op == "%":
+            return left % get_const_value(node.right)
+
+        if node.op == "//":
+            return left // get_const_value(node.right)
+
+        if node.op == "/":
+            return left / get_const_value(node.right)
+
+        # TODO - rest
+
+    if isinstance(node, nodes.Const):
+        return _convert_to_bool_if_necessary(node, parent, _convert_const_to_z3(node))
+
+    if isinstance(node, nodes.UnaryOp):
+        expr = convert_condition_to_z3_expression(node.operand, initialized_variables, node)
+        return _convert_to_bool_if_necessary(node, parent, expr)
 
 
 def implies(node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
