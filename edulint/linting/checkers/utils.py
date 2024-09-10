@@ -391,19 +391,32 @@ def convert_condition_to_z3_expression(
 
     if isinstance(node, nodes.BinOp):
         left = convert_condition_to_z3_expression(node.left, initialized_variables, node)
-        if left is None or (node.op == "%" or node.op == "//") and not is_int(left):
+        if node.op in ("+", "-", "*"):
+            right = convert_condition_to_z3_expression(node.right, initialized_variables, node)
+
+        if (
+            left is None
+            or right is None
+            or ((node.op == "%" or node.op == "//") and not is_int(left))
+        ):
             return None
 
+        z3_expr: Optional[ExprRef] = None
+
         if node.op == "%":
-            return left % get_const_value(node.right)
+            z3_expr = left % get_const_value(node.right)
+        elif node.op == "//":
+            z3_expr = left // get_const_value(node.right)
+        elif node.op == "/":
+            z3_expr = left / get_const_value(node.right)
+        elif node.op == "+":
+            z3_expr = left + right
+        elif node.op == "-":
+            z3_expr = left - right
+        elif node.op == "*":
+            z3_expr = left * right
 
-        if node.op == "//":
-            return left // get_const_value(node.right)
-
-        if node.op == "/":
-            return left / get_const_value(node.right)
-
-        # TODO - rest
+        return _convert_to_bool_if_necessary(node, parent, z3_expr)
 
     if isinstance(node, nodes.Const):
         return _convert_to_bool_if_necessary(node, parent, _convert_const_to_z3(node))
@@ -411,6 +424,9 @@ def convert_condition_to_z3_expression(
     if isinstance(node, nodes.UnaryOp):
         expr = convert_condition_to_z3_expression(node.operand, initialized_variables, node)
         return _convert_to_bool_if_necessary(node, parent, expr)
+
+    # Should not be reachable
+    return None
 
 
 def implies(node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
