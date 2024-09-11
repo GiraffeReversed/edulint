@@ -16,6 +16,7 @@ from edulint.linting.checkers.utils import (
     is_number,
     implies,
     is_pure_expression,
+    initialize_variables,
 )
 
 ExprRepresentation = str
