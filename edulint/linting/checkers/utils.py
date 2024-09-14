@@ -31,8 +31,9 @@ from z3 import (
     is_int,
     Then,
     Tactic,
-    solver,
     Not,
+    unsat,
+    Abs,
 )
 
 from edulint.linting.analyses.data_dependency import node_to_var
@@ -267,6 +268,10 @@ def _not_allowed_node(
             and (node.op == "~" or (node.op == "not" and not _is_bool_node(parent)))
         )
         or (isinstance(node, nodes.BoolOp) and (node.op is None or not _is_bool_node(parent)))
+        or (
+            isinstance(node, (nodes.Const))
+            and (node.value is None or isinstance(node.value, bool) and not _is_bool_node(parent))
+        )
     )
 
 
@@ -284,9 +289,11 @@ def initialize_variables(
     is_descendant_of_integer_operation: bool,
     parent: Optional[nodes.NodeNG],
 ) -> bool:
-    # Supposes that node is pure. And we exclude bit operations, because Z3 supports them only on bitvectors.
-    # Returns False if the condition has some not allowed operations in Z3 or operations that are too difficult
-    # for Z3 and would take a lot of time (like the '**' operator)
+    """
+    Supposes that node is pure. And we exclude bit operations, because Z3 supports them only on bitvectors.
+    Returns False if the condition has some not allowed operations in Z3 or operations that are too difficult
+    for Z3 and would take a lot of time (like the '**' operator)
+    """
     if _not_allowed_node(node, is_descendant_of_integer_operation, parent):
         return False
 
@@ -304,7 +311,7 @@ def initialize_variables(
 
     if _is_abs_function(node):
         return initialize_variables(
-            node.args[0], initialize_variables, is_descendant_of_integer_operation, node
+            node.args[0], initialized_variables, is_descendant_of_integer_operation, node
         )
 
     # Thanks to the purity of the original node we can work with all these types as variables.
@@ -364,16 +371,14 @@ def convert_condition_to_z3_expression(
     initialized_variables: Dict[str, ArithRef],
     parent: Optional[nodes.NodeNG],
 ) -> Optional[ExprRef]:
-    # We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if
-
-    # TODO - erase this: I have no chance of knowing when the variable should be bool or when it should be a number (Real or Int)
+    "We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if"
 
     if node is None:
         return None
 
     if _is_abs_function(node):
-        # TODO - try to write my own abs function that takes 0 arguments, if this breaks.
         expr = convert_condition_to_z3_expression(node.args[0], initialized_variables, node)
+        return _convert_to_bool_if_necessary(node, parent, Abs(expr))
 
     if _is_variable_in_pure_expression(node):
         return _convert_to_bool_if_necessary(node, parent, initialized_variables[node.as_string()])
@@ -395,7 +400,7 @@ def convert_condition_to_z3_expression(
 
     if isinstance(node, nodes.Compare):
         left = convert_condition_to_z3_expression(node.left, initialized_variables, node)
-        right = convert_condition_to_z3_expression(node.ops[0][1])
+        right = convert_condition_to_z3_expression(node.ops[0][1], initialized_variables, node)
         comparison = node.ops[0][0]
 
         if left is None or right is None:
@@ -423,12 +428,14 @@ def convert_condition_to_z3_expression(
 
     if isinstance(node, nodes.BinOp):
         left = convert_condition_to_z3_expression(node.left, initialized_variables, node)
+        right = None
+
         if node.op in ("+", "-", "*"):
             right = convert_condition_to_z3_expression(node.right, initialized_variables, node)
 
         if (
             left is None
-            or right is None
+            or (node.op in ("+", "-", "*") and right is None)
             or ((node.op == "%" or node.op == "//") and not is_int(left))
         ):
             return None
@@ -438,7 +445,7 @@ def convert_condition_to_z3_expression(
         if node.op == "%":
             z3_expr = left % get_const_value(node.right)
         elif node.op == "//":
-            z3_expr = left // get_const_value(node.right)
+            z3_expr = left / get_const_value(node.right)
         elif node.op == "/":
             z3_expr = left / get_const_value(node.right)
         elif node.op == "+":
@@ -470,8 +477,24 @@ def convert_condition_to_z3_expression(
     return None
 
 
-def implies(node1: nodes.NodeNG, node2: nodes.NodeNG) -> bool:
-    pass
+def create_optimized_tactic():
+    # Create a custom tactic
+    tactic = Then(
+        Tactic("simplify"),
+        Tactic("solve-eqs"),
+        Tactic("propagate-values"),
+        Tactic("solve-eqs"),
+        Tactic("smt"),
+    )
+
+    return tactic
+
+
+def implies(condition1: ArithRef, condition2: ArithRef) -> bool:
+    solver = create_optimized_tactic().solver()
+    solver.set("rlimit", 1700)
+    solver.add(And(condition1, Not(condition2)))
+    return solver.check() == unsat
 
 
 def is_multi_assign(node: nodes.NodeNG) -> bool:
