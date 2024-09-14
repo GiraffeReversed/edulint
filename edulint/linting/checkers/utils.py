@@ -447,7 +447,7 @@ def convert_condition_to_z3_expression(
         elif node.op == "//":
             z3_expr = left / get_const_value(node.right)
         elif node.op == "/":
-            z3_expr = left / get_const_value(node.right)
+            z3_expr = left / float(get_const_value(node.right))
         elif node.op == "+":
             z3_expr = left + right
         elif node.op == "-":
