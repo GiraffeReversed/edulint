@@ -2,6 +2,8 @@ from astroid import nodes  # type: ignore
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
 
+from z3 import ArithRef
+
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
 
@@ -17,6 +19,7 @@ from edulint.linting.checkers.utils import (
     implies,
     is_pure_expression,
     initialize_variables,
+    convert_condition_to_z3_expression,
 )
 
 ExprRepresentation = str
@@ -220,7 +223,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         ),
         "R6216": (
             "'%s' can be replaced with '%s'",
-            "redundant condition part",
+            "redundant-condition-part",
             "Emitted when there is a problem like 'A or B', where A implies B and suggests to simplify the condition to just 'B'",
         ),
     }
@@ -1155,24 +1158,43 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             and not is_number(node.ops[0][1])
         )
 
+    def _add_brackets_if_composed(self, node: nodes.NodeNG, is_standalone: bool) -> str:
+        return (
+            node.as_string()
+            if is_standalone
+            or isinstance(
+                node, (nodes.Name, nodes.Const, nodes.Call, nodes.Attribute, nodes.Subscript)
+            )
+            else f"({node.as_string()})"
+        )
+
     def _make_suggestion_for_redundant_condition_part(self, node: nodes.BoolOp) -> None:
         removed_condition = [False for _ in range(len(node.values))]
         removed_nothing = True
 
-        for i in range(len(node.values)):
-            if removed_condition[i]:
+        initialized_variables: Dict[str, ArithRef] = {}
+        if not initialize_variables(node, initialized_variables, False, None):
+            return
+
+        converted_conditions = [
+            convert_condition_to_z3_expression(child, initialized_variables, node)
+            for child in node.values
+        ]
+
+        for i in range(len(converted_conditions)):
+            if removed_condition[i] or converted_conditions[i] is None:
                 continue
 
-            for j in range(len(node.values)):
-                if i == j or removed_condition[j]:
+            for j in range(len(converted_conditions)):
+                if i == j or removed_condition[j] or converted_conditions[j] is None:
                     continue
 
-                if node.op == "or" and implies(node.values[i], node.values[j]):
+                if node.op == "or" and implies(converted_conditions[i], converted_conditions[j]):
                     removed_condition[i] = True
                     removed_nothing = False
                     break
 
-                if node.op == "and" and implies(node.values[i], node.values[j]):
+                if node.op == "and" and implies(converted_conditions[i], converted_conditions[j]):
                     removed_condition[j] = True
                     removed_nothing = False
                     continue
@@ -1181,17 +1203,31 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             return
 
         self.add_message(
-            "redundant condition part",
+            "redundant-condition-part",
             node=node,
             args=(
                 node.as_string(),
                 f" {node.op} ".join(
                     [
-                        node.values[i].as_string()
+                        self._add_brackets_if_composed(node.values[i], len(node.values) > 1)
                         for i in range(len(node.values))
                         if not removed_condition[i]
                     ]
                 ),
+            ),
+        )
+
+    def _might_be_child_of_pure_bool_op(self, node: nodes.NodeNG) -> bool:
+        return isinstance(
+            node.parent,
+            (
+                nodes.BinOp,
+                nodes.BoolOp,
+                nodes.UnaryOp,
+                nodes.Compare,
+                nodes.Subscript,
+                nodes.Attribute,
+                nodes.Call,
             ),
         )
 
@@ -1259,7 +1295,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             or made_suggestion
         )
 
-        if not made_suggestion:
+        if not made_suggestion and not self._might_be_child_of_pure_bool_op(node):
             made_suggestion = (
                 self._make_suggestion_for_redundant_condition_part(node) or made_suggestion
             )
@@ -1270,7 +1306,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "redundant-compare-avoidable-with-max-min",
         "using-compare-instead-of-equal",
         "simplifiable-test-by-equals",
-        "redundant condition part",
+        "redundant-condition-part",
     )
     def visit_boolop(self, node: nodes.BoolOp) -> None:
         self._check_for_simplification_of_boolop(node)
