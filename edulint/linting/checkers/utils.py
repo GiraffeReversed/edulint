@@ -492,49 +492,10 @@ Z3_TACTIC = Then(
 )
 
 
-def initialize_solver(rlimit=1700):
-    solver = Z3_TACTIC.solver()
-    solver.set("rlimit", rlimit)
-    return solver
-
-
-def implied_conditions(
-    conditions: List[ExprRef | None], expr_index: int, should_skip_index: List[bool], rlimit=1700
-) -> Generator[int, None, None]:
-    """
-    Yields indeces from 'conditions' that are implied by expression on index (excluding
-    the 'expr_index') 'expr_index'. (i.e. indeces 'i' that satisfie:
-    implies(conditions[expr_index], conditions[i])).
-
-    assumptions: len(should_skip_index) == len(conditions); 0 <= expr_index < len(conditions)
-    """
-    solver = initialize_solver(rlimit)
-    solver.add(conditions[expr_index])
-
-    for i in range(len(conditions)):
-        if i == expr_index or should_skip_index[i] or conditions[i] is None:
-            continue
-
-        solver.push()
-        solver.add(Not(conditions[i]))
-
-        if solver.check() == unsat:
-            yield i
-
-        solver.pop()
-
-
-def implies_with_solver(solver: Solver, condition2: ArithRef) -> bool:
-    solver.push()
-    solver.add(Not(condition2))
-    result = solver.check() == unsat
-    solver.pop()
-    return result
-
-
 def implies(condition1: ArithRef, condition2: ArithRef, rlimit=1700) -> bool:
     "Returns if implication 'condition1 => condition2' is valid."
-    solver = initialize_solver(rlimit)
+    solver = Z3_TACTIC.solver()
+    solver.set("rlimit", rlimit)
     solver.add(And(condition1, Not(condition2)))
     return solver.check() == unsat
 
