@@ -10,6 +10,7 @@ from typing import (
     cast,
     Callable,
     Dict,
+    Generator,
 )
 from functools import reduce
 from astroid import nodes, Uninferable  # type: ignore
@@ -34,6 +35,7 @@ from z3 import (
     Not,
     unsat,
     Abs,
+    Solver,
 )
 
 from edulint.linting.analyses.data_dependency import node_to_var
@@ -371,8 +373,11 @@ def convert_condition_to_z3_expression(
     initialized_variables: Dict[str, ArithRef],
     parent: Optional[nodes.NodeNG],
 ) -> Optional[ExprRef]:
-    "We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if"
-
+    """
+    We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if.
+    Before using this function you have to use the initialize_variables funcion to fill in the
+    initialized_variables dictionary.
+    """
     if node is None:
         return None
 
@@ -443,7 +448,8 @@ def convert_condition_to_z3_expression(
         z3_expr: Optional[ExprRef] = None
 
         if node.op == "%":
-            z3_expr = left % get_const_value(node.right)
+            modulo = get_const_value(node.right)
+            z3_expr = left % get_const_value(node.right) if modulo > 1 else None
         elif node.op == "//":
             z3_expr = left / get_const_value(node.right)
         elif node.op == "/":
@@ -477,22 +483,58 @@ def convert_condition_to_z3_expression(
     return None
 
 
-def create_optimized_tactic():
-    # Create a custom tactic
-    tactic = Then(
-        Tactic("simplify"),
-        Tactic("solve-eqs"),
-        Tactic("propagate-values"),
-        Tactic("solve-eqs"),
-        Tactic("smt"),
-    )
-
-    return tactic
+Z3_TACTIC = Then(
+    Tactic("simplify"),
+    Tactic("solve-eqs"),
+    Tactic("propagate-values"),
+    Tactic("solve-eqs"),
+    Tactic("smt"),
+)
 
 
-def implies(condition1: ArithRef, condition2: ArithRef) -> bool:
-    solver = create_optimized_tactic().solver()
-    solver.set("rlimit", 1700)
+def initialize_solver(rlimit=1700):
+    solver = Z3_TACTIC.solver()
+    solver.set("rlimit", rlimit)
+    return solver
+
+
+def implied_conditions(
+    conditions: List[ExprRef | None], expr_index: int, should_skip_index: List[bool], rlimit=1700
+) -> Generator[int, None, None]:
+    """
+    Yields indeces from 'conditions' that are implied by expression on index (excluding
+    the 'expr_index') 'expr_index'. (i.e. indeces 'i' that satisfie:
+    implies(conditions[expr_index], conditions[i])).
+
+    assumptions: len(should_skip_index) == len(conditions); 0 <= expr_index < len(conditions)
+    """
+    solver = initialize_solver(rlimit)
+    solver.add(conditions[expr_index])
+
+    for i in range(len(conditions)):
+        if i == expr_index or should_skip_index[i] or conditions[i] is None:
+            continue
+
+        solver.push()
+        solver.add(Not(conditions[i]))
+
+        if solver.check() == unsat:
+            yield i
+
+        solver.pop()
+
+
+def implies_with_solver(solver: Solver, condition2: ArithRef) -> bool:
+    solver.push()
+    solver.add(Not(condition2))
+    result = solver.check() == unsat
+    solver.pop()
+    return result
+
+
+def implies(condition1: ArithRef, condition2: ArithRef, rlimit=1700) -> bool:
+    "Returns if implication 'condition1 => condition2' is valid."
+    solver = initialize_solver(rlimit)
     solver.add(And(condition1, Not(condition2)))
     return solver.check() == unsat
 
