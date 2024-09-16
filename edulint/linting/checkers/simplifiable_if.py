@@ -20,6 +20,8 @@ from edulint.linting.checkers.utils import (
     is_pure_expression,
     initialize_variables,
     convert_condition_to_z3_expression,
+    initialize_solver,
+    implies_with_solver,
 )
 
 ExprRepresentation = str
@@ -1184,17 +1186,21 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         for i in range(len(converted_conditions)):
             if removed_condition[i] or converted_conditions[i] is None:
                 continue
+            solver = initialize_solver()
+            solver.add(converted_conditions[i])
 
             for j in range(len(converted_conditions)):
                 if i == j or removed_condition[j] or converted_conditions[j] is None:
                     continue
 
-                if node.op == "or" and implies(converted_conditions[i], converted_conditions[j]):
+                if node.op == "or" and implies_with_solver(solver, converted_conditions[j]):
                     removed_condition[i] = True
                     removed_nothing = False
                     break
 
-                if node.op == "and" and implies(converted_conditions[i], converted_conditions[j]):
+                if node.op == "and" and implies_with_solver(
+                    converted_conditions[i], converted_conditions[j]
+                ):
                     removed_condition[j] = True
                     removed_nothing = False
                     continue
