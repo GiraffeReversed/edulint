@@ -1170,6 +1170,26 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             else f"({node.as_string()})"
         )
 
+    def _should_remove_i(
+        self,
+        implication_forward: bool,
+        implication_backward: bool,
+        node: nodes.BoolOp,
+        i: int,
+        j: int,
+    ) -> bool:
+        return (
+            not (implication_forward and implication_backward)
+            and (
+                (implication_forward and node.op == "or")
+                or (implication_backward and node.op == "and")
+            )
+        ) or (
+            implication_forward
+            and implication_backward
+            and len(node.values[i].as_string()) > len(node.values[j].as_string())
+        )
+
     def _make_suggestion_for_redundant_condition_part(self, node: nodes.BoolOp) -> None:
         removed_condition = [False for _ in range(len(node.values))]
         removed_nothing = True
@@ -1187,19 +1207,23 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if removed_condition[i] or converted_conditions[i] is None:
                 continue
 
-            for j in range(len(converted_conditions)):
-                if i == j or removed_condition[j] or converted_conditions[j] is None:
+            for j in range(i + 1, len(converted_conditions)):
+                if removed_condition[j] or converted_conditions[j] is None:
                     continue
 
-                if node.op == "or" and implies(converted_conditions[i], converted_conditions[j]):
+                implication_forward = implies(converted_conditions[i], converted_conditions[j])
+                implication_backward = implies(converted_conditions[j], converted_conditions[i])
+
+                if not (implication_forward or implication_backward):
+                    continue
+
+                if self._should_remove_i(implication_forward, implication_backward, node, i, j):
                     removed_condition[i] = True
                     removed_nothing = False
                     break
 
-                if node.op == "and" and implies(converted_conditions[i], converted_conditions[j]):
-                    removed_condition[j] = True
-                    removed_nothing = False
-                    continue
+                removed_condition[j] = True
+                removed_nothing = False
 
         if removed_nothing:
             return
