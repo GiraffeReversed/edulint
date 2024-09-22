@@ -645,13 +645,13 @@ def test_using_compare_instead_of_equal(lines: List[str], expected_output: List[
 
 @pytest.mark.parametrize("lines,expected_output", [
     ([
-        "a < b and a+50 < b",
+        "a + b > c and c < a + 20 - b",
         "j >= n//2 and i>=n//2",
         "i < len(t1) or len(t2) > i or i < 5 or i < max( x,y , z )",
         "- 1 + len(lst) > min(x, 3, y) or max(y, z) < -1 + len(lst) or (-1 + len(lst)) > min(x, z)"
     ], [
         lazy_problem().set_line(1)
-        .set_text("'a < b and a + 50 < b' can be replaced with 'max(a, a + 50) < b'"),
+        .set_text("'a + b > c and c < a + 20 - b' can be replaced with 'c < min(a + b, a + 20 - b)'"),
         lazy_problem().set_line(2)
         .set_text("'j >= n // 2 and i >= n // 2' can be replaced with 'min(j, i) >= n // 2'"),
         lazy_problem().set_line(3)
@@ -700,5 +700,32 @@ def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Pro
     create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=simplifiable-test-by-equals")],
+        expected_output,
+    )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "t = x != y or abs(x - y) != 0",
+        "t = x % 2 == 0 and x % 6 == 0 and x % 3 == 0",
+        "t = x // 2 == 0 and (x < 1 and 0 < x)",
+        "t = x or False",
+        "t = a < b and b > a + 50 and a + b < 2*b"
+    ], [
+        lazy_problem().set_line(1)
+        .set_text("'x != y or abs(x - y) != 0' can be replaced with 'x != y'"),
+        lazy_problem().set_line(2)
+        .set_text("'x % 2 == 0 and x % 6 == 0 and x % 3 == 0' can be replaced with 'x % 6 == 0'"),
+        lazy_problem().set_line(3)
+        .set_text("'x // 2 == 0 and x < 1 and 0 < x' can be replaced with 'x < 1 and 0 < x'"),
+        lazy_problem().set_line(4)
+        .set_text("'x or False' can be replaced with 'x'"),
+        lazy_problem().set_line(5)
+        .set_text("'a < b and b > a + 50 and a + b < 2 * b' can be replaced with 'b > a + 50'"),
+    ]),
+])
+def test_redundant_condition_part(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=redundant-condition-part")],
         expected_output,
     )
