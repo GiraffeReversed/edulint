@@ -1297,24 +1297,16 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                     )
 
         # checkers that might make conflicting or same suggestion as redundant-condition-part
-
         made_suggestion = self._group_and_check_by_representation(comparison_operands, node)
-
-        made_suggestion = (
-            self._make_suggestion_for_using_max_min_if_possible(
-                comparisons_with_numbers, comparisons, node
-            )
-            or made_suggestion
-        )
 
         made_suggestion = (
             self._make_suggestion_for_simplifiable_test_by_equals(modulo_connected_with_and, node)
             or made_suggestion
         )
 
-        if not made_suggestion:
-            made_suggestion = (
-                self._make_suggestion_for_redundant_condition_part(node) or made_suggestion
+        if made_suggestion or not self._make_suggestion_for_redundant_condition_part(node):
+            self._make_suggestion_for_using_max_min_if_possible(
+                comparisons_with_numbers, comparisons, node
             )
 
     @only_required_for_messages(
