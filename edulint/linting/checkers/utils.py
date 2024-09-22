@@ -375,8 +375,9 @@ def convert_condition_to_z3_expression(
 ) -> Optional[ExprRef]:
     """
     We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if.
-    Before using this function you have to use the initialize_variables funcion to fill in the
-    initialized_variables dictionary.
+    Before using this function you have to use the initialize_variables funcion on all nodes that
+    you are interested about, to fill in the initialized_variables dictionary with variables of
+    correct types.
     """
     if node is None:
         return None
@@ -493,7 +494,13 @@ Z3_TACTIC = Then(
 
 
 def implies(condition1: ArithRef, condition2: ArithRef, rlimit=1700) -> bool:
-    "Returns if implication 'condition1 => condition2' is valid."
+    """
+    Returns if implication 'condition1 => condition2' is valid.
+
+    Warning: Can give incorrect answer if variable used in expressions involving % or // can
+    be of type float. (for example: x % 2 != 0 => x % 2 == 1, when x is int it is true,
+    but not when x is float)
+    """
     solver = Z3_TACTIC.solver()
     solver.set("rlimit", rlimit)
     solver.add(And(condition1, Not(condition2)))
