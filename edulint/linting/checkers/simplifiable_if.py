@@ -226,7 +226,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "R6216": (
             "'%s' can be replaced with '%s'",
             "redundant-condition-part",
-            "Emitted when there is a problem like 'A or B', where A implies B and suggests to simplify the condition to just 'B'",
+            """
+            Emitted when there is a problem like 'A or B', where A implies B and suggests to simplify the condition to just 'B'
+
+            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
+            """,
         ),
     }
 
@@ -1170,7 +1174,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             else f"({node.as_string()})"
         )
 
-    def _should_remove_i(
+    def _should_remove_ith(
         self,
         implication_forward: bool,
         implication_backward: bool,
@@ -1215,7 +1219,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 implication_forward = implies(converted_conditions[i], converted_conditions[j])
                 implication_backward = implies(converted_conditions[j], converted_conditions[i])
 
-                if self._should_remove_i(implication_forward, implication_backward, node, i, j):
+                if self._should_remove_ith(implication_forward, implication_backward, node, i, j):
                     removed_condition[i] = True
                     removed_nothing = False
                     break
