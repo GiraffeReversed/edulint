@@ -1,10 +1,10 @@
 # Compatibility tests: https://github.com/GiraffeReversed/edulint/actions/workflows/test-compatibility.yaml
 
-flake8>=3.8.4,<7.2  # 7.1.0 is tested to be compatible
+flake8>=3.8.4,<7.2  # 7.1.0 is tested to be compatible; Ideally >=6.1.0 so that all message translations work. Even older versions work, they just don't pass the tests which match the message output verbatim.
 flake8-json~=24.4.0 # 24.4.0 is tested to be compatible
-pylint>=3,<3.3  # 3.2.6 is tested to be compatible
+pylint>=3,<3.3  # 3.2.7 is tested to be compatible; Assertions in tests failed for Pylint 3.3 - the code reached supposedly unreachable section.   
 dataclasses-json~=0.6.7  # 0.6.7 is tested to be compatible
 tomli~=2.0.1  # 2.0.1 is tested to be compatible. In Python 3.11+ it's included as a standard library tomllib.
-requests>=2.31.0 # versions lower than 2.31.0 had CVE-2023-32681
-platformdirs
+requests~=2.31 # versions lower than 2.31.0 had CVE-2023-32681
+platformdirs~=4.0
 loguru
