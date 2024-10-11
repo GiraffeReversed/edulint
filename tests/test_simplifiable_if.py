@@ -585,7 +585,6 @@ def test_simplifiable_with_abs(filename: str, expected_output: List[Problem]) ->
 @pytest.mark.parametrize("lines,expected_output", [
     ([
         "x = 7.8",
-        "y = [-5.25, 2.3, 3, 4]",
         "a = x > -2 or x <= 6",
         "c = x >= 1 or x > 1",
         "d = x < 2 and x <= -5",
