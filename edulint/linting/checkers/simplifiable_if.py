@@ -1050,7 +1050,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         mod = get_const_value(left.right)
         val = get_const_value(right)
 
-        if not isinstance(mod, int) or not is_modulo_residue(val, mod):
+        if not isinstance(mod, int) or mod < 2 or not is_modulo_residue(val, mod):
             return None
 
         if mod == 2 and cmp == "!=":
