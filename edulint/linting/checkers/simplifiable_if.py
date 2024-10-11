@@ -231,7 +231,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
-        ),
+        ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
     }
 
     def _is_bool(self, node: nodes.NodeNG) -> bool:
@@ -797,7 +797,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def _group_and_check_by_representation(
         self, comparison_operands: List[NodeCmpValue], node: nodes.BoolOp
     ) -> bool:
-        made_suggestion = False
         already_checked: Set[int] = set()
         current_group: List[Tuple[Comparison, Value]] = []
 
@@ -824,12 +823,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if len(current_group) < 2:
                 continue
 
-            made_suggestion = (
-                self._suggestion_for_group_of_boolops(expr1.as_string(), current_group, node)
-                or made_suggestion
-            )
-
-        return made_suggestion
+            self._suggestion_for_group_of_boolops(expr1.as_string(), current_group, node)
 
     def _update_comparisons(
         self,
@@ -980,7 +974,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                         compared_with_num = None
 
         if expression is None:
-            return False
+            return
 
         group_string = self._get_original_group_as_string(
             expression, comparison, expressions, was_switched, compared_with_num, node.op
@@ -1005,8 +999,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 ),
             ),
         )
-
-        return True
 
     def _is_equality_or_inequality(self, node: nodes.NodeNG) -> bool:
         return (
@@ -1117,7 +1109,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def _make_suggestion_for_simplifiable_test_by_equals(
         self, modulo_connected_with_and: List[PairsOfModComparisonsWithNum], node: nodes.BoolOp
     ) -> bool:
-        made_suggestion = False
         for pair in modulo_connected_with_and:
             original: Optional[str] = None
             suggestion: Optional[str] = None
@@ -1150,10 +1141,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                     node=node,
                     args=(original, suggestion),
                 )
-
-            made_suggestion = made_suggestion or suggestion is not None
-
-        return made_suggestion
 
     def _is_comparison_not_between_numbers(self, node: nodes.NodeNG) -> bool:
         return (
@@ -1201,7 +1188,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         initialized_variables: Dict[str, ArithRef] = {}
         if not initialize_variables(node, initialized_variables, False, None):
-            return False
+            return
 
         converted_conditions = [
             convert_condition_to_z3_expression(child, initialized_variables, node)
@@ -1229,7 +1216,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                     removed_nothing = False
 
         if removed_nothing:
-            return False
+            return
 
         self.add_message(
             "redundant-condition-part",
@@ -1245,8 +1232,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 ),
             ),
         )
-
-        return True
 
     def _check_for_simplification_of_boolop(self, node: nodes.BoolOp) -> None:
         if node.op is None:
@@ -1296,18 +1281,12 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                         modulo_connected_with_and, *tmp, value.as_string()
                     )
 
-        # checkers that might make conflicting or same suggestion as redundant-condition-part
-        made_suggestion = self._group_and_check_by_representation(comparison_operands, node)
-
-        made_suggestion = (
-            self._make_suggestion_for_simplifiable_test_by_equals(modulo_connected_with_and, node)
-            or made_suggestion
+        self._group_and_check_by_representation(comparison_operands, node)
+        self._make_suggestion_for_simplifiable_test_by_equals(modulo_connected_with_and, node)
+        self._make_suggestion_for_using_max_min_if_possible(
+            comparisons_with_numbers, comparisons, node
         )
-
-        if made_suggestion or not self._make_suggestion_for_redundant_condition_part(node):
-            self._make_suggestion_for_using_max_min_if_possible(
-                comparisons_with_numbers, comparisons, node
-            )
+        self._make_suggestion_for_redundant_condition_part(node)
 
     @only_required_for_messages(
         "simplifiable-with-abs",

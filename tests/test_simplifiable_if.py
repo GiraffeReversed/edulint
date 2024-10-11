@@ -590,13 +590,13 @@ def test_simplifiable_with_abs(filename: str, expected_output: List[Problem]) ->
         "d = x < 2 and x <= -5",
         "e = -(x - 1) > 5 or - (x- 1) < -5 or -(x-1) >= 4",
     ], [
-        lazy_problem().set_line(3)
+        lazy_problem().set_line(2)
         .set_text("'x > -2 or x <= 6' can be simplified to 'True'. Simplify the condition if it is on purpose, or change it if it was not."),
-        lazy_problem().set_line(4)
+        lazy_problem().set_line(3)
         .set_text("'x >= 1 or x > 1' can be simplified to 'x >= 1'. Simplify the condition if it is on purpose, or change it if it was not."),
-        lazy_problem().set_line(5)
+        lazy_problem().set_line(4)
         .set_text("'x < 2 and x <= -5' can be simplified to 'x <= -5'. Simplify the condition if it is on purpose, or change it if it was not."),
-        lazy_problem().set_line(6)
+        lazy_problem().set_line(5)
         .set_text("'-(x - 1) > 5 or -(x - 1) < -5 or -(x - 1) >= 4' can be simplified to '-(x - 1) < -5 or -(x - 1) >= 4'. Simplify the condition if it is on purpose, or change it if it was not."),
     ]),
     ([
