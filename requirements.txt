@@ -8,3 +8,4 @@ tomli~=2.0.1  # 2.0.1 is tested to be compatible. In Python 3.11+ it's included 
 requests~=2.31 # versions lower than 2.31.0 had CVE-2023-32681
 platformdirs~=4.0
 loguru
+z3-solver
