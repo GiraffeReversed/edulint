@@ -547,7 +547,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if not self._test_pureness_and_initialize_variables_for_if(node, initialized_variables):
             return
 
-        ifBlock_representation, has_else_block = self._decompose_if(node)
+        ifBlock_representation, has_else_block = self._decompose_if(node, initialized_variables)
 
         if not ifBlock_representation or not node.has_elif_block():
             return
@@ -563,10 +563,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "no-value-in-one-branch-return",
         "simplifiable-if-nested",
         "simplifiable-if-seq",
+        "redundant-condition-part",
     )
     def visit_if(self, node: nodes.If) -> None:
         self._basic_checks(node)
-        self._check_for_redundant_condition_in_if(node)
+        # self._check_for_redundant_condition_in_if(node)
 
     @only_required_for_messages("simplifiable-if-expr", "simplifiable-if-expr-conj")
     def visit_ifexp(self, node: nodes.IfExp) -> None:
