@@ -2,7 +2,7 @@ from astroid import nodes  # type: ignore
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
 
-from z3 import ArithRef
+from z3 import ArithRef, ExprRef, And, Or
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -138,6 +138,43 @@ class PairsOfModComparisonsWithNum:
                 return False
 
         return True
+
+
+def convert_test_to_Z3(
+    test: nodes.NodeNG, initialized_variables: Dict[str, ArithRef]
+) -> Tuple[Optional[ExprRef], List[Tuple[Optional[ExprRef], nodes.NodeNG]]]:
+    if isinstance(test, (nodes.BoolOp)):
+        boolOp_operands = []
+        converted_test: List[ExprRef] = []
+
+        for child in test.values:
+            boolOp_operands.append(
+                convert_condition_to_z3_expression(child, initialized_variables, test)
+            )
+            if boolOp_operands[-1][0] is None:
+                return None, []
+
+            converted_test.append(boolOp_operands[-1][0])
+
+        return (Or(converted_test) if test.op == "or" else And(converted_test)), boolOp_operands
+
+    return convert_condition_to_z3_expression(test, initialized_variables, None), []
+
+
+class IfBlock:
+    def __init__(
+        self,
+        test: Optional[nodes.NodeNG],
+        body: List[nodes.NodeNG],
+        initialized_variables: Dict[str, ArithRef],
+    ) -> None:
+        self.condition, self.boolOp_operands, self.boolOp_operation = None, [], None
+
+        if test is not None:
+            self.condition, self.boolOp_operands = convert_test_to_Z3(test, initialized_variables)
+            self.boolOp_operation = test.op if isinstance(test, nodes.BoolOp) else None
+
+        self.body = body
 
 
 class SimplifiableIf(BaseChecker):  # type: ignore
@@ -406,17 +443,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             and isinstance(node.body[-1], nodes.Return)
         )
 
-    @only_required_for_messages(
-        "simplifiable-if-return",
-        "simplifiable-if-return-conj",
-        "simplifiable-if-assignment",
-        "simplifiable-if-assignment-conj",
-        "simplifiable-if-pass",
-        "no-value-in-one-branch-return",
-        "simplifiable-if-nested",
-        "simplifiable-if-seq",
-    )
-    def visit_if(self, node: nodes.If) -> None:
+    def _basic_checks(self, node: nodes.If) -> None:
         if len(node.orelse) == 0:
             if (
                 len(node.body) == 1
@@ -462,6 +489,84 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if refactored is not None:
             new_cond, only_replaces = refactored
             self._simplifiable_if_message(node, then, new_cond, only_replaces)
+
+    def _test_pureness_and_initialize_variables_for_if(
+        self, current_if_block: nodes.If, initialized_variables: Dict[str, ArithRef]
+    ) -> bool:
+        while current_if_block.has_elif_block():
+            if not (
+                self._is_pure_expression(current_if_block.test)
+                and initialize_variables(current_if_block.test, initialized_variables, False, None)
+            ):
+                return False
+
+            current_if_block = current_if_block.orelse[0]
+
+        return self._is_pure_expression(current_if_block.test) and initialize_variables(
+            current_if_block.test, initialized_variables, False, None
+        )
+
+    def _decompose_if(
+        self, node: nodes.If, initialized_variables: Dict[str, ArithRef]
+    ) -> Tuple[List[IfBlock], bool]:
+        ifBlock_representation: List[IfBlock] = []
+        has_else_block = False
+        current_if_block = node
+
+        while current_if_block.has_elif_block():
+            ifBlock_representation.append(
+                IfBlock(current_if_block.test, current_if_block.body, initialized_variables)
+            )
+
+            if ifBlock_representation[-1].condition is None:
+                return []
+
+            current_if_block = current_if_block.orelse[0]
+
+        # the last if/elif before else
+        ifBlock_representation.append(
+            IfBlock(current_if_block.test, current_if_block.body, initialized_variables)
+        )
+
+        if ifBlock_representation[-1].condition is None:
+            return []
+
+        # the else block
+        if current_if_block.orelse:
+            ifBlock_representation.append(
+                IfBlock(None, current_if_block.orelse, initialized_variables)
+            )
+            has_else_block = True
+
+        # TODO - add possibility to change else block to elif block if the condition would be simple (for example a == b or something like that)
+
+        return ifBlock_representation, has_else_block
+
+    def _check_for_redundant_condition_in_if(self, node: nodes.If) -> None:
+        initialized_variables: Dict[str, ArithRef] = {}
+        if not self._test_pureness_and_initialize_variables_for_if(node, initialized_variables):
+            return
+
+        ifBlock_representation, has_else_block = self._decompose_if(node)
+
+        if not ifBlock_representation or not node.has_elif_block():
+            return
+
+        # TODO - implement the actual check
+
+    @only_required_for_messages(
+        "simplifiable-if-return",
+        "simplifiable-if-return-conj",
+        "simplifiable-if-assignment",
+        "simplifiable-if-assignment-conj",
+        "simplifiable-if-pass",
+        "no-value-in-one-branch-return",
+        "simplifiable-if-nested",
+        "simplifiable-if-seq",
+    )
+    def visit_if(self, node: nodes.If) -> None:
+        self._basic_checks(node)
+        self._check_for_redundant_condition_in_if(node)
 
     @only_required_for_messages("simplifiable-if-expr", "simplifiable-if-expr-conj")
     def visit_ifexp(self, node: nodes.IfExp) -> None:
