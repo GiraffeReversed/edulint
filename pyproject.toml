@@ -1,7 +1,6 @@
 [project]
 name = "edulint"
-version = "4.1.3"  # Replace with your actual version
-dynamic = ["readme", "requires-python", "license", "classifiers", "urls", "dependencies"]
+dynamic = ["readme", "requires-python", "license", "classifiers", "dependencies", "version"]
 
 [build-system]
 requires = ["setuptools>=62.6"]  # required for: "install_requires = file: requirements.txt"
