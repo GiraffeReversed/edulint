@@ -479,7 +479,7 @@ def _parse_infile_configs(
                 return {}
 
             infile_config = parse_infile_config(path, option_parses)
-            return {infile_config.to_immutable(): (infile_config, [path])}
+            return {infile_config.to_immutable(log_unknown_groups=False): (infile_config, [path])}
 
         result = aggregate_subresults([os.path.join(path, name) for name in os.listdir(path)])
 
