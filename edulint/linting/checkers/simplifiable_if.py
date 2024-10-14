@@ -1,8 +1,10 @@
 from astroid import nodes  # type: ignore
+from astroid.const import Context
+from astroid import extract_node
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
 
-from z3 import ArithRef, ExprRef, And, Or
+from z3 import ArithRef, ExprRef, And, Or, Not
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -149,7 +151,7 @@ def convert_test_to_Z3(
 
         for child in test.values:
             boolOp_operands.append(
-                convert_condition_to_z3_expression(child, initialized_variables, test)
+                (convert_condition_to_z3_expression(child, initialized_variables, test), child)
             )
             if boolOp_operands[-1][0] is None:
                 return None, []
@@ -158,7 +160,9 @@ def convert_test_to_Z3(
 
         return (Or(converted_test) if test.op == "or" else And(converted_test)), boolOp_operands
 
-    return convert_condition_to_z3_expression(test, initialized_variables, None), []
+    test_in_Z3 = convert_condition_to_z3_expression(test, initialized_variables, None)
+
+    return test_in_Z3, [(None, test)]  # None is here to avoid storing the converted test twice.
 
 
 class IfBlock:
@@ -168,11 +172,13 @@ class IfBlock:
         body: List[nodes.NodeNG],
         initialized_variables: Dict[str, ArithRef],
     ) -> None:
-        self.condition, self.boolOp_operands, self.boolOp_operation = None, [], None
+        self.condition, self.boolOp_operands, self.isOr = None, [], False
 
         if test is not None:
             self.condition, self.boolOp_operands = convert_test_to_Z3(test, initialized_variables)
-            self.boolOp_operation = test.op if isinstance(test, nodes.BoolOp) else None
+
+            # we take test that is not BoolOp to be 'and' with just one operand
+            self.isOr = isinstance(test, nodes.BoolOp) and test.op == "or"
 
         self.body = body
 
@@ -506,6 +512,39 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             current_if_block.test, initialized_variables, False, None
         )
 
+    def _convert_else_to_elif_when_simple_enough(
+        self, ifBlock_representation: List[IfBlock], initialized_variables: Dict[str, ArithRef]
+    ) -> None:
+        """
+        This function converts else in the if statement to elif, such that it is
+        equivalent and simple enough, ie. a == b, this can help with some simplification.
+        """
+        if len(initialized_variables) != 2:
+            return
+
+        else_condition = And(
+            [
+                Not(ifBlock_representation[i].condition)
+                for i in range(len(ifBlock_representation) - 1)
+            ]
+        )
+
+        var1, var2 = list(initialized_variables.items())
+        desired_simplifications = [
+            (var1[1] == var2[1], f"{var1[0]} == {var2[0]}"),
+            (var1[1] != var2[1], f"{var1[0]} != {var2[0]}"),
+            (var1[1] > var2[1], f"{var1[0]} > {var2[0]}"),
+            (var1[1] < var2[1], f"{var1[0]} < {var2[0]}"),
+        ]
+
+        for simplification, string_representation in desired_simplifications:
+            if implies(else_condition, simplification) and implies(simplification, else_condition):
+                ifBlock_representation[-1].condition = simplification
+                ifBlock_representation[-1].boolOp_operands = [
+                    (None, extract_node(string_representation))
+                ]
+                return
+
     def _decompose_if(
         self, node: nodes.If, initialized_variables: Dict[str, ArithRef]
     ) -> Tuple[List[IfBlock], bool]:
@@ -519,7 +558,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             )
 
             if ifBlock_representation[-1].condition is None:
-                return []
+                return [], False
 
             current_if_block = current_if_block.orelse[0]
 
@@ -529,7 +568,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         )
 
         if ifBlock_representation[-1].condition is None:
-            return []
+            return [], False
 
         # the else block
         if current_if_block.orelse:
@@ -538,7 +577,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             )
             has_else_block = True
 
-        # TODO - add possibility to change else block to elif block if the condition would be simple (for example a == b or something like that)
+        if has_else_block:
+            self._convert_else_to_elif_when_simple_enough(ifBlock_representation)
 
         return ifBlock_representation, has_else_block
 
