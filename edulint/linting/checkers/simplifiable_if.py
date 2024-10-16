@@ -20,6 +20,8 @@ from edulint.linting.checkers.utils import (
     is_number,
     implies,
     is_pure_expression,
+    first_implied_index,
+    all_implied_indeces,
     initialize_variables,
     convert_condition_to_z3_expression,
     initialize_solver,
@@ -142,45 +144,72 @@ class PairsOfModComparisonsWithNum:
         return True
 
 
-def convert_test_to_Z3(
-    test: nodes.NodeNG, initialized_variables: Dict[str, ArithRef]
-) -> Tuple[Optional[ExprRef], List[Tuple[Optional[ExprRef], nodes.NodeNG]]]:
-    if isinstance(test, (nodes.BoolOp)):
-        boolOp_operands = []
-        converted_test: List[ExprRef] = []
+def get_converted_test_and_operands(
+    test: nodes.BoolOp, initialized_variables: Dict[str, ArithRef]
+) -> Tuple[Optional[ExprRef], List[ExprRef]]:
+    converted_operands: List[ExprRef] = []
 
-        for child in test.values:
-            boolOp_operands.append(
-                (convert_condition_to_z3_expression(child, initialized_variables, test), child)
-            )
-            if boolOp_operands[-1][0] is None:
-                return None, []
+    for operand in test.values:
+        converted_operands.append(
+            convert_condition_to_z3_expression(operand, initialized_variables, test)
+        )
+        if converted_operands[-1] is None:
+            return None, []
 
-            converted_test.append(boolOp_operands[-1][0])
-
-        return (Or(converted_test) if test.op == "or" else And(converted_test)), boolOp_operands
-
-    test_in_Z3 = convert_condition_to_z3_expression(test, initialized_variables, None)
-
-    return test_in_Z3, [(None, test)]  # None is here to avoid storing the converted test twice.
+    return (
+        Or(converted_operands) if test.op == "or" else And(converted_operands)
+    ), converted_operands
 
 
 class IfBlock:
+    def _set_test_info(self, test: nodes.NodeNG, initialized_variables: Dict[str, ArithRef]):
+        if isinstance(test, (nodes.BoolOp)):
+            self.condition, self.boolOp_operands = get_converted_test_and_operands(
+                test, initialized_variables
+            )
+
+            if self.condition is None:
+                return
+
+            self.negated_condition = Not(self.condition)
+            if test.op == "or":
+                self.isOr = True
+                self.negated_boolOp_operands = [Not(operand) for operand in self.boolOp_operands]
+
+            self.operands = test.values
+        else:
+            self.condition = convert_condition_to_z3_expression(test, initialized_variables, None)
+            if self.condition is not None:
+                self.negated_condition = Not(self.condition)
+
+            # I take 'test' that is not BoolOp to be 'and' node with just one operand. (for simplification)
+            self.operands = [test]
+
     def __init__(
         self,
         test: Optional[nodes.NodeNG],
         body: List[nodes.NodeNG],
         initialized_variables: Dict[str, ArithRef],
     ) -> None:
-        self.condition, self.boolOp_operands, self.isOr = None, [], False
+        self.condition: Optional[ExprRef] = None
+        self.negated_condition: Optional[ExprRef] = None
+        self.operands: List[nodes.NodeNG] = []
+
+        self.boolOp_operands: List[ExprRef] = []
+        self.negated_boolOp_operands: List[ExprRef] = []
+
+        self.isOr = False
 
         if test is not None:
-            self.condition, self.boolOp_operands = convert_test_to_Z3(test, initialized_variables)
-
-            # we take test that is not BoolOp to be 'and' with just one operand
-            self.isOr = isinstance(test, nodes.BoolOp) and test.op == "or"
+            self._set_test_info(test, initialized_variables)
 
         self.body = body
+
+    def is_boolOp(self):
+        return len(self.boolOp_operands) > 1
+
+    def get_operands_by_operation(self):
+        return self.negated_boolOp_operands if self.isOr else self.boolOp_operands
 
 
 class SimplifiableIf(BaseChecker):  # type: ignore
@@ -582,6 +611,37 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return ifBlock_representation, has_else_block
 
+    def _is_valid_move_up(
+        self, current_index: int, goal_index: int, ifBlock_representation: List[IfBlock]
+    ) -> bool:
+        "assumes goal_index < current_index"
+        # TODO - implement
+        pass
+
+    def _find_index_of_valid_move_for_simplification(
+        self, current_ifBlock: int, ifBlock_representation: List[IfBlock]
+    ):
+        """
+        Returns the index of first ifBlock where moving current_ifBlock
+        right above it is possible and would simplify it.
+        """
+        negated_condition = ifBlock_representation[current_ifBlock].negated_condition
+
+        for i in range(current_ifBlock):
+            if not ifBlock_representation[i].is_boolOp():
+                continue
+
+            implied_operand_index = first_implied_index(
+                negated_condition, ifBlock_representation[i].get_operands_by_operation()
+            )
+
+            if implied_operand_index is not None and self._is_valid_move_up(
+                current_ifBlock, i, ifBlock_representation
+            ):
+                continue
+
+            # TODO - implement the rest
+
     def _check_for_redundant_condition_in_if(self, node: nodes.If) -> None:
         initialized_variables: Dict[str, ArithRef] = {}
         if not self._test_pureness_and_initialize_variables_for_if(node, initialized_variables):
@@ -592,7 +652,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if not ifBlock_representation or not node.has_elif_block():
             return
 
-        # TODO - implement the actual check
+        current_ifBlock = 0
+        while current_ifBlock < len(ifBlock_representation):
+            negated_condition = Not(ifBlock_representation[current_ifBlock].condition)
+            # TODO - implement the rest
 
     @only_required_for_messages(
         "simplifiable-if-return",
