@@ -493,7 +493,7 @@ Z3_TACTIC = Then(
 )
 
 
-def implies(condition1: ArithRef, condition2: ArithRef, rlimit=1700) -> bool:
+def implies(condition1: ExprRef, condition2: ExprRef, rlimit=1700) -> bool:
     """
     Returns if implication 'condition1 => condition2' is valid.
 
@@ -505,6 +505,26 @@ def implies(condition1: ArithRef, condition2: ArithRef, rlimit=1700) -> bool:
     solver.set("rlimit", rlimit)
     solver.add(And(condition1, Not(condition2)))
     return solver.check() == unsat
+
+
+def first_implied_index(
+    condition: ExprRef, conditions: List[ExprRef], rlimit=1700
+) -> Optional[int]:
+    for i in range(len(conditions)):
+        if implies(condition, conditions[i]):
+            return i
+
+    return None
+
+
+def all_implied_indeces(condition: ExprRef, conditions: List[ExprRef], rlimit=1700) -> List[int]:
+    implied_indeces = []
+
+    for i in range(len(conditions)):
+        if implies(condition, conditions[i]):
+            implied_indeces.append(i)
+
+    return implied_indeces
 
 
 def is_multi_assign(node: nodes.NodeNG) -> bool:
