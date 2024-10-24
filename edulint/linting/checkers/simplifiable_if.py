@@ -182,15 +182,10 @@ class IfBlock:
             if self.condition is not None:
                 self.negated_condition = Not(self.condition)
 
-            # I take 'test' that is not BoolOp to be 'and' node with just one operand. (for simplification)
+            # I take 'test' that is not BoolOp to be 'and node' with just one operand. (for simplification)
             self.operands = [test]
 
-    def __init__(
-        self,
-        test: Optional[nodes.NodeNG],
-        body: List[nodes.NodeNG],
-        initialized_variables: Dict[str, ArithRef],
-    ) -> None:
+    def set_all_except_body_to_default(self):
         self.condition: Optional[ExprRef] = None
         self.negated_condition: Optional[ExprRef] = None
         self.operands: List[nodes.NodeNG] = []
@@ -199,6 +194,14 @@ class IfBlock:
         self.negated_boolOp_operands: List[ExprRef] = []
 
         self.isOr = False
+
+    def __init__(
+        self,
+        test: Optional[nodes.NodeNG],
+        body: List[nodes.NodeNG],
+        initialized_variables: Dict[str, ArithRef],
+    ) -> None:
+        self.set_all_except_body_to_default()
 
         if test is not None:
             self._set_test_info(test, initialized_variables)
@@ -612,20 +615,31 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         return ifBlock_representation, has_else_block
 
     def _is_valid_move_up(
-        self, current_index: int, goal_index: int, ifBlock_representation: List[IfBlock]
+        self,
+        goal_index: int,
+        conditions_for_move_validation: List[ExprRef],
     ) -> bool:
         "assumes goal_index < current_index"
-        # TODO - implement
-        pass
+        return implies(
+            And(conditions_for_move_validation[: goal_index + 1]),
+            And(conditions_for_move_validation[goal_index + 1 :]),
+        )
 
     def _find_index_of_valid_move_for_simplification(
         self, current_ifBlock: int, ifBlock_representation: List[IfBlock]
-    ):
+    ) -> Optional[Tuple[int, int]]:
         """
-        Returns the index of first ifBlock where moving current_ifBlock
-        right above it is possible and would simplify it.
+        The first value in returned value is the index of first ifBlock where moving
+        current_ifBlock right above it is possible and would simplify it. The second
+        value is index of condition that can be removed.
+        Returns None if there is no valid move that would make some simplification.
         """
         negated_condition = ifBlock_representation[current_ifBlock].negated_condition
+
+        conditions_for_move_validation = [
+            ifBlock_representation[current_ifBlock],
+            *[block.negated_condition for block in ifBlock_representation[:current_ifBlock]],
+        ]
 
         for i in range(current_ifBlock):
             if not ifBlock_representation[i].is_boolOp():
@@ -636,11 +650,59 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             )
 
             if implied_operand_index is not None and self._is_valid_move_up(
-                current_ifBlock, i, ifBlock_representation
+                i, conditions_for_move_validation
             ):
-                continue
+                return i, implied_operand_index
 
-            # TODO - implement the rest
+        return None
+
+    def _condition_simplifications_under_assumption(
+        self, block: IfBlock, assumption: ExprRef
+    ) -> Tuple[Optional[bool], List[int]]:
+        condition_is_always: Optional[bool] = None
+        redundant_operand_indeces: List[int] = []
+
+        if implies(assumption, block.condition):
+            condition_is_always = True
+        elif implies(assumption, block.negated_condition):
+            condition_is_always = False
+        elif len(block.boolOp_operands) > 1:
+            redundant_operand_indeces = all_implied_indeces(
+                assumption, block.get_operands_by_operation()
+            )
+
+        return condition_is_always, redundant_operand_indeces
+
+    def _simplify_condition_at_index(
+        self,
+        if_statement: List[IfBlock],
+        condition_index: int,
+        condition_is_always: Optional[bool],
+        redundant_operand_indeces: List[int],
+    ) -> List[IfBlock]:
+        if condition_is_always is not None:
+            if condition_is_always:
+                if_statement[condition_index].set_all_except_body_to_default()
+                return if_statement[: condition_index + 1]
+
+            return [if_statement[i] for i in range(len(if_statement)) if i != condition_index]
+
+        if not redundant_operand_indeces:
+            return if_statement
+
+        # TODO - remove redundant indeces
+
+    def _immediate_simplifications_for_if(self, if_statement: List[IfBlock]):
+        previous_conditions_negated = if_statement[0].negated_condition
+
+        i = 1
+        while i < len(if_statement) - 1:
+            condition_is_always, redundant_operand_indeces = (
+                self._condition_simplifications_under_assumption(
+                    if_statement[i], previous_conditions_negated
+                )
+            )
+            # TODO
 
     def _check_for_redundant_condition_in_if(self, node: nodes.If) -> None:
         initialized_variables: Dict[str, ArithRef] = {}
@@ -654,8 +716,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         current_ifBlock = 0
         while current_ifBlock < len(ifBlock_representation):
-            negated_condition = Not(ifBlock_representation[current_ifBlock].condition)
-            # TODO - implement the rest
+            move = self._find_index_of_valid_move_for_simplification(
+                current_ifBlock, ifBlock_representation
+            )
+            # TODO
 
     @only_required_for_messages(
         "simplifiable-if-return",
