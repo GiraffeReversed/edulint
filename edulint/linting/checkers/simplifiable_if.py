@@ -40,6 +40,10 @@ SameDirComparisons = Dict[
 # indicates, whether the comparison in the original source code is in the same direction as in the dictionary.
 
 
+def remove_elements_at_indeces(lst: List[int], remove_indeces: Set[int]):
+    return [elem for i, elem in enumerate(lst) if i not in remove_indeces]
+
+
 def is_modulo_residue(value: Any, modulo: int) -> bool:
     return isinstance(value, int) and 0 <= value < modulo
 
@@ -144,6 +148,10 @@ class PairsOfModComparisonsWithNum:
         return True
 
 
+def get_boolOp_as_condition(operands: List[ExprRef], is_or: bool):
+    return Or(operands) if is_or else And(operands)
+
+
 def get_converted_test_and_operands(
     test: nodes.BoolOp, initialized_variables: Dict[str, ArithRef]
 ) -> Tuple[Optional[ExprRef], List[ExprRef]]:
@@ -156,9 +164,7 @@ def get_converted_test_and_operands(
         if converted_operands[-1] is None:
             return None, []
 
-    return (
-        Or(converted_operands) if test.op == "or" else And(converted_operands)
-    ), converted_operands
+    return get_boolOp_as_condition(converted_operands, test.op == "or"), converted_operands
 
 
 class IfBlock:
@@ -173,7 +179,7 @@ class IfBlock:
 
             self.negated_condition = Not(self.condition)
             if test.op == "or":
-                self.isOr = True
+                self.is_or = True
                 self.negated_boolOp_operands = [Not(operand) for operand in self.boolOp_operands]
 
             self.operands = test.values
@@ -193,7 +199,7 @@ class IfBlock:
         self.boolOp_operands: List[ExprRef] = []
         self.negated_boolOp_operands: List[ExprRef] = []
 
-        self.isOr = False
+        self.is_or = False
 
     def __init__(
         self,
@@ -208,11 +214,23 @@ class IfBlock:
 
         self.body = body
 
+    def remove_redundant_operands(self, redundant_operand_indeces: Set[int]):
+        self.operands = remove_elements_at_indeces(self.operands, redundant_operand_indeces)
+        self.boolOp_operands = remove_elements_at_indeces(
+            self.boolOp_operands, redundant_operand_indeces
+        )
+        self.negated_boolOp_operands = remove_elements_at_indeces(
+            self.negated_boolOp_operands, redundant_operand_indeces
+        )
+
+        self.condition = get_boolOp_as_condition(self.boolOp_operands, self.is_or)
+        self.negated_condition = Not(self.condition)
+
     def is_boolOp(self):
         return len(self.boolOp_operands) > 1
 
     def get_operands_by_operation(self):
-        return self.negated_boolOp_operands if self.isOr else self.boolOp_operands
+        return self.negated_boolOp_operands if self.is_or else self.boolOp_operands
 
 
 class SimplifiableIf(BaseChecker):  # type: ignore
@@ -659,50 +677,55 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def _condition_simplifications_under_assumption(
         self, block: IfBlock, assumption: ExprRef
     ) -> Tuple[Optional[bool], List[int]]:
-        condition_is_always: Optional[bool] = None
+        condition_always: Optional[bool] = None
         redundant_operand_indeces: List[int] = []
 
         if implies(assumption, block.condition):
-            condition_is_always = True
+            condition_always = True
         elif implies(assumption, block.negated_condition):
-            condition_is_always = False
+            condition_always = False
         elif len(block.boolOp_operands) > 1:
             redundant_operand_indeces = all_implied_indeces(
                 assumption, block.get_operands_by_operation()
             )
 
-        return condition_is_always, redundant_operand_indeces
+        return condition_always, redundant_operand_indeces
 
     def _simplify_condition_at_index(
         self,
         if_statement: List[IfBlock],
         condition_index: int,
-        condition_is_always: Optional[bool],
+        condition_always: Optional[bool],
         redundant_operand_indeces: List[int],
     ) -> List[IfBlock]:
-        if condition_is_always is not None:
-            if condition_is_always:
-                if_statement[condition_index].set_all_except_body_to_default()
-                return if_statement[: condition_index + 1]
+        if condition_always is True:
+            if_statement[condition_index].set_all_except_body_to_default()
+            return if_statement[: condition_index + 1]
 
+        if condition_always is False:
             return [if_statement[i] for i in range(len(if_statement)) if i != condition_index]
 
-        if not redundant_operand_indeces:
-            return if_statement
+        if redundant_operand_indeces:
+            if_statement[condition_index].remove_redundant_operands(set(redundant_operand_indeces))
 
-        # TODO - remove redundant indeces
+        return if_statement
 
     def _immediate_simplifications_for_if(self, if_statement: List[IfBlock]):
         previous_conditions_negated = if_statement[0].negated_condition
 
         i = 1
         while i < len(if_statement) - 1:
-            condition_is_always, redundant_operand_indeces = (
+            condition_always, redundant_operand_indeces = (
                 self._condition_simplifications_under_assumption(
                     if_statement[i], previous_conditions_negated
                 )
             )
-            # TODO
+            if condition_always is not None or not redundant_operand_indeces:
+                if_statement = self._simplify_condition_at_index(
+                    if_statement, i, condition_always, redundant_operand_indeces
+                )
+
+        # TODO
 
     def _check_for_redundant_condition_in_if(self, node: nodes.If) -> None:
         initialized_variables: Dict[str, ArithRef] = {}
