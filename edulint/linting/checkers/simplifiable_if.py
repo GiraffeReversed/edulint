@@ -152,7 +152,11 @@ def add_brackets_if_composed(node: nodes.NodeNG, is_standalone: bool) -> str:
     return (
         node.as_string()
         if is_standalone
-        or isinstance(node, (nodes.Name, nodes.Const, nodes.Call, nodes.Attribute, nodes.Subscript))
+        or isinstance(
+            node,
+            (nodes.Name, nodes.Const, nodes.Call, nodes.Attribute, nodes.Subscript, nodes.Compare),
+        )
+        or (isinstance(node, nodes.BoolOp) and node.op == "and")
         else f"({node.as_string()})"
     )
 
@@ -189,6 +193,7 @@ class IfBlock:
             self.negated_condition = Not(self.condition)
             if test.op == "or":
                 self.is_or = True
+                # only 'or' cares about negated operands
                 self.negated_boolOp_operands = [Not(operand) for operand in self.boolOp_operands]
 
             self.operands = test.values
@@ -244,7 +249,7 @@ class IfBlock:
     def get_test_as_string(self) -> str:
         return f" {'or' if self.is_or else 'and'} ".join(
             [
-                add_brackets_if_composed(self.operands[i], len(self.operands) > 1)
+                add_brackets_if_composed(self.operands[i], len(self.operands) == 1)
                 for i in range(len(self.operands))
             ]
         )
@@ -343,7 +348,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             """,
         ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
         "R6217": (
-            "'\n%s'\ncan be replaced with:'\n%s'",
+            "\n'\n%s\n'\ncan be replaced with:\n'\n%s\n'",
             "redundant-condition-part-in-if",
             """
             Emitted when elifs in if-statement can be rearanged to get simpler conditions. (by moving some condition higher, parts of conditions below it can become redundant)
@@ -731,7 +736,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             )
 
             deleted_block = False
-            if condition_always is not None or not redundant_operand_indeces:
+            if condition_always is not None or redundant_operand_indeces:
                 if_statement, deleted_block = self._simplify_condition_at_index(
                     if_statement, i, condition_always, redundant_operand_indeces
                 )
@@ -754,7 +759,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     ) -> bool:
         "assumes goal_index < block_index"
         return implies(
-            And(negated_conditions_before_goal, if_statement[block_index].negated_condition),
+            And(negated_conditions_before_goal, if_statement[block_index].condition),
             And([block.negated_condition for block in if_statement[goal_index:block_index]]),
         )
 
@@ -774,7 +779,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             condition_always, redundant_operand_indeces = (
                 self._condition_simplifications_under_assumption(
                     if_statement[current_block],
-                    And(previous_conditions_negated, if_statement[block_index]),
+                    And(previous_conditions_negated, if_statement[block_index].negated_condition),
                 )
             )
 
@@ -839,7 +844,18 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return if_statement, made_simplification
 
+    def _is_elif_branch(self, node: nodes.If) -> bool:
+        return (
+            node.parent is not None
+            and isinstance(node.parent, nodes.If)
+            and len(node.parent.orelse) == 1
+            and node is node.parent.orelse[0]
+        )
+
     def _check_for_redundant_condition_in_if(self, node: nodes.If) -> None:
+        if self._is_elif_branch(node):
+            return
+
         initialized_variables: Dict[str, ArithRef] = {}
         if not self._test_pureness_and_initialize_variables_for_if(node, initialized_variables):
             return
@@ -1656,6 +1672,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if removed_nothing:
             return
 
+        suggestion_operands = [
+            operand for i, operand in enumerate(node.values) if not removed_condition[i]
+        ]
+
         self.add_message(
             "redundant-condition-part",
             node=node,
@@ -1663,9 +1683,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 node.as_string(),
                 f" {node.op} ".join(
                     [
-                        add_brackets_if_composed(node.values[i], len(node.values) > 1)
-                        for i in range(len(node.values))
-                        if not removed_condition[i]
+                        add_brackets_if_composed(operand, len(suggestion_operands) == 1)
+                        for operand in suggestion_operands
                     ]
                 ),
             ),

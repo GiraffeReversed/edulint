@@ -10,7 +10,6 @@ from typing import (
     cast,
     Callable,
     Dict,
-    Generator,
 )
 from functools import reduce
 from astroid import nodes, Uninferable  # type: ignore
@@ -35,7 +34,6 @@ from z3 import (
     Not,
     unsat,
     Abs,
-    Solver,
 )
 
 from edulint.linting.analyses.data_dependency import node_to_var
