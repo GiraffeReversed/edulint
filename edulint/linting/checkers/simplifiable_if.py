@@ -4,7 +4,7 @@ from astroid import extract_node
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
 
-from z3 import ArithRef, ExprRef, And, Or, Not
+from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -563,7 +563,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         )
 
     def _convert_else_to_elif_when_simple_enough(
-        self, ifBlock_representation: List[IfBlock], initialized_variables: Dict[str, ArithRef]
+        self, if_statement: List[IfBlock], initialized_variables: Dict[str, ArithRef]
     ) -> None:
         """
         This function converts else in the if statement to elif, such that it is
@@ -572,12 +572,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if len(initialized_variables) != 2:
             return
 
-        else_condition = And(
-            [
-                Not(ifBlock_representation[i].condition)
-                for i in range(len(ifBlock_representation) - 1)
-            ]
-        )
+        else_condition = And([block.negated_condition for block in if_statement[:-1]])
 
         var1, var2 = list(initialized_variables.items())
         desired_simplifications = [
@@ -589,59 +584,40 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         for simplification, string_representation in desired_simplifications:
             if implies(else_condition, simplification) and implies(simplification, else_condition):
-                ifBlock_representation[-1].condition = simplification
-                ifBlock_representation[-1].boolOp_operands = [
-                    (None, extract_node(string_representation))
-                ]
+                if_statement[-1].condition = simplification
+                if_statement[-1].negated_condition = Not(simplification)
+                if_statement[-1].operands = [extract_node(string_representation)]
                 return
 
     def _decompose_if(
         self, node: nodes.If, initialized_variables: Dict[str, ArithRef]
-    ) -> Tuple[List[IfBlock], bool]:
-        ifBlock_representation: List[IfBlock] = []
-        has_else_block = False
+    ) -> List[IfBlock]:
+        if_statement: List[IfBlock] = []
         current_if_block = node
 
         while current_if_block.has_elif_block():
-            ifBlock_representation.append(
+            if_statement.append(
                 IfBlock(current_if_block.test, current_if_block.body, initialized_variables)
             )
 
-            if ifBlock_representation[-1].condition is None:
+            if if_statement[-1].condition is None:
                 return [], False
 
             current_if_block = current_if_block.orelse[0]
 
         # the last if/elif before else
-        ifBlock_representation.append(
+        if_statement.append(
             IfBlock(current_if_block.test, current_if_block.body, initialized_variables)
         )
 
-        if ifBlock_representation[-1].condition is None:
+        if if_statement[-1].condition is None:
             return [], False
 
         # the else block
         if current_if_block.orelse:
-            ifBlock_representation.append(
-                IfBlock(None, current_if_block.orelse, initialized_variables)
-            )
-            has_else_block = True
+            if_statement.append(IfBlock(None, current_if_block.orelse, initialized_variables))
 
-        if has_else_block:
-            self._convert_else_to_elif_when_simple_enough(ifBlock_representation)
-
-        return ifBlock_representation, has_else_block
-
-    def _is_valid_move_up(
-        self,
-        goal_index: int,
-        conditions_for_move_validation: List[ExprRef],
-    ) -> bool:
-        "assumes goal_index < current_index"
-        return implies(
-            And(conditions_for_move_validation[: goal_index + 1]),
-            And(conditions_for_move_validation[goal_index + 1 :]),
-        )
+        return if_statement
 
     def _find_index_of_valid_move_for_simplification(
         self, current_ifBlock: int, ifBlock_representation: List[IfBlock]
@@ -684,7 +660,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             condition_always = True
         elif implies(assumption, block.negated_condition):
             condition_always = False
-        elif len(block.boolOp_operands) > 1:
+        elif len(block.operands) > 1:
             redundant_operand_indeces = all_implied_indeces(
                 assumption, block.get_operands_by_operation()
             )
@@ -697,52 +673,155 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         condition_index: int,
         condition_always: Optional[bool],
         redundant_operand_indeces: List[int],
-    ) -> List[IfBlock]:
+    ) -> Tuple[List[IfBlock], bool]:
         if condition_always is True:
             if_statement[condition_index].set_all_except_body_to_default()
-            return if_statement[: condition_index + 1]
+            return if_statement[: condition_index + 1], False
 
         if condition_always is False:
-            return [if_statement[i] for i in range(len(if_statement)) if i != condition_index]
+            return [block for i, block in enumerate(if_statement) if i != condition_index], True
 
         if redundant_operand_indeces:
             if_statement[condition_index].remove_redundant_operands(set(redundant_operand_indeces))
 
-        return if_statement
+        return if_statement, False
 
-    def _immediate_simplifications_for_if(self, if_statement: List[IfBlock]):
+    def _immediate_simplifications_for_if(self, if_statement: List[IfBlock]) -> None:
         previous_conditions_negated = if_statement[0].negated_condition
+        elif_count = len(if_statement)
+
+        if if_statement[-1].condition is None:
+            elif_count -= 1
 
         i = 1
-        while i < len(if_statement) - 1:
+        while i < elif_count:
             condition_always, redundant_operand_indeces = (
                 self._condition_simplifications_under_assumption(
                     if_statement[i], previous_conditions_negated
                 )
             )
+
+            deleted_block = False
             if condition_always is not None or not redundant_operand_indeces:
-                if_statement = self._simplify_condition_at_index(
+                if_statement, deleted_block = self._simplify_condition_at_index(
                     if_statement, i, condition_always, redundant_operand_indeces
                 )
 
-        # TODO
+            if not deleted_block:
+                previous_conditions_negated = And(
+                    previous_conditions_negated, if_statement[i].negated_condition
+                )
+                i += 1
+
+    def _is_valid_move_up(
+        self,
+        block_index: int,
+        goal_index: int,
+        if_statement: List[IfBlock],
+        negated_conditions_before_goal: BoolRef,
+    ) -> bool:
+        "assumes goal_index < block_index"
+        return implies(
+            And(negated_conditions_before_goal, if_statement[block_index].negated_condition),
+            And([block.negated_condition for block in if_statement[goal_index:block_index]]),
+        )
+
+    def _first_movable_block_for_simplification(
+        self, if_statement: List[IfBlock], current_block: int, elif_count: int
+    ) -> Optional[Tuple[int, Optional[bool], List[int]]]:
+        previous_conditions_negated = And(
+            [block.negated_condition for block in if_statement[:current_block]]
+        )
+
+        for block_index in range(current_block + 1, elif_count):
+            if not self._is_valid_move_up(
+                block_index, current_block, if_statement, previous_conditions_negated
+            ):
+                continue
+
+            condition_always, redundant_operand_indeces = (
+                self._condition_simplifications_under_assumption(
+                    if_statement[current_block],
+                    And(previous_conditions_negated, if_statement[block_index]),
+                )
+            )
+
+            if condition_always is not None or redundant_operand_indeces:
+                return block_index, condition_always, redundant_operand_indeces
+
+        return None
+
+    def _move_block(self, if_statement: List[IfBlock], goal_index: int, block_to_move: int):
+        if_statement.insert(goal_index, if_statement.pop(block_to_move))
+
+    def _simplify_if_by_moving_conditions_up(
+        self, if_statement: List[IfBlock], elif_count: int, start_index: int, end: int
+    ):
+        current_block = end - 1
+
+        while current_block >= start_index:
+            simplified_block_index = current_block
+            movable_block = self._first_movable_block_for_simplification(
+                if_statement, simplified_block_index, elif_count
+            )
+            while movable_block is not None:
+                block_to_move, condition_always, redundant_operand_indeces = movable_block
+
+                self._move_block(if_statement, current_block, block_to_move)
+                simplified_block_index += 1
+
+                if_statement, deleted_block = self._simplify_condition_at_index(
+                    if_statement, current_block + 1, condition_always, redundant_operand_indeces
+                )
+
+                if condition_always is not None:
+                    elif_count = (
+                        len(if_statement) - 1
+                        if if_statement[-1].condition is None
+                        else len(if_statement)
+                    )
+
+                if len(if_statement) == simplified_block_index + 1:
+                    break
+
+                if deleted_block:
+                    self._simplify_if_by_moving_conditions_up(
+                        if_statement, elif_count, simplified_block_index, block_to_move
+                    )
+                    break
+                else:
+                    self._simplify_if_by_moving_conditions_up(
+                        if_statement, elif_count, simplified_block_index + 1, block_to_move + 1
+                    )
+
+                movable_block = self._first_movable_block_for_simplification(
+                    if_statement, simplified_block_index, elif_count
+                )
+
+            current_block -= 1
 
     def _check_for_redundant_condition_in_if(self, node: nodes.If) -> None:
         initialized_variables: Dict[str, ArithRef] = {}
         if not self._test_pureness_and_initialize_variables_for_if(node, initialized_variables):
             return
 
-        ifBlock_representation, has_else_block = self._decompose_if(node, initialized_variables)
+        if_statement = self._decompose_if(node, initialized_variables)
 
-        if not ifBlock_representation or not node.has_elif_block():
+        if not if_statement or not node.has_elif_block():
             return
 
-        current_ifBlock = 0
-        while current_ifBlock < len(ifBlock_representation):
-            move = self._find_index_of_valid_move_for_simplification(
-                current_ifBlock, ifBlock_representation
-            )
-            # TODO
+        self._immediate_simplifications_for_if(if_statement)
+
+        has_else_block = if_statement[-1].condition is None
+
+        if has_else_block:
+            self._convert_else_to_elif_when_simple_enough(if_statement)
+
+        elif_count = (
+            len(if_statement) - 1 if if_statement[-1].condition is None else len(if_statement)
+        )
+
+        self._simplify_if_by_moving_conditions_up(if_statement, elif_count, 0, elif_count - 1)
 
     @only_required_for_messages(
         "simplifiable-if-return",
