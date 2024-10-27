@@ -148,6 +148,15 @@ class PairsOfModComparisonsWithNum:
         return True
 
 
+def add_brackets_if_composed(node: nodes.NodeNG, is_standalone: bool) -> str:
+    return (
+        node.as_string()
+        if is_standalone
+        or isinstance(node, (nodes.Name, nodes.Const, nodes.Call, nodes.Attribute, nodes.Subscript))
+        else f"({node.as_string()})"
+    )
+
+
 def get_boolOp_as_condition(operands: List[ExprRef], is_or: bool):
     return Or(operands) if is_or else And(operands)
 
@@ -231,6 +240,14 @@ class IfBlock:
 
     def get_operands_by_operation(self):
         return self.negated_boolOp_operands if self.is_or else self.boolOp_operands
+
+    def get_test_as_string(self) -> str:
+        return f" {'or' if self.is_or else 'and'} ".join(
+            [
+                add_brackets_if_composed(self.operands[i], len(self.operands) > 1)
+                for i in range(len(self.operands))
+            ]
+        )
 
 
 class SimplifiableIf(BaseChecker):  # type: ignore
@@ -325,6 +342,15 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
+        "R6217": (
+            "'\n%s'\ncan be replaced with:'\n%s'",
+            "redundant-condition-part-in-if",
+            """
+            Emitted when elifs in if-statement can be rearanged to get simpler conditions. (by moving some condition higher, parts of conditions below it can become redundant)
+
+            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
+            """,
+        ),
     }
 
     def _is_bool(self, node: nodes.NodeNG) -> bool:
@@ -686,7 +712,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return if_statement, False
 
-    def _immediate_simplifications_for_if(self, if_statement: List[IfBlock]) -> None:
+    def _immediate_simplifications_for_if(
+        self, if_statement: List[IfBlock]
+    ) -> Tuple[List[IfBlock], bool]:
+        made_simplification = False
         previous_conditions_negated = if_statement[0].negated_condition
         elif_count = len(if_statement)
 
@@ -706,12 +735,15 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 if_statement, deleted_block = self._simplify_condition_at_index(
                     if_statement, i, condition_always, redundant_operand_indeces
                 )
+                made_simplification = True
 
             if not deleted_block:
                 previous_conditions_negated = And(
                     previous_conditions_negated, if_statement[i].negated_condition
                 )
                 i += 1
+
+        return if_statement, made_simplification
 
     def _is_valid_move_up(
         self,
@@ -756,14 +788,17 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _simplify_if_by_moving_conditions_up(
         self, if_statement: List[IfBlock], elif_count: int, start_index: int, end: int
-    ):
+    ) -> Tuple[List[IfBlock], bool]:
         current_block = end - 1
+        made_simplification = False
 
         while current_block >= start_index:
             simplified_block_index = current_block
             movable_block = self._first_movable_block_for_simplification(
                 if_statement, simplified_block_index, elif_count
             )
+            made_simplification = movable_block is not None
+
             while movable_block is not None:
                 block_to_move, condition_always, redundant_operand_indeces = movable_block
 
@@ -785,20 +820,24 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                     break
 
                 if deleted_block:
-                    self._simplify_if_by_moving_conditions_up(
+                    if_statement, simplified = self._simplify_if_by_moving_conditions_up(
                         if_statement, elif_count, simplified_block_index, block_to_move
                     )
+                    made_simplification = made_simplification or simplified
                     break
                 else:
-                    self._simplify_if_by_moving_conditions_up(
+                    if_statement, simplified = self._simplify_if_by_moving_conditions_up(
                         if_statement, elif_count, simplified_block_index + 1, block_to_move + 1
                     )
+                    made_simplification = made_simplification or simplified
 
                 movable_block = self._first_movable_block_for_simplification(
                     if_statement, simplified_block_index, elif_count
                 )
 
             current_block -= 1
+
+        return if_statement, made_simplification
 
     def _check_for_redundant_condition_in_if(self, node: nodes.If) -> None:
         initialized_variables: Dict[str, ArithRef] = {}
@@ -810,18 +849,52 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if not if_statement or not node.has_elif_block():
             return
 
-        self._immediate_simplifications_for_if(if_statement)
+        if_statement, made_simplification = self._immediate_simplifications_for_if(if_statement)
 
         has_else_block = if_statement[-1].condition is None
 
         if has_else_block:
-            self._convert_else_to_elif_when_simple_enough(if_statement)
+            self._convert_else_to_elif_when_simple_enough(if_statement, initialized_variables)
 
         elif_count = (
             len(if_statement) - 1 if if_statement[-1].condition is None else len(if_statement)
         )
 
-        self._simplify_if_by_moving_conditions_up(if_statement, elif_count, 0, elif_count - 1)
+        if_statement, simplified = self._simplify_if_by_moving_conditions_up(
+            if_statement, elif_count, 0, elif_count - 1
+        )
+        made_simplification = made_simplification or simplified
+
+        if not made_simplification:
+            return
+
+        if has_else_block:
+            if_statement[-1].condition = None
+
+        suggestion = "\nel".join(
+            [
+                "\n".join(
+                    [
+                        (
+                            f"if {block.get_test_as_string()}:"
+                            if block.condition is not None
+                            else "se:"
+                        ),
+                        "    "
+                        + ("    ".join([line.as_string() for line in block.body])).replace(
+                            "\n", "\n    "
+                        ),
+                    ]
+                )
+                for block in if_statement
+            ]
+        )
+
+        self.add_message(
+            "redundant-condition-part-in-if",
+            node=node,
+            args=(node.as_string(), suggestion),
+        )
 
     @only_required_for_messages(
         "simplifiable-if-return",
@@ -832,11 +905,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "no-value-in-one-branch-return",
         "simplifiable-if-nested",
         "simplifiable-if-seq",
-        "redundant-condition-part",
+        "redundant-condition-part-in-if",
     )
     def visit_if(self, node: nodes.If) -> None:
         self._basic_checks(node)
-        # self._check_for_redundant_condition_in_if(node)
+        self._check_for_redundant_condition_in_if(node)
 
     @only_required_for_messages("simplifiable-if-expr", "simplifiable-if-expr-conj")
     def visit_ifexp(self, node: nodes.IfExp) -> None:
@@ -1526,16 +1599,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             and not is_number(node.ops[0][1])
         )
 
-    def _add_brackets_if_composed(self, node: nodes.NodeNG, is_standalone: bool) -> str:
-        return (
-            node.as_string()
-            if is_standalone
-            or isinstance(
-                node, (nodes.Name, nodes.Const, nodes.Call, nodes.Attribute, nodes.Subscript)
-            )
-            else f"({node.as_string()})"
-        )
-
     def _should_remove_ith(
         self,
         implication_forward: bool,
@@ -1600,7 +1663,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 node.as_string(),
                 f" {node.op} ".join(
                     [
-                        self._add_brackets_if_composed(node.values[i], len(node.values) > 1)
+                        add_brackets_if_composed(node.values[i], len(node.values) > 1)
                         for i in range(len(node.values))
                         if not removed_condition[i]
                     ]
