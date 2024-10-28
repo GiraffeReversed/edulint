@@ -811,7 +811,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             movable_block = self._first_movable_block_for_simplification(
                 if_statement, simplified_block_index, elif_count
             )
-            made_simplification = movable_block is not None
+            made_simplification = made_simplification or movable_block is not None
 
             while movable_block is not None:
                 block_to_move, condition_always, redundant_operand_indeces = movable_block
