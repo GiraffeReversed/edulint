@@ -355,7 +355,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
-        ),
+        ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
     }
 
     def _is_bool(self, node: nodes.NodeNG) -> bool:
