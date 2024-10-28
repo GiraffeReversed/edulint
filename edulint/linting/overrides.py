@@ -30,6 +30,7 @@ OVERRIDERS = {
     # R6216=redundant-condition-part, simplifiable-with-abs, redundant-compare-in-condition, using-compare-instead-of-equal, simplifiable-test-by-equals
     "R6213": {"R6216"},
     # R6213=redundant-compare-avoidable-with-max-min, R6216=redundant-condition-part
+    "R6217": {"R6211", "R6212", "R6214", "R6215", "R6216"},
 }
 
 
