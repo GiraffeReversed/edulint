@@ -509,7 +509,7 @@ def first_implied_index(
     condition: ExprRef, conditions: List[ExprRef], rlimit=1700
 ) -> Optional[int]:
     for i in range(len(conditions)):
-        if implies(condition, conditions[i]):
+        if implies(condition, conditions[i], rlimit):
             return i
 
     return None
@@ -519,7 +519,7 @@ def all_implied_indeces(condition: ExprRef, conditions: List[ExprRef], rlimit=17
     implied_indeces = []
 
     for i in range(len(conditions)):
-        if implies(condition, conditions[i]):
+        if implies(condition, conditions[i], rlimit):
             implied_indeces.append(i)
 
     return implied_indeces
