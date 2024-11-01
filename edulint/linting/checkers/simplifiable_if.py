@@ -665,6 +665,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 assumption, block.get_operands_by_operation()
             )
 
+            # this is necessary, because implies function returns False if it does not know.
+            if len(redundant_operand_indeces) == len(block.operands):
+                condition_always = not block.is_or
+                redundant_operand_indeces = []
+
         return condition_always, redundant_operand_indeces
 
     def _simplify_condition_at_index(

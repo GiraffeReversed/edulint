@@ -493,7 +493,7 @@ Z3_TACTIC = Then(
 
 def implies(condition1: ExprRef, condition2: ExprRef, rlimit=1700) -> bool:
     """
-    Returns if implication 'condition1 => condition2' is valid.
+    Returns if implication 'condition1 => condition2' is valid. (but if it cannot decide return False)
 
     Warning: Can give incorrect answer if variable used in expressions involving % or // can
     be of type float. (for example: x % 2 != 0 => x % 2 == 1, when x is int it is true,
