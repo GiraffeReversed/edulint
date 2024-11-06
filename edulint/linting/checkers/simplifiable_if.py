@@ -205,7 +205,7 @@ class IfBlock:
             # I take 'test' that is not BoolOp to be 'and node' with just one operand. (for simplification)
             self.operands = [test]
 
-    def set_all_except_body_to_default(self):
+    def set_all_to_default(self):
         self.condition: Optional[ExprRef] = None
         self.negated_condition: Optional[ExprRef] = None
         self.operands: List[nodes.NodeNG] = []
@@ -220,12 +220,14 @@ class IfBlock:
         test: Optional[nodes.NodeNG],
         body: List[nodes.NodeNG],
         initialized_variables: Dict[str, ArithRef],
+        position_in_if: int,
     ) -> None:
-        self.set_all_except_body_to_default()
+        self.set_all_to_default()
 
         if test is not None:
             self._set_test_info(test, initialized_variables)
 
+        self.position_in_if = position_in_if
         self.body = body
 
     def remove_redundant_operands(self, redundant_operand_indeces: Set[int]):
@@ -348,8 +350,35 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             """,
         ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
         "R6217": (
-            "\n'\n%s\n'\ncan be replaced with:\n'\n%s\n'",
+            "The body of this 'elif' is never executed",
+            "redundant-condition-in-if",
+            """
+            Emitted when body of 'elif' in if statement is never executed, because when all tests above this 'elif' are False, then the test in this 'elif' is False too.
+
+            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
+            """,
+        ),
+        "R6218": (
+            "This 'elif' can be replaced with just 'else'.",
+            "using-elif-instead-of-else",
+            """
+            Emitted when a body of 'elif' in if statement is always executed when reached.
+
+            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
+            """,
+        ),
+        "R6219": (
+            "'%s' can be replaced with '%s', because some operands of the '%s' are always %s",
             "redundant-condition-part-in-if",
+            """
+            Emitted when a test condition in 'elif' can be simplified, because when the control flow reaches this 'elif' we know that some parts of this condition are True (when the condition is 'and') or False (when the condition is 'or')
+
+            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
+            """,
+        ),
+        "R6220": (
+            "Conditions in the if statement can be simplified by reordering elif blocks, we suggest this order: '%s' with these possibly simplified test conditions respectively: '%s'.",
+            "redundant-condition-part-in-if-reorder",
             """
             Emitted when elifs in if-statement can be rearanged to get simpler conditions. (by moving some condition higher, parts of conditions below it can become redundant)
 
@@ -625,28 +654,40 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     ) -> List[IfBlock]:
         if_statement: List[IfBlock] = []
         current_if_block = node
+        position_in_if = 1
 
         while current_if_block.has_elif_block():
             if_statement.append(
-                IfBlock(current_if_block.test, current_if_block.body, initialized_variables)
+                IfBlock(
+                    current_if_block.test,
+                    current_if_block.body,
+                    initialized_variables,
+                    position_in_if,
+                )
             )
 
             if if_statement[-1].condition is None:
                 return []
 
             current_if_block = current_if_block.orelse[0]
+            position_in_if += 1
 
         # the last if/elif before else
         if_statement.append(
-            IfBlock(current_if_block.test, current_if_block.body, initialized_variables)
+            IfBlock(
+                current_if_block.test, current_if_block.body, initialized_variables, position_in_if
+            )
         )
+        position_in_if += 1
 
         if if_statement[-1].condition is None:
             return []
 
         # the else block
         if current_if_block.orelse:
-            if_statement.append(IfBlock(None, current_if_block.orelse, initialized_variables))
+            if_statement.append(
+                IfBlock(None, current_if_block.orelse, initialized_variables, position_in_if)
+            )
 
         return if_statement
 
@@ -680,7 +721,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         redundant_operand_indeces: List[int],
     ) -> Tuple[List[IfBlock], bool]:
         if condition_always is True:
-            if_statement[condition_index].set_all_except_body_to_default()
+            if_statement[condition_index].set_all_to_default()
             return if_statement[: condition_index + 1], False
 
         if condition_always is False:
@@ -873,7 +914,61 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             and node is node.parent.orelse[0]
         )
 
-    def _check_for_redundant_condition_in_if(self, node: nodes.If) -> None:
+    def _give_suggestion_for_changed_order_in_if(
+        self, node: nodes.If, if_statement: List[IfBlock]
+    ) -> None:
+        new_order = ", ".join([f"{block.position_in_if}." for block in if_statement])
+        suggestion = ", ".join(
+            [
+                (block.get_test_as_string() if block.condition is not None else "else:")
+                for block in if_statement
+            ]
+        )
+
+        self.add_message(
+            "redundant-condition-part-in-if-reorder",
+            node=node,
+            args=(new_order, suggestion),
+        )
+
+    def _give_suggestion_for_same_order_in_if(
+        self, node: nodes.If, if_statement: List[IfBlock]
+    ) -> None:
+        i = 0
+        elif_num = 1
+        current_block = node
+
+        while isinstance(current_block, nodes.If):
+            if i < len(if_statement) and elif_num == if_statement[i].position_in_if:
+                if if_statement[i].condition is None:
+                    self.add_message(
+                        "using-elif-instead-of-else",
+                        node=current_block,
+                    )
+                elif isinstance(current_block.test, nodes.BoolOp) and len(
+                    current_block.test.values
+                ) > len(if_statement[i].operands):
+                    self.add_message(
+                        "redundant-condition-part-in-if",
+                        node=current_block,
+                        args=(
+                            current_block.test.as_string(),
+                            if_statement[i].get_test_as_string(),
+                            current_block.test.op,
+                            "False" if if_statement[i].is_or else "True",
+                        ),
+                    )
+                i += 1
+            else:
+                self.add_message(
+                    "redundant-condition-in-if",
+                    node=current_block,
+                )
+
+            current_block = current_block.orelse[0] if current_block.has_elif_block() else None
+            elif_num += 1
+
+    def _check_for_redundant_condition_part_in_if(self, node: nodes.If) -> None:
         if self._is_elif_branch(node):
             return
 
@@ -895,10 +990,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         elif_count = self._get_elif_count(if_statement)
 
-        if_statement, simplified = self._simplify_if_by_moving_conditions_up(
+        if_statement, elif_order_changed = self._simplify_if_by_moving_conditions_up(
             if_statement, elif_count, 0, elif_count - 1, has_else_block
         )
-        made_simplification = made_simplification or simplified
+        made_simplification = made_simplification or elif_order_changed
 
         if not made_simplification:
             return
@@ -906,30 +1001,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if has_else_block:
             if_statement[-1].condition = None
 
-        suggestion = "\nel".join(
-            [
-                "\n".join(
-                    [
-                        (
-                            f"if {block.get_test_as_string()}:"
-                            if block.condition is not None
-                            else "se:"
-                        ),
-                        "    "
-                        + ("\n".join([line.as_string() for line in block.body])).replace(
-                            "\n", "\n    "
-                        ),
-                    ]
-                )
-                for block in if_statement
-            ]
-        )
-
-        self.add_message(
-            "redundant-condition-part-in-if",
-            node=node,
-            args=(node.as_string(), suggestion),
-        )
+        if elif_order_changed:
+            self._give_suggestion_for_changed_order_in_if(node, if_statement)
+        else:
+            self._give_suggestion_for_same_order_in_if(node, if_statement)
 
     @only_required_for_messages(
         "simplifiable-if-return",
@@ -940,11 +1015,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "no-value-in-one-branch-return",
         "simplifiable-if-nested",
         "simplifiable-if-seq",
+        "redundant-condition-part-in-if-reorder",
         "redundant-condition-part-in-if",
+        "using-elif-instead-of-else",
+        "redundant-condition-in-if",
     )
     def visit_if(self, node: nodes.If) -> None:
         self._basic_checks(node)
-        self._check_for_redundant_condition_in_if(node)
+        self._check_for_redundant_condition_part_in_if(node)
 
     @only_required_for_messages("simplifiable-if-expr", "simplifiable-if-expr-conj")
     def visit_ifexp(self, node: nodes.IfExp) -> None:
