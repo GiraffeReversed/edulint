@@ -12,6 +12,13 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
+from edulint.linting.checkers.z3_analysis import (
+    implies,
+    all_implied_indeces,
+    initialize_variables,
+    convert_condition_to_z3_expression,
+)
+
 from edulint.linting.checkers.utils import (
     get_name,
     get_assigned_to,
@@ -920,7 +927,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         new_order = ", ".join([f"{block.position_in_if}." for block in if_statement])
         suggestion = ", ".join(
             [
-                (block.get_test_as_string() if block.condition is not None else "else:")
+                (block.get_test_as_string() if block.condition is not None else "else block")
                 for block in if_statement
             ]
         )
