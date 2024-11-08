@@ -136,19 +136,15 @@ def _is_variable_in_pure_expression(node: nodes.NodeNG) -> bool:
     return isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call))
 
 
-def _convert_to_bool_if_necessary(
+def _none_if_possibly_not_boolean(
     node: nodes.NodeNG, parent: nodes.NodeNG, z3_node_representation: Optional[ExprRef]
 ) -> Optional[ExprRef]:
-    if z3_node_representation is None:
-        return None
-
-    # Because in python when a number 'x' is converted to bool it is equivalent to converting it to 'x != 0'
     if _is_bool_node(parent) and not (
         _is_bool_node(node)
         or isinstance(node, nodes.Compare)
         or (isinstance(node, nodes.Const) and isinstance(node.value, bool))
     ):
-        return z3_node_representation != 0
+        return None
 
     return z3_node_representation
 
@@ -182,15 +178,15 @@ def convert_condition_to_z3_expression(
 
     if _is_abs_function(node):
         expr = convert_condition_to_z3_expression(node.args[0], initialized_variables, node)
-        return _convert_to_bool_if_necessary(node, parent, Abs(expr))
+        return _none_if_possibly_not_boolean(node, parent, Abs(expr))
 
     if _is_variable_in_pure_expression(node):
-        return _convert_to_bool_if_necessary(node, parent, initialized_variables[node.as_string()])
+        return _none_if_possibly_not_boolean(node, parent, initialized_variables[node.as_string()])
 
     if isinstance(node, nodes.BoolOp):
         operands = []
         for operand in node.values:
-            expr = _convert_to_bool_if_necessary(
+            expr = _none_if_possibly_not_boolean(
                 node,
                 parent,
                 convert_condition_to_z3_expression(operand, initialized_variables, node),
@@ -260,10 +256,10 @@ def convert_condition_to_z3_expression(
         elif node.op == "*":
             z3_expr = left * right
 
-        return _convert_to_bool_if_necessary(node, parent, z3_expr)
+        return _none_if_possibly_not_boolean(node, parent, z3_expr)
 
     if isinstance(node, nodes.Const):
-        return _convert_to_bool_if_necessary(node, parent, _convert_const_to_z3(node))
+        return _none_if_possibly_not_boolean(node, parent, _convert_const_to_z3(node))
 
     if isinstance(node, nodes.UnaryOp):
         expr = convert_condition_to_z3_expression(node.operand, initialized_variables, node)
@@ -276,7 +272,7 @@ def convert_condition_to_z3_expression(
         elif node.op == "not":
             expr = Not(expr)
 
-        return _convert_to_bool_if_necessary(node, parent, expr)
+        return _none_if_possibly_not_boolean(node, parent, expr)
 
     # Should not be reachable
     return None
