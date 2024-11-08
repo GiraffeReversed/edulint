@@ -172,6 +172,10 @@ def convert_condition_to_z3_expression(
     Before using this function you have to use the initialize_variables funcion on all nodes that
     you are interested about, to fill in the initialized_variables dictionary with variables of
     correct types.
+
+    Note: Is possible to allow expressions that are or could potentially be of different than boolean
+    type by changing _none_if_possibly_not_boolean() function to, instead of None, return expr != 0.
+    But you should think this through, if this will not introduce any problems. (for example in R6216).
     """
     if node is None:
         return None
