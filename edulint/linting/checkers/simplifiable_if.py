@@ -1748,17 +1748,22 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if not initialize_variables(node, initialized_variables, False, None):
             return
 
-        converted_conditions = [
-            convert_condition_to_z3_expression(child, initialized_variables, node)
-            for child in node.values
-        ]
+        converted_conditions = []
+        for child in node.values:
+            condition = convert_condition_to_z3_expression(child, initialized_variables, node)
+
+            # This is done by different pylint checker (True and x == 0)
+            if isinstance(child, nodes.Const) and isinstance(child, bool) or condition is None:
+                return
+
+            converted_conditions.append(condition)
 
         for i in range(len(converted_conditions)):
-            if removed_condition[i] or converted_conditions[i] is None:
+            if removed_condition[i]:
                 continue
 
             for j in range(i + 1, len(converted_conditions)):
-                if removed_condition[j] or converted_conditions[j] is None:
+                if removed_condition[j]:
                     continue
 
                 implication_forward = implies(converted_conditions[i], converted_conditions[j])
