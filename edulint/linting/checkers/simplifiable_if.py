@@ -357,7 +357,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             """,
         ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
         "R6217": (
-            "The body of this 'elif' is never executed",
+            "The body of this 'elif' is never executed.",
             "redundant-condition-in-if",
             """
             Emitted when body of 'elif' in if statement is never executed, because when all tests above this 'elif' are False, then the test in this 'elif' is False too.
@@ -375,7 +375,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             """,
         ),
         "R6219": (
-            "'%s' can be replaced with '%s', because some operands of the '%s' are always %s",
+            "'%s' can be replaced with '%s', because some operands of the '%s' are always %s.",
             "redundant-condition-part-in-if",
             """
             Emitted when a test condition in 'elif' can be simplified, because when the control flow reaches this 'elif' we know that some parts of this condition are True (when the condition is 'and') or False (when the condition is 'or')
@@ -1753,7 +1753,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             condition = convert_condition_to_z3_expression(child, initialized_variables, node)
 
             # This is done by different pylint checker (True and x == 0)
-            if isinstance(child, nodes.Const) and isinstance(child, bool) or condition is None:
+            if (
+                isinstance(child, nodes.Const)
+                and isinstance(child.value, bool)
+                or condition is None
+            ):
                 return
 
             converted_conditions.append(condition)
