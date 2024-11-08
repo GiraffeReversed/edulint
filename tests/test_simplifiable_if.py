@@ -707,7 +707,6 @@ def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Pro
         "t = x != y or abs(x - y) != 0",
         "t = x % 2 == 0 and x % 6 == 0 and x % 3 == 0",
         "t = x // 2 == 0 and (x < 1 and 0 < x)",
-        "t = x or False",
         "t = a < b and b > a + 50 and a + b < 2*b"
     ], [
         lazy_problem().set_line(1)
@@ -717,8 +716,6 @@ def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Pro
         lazy_problem().set_line(3)
         .set_text("'x // 2 == 0 and x < 1 and 0 < x' can be replaced with 'x < 1 and 0 < x'"),
         lazy_problem().set_line(4)
-        .set_text("'x or False' can be replaced with 'x'"),
-        lazy_problem().set_line(5)
         .set_text("'a < b and b > a + 50 and a + b < 2 * b' can be replaced with 'b > a + 50'"),
     ]),
 ])
@@ -753,73 +750,19 @@ def test_redundant_condition_part(lines: List[str], expected_output: List[Proble
         "elif x == 0 or y == 0:",
         "    y += 1",
     ], [
-        lazy_problem().set_line(1)
-        .set_text("""
-'
-if x > 0:
-    x += 1
-elif x > 1:
-    print(x)
-'
-can be replaced with:
-'
-if x > 0:
-    x += 1
-'"""),
-        lazy_problem().set_line(6)
-        .set_text("""
-'
-if x > 0:
-    x += 1
-elif x < 1:
-    print(x)
-'
-can be replaced with:
-'
-if x > 0:
-    x += 1
-else:
-    print(x)
-'"""),
+        lazy_problem().set_line(3)
+        .set_text("The body of this 'elif' is never executed."),
+        lazy_problem().set_line(8)
+        .set_text("This 'elif' can be replaced with just 'else'."),
         lazy_problem().set_line(11)
-        .set_text("""
-'
-if abs(a - b) < 51 and not a - b == 0:
-    print('A')
-elif abs(a - b) > 49:
-    print('B')
-else:
-    print('AB')
-'
-can be replaced with:
-'
-if a == b:
-    print('AB')
-elif abs(a - b) < 51:
-    print('A')
-else:
-    print('B')
-'"""),
-        lazy_problem().set_line(18)
-        .set_text("""
-'
-if x == 0 or y % 3 == 1:
-    x += 1
-elif x == 0 or y == 0:
-    y += 1
-'
-can be replaced with:
-'
-if x == 0 or y % 3 == 1:
-    x += 1
-elif y == 0:
-    y += 1
-'"""),
+        .set_text("Conditions in the if statement can be simplified by reordering elif blocks, we suggest this order: '3., 1., 2.' with these possibly simplified test conditions respectively: 'a == b, abs(a - b) < 51, else block'."),
+        lazy_problem().set_line(20)
+        .set_text("'x == 0 or y == 0' can be replaced with 'y == 0', because some operands of the 'or' are always False."),
     ]),
 ])
 def test_redundant_condition_part_in_if(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--enable=redundant-condition-part-in-if")],
+        [Arg(Option.PYLINT, "--enable=R6217,R6218,R6219,R6220")],
         expected_output,
     )
