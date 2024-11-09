@@ -149,6 +149,29 @@ class Config:
     def _to_immutable(val: UnionT) -> ImmutableT:
         return val if not isinstance(val, list) else tuple(val)
 
+    @staticmethod
+    def _resolve_enable_disable_all(pylint_args: List[str]) -> List[str]:
+        result = []
+        all_set, enable = False, False
+        for arg in reversed(pylint_args):
+            arg = arg.lower()
+            if arg == "--enable=noop":
+                pass
+            elif arg in ("--disable=all", "--enable=all"):
+                if all_set:
+                    continue
+                all_set = True
+                enable = arg == "--enable=all"
+            elif all_set and (
+                (arg.startswith("--disable") and enable)
+                or (arg.startswith("--enable") and not enable)
+            ):
+                continue
+            result.append(arg)
+
+        result.reverse()
+        return result
+
     def to_immutable(
         self, option_sets: OptionSets = {}, log_unknown_groups: bool = True
     ) -> "ImmutableConfig":
@@ -159,6 +182,8 @@ class Config:
         for arg in combined:
             if arg is None:
                 continue
+            if arg.option == Option.PYLINT:
+                arg = ProcessedArg(Option.PYLINT, self._resolve_enable_disable_all(arg.val))
             ordered_args[int(arg.option)] = arg
 
         enablers_from_option_sets = {}

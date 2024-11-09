@@ -63,6 +63,16 @@ from typing import List
                 lazy_problem().set_code("E303").set_line(22),
             ],
         ),
+        (
+            "z202817-zkouska.py",
+            [Arg(Option.PYLINT, "--enable=all"), Arg(Option.PYLINT, "--disable=all")],
+            []
+        ),
+        (
+            "z202817-zkouska.py",
+            [Arg(Option.CONFIG_FILE, "empty"), Arg(Option.PYLINT, "--enable=all")],
+            [lazy_problem().set_source(Linter.PYLINT) for _ in range(33)]
+        )
     ],
 )
 def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:

@@ -54,19 +54,11 @@ def remote_empty_config_url() -> str:
 
 
 def prepare_config(filename: str, args: List[UnprocessedArg], from_empty: bool) -> Config:
-    config_args = Config("test", args)
-    args_config = config_args.get_last_value(Option.CONFIG_FILE, use_default=False)
-    config_path = (
-        args_config
-        if args_config is not None
-        else "empty"
-        if from_empty
-        else config_args.get_last_value(Option.CONFIG_FILE, use_default=True)
-    )
+    if from_empty:
+        args = [UnprocessedArg(Option.CONFIG_FILE, "empty")] + args
     config = get_config_one(
         filename,
         [f"{arg.option.to_name()}={arg.val}" if arg.val is not None else arg.option.to_name() for arg in args]
-        + [f"config-file={config_path}"]
     )
     assert config is not None
     return config
