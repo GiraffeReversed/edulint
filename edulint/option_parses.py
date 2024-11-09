@@ -48,7 +48,7 @@ class Type(MultivaluedEnum):
 
     BOOL = (auto(), _to_bool_val)
     LIST = (auto(), _to_list_val)
-    COMMA_SEPARATED_LIST = (auto, _from_comma_separated_to_list_val)
+    COMMA_SEPARATED_LIST = (auto(), _from_comma_separated_to_list_val)
     STR = (auto(), _to_str_val)
     INT = (auto(), _to_int_val)
 
