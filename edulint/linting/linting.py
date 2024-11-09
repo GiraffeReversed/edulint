@@ -61,6 +61,9 @@ def pylint_to_problem(
     assert isinstance(raw["symbol"], str), f'get {type(raw["symbol"])} for symbol'
 
     def get_used_filename(path: str) -> str:
+        if path.lower() == "command line or configuration file":
+            return path
+
         path = Path(path)
         abs_path = path.resolve()
         for fd in [Path(path) for path in files_or_dirs]:
@@ -243,6 +246,9 @@ def sort(files_or_dirs: List[str], problems: List[Problem]) -> List[Problem]:
     files_or_dirs = [Path(path) for path in files_or_dirs]
 
     def get_file_or_dir_index(path: str):
+        if path.lower() == "command line or configuration file":
+            return -1
+
         path = Path(path)
         for i, fd in enumerate(files_or_dirs):
             if fd == path or fd in path.parents:
