@@ -1,7 +1,7 @@
 # EduLint
 
 [![Pypi](https://img.shields.io/pypi/v/edulint)](https://pypi.org/project/edulint/)
-![Python versions](https://img.shields.io/badge/python-3.8%20--%203.12-blue)
+![Python versions](https://img.shields.io/badge/python-3.8%20--%203.13-blue)
 ![Tests](https://img.shields.io/github/actions/workflow/status/GiraffeReversed/edulint/test.yaml)
 [![ReadTheDocs](https://img.shields.io/readthedocs/edulint)](https://edulint.readthedocs.io/)
 [![Docker image](https://img.shields.io/docker/image-size/edulint/edulint-cli/latest?label=Docker%20image%20size)](https://hub.docker.com/r/edulint/edulint-cli)
@@ -56,7 +56,7 @@ It supports the same configuration options as the native Python package.
 - [x] Additional explanations for problems detected in code
 - [x] [Thonny plugin](https://github.com/GiraffeReversed/thonny-edulint)
 - [x] More code quality defects (from WPS; detecting duplicate code)
-- [x] Rewrite web to [React](https://github.com/GiraffeReversed/edulint-react-web) 
+- [x] Rewrite web to [React](https://github.com/GiraffeReversed/edulint-react-web)
 - [ ] Add additional functionality to web (more settings, better teacher onboarding, …)
 - [ ] Speed-up linting by switching to [Ruff](https://github.com/charliermarsh/ruff)
 - [ ] official VS Code plugin (3rd party plugin already exists: [Github](https://github.com/matousekm/edulint-vscode), [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=matousekm.edulint-vscode))
