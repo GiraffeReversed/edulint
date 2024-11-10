@@ -44,6 +44,10 @@ def flake8_to_problem(enablers: Dict[str, str], raw: ProblemJson) -> Problem:
     )
 
 
+def is_pylint_out_of_file_problem(path):
+    return any(segment in path.lower() for segment in ("command line", "configuration file"))
+
+
 def pylint_to_problem(
     files_or_dirs: List[str], enablers: Dict[str, str], raw: ProblemJson
 ) -> Problem:
@@ -61,7 +65,7 @@ def pylint_to_problem(
     assert isinstance(raw["symbol"], str), f'get {type(raw["symbol"])} for symbol'
 
     def get_used_filename(path: str) -> str:
-        if path.lower() == "command line or configuration file":
+        if is_pylint_out_of_file_problem(path):
             return path
 
         path = Path(path)
@@ -80,7 +84,7 @@ def pylint_to_problem(
                             break
 
                     return Path(*[".."] * (len(cwd_parts) - i), *abs_path_parts[i:])
-        assert False, "unreachable"
+        assert False, f"unreachable, but {path}"
 
     code_enabler = enablers.get(raw["messageId"])
     symbol_enabler = enablers.get(raw["symbol"])
@@ -246,7 +250,7 @@ def sort(files_or_dirs: List[str], problems: List[Problem]) -> List[Problem]:
     files_or_dirs = [Path(path) for path in files_or_dirs]
 
     def get_file_or_dir_index(path: str):
-        if path.lower() == "command line or configuration file":
+        if is_pylint_out_of_file_problem(path):
             return -1
 
         path = Path(path)
