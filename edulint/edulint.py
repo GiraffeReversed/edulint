@@ -158,7 +158,17 @@ def _update_check():
 def check_code(args, option_parses):
     cmd_args = get_cmd_args(args)
 
-    file_configs = get_config_many(args.files_or_dirs, cmd_args, option_parses=option_parses)
+    try:
+        file_configs = get_config_many(args.files_or_dirs, cmd_args, option_parses=option_parses)
+    except FileNotFoundError as e:
+        exception = str(e)
+        if exception.lower().startswith("[errno"):
+            assert "]" in exception
+            exception = exception[exception.index("]") + 2 :]
+        logger.opt(raw=True, colors=True).critical(
+            "<red>FileNotFoundError:</red> {exception}\n", exception=exception
+        )
+        return 3
 
     try:
         results = lint_many(file_configs)
