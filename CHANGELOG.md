@@ -1,9 +1,32 @@
-# WIP
+## WIP
 
-- separated `similar-block-to-loop` to `similar-block-to-loop-range` and `similar-block-to-loop-collection`
+## v4.2.0
+
+- update support for Python 3.13
+- remove `no-self-use` from the `enhancement` group
+- allow "command line" or "configuration file" in Pylint path
+- fail gracefully when checked file not found
+
+## v4.1.5
+
+- add support for installing through `pipx`
+
+## v4.1.4
+
+- remove false-positive undefined group log
+
+## v4.1.3
+
+- skip missing examples/explanations in `edulint explain`
+
+## v4.1.1
+
+- update docs, document language translations
 - added `edulint explain all` to get all available explanations
-- resolve config files and language files relative to the parent config/checked file
 - fix `use-for-loop`: missing check whether the variable is incremented towards the limit
+- separated `similar-block-to-loop` to `similar-block-to-loop-range` and `similar-block-to-loop-collection`
+- update support for Python 3.12
+- resolve config files and language files relative to the parent config/checked file
 
 ## v4.0.0
 
