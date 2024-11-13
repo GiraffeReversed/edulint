@@ -483,6 +483,15 @@ class Local(BaseChecker):
         ):
             self.add_message("use-early-return", node=node)
 
+    def _check_in_range_instead_of_compare(self, node: nodes.Compare) -> None:
+        if len(node.ops) == 1 and node.ops[0][0] == "in":
+            range_params = get_range_params(node.ops[0][1])
+            if range_params is None:
+                return
+
+            start, stop, step = range_params
+            # start, stop, step = node.value if isinstance(node, nodes.Const) else None
+
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
@@ -530,6 +539,7 @@ class Local(BaseChecker):
     def visit_compare(self, node: nodes.Compare) -> None:
         self._check_no_is(node)
         self._check_magical_constant_in_ord_compare(node)
+        self._check_in_range_instead_of_compare(node)
 
 
 def register(linter: "PyLinter") -> None:
