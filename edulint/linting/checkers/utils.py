@@ -1,6 +1,7 @@
 from typing import Any, TypeVar, Generic, List, Iterable, Union, Optional, Tuple, cast, Callable
 from functools import reduce
 from astroid import nodes, Uninferable  # type: ignore
+from astroid.const import Context
 import sys
 import inspect
 import operator
@@ -145,6 +146,45 @@ EXPR_FUNCTIONS = PURE_FUNCTIONS | {"all", "any", "map", "filter"}
 def is_pure_builtin(node: nodes.NodeNG) -> bool:
     inferred = utils.safe_infer(node)
     return is_builtin(node) and inferred and inferred.name in PURE_FUNCTIONS
+
+
+def is_pure_node(node: nodes.NodeNG):
+    """
+    Note: This method does not check children of the node, just the node itself.
+    """
+    return (
+        isinstance(node, nodes.Name)
+        or isinstance(node, nodes.Const)
+        or isinstance(node, nodes.BinOp)
+        or isinstance(node, nodes.BoolOp)
+        or isinstance(node, nodes.UnaryOp)
+        or isinstance(node, nodes.Compare)
+        or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
+        or isinstance(node, nodes.Attribute)
+        or (
+            isinstance(node, nodes.Call)
+            and len(node.keywords) == 0
+            and len(node.kwargs) == 0
+            and len(node.starargs) == 0
+            and is_pure_builtin(node.func)
+        )
+    )
+
+
+def is_pure_expression(node: nodes.NodeNG) -> bool:
+    if not is_pure_node(node):
+        return False
+
+    children = node.get_children()
+    if isinstance(node, nodes.Call):
+        # the first child of Call is always the function itself and we know it is pure by now.
+        next(children)
+
+    for child in children:
+        if not is_pure_expression(child):
+            return False
+
+    return True
 
 
 def is_multi_assign(node: nodes.NodeNG) -> bool:

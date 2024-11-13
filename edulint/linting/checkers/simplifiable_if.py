@@ -1,5 +1,4 @@
 from astroid import nodes  # type: ignore
-from astroid.const import Context
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
 
@@ -13,8 +12,8 @@ from edulint.linting.checkers.utils import (
     get_name,
     get_assigned_to,
     is_any_assign,
-    is_pure_builtin,
     get_const_value,
+    is_pure_expression,
 )
 
 ExprRepresentation = str
@@ -743,43 +742,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             args=(group_string, new_expr),
         )
 
-    def _is_pure_node(self, node: nodes.NodeNG):
-        """
-        Note: This method does not check children of the node, just the node itself.
-        """
-        return (
-            isinstance(node, nodes.Name)
-            or isinstance(node, nodes.Const)
-            or isinstance(node, nodes.BinOp)
-            or isinstance(node, nodes.BoolOp)
-            or isinstance(node, nodes.UnaryOp)
-            or isinstance(node, nodes.Compare)
-            or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
-            or isinstance(node, nodes.Attribute)
-            or (
-                isinstance(node, nodes.Call)
-                and len(node.keywords) == 0
-                and len(node.kwargs) == 0
-                and len(node.starargs) == 0
-                and is_pure_builtin(node.func)
-            )
-        )
-
-    def _is_pure_expression(self, node: nodes.NodeNG) -> bool:
-        if not self._is_pure_node(node):
-            return False
-
-        children = node.get_children()
-        if isinstance(node, nodes.Call):
-            # the first child of Call is always the function itself and we know it is pure by now.
-            next(children)
-
-        for child in children:
-            if not self._is_pure_expression(child):
-                return False
-
-        return True
-
     def _group_and_check_by_representation(
         self, comparison_operands: List[NodeCmpValue], node: nodes.BoolOp
     ) -> None:
@@ -1149,7 +1111,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         modulo_connected_with_and: List[PairsOfModComparisonsWithNum] = []
 
         for value in node.values:
-            if not self._is_pure_expression(value):
+            if not is_pure_expression(value):
                 return
 
             operand = self._get_node_comparator_const_value(value)
