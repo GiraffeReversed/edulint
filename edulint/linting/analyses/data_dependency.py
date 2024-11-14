@@ -42,8 +42,6 @@ def collect_gens_kill(
 
                     if kill_event not in event.definitions:
                         event.definitions.append(kill_event)
-
-                    if event not in kill_event.uses:
                         kill_event.uses.append(event)
 
             if event.type in KILLING_EVENTS:
@@ -54,9 +52,9 @@ def collect_gens_kill(
 
 def kills_from_parents(
     block: CFGBlock,
-    kills: Dict[CFGBlock, Dict[Variable, List[Tuple[CFGLoc, VarEvent]]]],
-    parent_scope_kills: Dict[Variable, List[Tuple[CFGLoc, VarEvent]]],
-) -> Dict[Variable, List[Tuple[CFGLoc, VarEvent]]]:
+    kills: Dict[CFGBlock, Dict[Variable, List[VarEvent]]],
+    parent_scope_kills: Dict[Variable, List[VarEvent]],
+) -> Dict[Variable, List[VarEvent]]:
     if len(block.predecessors) == 0:
         return parent_scope_kills
 
@@ -72,7 +70,7 @@ def kills_from_parents(
 
 def collect_reaching_definitions(
     node: Union[nodes.Module, nodes.Arguments],
-    parent_scope_kills: Dict[Variable, List[Tuple[CFGLoc, nodes.NodeNG]]] = None,
+    parent_scope_kills: Dict[Variable, List[VarEvent]] = None,
 ) -> None:
     parent_scope_kills = parent_scope_kills if parent_scope_kills is not None else {}
 
@@ -99,19 +97,17 @@ def collect_reaching_definitions(
             computed_kill = computed_kills[block]
 
             for var, es in parent_kills.items():
-                # this block does not kill the parent's value
-                if var not in original_kill:
-                    for kill_event in es:
+                for kill_event in es:
+                    # this block does not kill the parent's value
+                    if var not in original_kill:
                         # if the kill was not added already
                         if kill_event not in computed_kill[var]:
                             computed_kill[var].append(kill_event)
                             changed = True
 
-                for gen_event in gens.get(var, []):
-                    for kill_event in es:
+                    for gen_event in gens.get(var, []):
                         if kill_event not in gen_event.definitions:
                             gen_event.definitions.append(kill_event)
-                        if gen_event not in kill_event.uses:
                             kill_event.uses.append(gen_event)
 
     for block in blocks:
