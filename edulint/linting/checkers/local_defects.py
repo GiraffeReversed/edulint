@@ -14,6 +14,7 @@ from edulint.linting.checkers.utils import (
     is_parents_elif,
     get_statements_count,
     is_negation,
+    is_pure_expression,
 )
 
 
@@ -106,6 +107,11 @@ class Local(BaseChecker):
             "Use early return.",
             "use-early-return",
             "Emitted when a long block of code is followed by an else that just returns, breaks or continues.",
+        ),
+        "R6617": (
+            "Consider replacing '%s' with '%s'",
+            "in-range-instead-of-compare-small",
+            "Emitted when there is a problem like 'n in range(1, 5, 2)' and suggests 'n == 1 or n == 3'.",
         ),
     }
 
@@ -484,13 +490,117 @@ class Local(BaseChecker):
             self.add_message("use-early-return", node=node)
 
     def _check_in_range_instead_of_compare(self, node: nodes.Compare) -> None:
-        if len(node.ops) == 1 and node.ops[0][0] == "in":
+        def is_integer(value: Any) -> bool:
+            return isinstance(value, int) and not isinstance(value, bool)
+
+        def count_range_values(start: int, stop: int, step: int) -> int:
+            if (start < stop and step < 0) or (start > stop and step > 0):
+                return 0
+
+            return -((start - stop) // step)
+
+        def is_var(node: nodes.NodeNG) -> bool:
+            return isinstance(node, (nodes.Name, nodes.Call, nodes.Subscript, nodes.Attribute))
+
+        def get_value_plus_constant(node: nodes.NodeNG) -> Optional[Tuple[str, int]]:
+            if is_var(node):
+                var = node.as_string()
+                const = 0
+                return var, const
+
+            if isinstance(node, nodes.BinOp) and (node.op == "+" or node.op == "-"):
+                if is_var(node.left) and isinstance(node.right, nodes.Const):
+                    var = node.left.as_string()
+                    const = node.right.value if node.op == "+" else -node.right.value
+                    return var, const
+
+                if is_var(node.right) and isinstance(node.left, nodes.Const) and node.op == "+":
+                    var = node.right.as_string()
+                    const = node.left.value
+                    return var, const
+
+            return None
+
+        def get_all_values_in_range_if_not_many(
+            start: nodes.NodeNG,
+            start_val: Optional[int],
+            stop: nodes.NodeNG,
+            stop_val: Optional[int],
+            step: int,
+        ) -> Optional[List[str]]:
+            if start_val is not None and stop_val is not None:
+                values_count = count_range_values(start_val, stop_val, step)
+                if values_count > 3 or values_count > 2 and abs(step) == 1:
+                    return None
+
+                return [str(value) for value in range(start_val, stop_val, step)]
+
+            if start_val is None and stop_val is None:
+                value_plus_constant = get_value_plus_constant(start)
+                if value_plus_constant is None:
+                    return None
+
+                val1, const1 = value_plus_constant
+
+                value_plus_constant = get_value_plus_constant(stop)
+                if value_plus_constant is None:
+                    return None
+
+                val2, const2 = value_plus_constant
+
+                if val1 != val2:
+                    return None
+
+                values_count = count_range_values(const1, const2, step)
+                if values_count > 3 or values_count > 2 and abs(step) == 1:
+                    return None
+
+                return [
+                    val1 if value == 0 else (val1 + " + " if value > 0 else " - " + str(abs(value)))
+                    for value in range(start_val, stop_val, step)
+                ]
+
+            return None
+
+        if len(node.ops) == 1 and (node.ops[0][0] == "in" or node.ops[0][0] == "not in") and is_var(node.left):
             range_params = get_range_params(node.ops[0][1])
             if range_params is None:
                 return
 
             start, stop, step = range_params
-            # start, stop, step = node.value if isinstance(node, nodes.Const) else None
+            start_val = get_const_value(start)
+            stop_val = get_const_value(stop)
+            step_val = get_const_value(step)
+
+            if (
+                not is_pure_expression(start)
+                or not is_pure_expression(stop)
+                or not is_integer(step_val)
+                or step_val == 0
+                or start_val is not None
+                and not is_integer(start_val)
+                or stop_val is not None
+                and not is_integer(stop_val)
+            ):
+                return
+
+            all_values = get_all_values_in_range_if_not_many(
+                start, start_val, stop, stop_val, step_val
+            )
+
+            if all_values is not None:
+                if len(all_values) == 0:
+                    suggested_replacement = 'False' if node.ops[0][0] == "in" else 'True'
+                else:
+                    comparison = f'{node.left.as_string()} {'==' if node.ops[0][0] == "in" else '!='} '
+                    suggested_replacement = comparison + f' {'or' if node.ops[0][0] == "in" else 'and'} {comparison}'.join(all_values)
+
+                self.add_message(
+                    "in-range-instead-of-compare-small",
+                    node=node,
+                    args=(node.as_string(), suggested_replacement),
+                )
+
 
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
