@@ -305,6 +305,7 @@ def predecessors_from_loc(
 
 
 def get_cfg_loc(in_stmt: nodes.NodeNG) -> CFGLoc:
+    """Returns the CFGLoc of this node or its closest parent."""
     while not hasattr(in_stmt, "cfg_loc"):
         in_stmt = in_stmt.parent
         assert in_stmt is not None

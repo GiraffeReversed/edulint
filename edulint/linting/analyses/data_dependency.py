@@ -1,4 +1,4 @@
-from typing import List, Union, Set, Optional, Dict, Tuple
+from typing import List, Union, Set, Optional, Dict, Tuple, Iterator
 from collections import defaultdict
 
 from astroid import nodes
@@ -130,6 +130,14 @@ def collect_reaching_definitions(
 def vars_in(
     node: Union[nodes.NodeNG, List[nodes.NodeNG]], event_types: Optional[Set[VarEventType]] = None
 ) -> Dict[Variable, List[nodes.NodeNG]]:
+    """
+    Returns variables and nodes associated with each, that appear in a node or a code block.
+
+    Args:
+        node (Union[nodes.NodeNG, List[nodes.NodeNG]]): Node or nodes to search in.
+        event_types (Optional[Set[VarEventTypes]]): Report only selected events. If set to None
+          (default), reports all event types.
+    """
     result = {}
 
     if isinstance(node, nodes.NodeNG):
@@ -145,7 +153,8 @@ def vars_in(
     return result
 
 
-def name_to_var(name: str, node: nodes.NodeNG):
+def name_to_var(name: str, node: nodes.NodeNG) -> Optional[Variable]:
+    """Returns variable with given name inside the given node, which also determines the variables scope."""
     start = get_cfg_loc(node)
     for loc in syntactic_children_locs_from(start, node):
         for var, events in loc.var_events.items():
@@ -155,12 +164,19 @@ def name_to_var(name: str, node: nodes.NodeNG):
     return None
 
 
-def node_to_var(node: nodes.NodeNG):
+def node_to_event(node: nodes.NodeNG) -> Optional[VarEvent]:
+    """Returns event related to given node, if such exists."""
     loc = get_cfg_loc(node)
     for var, event in loc.var_events.all():
         if event.node == node:
-            return var
+            return event
     return None
+
+
+def node_to_var(node: nodes.NodeNG):
+    """Returns variable related to given node, if such exists."""
+    event = node_to_event(node)
+    return event.var if event is not None else None
 
 
 def _get_matching_superpart(var_node: nodes.NodeNG, super_node: nodes.NodeNG):
@@ -194,7 +210,13 @@ def _get_matching_superpart(var_node: nodes.NodeNG, super_node: nodes.NodeNG):
     return var_node
 
 
-def filter_events_for(node: nodes.Attribute, events: List[VarEvent]) -> List[VarEvent]:
+def filter_events_for(
+    node: [nodes.Name, nodes.AssignName, nodes.Attribute], events: List[VarEvent]
+) -> List[VarEvent]:
+    """
+    Filter events that happen directly to the given node, not to its part (e.g. through
+    a subscript or attribute).
+    """
     if isinstance(node, (nodes.Name, nodes.AssignName)):
         return events
 
@@ -224,7 +246,16 @@ def get_events_for(
     vars: List[Variable],
     nodes: List[nodes.NodeNG],
     event_types: Optional[List[VarEventType]] = None,
-):
+) -> Iterator[VarEvent]:
+    """
+    Iterates over events for given variables in given code block.
+
+    Args:
+        vars (List[Variable]): variables to collect events for
+        nodes (List[nodes.NodeNG]): list of nodes to collect in (including syntactic children)
+        event_types (Optional[List[VarEventTypes]]): collect only selected event types; default
+          (None) means collecting all.
+    """
     if len(nodes) == 0:
         return
 
@@ -244,7 +275,16 @@ def get_events_by_var(
     vars: List[Variable],
     nodes: List[nodes.NodeNG],
     event_types: Optional[List[VarEventType]] = None,
-):
+) -> Dict[Variable, List[VarEvent]]:
+    """
+    Returns a dictionary, mapping variables to events for given variables in given code block.
+
+    Args:
+        vars (List[Variable]): variables to collect events for
+        nodes (List[nodes.NodeNG]): list of nodes to collect in (including syntactic children)
+        event_types (Optional[List[VarEventTypes]]): collect only selected event types; default
+          (None) means collecting all.
+    """
     result = defaultdict(list)
     for event in get_events_for(vars, nodes, event_types):
         result[event.var].append(event)
@@ -252,6 +292,7 @@ def get_events_by_var(
 
 
 def modified_in(vars: List[Variable], nodes: List[nodes.NodeNG]) -> bool:
+    """Returns true iff any of the given variables is modified in given nodes (including syntactic children)."""
     # just check whether there is such an event
     for _ in get_events_for(vars, nodes, MODIFYING_EVENTS):
         return True
