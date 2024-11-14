@@ -269,14 +269,25 @@ def test_ord_files(filename: str, expected_output: List[Problem]) -> None:
     ]),
     ("3ee0761302-p4_geometry.py", []),
     ("4594fad43b-p4_triangle.py", []),
+    ("5cfe50cb59-p3_count.py", []),
     ("66479c3d7d-p4_geometry.py", []),
+    ("7c0ee26cf6-task_1.py", []),
     ("7922cc0638-p6_next.py", [lazy_problem().set_code("R6616").set_line(20)]),
     ("104174-ipv4_restore.py", [
         lazy_problem().set_code("R6610").set_line(38).set_text("Do not multiply list with mutable content.")
     ]),
     ("104584-p4_digits.py", []),
+    ("APS_pdf_to_word_main.py", []),
+    ("APS_tfa_analyzer.py", []),
+    ("c5812dbf34-c_race.py", []),
     ("calc_with_vars.py", []),
+    ("cf_1000_a_6.py", []),
+    ("cf_1004_a_15.py", []),
+    ("cf_1015_a_34.py", []),
+    ("cf_1472_c_42.py", []),
+    ("cf_1512_b_38.py", []),
     ("hw14358.py", [
+        lazy_problem().set_code("R6609").set_line(29),
         lazy_problem().set_code("R6609").set_line(31).set_text("Use augmented assignment: 'b += 1'"),
         lazy_problem().set_code("R6609").set_line(34).set_text("Use augmented assignment: 'a += 1'"),
         lazy_problem().set_code("R6608").set_line(44).set_text("Redundant arithmetic: num // num"),
@@ -334,6 +345,16 @@ def test_ord_files(filename: str, expected_output: List[Problem]) -> None:
         lazy_problem().set_code("R6605").set_line(9).set_text("Use elif."),
         lazy_problem().set_code("R6608").set_line(53).set_text("Redundant arithmetic: valid += 0"),
         lazy_problem().set_code("R6608").set_line(64).set_text("Redundant arithmetic: valid += 0"),
+    ]),
+    ("uc_9721_05_11.py", [
+        lazy_problem().set_code("R6609").set_line(3),
+        # lazy_problem().set_code("R6609").set_line(7), # TODO improve type guessing
+    ]),
+    ("uc_9954_15_08.py", [
+        lazy_problem().set_code("R6609").set_line(6),
+        lazy_problem().set_code("R6609").set_line(7),
+        lazy_problem().set_code("R6609").set_line(10),
+        lazy_problem().set_code("R6609").set_line(11),
     ]),
     ("ut_157_0762_16_47.py", []),
 ])

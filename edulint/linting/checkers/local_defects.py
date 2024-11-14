@@ -7,10 +7,10 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter
 
+from edulint.linting.analyses.types import guess_type
 from edulint.linting.checkers.utils import (
     get_range_params,
     get_const_value,
-    infer_to_value,
     is_parents_elif,
     get_statements_count,
     is_negation,
@@ -258,50 +258,12 @@ class Local(BaseChecker):
             self.add_message("redundant-arithmetic", node=node, args=(node.as_string(),))
 
     def _check_augmentable(self, node: Union[nodes.Assign, nodes.AnnAssign]) -> None:
-        IMMUTABLE_OPS = ("/", "//", "%", "**", "<<", ">>")
-
         def add_message(target: str, param: nodes.BinOp) -> None:
             self.add_message(
                 "use-augmented-assign",
                 node=node,
                 args=(target, node.value.op, param.as_string()),
             )
-
-        def is_immutable(node: nodes.NodeNG) -> bool:
-            if isinstance(node, (nodes.Const)) and isinstance(
-                node.value, (int, float, bool, str, bytes, tuple)
-            ):
-                return True
-            if isinstance(node, nodes.BinOp):
-                return (
-                    node.op in IMMUTABLE_OPS or is_immutable(node.left) or is_immutable(node.right)
-                )
-            if isinstance(node, nodes.Call):
-                return any(
-                    node.func.as_string().endswith(n)
-                    for n in (
-                        "int",
-                        "float",
-                        "bool",
-                        "str",
-                        "bytes",
-                        "tuple",
-                        "len",
-                        "sum",
-                        "chr",
-                        "ord",
-                        "trunc",
-                        "round",
-                        "sqrt",
-                        "cos",
-                        "sin",
-                        "radians",
-                        "degrees",
-                    )
-                )
-            if isinstance(node, nodes.IfExp):
-                return is_immutable(node.body) or is_immutable(node.orelse)
-            return False
 
         if not isinstance(node.value, nodes.BinOp):
             return
@@ -314,21 +276,18 @@ class Local(BaseChecker):
         else:
             assert False, "unreachable"
 
-        left_value = infer_to_value(bin_op.left)
-        right_value = infer_to_value(bin_op.right)
+        result_type = guess_type(bin_op)
+        if result_type is None or result_type.any_mutable():
+            return
 
-        if node.value.op in IMMUTABLE_OPS or is_immutable(left_value) or is_immutable(right_value):
-            if target == bin_op.left.as_string():
-                add_message(target, bin_op.right)
-            elif bin_op.op in "+*|&" and target == bin_op.right.as_string():
-                if not (
-                    isinstance(left_value, nodes.Const)
-                    and isinstance(left_value.value, (str, bytes, tuple))
-                ) and not (
-                    isinstance(right_value, nodes.Const)
-                    and isinstance(right_value.value, (str, bytes, tuple))
-                ):
-                    add_message(target, bin_op.left)
+        if target == bin_op.left.as_string():
+            add_message(target, bin_op.right)
+        elif (
+            bin_op.op in "+*|&"
+            and target == bin_op.right.as_string()
+            and not result_type.any_container()
+        ):
+            add_message(target, bin_op.left)
 
     def _check_multiplied_list(self, node: nodes.BinOp) -> None:
         def is_mutable(elem: nodes.NodeNG) -> bool:
