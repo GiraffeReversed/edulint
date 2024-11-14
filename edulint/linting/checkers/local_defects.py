@@ -562,7 +562,11 @@ class Local(BaseChecker):
 
             return None
 
-        if len(node.ops) == 1 and (node.ops[0][0] == "in" or node.ops[0][0] == "not in") and is_var(node.left):
+        if (
+            len(node.ops) == 1
+            and (node.ops[0][0] == "in" or node.ops[0][0] == "not in")
+            and is_var(node.left)
+        ):
             range_params = get_range_params(node.ops[0][1])
             if range_params is None:
                 return
@@ -590,17 +594,23 @@ class Local(BaseChecker):
 
             if all_values is not None:
                 if len(all_values) == 0:
-                    suggested_replacement = 'False' if node.ops[0][0] == "in" else 'True'
+                    suggested_replacement = "False" if node.ops[0][0] == "in" else "True"
                 else:
-                    comparison = f'{node.left.as_string()} {'==' if node.ops[0][0] == "in" else '!='} '
-                    suggested_replacement = comparison + f' {'or' if node.ops[0][0] == "in" else 'and'} {comparison}'.join(all_values)
+                    comparison = (
+                        f'{node.left.as_string()} {"==" if node.ops[0][0] == "in" else "!="} '
+                    )
+                    suggested_replacement = (
+                        comparison
+                        + f' {"or" if node.ops[0][0] == "in" else "and"} {comparison}'.join(
+                            all_values
+                        )
+                    )
 
                 self.add_message(
                     "in-range-instead-of-compare-small",
                     node=node,
                     args=(node.as_string(), suggested_replacement),
                 )
-
 
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
