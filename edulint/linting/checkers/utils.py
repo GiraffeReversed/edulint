@@ -464,7 +464,7 @@ def is_negation(lt: nodes.NodeNG, rt: nodes.NodeNG, negated_rt: bool) -> bool:
         lt_mod, lt_val = (lt_lt, lt_rt) if is_mod_two(lt_lt) else (lt_rt, lt_lt)
         rt_mod, rt_val = (rt_lt, rt_rt) if is_mod_two(rt_lt) else (rt_rt, rt_lt)
 
-        return are_identical(lt_mod.left, rt_mod.left) and not are_identical(lt_val, rt_val)
+        return have_same_value(lt_mod.left, rt_mod.left) and not have_same_value(lt_val, rt_val)
 
     lt, negated_rt = strip_nots(lt, negated_rt)
     rt, negated_rt = strip_nots(rt, negated_rt)
@@ -494,7 +494,12 @@ def is_negation(lt: nodes.NodeNG, rt: nodes.NodeNG, negated_rt: bool) -> bool:
 
         return False
 
-    return negated_rt and are_identical(lt, rt)
+    return negated_rt and have_same_value(lt, rt)
+
+
+def have_same_value(lt: nodes.NodeNG, rt: nodes.NodeNG):
+    # TODO improve, for example not all functions are pure
+    return are_identical(lt, rt)
 
 
 def are_identical(
