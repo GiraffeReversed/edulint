@@ -556,8 +556,12 @@ class Local(BaseChecker):
                     return None
 
                 return [
-                    val1 if value == 0 else (val1 + " + " if value > 0 else " - " + str(abs(value)))
-                    for value in range(start_val, stop_val, step)
+                    (
+                        val1
+                        if value == 0
+                        else (val1 + (" + " if value > 0 else " - ") + str(abs(value)))
+                    )
+                    for value in range(const1, const2, step)
                 ]
 
             return None
@@ -655,7 +659,9 @@ class Local(BaseChecker):
     def visit_annassign(self, node: nodes.AnnAssign) -> None:
         self._check_augmentable(node)
 
-    @only_required_for_messages("no-is-bool", "magical-constant-in-ord-compare")
+    @only_required_for_messages(
+        "no-is-bool", "magical-constant-in-ord-compare", "in-range-instead-of-compare-small"
+    )
     def visit_compare(self, node: nodes.Compare) -> None:
         self._check_no_is(node)
         self._check_magical_constant_in_ord_compare(node)
