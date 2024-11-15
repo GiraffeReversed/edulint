@@ -616,6 +616,8 @@ class Local(BaseChecker):
                     args=(node.as_string(), suggested_replacement),
                 )
 
+            # TODO - finish the other cases (not small)
+
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
         self._check_extend(node)
