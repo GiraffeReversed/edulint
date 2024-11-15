@@ -52,6 +52,8 @@ class VarEvent:
     type: VarEventType
     definitions: Optional[List["VarEvent"]] = field(default_factory=list)
     uses: Optional[List["VarEvent"]] = field(default_factory=list)
+    redefines: Optional[List["VarEvent"]] = field(default_factory=list)
+    redefined_by: Optional[List["VarEvent"]] = field(default_factory=list)
 
     def __repr__(self) -> str:
         return (

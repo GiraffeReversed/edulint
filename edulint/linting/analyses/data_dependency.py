@@ -37,15 +37,19 @@ def collect_gens_kill(
                 if var not in kill:
                     gens[var].append(event)
                 else:
-                    assert len(kill[var]) == 1
-                    kill_event = kill[var][0]
+                    kill_event = kill[var][-1]
 
                     if kill_event not in event.definitions:
                         event.definitions.append(kill_event)
                         kill_event.uses.append(event)
 
             if event.type in KILLING_EVENTS:
-                kill[var] = [event]
+                if var in kill:
+                    kill_event = kill[var][-1]
+                    if kill_event not in event.redefines:
+                        event.redefines.append(kill_event)
+                        kill_event.redefined_by.append(event)
+                kill[var].append(event)
 
     return gens, kill
 
@@ -104,6 +108,11 @@ def collect_reaching_definitions(
                         if kill_event not in computed_kill[var]:
                             computed_kill[var].append(kill_event)
                             changed = True
+                    else:
+                        other_kill_event = original_kill[var][0]
+                        if other_kill_event not in kill_event.redefined_by:
+                            kill_event.redefined_by.append(other_kill_event)
+                            other_kill_event.redefines.append(kill_event)
 
                     for gen_event in gens.get(var, []):
                         if kill_event not in gen_event.definitions:
@@ -220,7 +229,7 @@ def filter_events_for(
     for event in events:
         superpart = _get_matching_superpart(event.node, node)
         if superpart is not None:
-            result.append(VarEvent(event.var, superpart, event.type, None, None))
+            result.append(VarEvent(event.var, superpart, event.type, None, None, None, None))
     return result
 
 
