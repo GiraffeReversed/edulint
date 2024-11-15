@@ -1,4 +1,4 @@
-from typing import Generator, Optional, Callable, List, Tuple, Iterator
+from typing import Generator, Optional, Callable, List, Tuple, Iterator, Union
 from collections import defaultdict
 from enum import Enum
 
@@ -174,7 +174,21 @@ def successor_blocks_from_locs(
     stop_on_block: Optional[Callable[[CFGBlock, int, int], bool]] = None,
     include_start: bool = False,
     include_end: bool = False,
-):
+) -> Iterator[Tuple[CFGBlock, int, int]]:
+    """
+    Iterates blocks reachable from given locs (DFS).
+
+    Args:
+        locs: CFG locations to start from
+        stop_on_loc: condition to test on a location to determine if the iteration should stop here
+        stop_on_block: condition to test on a block to determine if the iteration should stop here
+        include_start: whether to include the initial locations in locs argument
+        include_end: whether to include the node on which the iteration is stopped
+
+    Yields:
+        a triplet of block and two indexes into its locs; the indexes determine which part of the block would be
+        iterated over when iterating over locations (for cases when iteration starts in the middle of a block)
+    """
     return essor_blocks_from_locs(
         locs, Direction.SUCCESSORS, stop_on_loc, stop_on_block, include_start, include_end
     )
@@ -187,6 +201,20 @@ def predecessor_blocks_from_locs(
     include_start: bool = False,
     include_end: bool = False,
 ):
+    """
+    Iterates blocks from which given locs are reachable (reversed DFS).
+
+    Args:
+        locs: CFG locations to start from
+        stop_on_loc: condition to test on a location to determine if the iteration should stop here
+        stop_on_block: condition to test on a block to determine if the iteration should stop here
+        include_start: whether to include the initial locations in locs argument
+        include_end: whether to include the node on which the iteration is stopped
+
+    Yields:
+        a triplet of block and two indexes into its locs; the indexes determine which part of the block would be
+        iterated over when iterating over locations (for cases when iteration starts in the middle of a block)
+    """
     return essor_blocks_from_locs(
         locs, Direction.PREDECESSORS, stop_on_loc, stop_on_block, include_start, include_end
     )
@@ -249,7 +277,24 @@ def successors_from_loc(
     include_end: bool = False,
     explore_functions: bool = False,
     explore_classes: bool = False,
-) -> Generator[CFGLoc, None, None]:
+) -> Iterator[CFGLoc]:
+    """
+    Iterates locs reachable from the given loc (DFS).
+
+    Args:
+        loc: the CFG location to start from
+        stop_on_loc: condition to test on a location to determine if the iteration should stop here
+        stop_on_block: condition to test on a block to determine if the iteration should stop here
+        include_start: whether to include the initial locations in locs argument
+        include_end: whether to include the node on which the iteration is stopped
+        explore_functions: whether the iteration should continue into function definitions in the place
+          where they are defined
+        explore_classes: whether the iteration should continue into class definitions in the place where
+          they are defined
+
+    Yields:
+        reachable locations
+    """
     yield from essor_locs_from_locs(
         [loc],
         Direction.SUCCESSORS,
@@ -270,7 +315,24 @@ def successors_from_locs(
     include_end: bool = False,
     explore_functions: bool = False,
     explore_classes: bool = False,
-) -> Generator[CFGLoc, None, None]:
+) -> Iterator[CFGLoc]:
+    """
+    Iterates locs reachable from given locs (DFS).
+
+    Args:
+        loc: CFG locations to start from
+        stop_on_loc: condition to test on a location to determine if the iteration should stop here
+        stop_on_block: condition to test on a block to determine if the iteration should stop here
+        include_start: whether to include the initial locations in locs argument
+        include_end: whether to include the node on which the iteration is stopped
+        explore_functions: whether the iteration should continue into function definitions in the place
+          where they are defined
+        explore_classes: whether the iteration should continue into class definitions in the place where
+          they are defined
+
+    Yields:
+        reachable locations
+    """
     yield from essor_locs_from_locs(
         locs,
         Direction.SUCCESSORS,
@@ -291,7 +353,24 @@ def predecessors_from_loc(
     include_end: bool = False,
     explore_functions: bool = False,
     explore_classes: bool = False,
-) -> Generator[CFGLoc, None, None]:
+) -> Iterator[CFGLoc]:
+    """
+    Iterates locs from which given loc is reachable (reversed DFS).
+
+    Args:
+        loc: CFG locations to start from
+        stop_on_loc: condition to test on a location to determine if the iteration should stop here
+        stop_on_block: condition to test on a block to determine if the iteration should stop here
+        include_start: whether to include the initial locations in locs argument
+        include_end: whether to include the node on which the iteration is stopped
+        explore_functions: whether the iteration should continue into function definitions in the place
+          where they are defined
+        explore_classes: whether the iteration should continue into class definitions in the place where
+          they are defined
+
+    Yields:
+        reachable locations
+    """
     yield from essor_locs_from_locs(
         [loc],
         Direction.PREDECESSORS,
@@ -314,6 +393,11 @@ def get_cfg_loc(in_stmt: nodes.NodeNG) -> CFGLoc:
 
 
 def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
+    """
+    Takes a location and returns a tuple with possible statement locations
+    (locations which are not a true part of the CFG = if statements, not just
+    their conditions, etc.)
+    """
     parent = loc.node.parent
 
     if isinstance(loc.node, nodes.Arguments) or (
@@ -340,11 +424,21 @@ def get_stmt_locs(loc: CFGLoc) -> Tuple[Optional[CFGLoc], Optional[CFGLoc]]:
 
 
 def syntactic_children_locs(
-    syntactic: nodes.NodeNG,
+    syntactic: Union[nodes.NodeNG, List[nodes.NodeNG]],
     include_stmt_locs: bool = False,
     explore_functions: bool = False,
     explore_classes: bool = False,
-):
+) -> Iterator[CFGLoc]:
+    """
+    Returns all locations that are syntactic descendants of a node, not just its
+    children.
+
+    Args:
+        syntactic: the node or nodes to start from
+        include_stmt_locations: whether statement locations should be included, see get_stmt_locs
+        explore_functions: whether nested function definitions should also be iterated
+        explore_classes: whether nested class definitions shoudl also be iterated
+    """
     if isinstance(syntactic, nodes.NodeNG):
         node = syntactic
     else:
@@ -359,12 +453,22 @@ def syntactic_children_locs(
 
 def syntactic_children_locs_from(
     loc: CFGLoc,
-    syntactic: nodes.NodeNG,
+    syntactic: Union[nodes.NodeNG, List[nodes.NodeNG]],
     include_stmt_locs: bool = False,
     explore_functions: bool = False,
     explore_classes: bool = False,
-) -> Generator[CFGLoc, None, None]:
+) -> Iterator[CFGLoc]:
+    """
+    Returns all locations that are syntactic descendants of a node, not just its
+    children, starting from a location.
 
+    Args:
+        loc: the location to start from
+        syntactic: the node or nodes to start from
+        include_stmt_locations: whether statement locations should be included, see get_stmt_locs
+        explore_functions: whether nested function definitions should also be iterated
+        explore_classes: whether nested class definitions shoudl also be iterated
+    """
     if isinstance(loc, CFGLoc):
         loc = [loc]
     if isinstance(syntactic, nodes.NodeNG):
