@@ -4,6 +4,8 @@ Provides a function to generate and display the control flow graph of a given mo
 
 # adapted from https://github.com/pyta-uoft/pyta/blob/4c858623549e24a49fea7aef9c8ec7c20c836bd6/python_ta/cfg/cfg_generator.py
 
+import argparse
+from collections import defaultdict
 import importlib.util
 import os.path
 import sys
@@ -13,8 +15,11 @@ import graphviz
 from astroid import nodes
 from astroid.builder import AstroidBuilder
 
-from edulint.linting.analyses.cfg.graph import CFGBlock, ControlFlowGraph
+from edulint.linting.analyses.cfg.graph import CFGBlock, CFGLoc, ControlFlowGraph
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
+from edulint.linting.analyses.cfg.utils import get_cfg_loc
+from edulint.linting.analyses.variable_modification import VarModificationAnalysis
+from edulint.linting.analyses.data_dependency import collect_reaching_definitions
 
 GRAPH_OPTIONS = {
     "format": "dot",
@@ -24,7 +29,7 @@ SUBGRAPH_OPTIONS = {"fontname": "Courier New"}
 
 
 def generate_cfg(
-    mod: str = "", auto_open: bool = False, visitor_options: Optional[Dict[str, Any]] = None
+    mod: str = "", run_dda: bool = True, visitor_options: Optional[Dict[str, Any]] = None
 ) -> None:
     """Generate a control flow graph for the given module.
 
@@ -44,12 +49,12 @@ def generate_cfg(
         auto_open (bool): Automatically open the graph in your browser.
         visitor_options (dict): An options dict to configure how the cfgs are generated.
     """
-    _generate(mod=mod, auto_open=auto_open, visitor_options=visitor_options)
+    return _generate(mod=mod, run_dda=run_dda, visitor_options=visitor_options)
 
 
 def _generate(
-    mod: str = "", auto_open: bool = False, visitor_options: Optional[Dict[str, Any]] = None
-) -> None:
+    mod: str, run_dda: bool, visitor_options: Optional[Dict[str, Any]]
+) -> Dict[nodes.NodeNG, ControlFlowGraph]:
     """Generate a control flow graph for the given module.
 
     `mod` can either be:
@@ -62,12 +67,15 @@ def _generate(
     if abs_path is None:  # _get_valid_file_path returns None in case of invalid file
         return
 
-    file_name = os.path.splitext(os.path.basename(abs_path))[0]
     module = AstroidBuilder().file_build(abs_path)
     visitor = CFGVisitor(options=visitor_options)
     module.accept(visitor)
 
-    _display(visitor.cfgs, file_name, auto_open=auto_open)
+    if run_dda:
+        VarModificationAnalysis().collect(module)
+        collect_reaching_definitions(module)
+
+    return visitor.cfgs
 
 
 def _get_valid_file_path(mod: str = "") -> Optional[str]:
@@ -96,28 +104,39 @@ def _get_valid_file_path(mod: str = "") -> Optional[str]:
     return os.path.abspath(mod)
 
 
-def _display(
-    cfgs: Dict[nodes.NodeNG, ControlFlowGraph], filename: str, auto_open: bool = False
+def _cfg_node_to_id(node: nodes.NodeNG):
+    if isinstance(node, nodes.Module):
+        return "__main__"
+    if isinstance(node, nodes.ClassDef):
+        return node.name
+    if isinstance(node, nodes.FunctionDef):
+        scope_parent = node.scope().parent
+        subgraph_label = node.name
+        # Update the label to the qualified name if it is a method
+        while isinstance(scope_parent, (nodes.FunctionDef, nodes.ClassDef)):
+            subgraph_label = scope_parent.name + "." + subgraph_label
+            scope_parent = scope_parent.parent.scope()
+        return subgraph_label
+    print(node)
+    assert False, "unreachable"
+
+
+def generate_dot(
+    cfgs: Dict[nodes.NodeNG, ControlFlowGraph], filename: str, generate_dda: bool
 ) -> None:
     graph = graphviz.Digraph(name=filename, **GRAPH_OPTIONS)
     for node, cfg in cfgs.items():
-        if isinstance(node, nodes.Module):
-            subgraph_label = "__main__"
-        elif isinstance(node, nodes.FunctionDef):
-            scope_parent = node.scope().parent
-            subgraph_label = node.name
-            # Update the label to the qualified name if it is a method
-            if isinstance(scope_parent, nodes.ClassDef):
-                subgraph_label = scope_parent.name + "." + subgraph_label
-        else:
-            continue
         with graph.subgraph(name=f"cluster_{cfg.cfg_id}") as c:
-            visited = set()
-            _visit(cfg.start, c, visited, cfg.end)
+            visited = {cfg.start}
+            _visit(cfg.start, c, visited, cfg.end, generate_dda)
             for block in cfg.unreachable_blocks:
-                _visit(block, c, visited, cfg.end)
-            c.attr(label=subgraph_label, **SUBGRAPH_OPTIONS)
+                _visit(block, c, visited, cfg.end, generate_dda)
+            c.attr(label=_cfg_node_to_id(node), **SUBGRAPH_OPTIONS)
 
+    return graph
+
+
+def display(graph: graphviz.Digraph, filename: str, auto_open: bool = False) -> None:
     graph.render(filename, view=auto_open)
 
 
@@ -132,30 +151,108 @@ def display_from_block(block: CFGBlock, filename: str, auto_open: bool = False) 
     graph.render(filename, view=auto_open, cleanup=True)
 
 
-def _visit(block: CFGBlock, graph: graphviz.Digraph, visited: Set[int], end: CFGBlock) -> None:
+def _visit(
+    block: CFGBlock,
+    graph: graphviz.Digraph,
+    visited: Set[CFGBlock],
+    end: CFGBlock,
+    generate_dda: bool,
+) -> None:
     """
     Visit a CFGBlock and add it to the control flow graph.
     """
-    node_id = f"{graph.name}_{block.id}"
-    if node_id in visited:
-        return
 
-    label = "\n".join([loc.node.as_string() for loc in block.locs]) + "\n"
-    # Need to escape backslashes explicitly.
-    label = label.replace("\\", "\\\\")
-    # \l is used for left alignment.
-    label = label.replace("\n", "\\l")
+    def _block_to_id(block: CFGBlock) -> str:
+        return f"{graph.name}_{block.id}_0"
 
-    fill_color = "grey93" if not block.reachable else "white"
-    # Change the fill colour if block is the end of the cfg
-    fill_color = "black" if block == end else fill_color
+    def _loc_to_id(loc: CFGLoc) -> str:
+        return f"{graph.name}_{loc.block.id}_{loc.pos}"
 
-    graph.node(node_id, label=label, fillcolor=fill_color, style="filled")
-    visited.add(node_id)
+    def _add_relation(graph, loc, relation_getter, color, scope):
+        related_vars = defaultdict(set)
+        for var, event in loc.var_events.all():
+            for related in relation_getter(event):
+                event_loc = get_cfg_loc(related.node)
+                if event_loc.node.scope() == scope:
+                    related_vars[event_loc].add(related.var.name)
+                else:
+                    related_vars[get_cfg_loc(event_loc.node.scope())].add(related.var.name)
+
+        for event_loc, vars in related_vars.items():
+            if event_loc.node.scope() == scope:
+                target = _loc_to_id(event_loc)
+            else:
+                target = _cfg_node_to_id(event_loc.node.scope())
+            graph.edge(
+                _loc_to_id(loc),
+                target,
+                "".join(v + "\n" for v in vars),
+                color=color,
+                fontcolor=color,
+            )
+
+    # Change the fill colour if block is the end of the cfg or is not reachable
+    fill_color = "black" if block == end else "grey93" if not block.reachable else "white"
+
+    if len(block.locs) == 0:
+        graph.node(_block_to_id(block), label="", fillcolor=fill_color, style="filled")
+        last_loc_id = _block_to_id(block)
+    else:
+        scope = block.locs[0].node.scope()
+        for i, loc in enumerate(block.locs):
+            graph.node(
+                _loc_to_id(loc),
+                # Need to escape backslashes explicitly; \l is used for left alignment.
+                label=loc.node.as_string().replace("\\", "\\\\").replace("\n", "\\l"),
+                fillcolor=fill_color,
+                style="filled",
+            )
+            if i > 0:
+                graph.edge(_loc_to_id(loc.block.locs[i - 1]), _loc_to_id(loc))
+
+            _add_relation(graph, loc, lambda event: event.uses, "blue", scope)
+            _add_relation(graph, loc, lambda event: event.redefines, "red", scope)
+            last_loc_id = _loc_to_id(loc)
 
     for edge in block.successors:
         if edge.label is not None:
-            graph.edge(node_id, f"{graph.name}_{edge.target.id}", str(edge.label))
+            graph.edge(last_loc_id, _block_to_id(edge.target), str(edge.label))
         else:
-            graph.edge(node_id, f"{graph.name}_{edge.target.id}")
-        _visit(edge.target, graph, visited, end)
+            graph.edge(last_loc_id, _block_to_id(edge.target))
+
+        if edge.target not in visited:
+            visited.add(edge.target)
+            _visit(edge.target, graph, visited, end, generate_dda)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename", help="path to file to generate graph for")
+    parser.add_argument("-o", "--output", help="name of the file to save the .dot to", default=None)
+    parser.add_argument(
+        "--dda",
+        help="show data from the data dependency analysis",
+        action="store_true",
+        default=True,
+    )
+    parser.add_argument(
+        "--auto-open",
+        help="automatically open the dot after completion",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument("function", help="construct graph only for given funcionts", nargs="*")
+
+    args = parser.parse_args()
+
+    output_filename = args.output if args.output is not None else os.path.basename(args.filename)
+    output_filename += ".dot"
+
+    cfgs = generate_cfg(args.filename, run_dda=args.dda)
+    if args.function:
+        named_cfgs = {_cfg_node_to_id(node): node for node, cfg in cfgs.items()}
+        cfgs = {named_cfgs[name]: cfgs[named_cfgs[name]] for name in args.function}
+        print(args.function)
+    graph = generate_dot(cfgs, output_filename, generate_dda=args.dda)
+
+    display(graph, output_filename, auto_open=args.auto_open)

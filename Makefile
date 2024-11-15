@@ -69,3 +69,6 @@ lint_data:
 			python3 -m edulint check -o "${OPTIONS}" $$EXTRA $$DATA_DIR/$$week/*.py > $$LINTINGS_DIR/$$week.$$EXT; \
 	done;
 
+graph:
+	export PYTHONPATH=${EDULINT_PATH} && \
+	    python3 edulint/linting/analyses/cfg/dot_generator.py ${ARGS}
