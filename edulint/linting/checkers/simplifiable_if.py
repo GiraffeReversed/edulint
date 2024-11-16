@@ -359,10 +359,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             """,
         ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
         "R6217": (
-            "The body of this 'elif' is never executed.",
-            "redundant-condition-in-if",
+            "The body of this '%s' is never executed.",
+            "unrechable-elif-else",
             """
             Emitted when body of 'elif' in if statement is never executed, because when all tests above this 'elif' are False, then the test in this 'elif' is False too.
+            Or when the body of 'else' is unreachable.
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
@@ -946,6 +947,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         i = 0
         elif_num = 1
         current_block = node
+        else_block: List[nodes.NodeNG] = []
 
         while isinstance(current_block, nodes.If):
             if i < len(if_statement) and elif_num == if_statement[i].position_in_if:
@@ -969,13 +971,18 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                     )
                 i += 1
             else:
-                self.add_message(
-                    "redundant-condition-in-if",
-                    node=current_block,
-                )
+                self.add_message("unrechable-elif-else", node=current_block, args=("elif"))
 
-            current_block = current_block.orelse[0] if current_block.has_elif_block() else None
+            if current_block.has_elif_block():
+                current_block = current_block.orelse[0]
+            else:
+                else_block = current_block.orelse
+                current_block = None
+
             elif_num += 1
+
+        if i >= len(if_statement) and len(else_block) > 0:
+            self.add_message("unrechable-elif-else", node=else_block[0], args=("else"))
 
     def _check_for_redundant_condition_part_in_if(self, node: nodes.If) -> None:
         if self._is_elif_branch(node):
@@ -1027,7 +1034,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "redundant-condition-part-in-if-reorder",
         "redundant-condition-part-in-if",
         "using-elif-instead-of-else",
-        "redundant-condition-in-if",
+        "unrechable-elif-else",
     )
     def visit_if(self, node: nodes.If) -> None:
         self._basic_checks(node)
