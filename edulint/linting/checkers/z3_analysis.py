@@ -1,8 +1,4 @@
-from typing import (
-    List,
-    Optional,
-    Dict,
-)
+from typing import List, Optional, Dict, Tuple
 
 from astroid import nodes
 from edulint.linting.checkers.utils import get_const_value, is_integer, is_number
@@ -136,17 +132,22 @@ def _is_variable_in_pure_expression(node: nodes.NodeNG) -> bool:
     return isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call))
 
 
-def _none_if_possibly_not_boolean(
+def _convert_to_bool_if_necessary(
     node: nodes.NodeNG, parent: nodes.NodeNG, z3_node_representation: Optional[ExprRef]
-) -> Optional[ExprRef]:
+) -> Tuple[Optional[ExprRef], bool]:
+    "returns a tuple with possibly converted expression as the first value and the second indicates whether the conversion happend or not"
+    if z3_node_representation is None:
+        return None, False
+
+    # Because in python when a number 'x' is converted to bool it is equivalent to converting it to 'x != 0'
     if _is_bool_node(parent) and not (
         _is_bool_node(node)
         or isinstance(node, nodes.Compare)
         or (isinstance(node, nodes.Const) and isinstance(node.value, bool))
     ):
-        return None
+        return z3_node_representation != 0, True
 
-    return z3_node_representation
+    return z3_node_representation, False
 
 
 def _convert_const_to_z3(node: nodes.Const) -> Optional[ExprRef]:
@@ -166,83 +167,101 @@ def convert_condition_to_z3_expression(
     node: Optional[nodes.NodeNG],
     initialized_variables: Dict[str, ArithRef],
     parent: Optional[nodes.NodeNG],
-) -> Optional[ExprRef]:
+) -> tuple[Optional[ExprRef], bool]:
     """
     We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if.
     Before using this function you have to use the initialize_variables funcion on all nodes that
     you are interested about, to fill in the initialized_variables dictionary with variables of
     correct types.
 
-    Note: Is possible to allow expressions that are or could potentially be of different than boolean
-    type by changing _none_if_possibly_not_boolean() function to, instead of None, return expr != 0.
-    But you should think this through, if this will not introduce any problems. (for example in R6216).
+    Returns a tuple, where the first value is the converted condition (or None) and the second value
+    indicates whether conversion from possibly not boolean value to boolean happened (for example
+    instead of 'x' it would return 'x != 0' and True, indicating that there was a conversion).
     """
     if node is None:
-        return None
+        return None, False
+
+    conversion_to_bool = False
 
     if _is_abs_function(node):
-        expr = convert_condition_to_z3_expression(node.args[0], initialized_variables, node)
-        return _none_if_possibly_not_boolean(node, parent, Abs(expr))
+        expr, conversion_to_bool = convert_condition_to_z3_expression(
+            node.args[0], initialized_variables, node
+        )
+        expr, bool_conversion = _convert_to_bool_if_necessary(node, parent, Abs(expr))
+        return expr, bool_conversion or conversion_to_bool
 
     if _is_variable_in_pure_expression(node):
-        return _none_if_possibly_not_boolean(node, parent, initialized_variables[node.as_string()])
+        return _convert_to_bool_if_necessary(node, parent, initialized_variables[node.as_string()])
 
     if isinstance(node, nodes.BoolOp):
         operands = []
         for operand in node.values:
-            expr = _none_if_possibly_not_boolean(
-                node,
-                parent,
-                convert_condition_to_z3_expression(operand, initialized_variables, node),
+            converted_condition, bool_conversion = convert_condition_to_z3_expression(
+                operand, initialized_variables, node
             )
+            conversion_to_bool = conversion_to_bool or bool_conversion
+
+            expr, bool_conversion = _convert_to_bool_if_necessary(node, parent, converted_condition)
+            conversion_to_bool = conversion_to_bool or bool_conversion
+
             if expr is None:
-                return None
+                return None, False
 
             operands.append(expr)
 
-        return And(operands) if node.op == "and" else Or(operands)
+        return (And(operands) if node.op == "and" else Or(operands)), conversion_to_bool
 
     if isinstance(node, nodes.Compare):
-        left = convert_condition_to_z3_expression(node.left, initialized_variables, node)
-        right = convert_condition_to_z3_expression(node.ops[0][1], initialized_variables, node)
+        left, bool_conversion = convert_condition_to_z3_expression(
+            node.left, initialized_variables, node
+        )
+        conversion_to_bool = bool_conversion or conversion_to_bool
+
+        right, bool_conversion = convert_condition_to_z3_expression(
+            node.ops[0][1], initialized_variables, node
+        )
+        conversion_to_bool = bool_conversion or conversion_to_bool
+
         comparison = node.ops[0][0]
 
         if left is None or right is None:
-            return None
+            return None, False
 
         if comparison == "==":
-            return left == right
+            converted_condition = left == right
+        elif comparison == "!=":
+            converted_condition = left != right
+        elif comparison == "<":
+            converted_condition = left < right
+        elif comparison == "<=":
+            converted_condition = left <= right
+        elif comparison == ">":
+            converted_condition = left > right
+        elif comparison == ">=":
+            converted_condition = left >= right
+        else:
+            return None, False
 
-        if comparison == "!=":
-            return left != right
-
-        if comparison == "<":
-            return left < right
-
-        if comparison == "<=":
-            return left <= right
-
-        if comparison == ">":
-            return left > right
-
-        if comparison == ">=":
-            return left >= right
-
-        return None
+        return converted_condition, conversion_to_bool
 
     if isinstance(node, nodes.BinOp):
-        left = convert_condition_to_z3_expression(node.left, initialized_variables, node)
+        left, conversion_to_bool = convert_condition_to_z3_expression(
+            node.left, initialized_variables, node
+        )
         right = None
 
         if node.op in ("+", "-", "*"):
-            right = convert_condition_to_z3_expression(node.right, initialized_variables, node)
+            right, bool_conversion = convert_condition_to_z3_expression(
+                node.right, initialized_variables, node
+            )
+            conversion_to_bool = conversion_to_bool or bool_conversion
 
         if (
             left is None
             or (node.op in ("+", "-", "*") and right is None)
             or ((node.op == "%" or node.op == "//") and not is_int(left))
         ):
-            return None
+            return None, False
 
         z3_expr: Optional[ExprRef] = None
 
@@ -260,26 +279,30 @@ def convert_condition_to_z3_expression(
         elif node.op == "*":
             z3_expr = left * right
 
-        return _none_if_possibly_not_boolean(node, parent, z3_expr)
+        converted_condition, bool_conversion = _convert_to_bool_if_necessary(node, parent, z3_expr)
+        return converted_condition, (bool_conversion or conversion_to_bool)
 
     if isinstance(node, nodes.Const):
-        return _none_if_possibly_not_boolean(node, parent, _convert_const_to_z3(node))
+        return _convert_to_bool_if_necessary(node, parent, _convert_const_to_z3(node))
 
     if isinstance(node, nodes.UnaryOp):
-        expr = convert_condition_to_z3_expression(node.operand, initialized_variables, node)
+        expr, conversion_to_bool = convert_condition_to_z3_expression(
+            node.operand, initialized_variables, node
+        )
 
         if expr is None:
-            return None
+            return None, False
 
         if node.op == "-":
             expr = -expr
         elif node.op == "not":
             expr = Not(expr)
 
-        return _none_if_possibly_not_boolean(node, parent, expr)
+        converted_condition, bool_conversion = _convert_to_bool_if_necessary(node, parent, expr)
+        return converted_condition, (bool_conversion or conversion_to_bool)
 
     # Should not be reachable
-    return None
+    return None, False
 
 
 Z3_TACTIC = Then(

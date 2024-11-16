@@ -179,7 +179,7 @@ def get_converted_test_and_operands(
 
     for operand in test.values:
         converted_operands.append(
-            convert_condition_to_z3_expression(operand, initialized_variables, test)
+            convert_condition_to_z3_expression(operand, initialized_variables, test)[0]
         )
         if converted_operands[-1] is None:
             return None, []
@@ -205,7 +205,9 @@ class IfBlock:
 
             self.operands = test.values
         else:
-            self.condition = convert_condition_to_z3_expression(test, initialized_variables, None)
+            self.condition = convert_condition_to_z3_expression(test, initialized_variables, None)[
+                0
+            ]
             if self.condition is not None:
                 self.negated_condition = Not(self.condition)
 
@@ -1750,13 +1752,16 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         converted_conditions = []
         for child in node.values:
-            condition = convert_condition_to_z3_expression(child, initialized_variables, node)
+            condition, bool_conversion = convert_condition_to_z3_expression(
+                child, initialized_variables, node
+            )
 
-            # This is done by different pylint checker (True and x == 0)
             if (
+                # This is done by different pylint checker (True and x == 0)
                 isinstance(child, nodes.Const)
                 and isinstance(child.value, bool)
                 or condition is None
+                or bool_conversion
             ):
                 return
 
