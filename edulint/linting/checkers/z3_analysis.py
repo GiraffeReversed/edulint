@@ -2,6 +2,7 @@ from typing import List, Optional, Dict, Tuple
 
 from astroid import nodes
 from edulint.linting.checkers.utils import get_const_value, is_integer, is_number
+from edulint.linting.analyses.types import guess_type, Type
 
 from z3 import (
     ExprRef,
@@ -115,14 +116,29 @@ def initialize_variables(
         variable_key = node.as_string()
         variable = initialized_variables.get(variable_key)
 
+        added_new_var = False
+
         if variable is None:
+            added_new_var = True
             initialized_variables[variable_key] = (
                 Int(str(len(initialized_variables)))
                 if is_descendant_of_integer_operation
                 else Real(str(len(initialized_variables)))
             )
         elif is_descendant_of_integer_operation and variable.is_real():
+            added_new_var = True
             initialized_variables[variable_key] = Int(variable.decl().name())
+
+        # if added_new_var:
+        #     guessed_type = guess_type(node)
+        #     if guessed_type is None:
+        #         return False
+
+        #     if is_descendant_of_integer_operation:
+        #         return guessed_type.has_only(Type.INT)
+
+        #     types = guessed_type.get()
+        #     return all([t == Type.BOOL or t == Type.FLOAT or t == Type.INT for t in types])
 
     return True
 
