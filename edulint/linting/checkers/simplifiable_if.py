@@ -994,7 +994,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _check_elif_instead_of_else(self, node: nodes.If, next_if: nodes.If) -> None:
         "this is basically _check_redundant_elif() form local_defects.py"
-        if not (self._is_pure_node(node.test) and self._is_pure_node(next_if.test)):
+        if not (self._is_pure_expression(node.test) and self._is_pure_expression(next_if.test)):
             return False
 
         if is_negation(node.test, next_if.test, negated_rt=False):
