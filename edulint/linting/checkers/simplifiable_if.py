@@ -33,6 +33,7 @@ from edulint.linting.checkers.utils import (
     convert_condition_to_z3_expression,
     initialize_solver,
     implies_with_solver,
+    is_negation,
 )
 
 ExprRepresentation = str
@@ -360,7 +361,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
         "R6217": (
             "The body of this '%s' is never executed.",
-            "unrechable-elif-else",
+            "unreachable-elif-else",
             """
             Emitted when body of 'elif' in if statement is never executed, because when all tests above this 'elif' are False, then the test in this 'elif' is False too.
             Or when the body of 'else' is unreachable.
@@ -618,19 +619,26 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _test_pureness_and_initialize_variables_for_if(
         self, current_if_block: nodes.If, initialized_variables: Dict[str, ArithRef]
-    ) -> bool:
+    ) -> Tuple[bool, Optional[nodes.If]]:
+        """Returns tuple, where first value indicates whether there are problems with pureness or initialization.
+        And the second value is the first elif, where there was some problem or None if there was
+        no problem.
+        """
         while current_if_block.has_elif_block():
             if not (
                 self._is_pure_expression(current_if_block.test)
                 and initialize_variables(current_if_block.test, initialized_variables, False, None)
             ):
-                return False
+                return True, current_if_block
 
             current_if_block = current_if_block.orelse[0]
 
-        return self._is_pure_expression(current_if_block.test) and initialize_variables(
+        if self._is_pure_expression(current_if_block.test) and initialize_variables(
             current_if_block.test, initialized_variables, False, None
-        )
+        ):
+            return False, None
+
+        return True, current_if_block
 
     def _convert_else_to_elif_when_simple_enough(
         self, if_statement: List[IfBlock], initialized_variables: Dict[str, ArithRef]
@@ -971,7 +979,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                     )
                 i += 1
             else:
-                self.add_message("unrechable-elif-else", node=current_block, args=("elif"))
+                self.add_message("unreachable-elif-else", node=current_block, args=("elif"))
 
             if current_block.has_elif_block():
                 current_block = current_block.orelse[0]
@@ -982,34 +990,68 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             elif_num += 1
 
         if i >= len(if_statement) and len(else_block) > 0:
-            self.add_message("unrechable-elif-else", node=else_block[0], args=("else"))
+            self.add_message("unreachable-elif-else", node=else_block[0], args=("else"))
 
-    def _check_for_redundant_condition_part_in_if(self, node: nodes.If) -> None:
-        if self._is_elif_branch(node):
+    def _check_elif_instead_of_else(self, node: nodes.If, next_if: nodes.If) -> None:
+        "this is basically _check_redundant_elif() form local_defects.py"
+        if not (self._is_pure_node(node.test) and self._is_pure_node(next_if.test)):
+            return False
+
+        if is_negation(node.test, next_if.test, negated_rt=False):
+            self.add_message(
+                "using-elif-instead-of-else",
+                node=next_if,
+            )
+            while next_if.has_elif_block():
+                next_if = next_if.orelse[0]
+                self.add_message("unreachable-elif-else", node=next_if, args=("elif"))
+
+            if len(next_if.orelse) > 0:
+                self.add_message("unreachable-elif-else", node=next_if.orelse[0], args=("else"))
+
+            return True
+
+        return False
+
+    def _check_for_redundant_condition_part_in_if(
+        self, node: nodes.If, skip_reordering: bool
+    ) -> None:
+        if not skip_reordering and self._is_elif_branch(node) or not node.has_elif_block():
+            return
+
+        if self._check_elif_instead_of_else(node, node.orelse[0]):
             return
 
         initialized_variables: Dict[str, ArithRef] = {}
-        if not self._test_pureness_and_initialize_variables_for_if(node, initialized_variables):
+
+        problems, first_problematic_if = self._test_pureness_and_initialize_variables_for_if(
+            node, initialized_variables
+        )
+
+        if problems:
+            if first_problematic_if.has_elif_block():
+                self._check_for_redundant_condition_part_in_if(first_problematic_if.orelse[0], True)
             return
 
         if_statement = self._decompose_if(node, initialized_variables)
 
-        if not if_statement or not node.has_elif_block():
+        if not if_statement:
             return
 
         if_statement, made_simplification, has_else_block = self._immediate_simplifications_for_if(
             if_statement
         )
 
-        if if_statement[-1].condition is None:
-            self._convert_else_to_elif_when_simple_enough(if_statement, initialized_variables)
+        if not skip_reordering:
+            if if_statement[-1].condition is None:
+                self._convert_else_to_elif_when_simple_enough(if_statement, initialized_variables)
 
-        elif_count = self._get_elif_count(if_statement)
+            elif_count = self._get_elif_count(if_statement)
 
-        if_statement, elif_order_changed = self._simplify_if_by_moving_conditions_up(
-            if_statement, elif_count, 0, elif_count - 1, has_else_block
-        )
-        made_simplification = made_simplification or elif_order_changed
+            if_statement, elif_order_changed = self._simplify_if_by_moving_conditions_up(
+                if_statement, elif_count, 0, elif_count - 1, has_else_block
+            )
+            made_simplification = made_simplification or elif_order_changed
 
         if not made_simplification:
             return
@@ -1017,7 +1059,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if has_else_block:
             if_statement[-1].condition = None
 
-        if elif_order_changed:
+        if not skip_reordering and elif_order_changed:
             self._give_suggestion_for_changed_order_in_if(node, if_statement)
         else:
             self._give_suggestion_for_same_order_in_if(node, if_statement)
@@ -1034,11 +1076,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "redundant-condition-part-in-if-reorder",
         "redundant-condition-part-in-if",
         "using-elif-instead-of-else",
-        "unrechable-elif-else",
+        "unreachable-elif-else",
     )
     def visit_if(self, node: nodes.If) -> None:
         self._basic_checks(node)
-        self._check_for_redundant_condition_part_in_if(node)
+        self._check_for_redundant_condition_part_in_if(node, False)
 
     @only_required_for_messages("simplifiable-if-expr", "simplifiable-if-expr-conj")
     def visit_ifexp(self, node: nodes.IfExp) -> None:
