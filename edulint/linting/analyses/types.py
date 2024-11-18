@@ -1,6 +1,6 @@
 from enum import Enum, auto
 from functools import reduce
-from typing import Optional, List
+from typing import Optional, List, Union
 import operator
 
 from astroid import nodes
@@ -68,8 +68,10 @@ class Types(metaclass=MetaTypes):
     def has(self, type):
         return ((1 << int(type)) & self.types) > 0
 
-    def has_only(self, type):
-        return self.has(type) and len(self) == 1
+    def has_only(self, types: Union[Type, List[Type]]):
+        if isinstance(types, Type):
+            types = [types]
+        return all(t in types for t in self.get())
 
     def get(self) -> List[Type]:
         result = []
@@ -371,7 +373,9 @@ class TypeVisitor(BaseVisitor[Types]):
             if is_builtin(func):
                 return BUILTIN_TYPES.get(func.name, Types.empty())
             assigned = list(
-                get_assigned_expressions(func, include_nodes=[], include_destructuring=False)
+                get_assigned_expressions(
+                    func, include_nodes=[nodes.ImportFrom], include_destructuring=False
+                )
             )
             if len(assigned) == 1 and isinstance(assigned[0], nodes.ImportFrom):
                 return MODULE_METHOD_TYPES.get(assigned[0].modname, {}).get(
