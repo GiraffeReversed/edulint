@@ -235,7 +235,10 @@ def filter_events_for(
 
 ### iterators
 
-_ASSIGNING_NODES = (nodes.FunctionDef, nodes.Arguments, nodes.For, nodes.With, nodes.ExceptHandler)
+_ASSIGNING_EXPRESSIONS = (nodes.Assign, nodes.AnnAssign, nodes.AugAssign, nodes.NamedExpr)
+_ASSIGNING_ITERS = (nodes.For, nodes.Comprehension)
+_ASSIGNING_STATEMENTS = (nodes.Import, nodes.ImportFrom, nodes.FunctionDef, nodes.ClassDef)
+_ASSIGNING_PARENT_STATEMENTS = (nodes.Arguments, nodes.With, nodes.ExceptHandler)
 
 
 def get_assigned_expressions(
@@ -250,7 +253,7 @@ def get_assigned_expressions(
           ExceptHandler, which can also assign to a variable, but not a specific expression)
         include_destructuring (bool): whether to include expressions which are destructured before assigning to the
           variable (e.g. whether should return `divmod(x, y)` for assignment `div, mod = divmod(x, y)` when
-          collecting expressions assigned to `div`.
+          collecting expressions assigned to `div`, or `range(10)` when assigning to `i` in `for i in range(10)`).
     """
     event = node_to_event(node)
     if event is None:
@@ -259,41 +262,38 @@ def get_assigned_expressions(
     for def_event in event.definitions:
         if def_event.type not in (VarEventType.ASSIGN, VarEventType.REASSIGN):
             continue
-        assert isinstance(
-            def_event.node,
-            (nodes.AssignName, nodes.Import, nodes.ImportFrom, nodes.FunctionDef, nodes.ClassDef),
-        )
-        if isinstance(def_event.node, (nodes.Import, nodes.ImportFrom)):
-            yield def_event.node
-            continue
-        if isinstance(def_event.node, (nodes.FunctionDef, nodes.ClassDef)):
-            if type(def_event.node) in include_nodes:
+        if isinstance(def_event.node, _ASSIGNING_STATEMENTS):
+            if type(def_event.node in include_nodes):
                 yield def_event.node
             continue
+        assert isinstance(def_event.node, nodes.AssignName)
 
         parent = def_event.node.parent
-        if isinstance(parent, (nodes.AnnAssign, nodes.AugAssign, nodes.Assign, nodes.NamedExpr)):
+        if isinstance(parent, _ASSIGNING_EXPRESSIONS):
             if parent.value is not None:  # AnnAssign-style declaration
                 yield parent.value
-        elif isinstance(parent, _ASSIGNING_NODES):
+        elif isinstance(parent, _ASSIGNING_ITERS):
+            if include_destructuring:
+                yield parent.iter
+        elif isinstance(parent, _ASSIGNING_PARENT_STATEMENTS):
             if type(parent) in include_nodes:
                 yield parent
         else:
 
-            parents = [def_event.node, parent]
-            while not isinstance(parent.parent, (nodes.Assign, nodes.For, nodes.NamedExpr)):
+            parents = [def_event.node]
+            while not isinstance(parent, _ASSIGNING_EXPRESSIONS + _ASSIGNING_ITERS):
                 parents.append(parent)
                 parent = parent.parent
-            assigning = parent.parent
+            assigning = parent
 
-            if isinstance(assigning, nodes.For):
-                if nodes.For in include_nodes and include_destructuring:
-                    yield assigning
+            if isinstance(assigning, _ASSIGNING_ITERS):
+                if include_destructuring:
+                    yield assigning.iter
             else:
                 expr = assigning.value
 
                 require_destructuring = False
-                for child in reversed(parents[:-1]):
+                for child in reversed(parents):
                     if not isinstance(child.parent, nodes.Tuple) or not isinstance(
                         expr, nodes.Tuple
                     ):
