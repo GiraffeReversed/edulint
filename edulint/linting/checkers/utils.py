@@ -209,6 +209,11 @@ def is_integer(node: nodes.NodeNG) -> bool:
     return isinstance(const_val, int) and not isinstance(const_val, bool)
 
 
+def is_float(node: nodes.NodeNG) -> bool:
+    const_val = get_const_value(node)
+    return isinstance(const_val, float) and not isinstance(const_val, bool)
+
+
 def is_multi_assign(node: nodes.NodeNG) -> bool:
     return hasattr(node, "targets")
 

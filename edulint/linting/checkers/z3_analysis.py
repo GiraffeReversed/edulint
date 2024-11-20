@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Tuple
 
 from astroid import nodes
-from edulint.linting.checkers.utils import get_const_value, is_integer, is_number
+from edulint.linting.checkers.utils import get_const_value, is_integer, is_number, is_float
 from edulint.linting.analyses.types import guess_type, Type
 
 from z3 import (
@@ -24,7 +24,7 @@ from z3 import (
 
 
 EXCLUDED_COMPARES_IN_Z3 = {"in", "not in", "is", "is not"}
-EXCLUDED_OPERATIONS_IN_Z3 = {"<<", ">>", "|", "&", "^", "@", "**"}
+EXCLUDED_OPERATIONS_IN_Z3 = {"<<", ">>", "|", "&", "^", "@"}
 
 
 def _is_bool_node(node: Optional[nodes.NodeNG]) -> bool:
@@ -32,6 +32,23 @@ def _is_bool_node(node: Optional[nodes.NodeNG]) -> bool:
         node is None
         or isinstance(node, nodes.BoolOp)
         or (isinstance(node, nodes.UnaryOp) and node.op == "not")
+    )
+
+
+def _is_variable_in_pure_expression(node: nodes.NodeNG) -> bool:
+    # In pure expressions, the value of a function call should not change, nor should the value of any other types listed below.
+    return isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call))
+
+
+def _is_expression_with_nonlinear_arithmetic(node: nodes.NodeNG) -> bool:
+    return (
+        isinstance(node, nodes.BinOp)
+        and not is_number(node)
+        and (
+            node.op == "**"
+            or (node.op == "/" and not is_number(node.right))
+            or ((node.op == "//" or node.op == "%") and not is_integer(node.right))
+        )
     )
 
 
@@ -43,13 +60,11 @@ def _not_allowed_node(
             isinstance(node, nodes.BinOp)
             and (
                 node.op is None
+                or node.left is None
+                or node.right is None
                 or node.op in EXCLUDED_OPERATIONS_IN_Z3
-                or (node.op == "%" and not is_integer(node.right))
-                or (
-                    node.op == "/"
-                    and (is_descendant_of_integer_operation or not is_number(node.right))
-                )
-                or (node.op == "//" and not is_integer(node.right))
+                or ((node.op == "%" or node.op == "//") and is_float(node.right))
+                or (node.op == "/" and (is_descendant_of_integer_operation))
             )
         )
         or (
@@ -67,7 +82,13 @@ def _not_allowed_node(
         or (isinstance(node, nodes.BoolOp) and (node.op is None or not _is_bool_node(parent)))
         or (
             isinstance(node, (nodes.Const))
-            and (node.value is None or isinstance(node.value, bool) and not _is_bool_node(parent))
+            and (
+                node.value is None
+                or isinstance(node.value, bool)
+                and not _is_bool_node(parent)
+                or not isinstance(node.value, (int, float))
+                or (is_descendant_of_integer_operation and isinstance(node.value, float))
+            )
         )
     )
 
@@ -88,31 +109,22 @@ def initialize_variables(
 ) -> bool:
     """
     Supposes that node is pure. And we exclude bit operations, because Z3 supports them only on bitvectors.
-    Returns False if the condition has some not allowed operations in Z3 or operations that are too difficult
-    for Z3 and would take a lot of time (like the '**' operator)
+    Returns False if the condition has some not allowed operations in Z3.
+    For operations that are nonlinear arithmetic this function just makes them a variable (for example m % n
+    would be a variable)
     """
     if _not_allowed_node(node, is_descendant_of_integer_operation, parent):
         return False
-
-    if isinstance(node, nodes.BinOp) and (node.op == "%" or node.op == "//"):
-        return initialize_variables(node.left, initialized_variables, True, node)
-
-    if isinstance(node, (nodes.BoolOp, nodes.Compare, nodes.UnaryOp, nodes.BinOp)):
-        for child in node.get_children():
-            if not initialize_variables(
-                child, initialized_variables, is_descendant_of_integer_operation, node
-            ):
-                return False
-
-        return True
 
     if _is_abs_function(node):
         return initialize_variables(
             node.args[0], initialized_variables, is_descendant_of_integer_operation, node
         )
 
+    nonlinear_arithmetic = _is_expression_with_nonlinear_arithmetic(node)
+
     # Thanks to the purity of the original node we can work with all these types as variables.
-    if isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call)):
+    if _is_variable_in_pure_expression(node) or nonlinear_arithmetic:
         variable_key = node.as_string()
         variable = initialized_variables.get(variable_key)
 
@@ -134,22 +146,29 @@ def initialize_variables(
             added_new_var = True
             initialized_variables[variable_key] = Int(variable.decl().name())
 
-        if added_new_var and not isinstance(node, nodes.Call):
-            guessed_type = guess_type(node)
-            if guessed_type is None:
+        # if added_new_var and not isinstance(node, nodes.Call) and not nonlinear_arithmetic:
+        #     guessed_type = guess_type(node)
+        #     if guessed_type is None:
+        #         return False
+
+        #     if is_descendant_of_integer_operation:
+        #         return guessed_type.has_only(Type.INT)
+
+        #     return guessed_type.has_only([Type.BOOL, Type.FLOAT, Type.INT])
+
+        return True
+
+    if isinstance(node, nodes.BinOp) and (node.op == "%" or node.op == "//"):
+        return initialize_variables(node.left, initialized_variables, True, node)
+
+    if isinstance(node, (nodes.BoolOp, nodes.Compare, nodes.UnaryOp, nodes.BinOp)):
+        for child in node.get_children():
+            if not initialize_variables(
+                child, initialized_variables, is_descendant_of_integer_operation, node
+            ):
                 return False
 
-            if is_descendant_of_integer_operation:
-                return guessed_type.has_only(Type.INT)
-
-            return guessed_type.has_only([Type.BOOL, Type.FLOAT, Type.INT])
-
     return True
-
-
-def _is_variable_in_pure_expression(node: nodes.NodeNG) -> bool:
-    # In pure expressions, the value of a function call should not change, nor should the value of any other types listed below.
-    return isinstance(node, (nodes.Name, nodes.Subscript, nodes.Attribute, nodes.Call))
 
 
 def _convert_to_bool_if_necessary(
@@ -210,7 +229,7 @@ def convert_condition_to_z3_expression(
         expr, bool_conversion = _convert_to_bool_if_necessary(node, parent, Abs(expr))
         return expr, bool_conversion or conversion_to_bool
 
-    if _is_variable_in_pure_expression(node):
+    if _is_variable_in_pure_expression(node) or _is_expression_with_nonlinear_arithmetic(node):
         return _convert_to_bool_if_necessary(node, parent, initialized_variables[node.as_string()])
 
     if isinstance(node, nodes.BoolOp):
