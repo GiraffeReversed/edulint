@@ -116,6 +116,11 @@ def initialize_variables(
         variable_key = node.as_string()
         variable = initialized_variables.get(variable_key)
 
+        if isinstance(node, nodes.Call) and (
+            variable_key.startswith("str") or variable_key.startswith("chr")
+        ):
+            return False
+
         added_new_var = False
 
         if variable is None:
@@ -129,16 +134,15 @@ def initialize_variables(
             added_new_var = True
             initialized_variables[variable_key] = Int(variable.decl().name())
 
-        # if added_new_var:
-        #     guessed_type = guess_type(node)
-        #     if guessed_type is None:
-        #         return False
+        if added_new_var and not isinstance(node, nodes.Call):
+            guessed_type = guess_type(node)
+            if guessed_type is None:
+                return False
 
-        #     if is_descendant_of_integer_operation:
-        #         return guessed_type.has_only(Type.INT)
+            if is_descendant_of_integer_operation:
+                return guessed_type.has_only(Type.INT)
 
-        #     types = guessed_type.get()
-        #     return all([t == Type.BOOL or t == Type.FLOAT or t == Type.INT for t in types])
+            return guessed_type.has_only([Type.BOOL, Type.FLOAT, Type.INT])
 
     return True
 
