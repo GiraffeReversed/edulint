@@ -371,7 +371,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         ),
         "R6218": (
             "This 'elif' can be replaced with just 'else'.",
-            "using-elif-instead-of-else",
+            "condition-always-true-in-elif",
             """
             Emitted when a body of 'elif' in if statement is always executed when reached.
 
@@ -380,7 +380,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         ),
         "R6219": (
             "'%s' can be replaced with '%s', because some operands of the '%s' are always %s.",
-            "redundant-condition-part-in-if",
+            "redundant-condition-part-in-elif",
             """
             Emitted when a test condition in 'elif' can be simplified, because when the control flow reaches this 'elif' we know that some parts of this condition are True (when the condition is 'and') or False (when the condition is 'or')
 
@@ -389,13 +389,22 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         ),
         "R6220": (
             "Conditions in the if statement can be simplified by reordering elif blocks, we suggest this order: '%s' with these possibly simplified test conditions respectively: '%s'.",
-            "redundant-condition-part-in-if-reorder",
+            "redundant-condition-part-in-elif-reorder",
             """
             Emitted when elifs in if-statement can be rearanged to get simpler conditions. (by moving some condition higher, parts of conditions below it can become redundant)
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
+        "R6221": (
+            "The body of this 'elif' is never executed, because its condition is always False when reached.",
+            "condition-always-false-in-elif",
+            """
+            Emitted when a condition in elif is always False, when reached.
+
+            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
+            """,
+        ),
     }
 
     def _is_bool(self, node: nodes.NodeNG) -> bool:
@@ -944,7 +953,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         )
 
         self.add_message(
-            "redundant-condition-part-in-if-reorder",
+            "redundant-condition-part-in-elif-reorder",
             node=node,
             args=(new_order, suggestion),
         )
@@ -961,14 +970,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if i < len(if_statement) and elif_num == if_statement[i].position_in_if:
                 if if_statement[i].condition is None:
                     self.add_message(
-                        "using-elif-instead-of-else",
+                        "condition-always-true-in-elif",
                         node=current_block,
                     )
                 elif isinstance(current_block.test, nodes.BoolOp) and len(
                     current_block.test.values
                 ) > len(if_statement[i].operands):
                     self.add_message(
-                        "redundant-condition-part-in-if",
+                        "redundant-condition-part-in-elif",
                         node=current_block,
                         args=(
                             current_block.test.as_string(),
@@ -978,6 +987,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                         ),
                     )
                 i += 1
+            elif i < len(if_statement):
+                self.add_message("condition-always-false-in-elif", node=current_block)
             else:
                 self.add_message("unreachable-elif-else", node=current_block, args=("elif"))
 
@@ -999,7 +1010,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         if is_negation(node.test, next_if.test, negated_rt=False):
             self.add_message(
-                "using-elif-instead-of-else",
+                "condition-always-true-in-elif",
                 node=next_if,
             )
             while next_if.has_elif_block():
@@ -1073,9 +1084,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "no-value-in-one-branch-return",
         "simplifiable-if-nested",
         "simplifiable-if-seq",
-        "redundant-condition-part-in-if-reorder",
-        "redundant-condition-part-in-if",
-        "using-elif-instead-of-else",
+        "redundant-condition-part-in-elif-reorder",
+        "redundant-condition-part-in-elif",
+        "condition-always-true-in-elif",
+        "condition-always-false-in-elif",
         "unreachable-elif-else",
     )
     def visit_if(self, node: nodes.If) -> None:
