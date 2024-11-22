@@ -1847,6 +1847,25 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return removed_condition
 
+    def _check_always_true_or_false(self, node: nodes.NodeNG, condition: ExprRef) -> bool:
+        if unsatisfiable(condition):
+            self.add_message(
+                "condition-always-true-or-false",
+                node=node,
+                args=("False"),
+            )
+            return True
+
+        if unsatisfiable(Not(condition)):
+            self.add_message(
+                "condition-always-true-or-false",
+                node=node,
+                args=("True"),
+            )
+            return True
+
+        return False
+
     def _make_suggestion_for_redundant_condition_part(self, node: nodes.BoolOp) -> None:
         initialized_variables: Dict[str, ArithRef] = {}
         if not initialize_variables(node, initialized_variables, False, None):
@@ -1886,25 +1905,21 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         converted_conditions = [
             operand for i, operand in enumerate(converted_conditions) if not removed_condition[i]
         ]
-        new_condition = Or(converted_conditions) if node.op == "or" else And(converted_conditions)
 
-        if unsatisfiable(new_condition):
-            self.add_message(
-                "condition-always-true-or-false",
-                node=node,
-                args=("False"),
+        if len(converted_conditions) == 1:
+            new_condition = converted_conditions[0]
+        else:
+            new_condition = (
+                Or(converted_conditions) if node.op == "or" else And(converted_conditions)
             )
-            return
 
-        if unsatisfiable(Not(new_condition)):
-            self.add_message(
-                "condition-always-true-or-false",
-                node=node,
-                args=("True"),
-            )
+        if self._check_always_true_or_false(node, new_condition):
             return
 
         if len(suggestion_operands) == len(node.values):
+            for operand in node.values:
+                if isinstance(operand, nodes.BoolOp):
+                    self._make_suggestion_for_redundant_condition_part(operand)
             return
 
         self.add_message(
@@ -1974,7 +1989,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         self._make_suggestion_for_using_max_min_if_possible(
             comparisons_with_numbers, comparisons, node
         )
-        self._make_suggestion_for_redundant_condition_part(node)
+
+        if not isinstance(node.parent, nodes.BoolOp):
+            self._make_suggestion_for_redundant_condition_part(node)
 
     @only_required_for_messages(
         "simplifiable-with-abs",
@@ -1987,6 +2004,24 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     )
     def visit_boolop(self, node: nodes.BoolOp) -> None:
         self._check_for_simplification_of_boolop(node)
+
+    @only_required_for_messages(
+        "condition-always-true-or-false",
+    )
+    def visit_compare(self, node: nodes.BoolOp) -> None:
+        if isinstance(node.parent, nodes.BoolOp):
+            return
+
+        initialized_variables: Dict[str, ArithRef] = {}
+        if not initialize_variables(node, initialized_variables, False, None):
+            return
+
+        converted_condition = convert_condition_to_z3_expression(node, initialized_variables, None)[
+            0
+        ]
+
+        if self._check_always_true_or_false(node, converted_condition):
+            return
 
 
 def register(linter: "PyLinter") -> None:
