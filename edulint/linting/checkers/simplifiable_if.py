@@ -17,6 +17,7 @@ from edulint.linting.checkers.z3_analysis import (
     all_implied_indeces,
     initialize_variables,
     convert_condition_to_z3_expression,
+    unsatisfiable,
 )
 
 from edulint.linting.checkers.utils import (
@@ -401,6 +402,15 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "condition-always-false-in-elif",
             """
             Emitted when a condition in elif is always False, when reached.
+
+            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
+            """,
+        ),
+        "R6222": (
+            "This condition is always %s.",
+            "condition-always-true-or-false",
+            """
+            Emitted when a condition is always True/False regardless of assignment to variables.
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
@@ -1803,10 +1813,41 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             # want to prefer shorter suggestions
         )
 
-    def _make_suggestion_for_redundant_condition_part(self, node: nodes.BoolOp) -> bool:
-        removed_condition = [False for _ in range(len(node.values))]
-        removed_nothing = True
+    def _redundant_condition_parts(
+        self, node: nodes.BoolOp, converted_conditions: List[ExprRef]
+    ) -> List[nodes.NodeNG]:
+        """
+        Returns a list of same length as node.values with boolean values indicating whether the operand on same index
+        can be removed."""
+        removed_condition = [False for _ in node.values]
 
+        is_or = node.op == "or"
+
+        for i, operand in enumerate(converted_conditions):
+            if is_or and unsatisfiable(operand) or not is_or and unsatisfiable(Not(operand)):
+                removed_condition[i] = True
+
+        for i in range(len(converted_conditions)):
+            if removed_condition[i]:
+                continue
+
+            for j in range(i + 1, len(converted_conditions)):
+                if removed_condition[j]:
+                    continue
+
+                implication_forward = implies(converted_conditions[i], converted_conditions[j])
+                implication_backward = implies(converted_conditions[j], converted_conditions[i])
+
+                if self._should_remove_ith(implication_forward, implication_backward, node, i, j):
+                    removed_condition[i] = True
+                    break
+
+                if implication_forward or implication_backward:
+                    removed_condition[j] = True
+
+        return removed_condition
+
+    def _make_suggestion_for_redundant_condition_part(self, node: nodes.BoolOp) -> None:
         initialized_variables: Dict[str, ArithRef] = {}
         if not initialize_variables(node, initialized_variables, False, None):
             return
@@ -1828,32 +1869,43 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             converted_conditions.append(condition)
 
-        for i in range(len(converted_conditions)):
-            if removed_condition[i]:
-                continue
-
-            for j in range(i + 1, len(converted_conditions)):
-                if removed_condition[j]:
-                    continue
-
-                implication_forward = implies(converted_conditions[i], converted_conditions[j])
-                implication_backward = implies(converted_conditions[j], converted_conditions[i])
-
-                if self._should_remove_ith(implication_forward, implication_backward, node, i, j):
-                    removed_condition[i] = True
-                    removed_nothing = False
-                    break
-
-                if implication_forward or implication_backward:
-                    removed_condition[j] = True
-                    removed_nothing = False
-
-        if removed_nothing:
-            return
+        removed_condition = self._redundant_condition_parts(node, converted_conditions)
 
         suggestion_operands = [
             operand for i, operand in enumerate(node.values) if not removed_condition[i]
         ]
+
+        if len(suggestion_operands) == 0:
+            self.add_message(
+                "condition-always-true-or-false",
+                node=node,
+                args=(str(node.op == "and")),
+            )
+            return
+
+        converted_conditions = [
+            operand for i, operand in enumerate(converted_conditions) if not removed_condition[i]
+        ]
+        new_condition = Or(converted_conditions) if node.op == "or" else And(converted_conditions)
+
+        if unsatisfiable(new_condition):
+            self.add_message(
+                "condition-always-true-or-false",
+                node=node,
+                args=("False"),
+            )
+            return
+
+        if unsatisfiable(Not(new_condition)):
+            self.add_message(
+                "condition-always-true-or-false",
+                node=node,
+                args=("True"),
+            )
+            return
+
+        if len(suggestion_operands) == len(node.values):
+            return
 
         self.add_message(
             "redundant-condition-part",
@@ -1931,6 +1983,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "using-compare-instead-of-equal",
         "simplifiable-test-by-equals",
         "redundant-condition-part",
+        "condition-always-true-or-false",
     )
     def visit_boolop(self, node: nodes.BoolOp) -> None:
         self._check_for_simplification_of_boolop(node)
