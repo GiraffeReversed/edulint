@@ -353,6 +353,13 @@ Z3_TACTIC = Then(
 )
 
 
+def unsatisfiable(condition: ExprRef, rlimit=1700) -> bool:
+    solver = Z3_TACTIC.solver()
+    solver.set("rlimit", rlimit)
+    solver.add(condition)
+    return solver.check() == unsat
+
+
 def implies(condition1: ExprRef, condition2: ExprRef, rlimit=1700) -> bool:
     """
     Returns if implication 'condition1 => condition2' is valid. (but if it cannot decide return False)
@@ -361,10 +368,7 @@ def implies(condition1: ExprRef, condition2: ExprRef, rlimit=1700) -> bool:
     be of type float. (for example: x % 2 != 0 => x % 2 == 1, when x is int it is true,
     but not when x is float)
     """
-    solver = Z3_TACTIC.solver()
-    solver.set("rlimit", rlimit)
-    solver.add(And(condition1, Not(condition2)))
-    return solver.check() == unsat
+    return unsatisfiable(And(condition1, Not(condition2)), rlimit)
 
 
 def first_implied_index(
