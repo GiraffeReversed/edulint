@@ -737,6 +737,10 @@ def test_redundant_condition_part(lines: List[str], expected_output: List[Proble
         "    x += 1",
         "elif x < 1:",
         "    print(x)",
+        "elif y == 0:",
+        "    print(y)",
+        "else:",
+        "    print(x, y)",
         "",
         "if abs(a - b) < 51 and not a - b == 0:",
         "    print('A')",
@@ -749,20 +753,30 @@ def test_redundant_condition_part(lines: List[str], expected_output: List[Proble
         "    x += 1",
         "elif x == 0 or y == 0:",
         "    y += 1",
+        "elif y == 0:",
+        "    x *= 2",
+        "else:",
+        "    print(x)"
     ], [
         lazy_problem().set_line(3)
-        .set_text("The body of this 'elif' is never executed."),
+        .set_text("The body of this 'elif' is never executed, because its condition is always False when reached."),
         lazy_problem().set_line(8)
         .set_text("This 'elif' can be replaced with just 'else'."),
-        lazy_problem().set_line(11)
+        lazy_problem().set_line(10)
+        .set_text("This 'elif' is unreachable."),
+        lazy_problem().set_line(13)
+        .set_text("This 'else' is unreachable."),
+        lazy_problem().set_line(15)
         .set_text("Conditions in the if statement can be simplified by reordering elif blocks, we suggest this order: '3., 1., 2.' with these possibly simplified test conditions respectively: 'a == b, abs(a - b) < 51, else block'."),
-        lazy_problem().set_line(20)
+        lazy_problem().set_line(24)
         .set_text("'x == 0 or y == 0' can be replaced with 'y == 0', because some operands of the 'or' are always False."),
+        lazy_problem().set_line(26)
+        .set_text("The body of this 'elif' is never executed, because its condition is always False when reached."),
     ]),
 ])
 def test_redundant_condition_part_in_if(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
-        [Arg(Option.PYLINT, "--enable=R6217,R6218,R6219,R6220")],
+        [Arg(Option.PYLINT, "--enable=R6217,R6218,R6219,R6220,R6221")],
         expected_output,
     )
