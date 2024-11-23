@@ -780,3 +780,54 @@ def test_redundant_condition_part_in_if(lines: List[str], expected_output: List[
         [Arg(Option.PYLINT, "--enable=R6217,R6218,R6219,R6220,R6221")],
         expected_output,
     )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "t = x + 1 == x",
+        "t = x == x",
+        "t = n != 3 or n != 2",
+    ], [
+        lazy_problem().set_line(1)
+        .set_text("This condition is always False."),
+        lazy_problem().set_line(2)
+        .set_text("This condition is always True."),
+        lazy_problem().set_line(3)
+        .set_text("This condition is always True."),
+    ]),
+])
+def test_condition_always_true_or_false(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=condition-always-true-or-false")],
+        expected_output,
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("f267db4b9e-p6_next.py", [
+        lazy_problem().set_line(16)
+        .set_text("This condition is always True.")
+    ]),
+    ("uc_3402_02_08.py", [
+        lazy_problem().set_line(4)
+        .set_text("This condition is always True."),
+    ]),
+    ("uc_71_1190_11_17.py", [
+        lazy_problem().set_line(12)
+        .set_text("This 'elif' can be replaced with just 'else'."),
+    ]),
+    ("ut_98_3740_14_18.py", [
+        lazy_problem().set_line(14)
+        .set_text("This 'elif' can be replaced with just 'else'."),
+    ]),
+    ("a12d60edf2-task_4.py", [
+        lazy_problem().set_line(60)
+        .set_text("This 'elif' can be replaced with just 'else'."),
+    ])
+])
+def test_redundant_condition_part(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=R6216,R6217,R6218,R6219,R6220,R6221,R6222")],
+        expected_output,
+    )
