@@ -706,7 +706,7 @@ def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Pro
     ([
         "t = x != y or abs(x - y) != 0",
         "t = x % 2 == 0 and x % 6 == 0 and x % 3 == 0",
-        "t = x // 2 == 0 and (x < 1 and 0 < x)",
+        "t = m % n + 1 == 1 or m % n == 0",
         "t = a < b and b > a + 50 and a + b < 2*b"
     ], [
         lazy_problem().set_line(1)
@@ -714,7 +714,7 @@ def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Pro
         lazy_problem().set_line(2)
         .set_text("'x % 2 == 0 and x % 6 == 0 and x % 3 == 0' can be replaced with 'x % 6 == 0'"),
         lazy_problem().set_line(3)
-        .set_text("'x // 2 == 0 and x < 1 and 0 < x' can be replaced with 'x < 1 and 0 < x'"),
+        .set_text("'m % n + 1 == 1 or m % n == 0' can be replaced with 'm % n == 0'"),
         lazy_problem().set_line(4)
         .set_text("'a < b and b > a + 50 and a + b < 2 * b' can be replaced with 'b > a + 50'"),
     ]),
