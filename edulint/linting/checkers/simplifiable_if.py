@@ -1799,13 +1799,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         node: nodes.BoolOp,
         i: int,
         j: int,
+        is_or: bool,
     ) -> bool:
         return (
             not (implication_forward and implication_backward)
-            and (
-                (implication_forward and node.op == "or")
-                or (implication_backward and node.op == "and")
-            )
+            and ((implication_forward and is_or) or (implication_backward and not is_or))
         ) or (
             implication_forward
             and implication_backward
@@ -1813,12 +1811,21 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             # want to prefer shorter suggestions
         )
 
+    def _ith_is_redundant(self, excluded_i: List[ExprRef], condition: ExprRef, is_or: bool) -> bool:
+        return (
+            is_or
+            and implies(condition, Or(excluded_i))
+            or not is_or
+            and implies(And(excluded_i), condition)
+        )
+
     def _redundant_condition_parts(
         self, node: nodes.BoolOp, converted_conditions: List[ExprRef]
-    ) -> List[nodes.NodeNG]:
+    ) -> List[bool]:
         """
         Returns a list of same length as node.values with boolean values indicating whether the operand on same index
-        can be removed."""
+        can be removed.
+        """
         removed_condition = [False for _ in node.values]
 
         is_or = node.op == "or"
@@ -1838,12 +1845,30 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 implication_forward = implies(converted_conditions[i], converted_conditions[j])
                 implication_backward = implies(converted_conditions[j], converted_conditions[i])
 
-                if self._should_remove_ith(implication_forward, implication_backward, node, i, j):
+                if self._should_remove_ith(
+                    implication_forward, implication_backward, node, i, j, is_or
+                ):
                     removed_condition[i] = True
                     break
 
                 if implication_forward or implication_backward:
                     removed_condition[j] = True
+
+        for i, operand in enumerate(converted_conditions):
+            if removed_condition[i]:
+                continue
+
+            excluded_i = [
+                cond
+                for j, cond in enumerate(converted_conditions)
+                if not removed_condition[j] and i != j
+            ]
+
+            if len(excluded_i) == 0:
+                break
+
+            if self._ith_is_redundant(excluded_i, converted_conditions[i], is_or):
+                removed_condition[i] = True
 
         return removed_condition
 
@@ -2020,7 +2045,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             0
         ]
 
-        if self._check_always_true_or_false(node, converted_condition):
+        if converted_condition is None or self._check_always_true_or_false(
+            node, converted_condition
+        ):
             return
 
 
