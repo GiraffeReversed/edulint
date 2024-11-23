@@ -361,11 +361,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             """,
         ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
         "R6217": (
-            "The body of this '%s' is never executed.",
+            "This '%s' is unreachable.",
             "unreachable-elif-else",
             """
-            Emitted when body of 'elif' in if statement is never executed, because when all tests above this 'elif' are False, then the test in this 'elif' is False too.
-            Or when the body of 'else' is unreachable.
+            Emitted when the 'else/elif' branch is unreachable due to totally exhaustive conditions before.
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
@@ -997,7 +996,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                         ),
                     )
                 i += 1
-            elif i < len(if_statement):
+            elif i < len(if_statement) or if_statement[-1].condition is not None:
                 self.add_message("condition-always-false-in-elif", node=current_block)
             else:
                 self.add_message("unreachable-elif-else", node=current_block, args=("elif"))
@@ -1834,6 +1833,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if is_or and unsatisfiable(operand) or not is_or and unsatisfiable(Not(operand)):
                 removed_condition[i] = True
 
+        # deal with equivalent operands (and implications between single operands)
         for i in range(len(converted_conditions)):
             if removed_condition[i]:
                 continue
@@ -1854,6 +1854,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 if implication_forward or implication_backward:
                     removed_condition[j] = True
 
+        # further simplification
         for i, operand in enumerate(converted_conditions):
             if removed_condition[i]:
                 continue
@@ -2033,7 +2034,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     @only_required_for_messages(
         "condition-always-true-or-false",
     )
-    def visit_compare(self, node: nodes.BoolOp) -> None:
+    def visit_compare(self, node: nodes.Compare) -> None:
         if isinstance(node.parent, nodes.BoolOp):
             return
 
