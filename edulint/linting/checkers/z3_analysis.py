@@ -146,15 +146,15 @@ def initialize_variables(
             added_new_var = True
             initialized_variables[variable_key] = Int(variable.decl().name())
 
-        # if added_new_var and not isinstance(node, nodes.Call) and not nonlinear_arithmetic:
-        #     guessed_type = guess_type(node)
-        #     if guessed_type is None:
-        #         return False
+        if added_new_var and not isinstance(node, nodes.Call) and not nonlinear_arithmetic:
+            guessed_type = guess_type(node)
+            if guessed_type is None:
+                return True  # Here should be False, but it makes the results much worse.
 
-        #     if is_descendant_of_integer_operation:
-        #         return guessed_type.has_only(Type.INT)
+            if is_descendant_of_integer_operation:
+                return guessed_type.has_only(Type.INT)
 
-        #     return guessed_type.has_only([Type.BOOL, Type.FLOAT, Type.INT])
+            return guessed_type.has_only([Type.BOOL, Type.FLOAT, Type.INT])
 
         return True
 

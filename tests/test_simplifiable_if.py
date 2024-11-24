@@ -823,7 +823,8 @@ def test_condition_always_true_or_false(lines: List[str], expected_output: List[
     ("a12d60edf2-task_4.py", [
         lazy_problem().set_line(60)
         .set_text("This 'elif' can be replaced with just 'else'."),
-    ])
+    ]),
+    ("cf_61_b_3.py", [])
 ])
 def test_redundant_condition_part(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
