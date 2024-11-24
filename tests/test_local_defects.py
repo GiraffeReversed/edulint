@@ -125,6 +125,48 @@ def test_no_is_custom(lines: List[str], expected_output: List[Problem]) -> None:
         [problem.set_code("R6613") for problem in expected_output]
     )
 
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "x in range(1, 10)",
+        "x in range(1, 10, 2)",
+        "x in range(1, 10, 5)",
+        "x in range(2, 11, 4)",
+        "x not in range(1, 10, 2)",
+        "x in range(3, -10, -2)",
+        "x in range(1)",
+        "x in range(start, start + 2)",
+        "x in range(start + 1, start - 5, -3)",
+        "x in range(start, stop, -3)"
+    ], [
+        lazy_problem().set_line(1)
+        .set_text("Consider replacing 'x in range(1, 10)' with '1 <= x and x < 10'"),
+        lazy_problem().set_line(2)
+        .set_text("Consider replacing 'x in range(1, 10, 2)' with '1 <= x and x < 10 and x % 2 == 1'"),
+        lazy_problem().set_line(3)
+        .set_text("Consider replacing 'x in range(1, 10, 5)' with 'x == 1 or x == 6'"),
+        lazy_problem().set_line(4)
+        .set_text("Consider replacing 'x in range(2, 11, 4)' with 'x == 2 or x == 6 or x == 10'"),
+        lazy_problem().set_line(5)
+        .set_text("Consider replacing 'x not in range(1, 10, 2)' with '1 > x or x >= 10 or x % 2 != 1'"),
+        lazy_problem().set_line(6)
+        .set_text("Consider replacing 'x in range(3, -10, -2)' with '3 >= x and x > -10 and x % 2 == 1'"),
+        lazy_problem().set_line(7)
+        .set_text("Consider replacing 'x in range(1)' with 'x == 0'"),
+        lazy_problem().set_line(8)
+        .set_text("Consider replacing 'x in range(start, start + 2)' with 'x == start or x == start + 1'"),
+        lazy_problem().set_line(9)
+        .set_text("Consider replacing 'x in range(start + 1, start - 5, -3)' with 'x == start + 1 or x == start - 2'"),
+        lazy_problem().set_line(10)
+        .set_text("Consider replacing 'x in range(start, stop, -3)' with 'start >= x and x > stop and x % 3 == start % 3'"),
+    ]),
+])
+def test_redundant_compare_with_variables(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=R6617,R6618,R6619")],
+        expected_output,
+    )
+
 @pytest.mark.parametrize("filename,expected_output", [
     ("044050-vigenere.py", [
         lazy_problem().set_code("R6614").set_line(38)
