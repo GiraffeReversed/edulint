@@ -15,6 +15,7 @@ from edulint.linting.checkers.utils import (
     get_statements_count,
     is_negation,
     is_pure_expression,
+    NEGATED_OP,
 )
 
 
@@ -112,6 +113,16 @@ class Local(BaseChecker):
             "Consider replacing '%s' with '%s'",
             "in-range-instead-of-compare-small",
             "Emitted when there is a problem like 'n in range(1, 5, 2)' and suggests 'n == 1 or n == 3'.",
+        ),
+        "R6618": (
+            "Consider replacing '%s' with '%s'",
+            "in-range-instead-of-compare",
+            "Emitted when there is a problem like 'n in range(1, 10)' and suggests '1 <= n and n < 10'.",
+        ),
+        "R6619": (
+            "Consider replacing '%s' with '%s'",
+            "in-range-instead-of-compare-step",
+            "Emitted when there is a problem like 'n in range(1, 10, 2)' and suggests '1 <= n and n < 5 and n % 2 == 1'.",
         ),
     }
 
@@ -567,56 +578,111 @@ class Local(BaseChecker):
             return None
 
         if (
-            len(node.ops) == 1
-            and (node.ops[0][0] == "in" or node.ops[0][0] == "not in")
-            and is_var(node.left)
+            len(node.ops) != 1
+            or (node.ops[0][0] != "in" and node.ops[0][0] != "not in")
+            or not is_var(node.left)
         ):
-            range_params = get_range_params(node.ops[0][1])
-            if range_params is None:
-                return
+            return
 
-            start, stop, step = range_params
-            start_val = get_const_value(start)
-            stop_val = get_const_value(stop)
-            step_val = get_const_value(step)
+        range_params = get_range_params(node.ops[0][1])
+        if range_params is None:
+            return
 
-            if (
-                not is_pure_expression(start)
-                or not is_pure_expression(stop)
-                or not is_integer(step_val)
-                or step_val == 0
-                or start_val is not None
-                and not is_integer(start_val)
-                or stop_val is not None
-                and not is_integer(stop_val)
-            ):
-                return
+        start, stop, step = range_params
+        start_val = get_const_value(start)
+        stop_val = get_const_value(stop)
+        step_val = get_const_value(step)
 
-            all_values = get_all_values_in_range_if_not_many(
-                start, start_val, stop, stop_val, step_val
-            )
+        if (
+            not is_pure_expression(start)
+            or not is_pure_expression(stop)
+            or not is_integer(step_val)
+            or step_val == 0
+            or start_val is not None
+            and not is_integer(start_val)
+            or stop_val is not None
+            and not is_integer(stop_val)
+        ):
+            return
 
-            if all_values is not None:
-                if len(all_values) == 0:
-                    suggested_replacement = "False" if node.ops[0][0] == "in" else "True"
-                else:
-                    comparison = (
-                        f'{node.left.as_string()} {"==" if node.ops[0][0] == "in" else "!="} '
-                    )
-                    suggested_replacement = (
-                        comparison
-                        + f' {"or" if node.ops[0][0] == "in" else "and"} {comparison}'.join(
-                            all_values
-                        )
-                    )
+        all_values = get_all_values_in_range_if_not_many(start, start_val, stop, stop_val, step_val)
 
-                self.add_message(
-                    "in-range-instead-of-compare-small",
-                    node=node,
-                    args=(node.as_string(), suggested_replacement),
+        if all_values is not None:
+            if len(all_values) == 0:
+                suggested_replacement = "False" if node.ops[0][0] == "in" else "True"
+            else:
+                comparison = f'{node.left.as_string()} {"==" if node.ops[0][0] == "in" else "!="} '
+                suggested_replacement = (
+                    comparison
+                    + f' {"or" if node.ops[0][0] == "in" else "and"} {comparison}'.join(all_values)
                 )
 
-            # TODO - finish the other cases (not small)
+            self.add_message(
+                "in-range-instead-of-compare-small",
+                node=node,
+                args=(node.as_string(), suggested_replacement),
+            )
+            return
+
+        connection_operation = "and"
+
+        step_compare = "=="
+        if step_val > 0:
+            start_compare = "<="
+            stop_compare = "<"
+        else:
+            start_compare = ">="
+            stop_compare = ">"
+
+        if node.ops[0][0] == "not in":
+            start_compare = NEGATED_OP[start_compare]
+            stop_compare = NEGATED_OP[stop_compare]
+            step_compare = NEGATED_OP[step_compare]
+            connection_operation = NEGATED_OP[connection_operation]
+
+        var = node.left.as_string()
+
+        suggested_replacement = " ".join(
+            [
+                start.as_string(),
+                start_compare,
+                var,
+                connection_operation,
+                var,
+                stop_compare,
+                stop.as_string(),
+            ]
+        )
+
+        if abs(step_val) == 1:
+            self.add_message(
+                "in-range-instead-of-compare",
+                node=node,
+                args=(node.as_string(), suggested_replacement),
+            )
+            return
+
+        suggested_replacement = " ".join(
+            [
+                suggested_replacement,
+                connection_operation,
+                var,
+                "%",
+                str(abs(step_val)),
+                step_compare,
+                (
+                    str(start_val % abs(step_val))
+                    if start_val is not None
+                    else f"{start.as_string()} % {str(step_val)}"
+                ),
+            ]
+        )
+
+        self.add_message(
+            "in-range-instead-of-compare-step",
+            node=node,
+            args=(node.as_string(), suggested_replacement),
+        )
 
     @only_required_for_messages("use-append", "use-isdecimal", "use-integral-division")
     def visit_call(self, node: nodes.Call) -> None:
@@ -662,7 +728,11 @@ class Local(BaseChecker):
         self._check_augmentable(node)
 
     @only_required_for_messages(
-        "no-is-bool", "magical-constant-in-ord-compare", "in-range-instead-of-compare-small"
+        "no-is-bool",
+        "magical-constant-in-ord-compare",
+        "in-range-instead-of-compare-small",
+        "in-range-instead-of-compare-step",
+        "in-range-instead-of-compare",
     )
     def visit_compare(self, node: nodes.Compare) -> None:
         self._check_no_is(node)
