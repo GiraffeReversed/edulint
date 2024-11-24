@@ -707,7 +707,8 @@ def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Pro
         "t = x != y or abs(x - y) != 0",
         "t = x % 2 == 0 and x % 6 == 0 and x % 3 == 0",
         "t = m % n + 1 == 1 or m % n == 0",
-        "t = a < b and b > a + 50 and a + b < 2*b"
+        "t = a < b and b > a + 50 and a + b < 2*b",
+        "hour_format = (hours % 12) or 12"
     ], [
         lazy_problem().set_line(1)
         .set_text("'x != y or abs(x - y) != 0' can be replaced with 'x != y'"),
@@ -719,7 +720,7 @@ def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Pro
         .set_text("'a < b and b > a + 50 and a + b < 2 * b' can be replaced with 'b > a + 50'"),
     ]),
 ])
-def test_redundant_condition_part(lines: List[str], expected_output: List[Problem]) -> None:
+def test_redundant_condition_part_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=redundant-condition-part")],
