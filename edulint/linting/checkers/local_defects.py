@@ -513,6 +513,12 @@ class Local(BaseChecker):
         def is_var(node: nodes.NodeNG) -> bool:
             return isinstance(node, (nodes.Name, nodes.Call, nodes.Subscript, nodes.Attribute))
 
+        def add_brackets_if_necessary(node: nodes.NodeNG) -> str:
+            if isinstance(node, (nodes.BinOp, nodes.UnaryOp)):
+                return f"({node.as_string()})"
+
+            return node.as_string()
+
         def get_value_plus_constant(node: nodes.NodeNG) -> Optional[Tuple[str, int]]:
             if is_var(node):
                 var = node.as_string()
@@ -673,7 +679,7 @@ class Local(BaseChecker):
                 (
                     str(start_val % abs(step_val))
                     if start_val is not None
-                    else f"{start.as_string()} % {str(step_val)}"
+                    else f"{add_brackets_if_necessary(start)} % {str(abs(step_val))}"
                 ),
             ]
         )
