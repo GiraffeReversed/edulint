@@ -704,20 +704,23 @@ def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Pro
 
 @pytest.mark.parametrize("lines,expected_output", [
     ([
+        "x = 1",
+        "y = 2",
+        "hours = 3",
         "t = x != y or abs(x - y) != 0",
         "t = x % 2 == 0 and x % 6 == 0 and x % 3 == 0",
         "t = m % n + 1 == 1 or m % n == 0",
-        "t = a < b and b > a + 50 and a + b < 2*b",
+        "t = x < y and y > x + 50 and x + y < 2*y",
         "hour_format = (hours % 12) or 12"
     ], [
-        lazy_problem().set_line(1)
-        .set_text("'x != y or abs(x - y) != 0' can be replaced with 'x != y'"),
-        lazy_problem().set_line(2)
-        .set_text("'x % 2 == 0 and x % 6 == 0 and x % 3 == 0' can be replaced with 'x % 6 == 0'"),
-        lazy_problem().set_line(3)
-        .set_text("'m % n + 1 == 1 or m % n == 0' can be replaced with 'm % n == 0'"),
         lazy_problem().set_line(4)
-        .set_text("'a < b and b > a + 50 and a + b < 2 * b' can be replaced with 'b > a + 50'"),
+        .set_text("'x != y or abs(x - y) != 0' can be replaced with 'x != y'"),
+        lazy_problem().set_line(5)
+        .set_text("'x % 2 == 0 and x % 6 == 0 and x % 3 == 0' can be replaced with 'x % 6 == 0'"),
+        lazy_problem().set_line(6)
+        .set_text("'m % n + 1 == 1 or m % n == 0' can be replaced with 'm % n == 0'"),
+        lazy_problem().set_line(7)
+        .set_text("'x < y and y > x + 50 and x + y < 2 * y' can be replaced with 'y > x + 50'"),
     ]),
 ])
 def test_redundant_condition_part_custom(lines: List[str], expected_output: List[Problem]) -> None:
@@ -729,6 +732,10 @@ def test_redundant_condition_part_custom(lines: List[str], expected_output: List
 
 @pytest.mark.parametrize("lines,expected_output", [
     ([
+        "x = 4",
+        "y = 1",
+        "a = 2",
+        "b = 3",
         "if x > 0:",
         "    x += 1",
         "elif x > 1:",
@@ -759,19 +766,19 @@ def test_redundant_condition_part_custom(lines: List[str], expected_output: List
         "else:",
         "    print(x)"
     ], [
-        lazy_problem().set_line(3)
+        lazy_problem().set_line(7)
         .set_text("The body of this 'elif' is never executed, because its condition is always False when reached."),
-        lazy_problem().set_line(8)
+        lazy_problem().set_line(12)
         .set_text("This 'elif' can be replaced with just 'else'."),
-        lazy_problem().set_line(10)
+        lazy_problem().set_line(14)
         .set_text("This 'elif' is unreachable."),
-        lazy_problem().set_line(13)
+        lazy_problem().set_line(17)
         .set_text("This 'else' is unreachable."),
-        lazy_problem().set_line(15)
+        lazy_problem().set_line(19)
         .set_text("Conditions in the if statement can be simplified by reordering elif blocks, we suggest this order: '3., 1., 2.' with these possibly simplified test conditions respectively: 'a == b, abs(a - b) < 51, else block'."),
-        lazy_problem().set_line(24)
+        lazy_problem().set_line(28)
         .set_text("'x == 0 or y == 0' can be replaced with 'y == 0', because some operands of the 'or' are always False."),
-        lazy_problem().set_line(26)
+        lazy_problem().set_line(30)
         .set_text("The body of this 'elif' is never executed, because its condition is always False when reached."),
     ]),
 ])
@@ -784,15 +791,16 @@ def test_redundant_condition_part_in_if(lines: List[str], expected_output: List[
 
 @pytest.mark.parametrize("lines,expected_output", [
     ([
+        "x = 2",
         "t = x + 1 == x",
         "t = x == x",
-        "t = n != 3 or n != 2",
+        "t = x != 3 or x != 2",
     ], [
-        lazy_problem().set_line(1)
-        .set_text("This condition is always False."),
         lazy_problem().set_line(2)
-        .set_text("This condition is always True."),
+        .set_text("This condition is always False."),
         lazy_problem().set_line(3)
+        .set_text("This condition is always True."),
+        lazy_problem().set_line(4)
         .set_text("This condition is always True."),
     ]),
 ])
