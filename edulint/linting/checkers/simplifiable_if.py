@@ -330,27 +330,27 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "'%s' can be replaced with '%s'",
             "simplifiable-with-abs",
             "Emitted when there is a problem like x < 4 and x > -4 and suggests abs(x) < 4.",
-        ),
+        ),  # in overriders
         "R6212": (
             "'%s' can be simplified to '%s'. Simplify the condition if it is on purpose, or change it if it was not.",
             "redundant-compare-in-condition",
             "Emitted when there is a problem like x > 4 or x > 3 and suggests x > 3. (ie min{4, 3})",
-        ),
+        ),  # in overriders
         "R6213": (
             "'%s' can be replaced with '%s'",
             "redundant-compare-avoidable-with-max-min",
             "Emitted when there is a problem like 'x > a and x > b' and suggests x > max(a, b).",
-        ),
+        ),  # in overriders
         "R6214": (
             "'%s' can be replaced with '%s'",
             "using-compare-instead-of-equal",
             "Emitted when there is a problem like x >= 0 and x <= 0 and suggests x == 0.",
-        ),
+        ),  # in overriders
         "R6215": (
             "'%s' can be replaced with '%s'",
             "simplifiable-test-by-equals",
             "Emitted when there is a problem like 'x % 2 == 0 and y % 2 == 0 or x % 2 == 1 and y % 2 == 1' and suggests 'x % 2 == y % 2'.",
-        ),
+        ),  # in overriders
         "R6216": (
             "'%s' can be replaced with '%s'",
             "redundant-condition-part",
@@ -359,7 +359,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
-        ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
+        ),  # in overriders
         "R6217": (
             "This '%s' is unreachable.",
             "unreachable-elif-else",
@@ -377,7 +377,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
-        ),
+        ),  # in overriders
         "R6219": (
             "'%s' can be replaced with '%s', because some operands of the '%s' are always %s.",
             "redundant-condition-part-in-elif",
@@ -395,7 +395,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
-        ),  # There is a reference in overriders on this (if you change to a different code, change it in there as well).
+        ),
         "R6221": (
             "The body of this 'elif' is never executed, because its condition is always False when reached.",
             "condition-always-false-in-elif",
@@ -404,7 +404,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
-        ),
+        ),  # in overriders
         "R6222": (
             "This condition is always %s.",
             "condition-always-true-or-false",
@@ -413,7 +413,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
-        ),
+        ),  # in overriders
     }
 
     def _is_bool(self, node: nodes.NodeNG) -> bool:
