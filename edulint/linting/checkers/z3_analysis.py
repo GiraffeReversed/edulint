@@ -149,7 +149,7 @@ def initialize_variables(
         if added_new_var and not isinstance(node, nodes.Call) and not nonlinear_arithmetic:
             guessed_type = guess_type(node)
             if guessed_type is None:
-                return True  # Here should be False, but it makes the results much worse.
+                return False
 
             if is_descendant_of_integer_operation:
                 return guessed_type.has_only(Type.INT)
