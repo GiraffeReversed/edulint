@@ -6,7 +6,7 @@ import operator
 from astroid import nodes
 
 from edulint.linting.analyses.data_dependency import get_assigned_expressions
-from edulint.linting.checkers.utils import is_builtin, BaseVisitor
+from edulint.linting.checkers.utils import is_builtin, BaseVisitor, get_range_params
 
 
 class Type(Enum):
@@ -246,12 +246,16 @@ class TypeVisitor(BaseVisitor[Types]):
     def visit_name(self, node: nodes.Name):
         result = Types.empty()
         for assigned in get_assigned_expressions(
-            node, include_nodes=[], include_destructuring=False
+            node, include_nodes=[nodes.For, nodes.Comprehension], include_destructuring=True
         ):
             if assigned in self.visited_exprs:
                 continue
             self.visited_exprs.add(assigned)
-            result |= self.visit(assigned)
+            if isinstance(assigned.parent, (nodes.For, nodes.Comprehension)):
+                if get_range_params(assigned) is not None:
+                    result |= Types.int()
+            else:
+                result |= self.visit(assigned)
         return result
 
     def visit_import(self, _node: nodes.Import):

@@ -99,6 +99,11 @@ def test_local_custom(lines: List[str], expected_output: List[Problem]) -> None:
         "    b = ''",
         "    b = a + b",
     ], []),
+    ([
+        "def foo(a):",
+        "    for i in range(a):",
+        "        a = a + i",
+    ], [lazy_problem()]),
 ])
 def test_augassign_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
