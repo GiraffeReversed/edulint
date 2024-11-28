@@ -208,17 +208,17 @@ def lint_pylint(files_or_dirs: List[str], config: ImmutableConfig) -> List[Probl
 
 
 def apply_overrides(problems: List[Problem], overriders: Dict[str, Set[str]]) -> List[Problem]:
-    codes_on_lines: Dict[int, Set[str]] = {
-        line: set() for line in set([problem.line for problem in problems])
+    codes_on_lines: Dict[Tuple[str, int], Set[str]] = {
+        (problem.path, problem.line): set() for problem in problems
     }
 
     for problem in problems:
-        codes_on_lines[problem.line].add(problem.code)
+        codes_on_lines[(problem.path, problem.line)].add(problem.code)
 
     result = []
     for problem in problems:
         o = overriders.get(problem.code, set())
-        if not (o & codes_on_lines[problem.line]):
+        if not (o & codes_on_lines[(problem.path, problem.line)]):
             result.append(problem)
 
     return result

@@ -4,7 +4,14 @@ from edulint.linters import Linter
 from edulint.options import Option
 from edulint.config.arg import Arg
 from edulint.linting.problem import Problem
-from test_utils import lazy_problem, apply_and_lint, create_apply_and_lint, just_lint, get_tests_path
+from test_utils import (
+    lazy_problem,
+    apply_and_lint,
+    create_apply_and_lint,
+    just_lint,
+    get_tests_path,
+    apply_and_lint_multiple,
+)
 from typing import List
 
 
@@ -636,10 +643,18 @@ def test_umime_count_a(filename: str, args: List[Arg], expected_output: List[Pro
 def test_overrides_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(lines, [Arg(Option.NO_FLAKE8, None)], expected_output, from_empty=False)
 
+@pytest.mark.parametrize("filenames,expected_output", [
+    (
+        ["custom_print_pass.py", "custom_return_print.py"],
+        [lazy_problem().set_code("W0107"), lazy_problem().set_code("W0101")]
+    ),
+])
+def test_overriders_across_files(filenames: List[str], expected_output: List[Problem]) -> None:
+    apply_and_lint_multiple(filenames, [Arg(Option.PYLINT, "--enable=W0107,W0101")], expected_output)
 
 @pytest.mark.parametrize("filename", ["hs3013-8548.py"])
 def test_lints_without_error(filename: str) -> None:
-    just_lint(filename, [], from_empty=False)
+    just_lint([filename], [], from_empty=False)
 
 
 @pytest.mark.filterwarnings(

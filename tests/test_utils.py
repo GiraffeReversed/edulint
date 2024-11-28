@@ -1,8 +1,8 @@
 from edulint.options import Option
 from edulint.config.arg import UnprocessedArg
-from edulint.config.config import Config, get_config_one
+from edulint.config.config import Config, get_config_many
 from edulint.linting.problem import Problem
-from edulint.linting.linting import lint_one
+from edulint.linting.linting import lint_many
 from dataclasses import fields, replace
 import os
 import pathlib
@@ -53,21 +53,21 @@ def remote_empty_config_url() -> str:
     return "https://raw.githubusercontent.com/GiraffeReversed/edulint/v2.9.2/edulint/config/files/empty.toml"
 
 
-def prepare_config(filename: str, args: List[UnprocessedArg], from_empty: bool) -> Config:
+def prepare_configs(paths: List[str], args: List[UnprocessedArg], from_empty: bool) -> Config:
     if from_empty:
         args = [UnprocessedArg(Option.CONFIG_FILE, "empty")] + args
-    config = get_config_one(
-        filename,
+    partition = get_config_many(
+        paths,
         [f"{arg.option.to_name()}={arg.val}" if arg.val is not None else arg.option.to_name() for arg in args]
     )
-    assert config is not None
-    return config
+    assert len(partition) > 0
+    return partition
 
 
-def just_lint(filename: str, args: List[UnprocessedArg], from_empty: bool = True) -> List[Problem]:
-    path = get_tests_path(filename)
-    config = prepare_config(path, args, from_empty)
-    return lint_one(path, config)
+def just_lint(filenames: List[str], args: List[UnprocessedArg], from_empty: bool = True) -> List[Problem]:
+    paths = [get_tests_path(fn) for fn in filenames]
+    partition = prepare_configs(paths, args, from_empty)
+    return lint_many(partition)
 
 
 def apply_and_lint(
@@ -76,8 +76,16 @@ def apply_and_lint(
     expected_output: List[Problem],
     from_empty: bool = True,
 ) -> None:
-    lazy_equal(just_lint(filename, args, from_empty), expected_output)
+    apply_and_lint_multiple([filename], args, expected_output, from_empty)
 
+
+def apply_and_lint_multiple(
+    filenames: List[str],
+    args: List[UnprocessedArg],
+    expected_output: List[Problem],
+    from_empty: bool=True,
+) -> None:
+    lazy_equal(just_lint(filenames, args, from_empty), expected_output)
 
 def create_apply_and_lint(
     lines: List[str],
