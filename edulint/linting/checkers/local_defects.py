@@ -7,7 +7,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter
 
-from edulint.linting.analyses.types import guess_type
+from edulint.linting.analyses.types import guess_type, Type
 from edulint.linting.checkers.utils import (
     get_range_params,
     get_const_value,
@@ -513,6 +513,16 @@ class Local(BaseChecker):
         def is_var(node: nodes.NodeNG) -> bool:
             return isinstance(node, (nodes.Name, nodes.Call, nodes.Subscript, nodes.Attribute))
 
+        def takes_only_int_values(node: nodes.NodeNG) -> bool:
+            name = node.as_string()
+
+            if isinstance(node, nodes.Call) and (name.startswith("str") or name.startswith("chr")):
+                return False
+
+            guessed_type = guess_type(node)
+
+            return guessed_type is not None and guessed_type.has_only(Type.INT)
+
         def add_brackets_if_necessary(node: nodes.NodeNG) -> str:
             if isinstance(node, (nodes.BinOp, nodes.UnaryOp)):
                 return f"({node.as_string()})"
@@ -587,6 +597,7 @@ class Local(BaseChecker):
             len(node.ops) != 1
             or (node.ops[0][0] != "in" and node.ops[0][0] != "not in")
             or not is_var(node.left)
+            or not takes_only_int_values(node.left)
         ):
             return
 
