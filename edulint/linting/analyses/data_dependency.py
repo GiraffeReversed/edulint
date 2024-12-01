@@ -269,6 +269,11 @@ def get_assigned_expressions(
         assert isinstance(def_event.node, nodes.AssignName)
 
         parent = def_event.node.parent
+        if isinstance(parent, nodes.FunctionDef) and (
+            def_event.node == parent.args.vararg_node or def_event.node == parent.args.kwarg_node
+        ):
+            parent = parent.args
+
         if isinstance(parent, _ASSIGNING_EXPRESSIONS):
             if parent.value is not None:  # AnnAssign-style declaration
                 yield parent.value
@@ -294,13 +299,16 @@ def get_assigned_expressions(
 
                 require_destructuring = False
                 for child in reversed(parents):
-                    if not isinstance(child.parent, nodes.Tuple) or not isinstance(
-                        expr, nodes.Tuple
+                    if (
+                        not isinstance(child.parent, nodes.Tuple)
+                        or not isinstance(expr, nodes.Tuple)
+                        or len(child.parent.elts) != len(expr.elts)
                     ):
                         require_destructuring = True
-                    else:
-                        i = child.parent.elts.index(child)
-                        expr = expr.elts[i]
+                        break
+
+                    i = child.parent.elts.index(child)
+                    expr = expr.elts[i]
                 if not require_destructuring or include_destructuring:
                     yield expr
 

@@ -263,7 +263,7 @@ def get_const_value_rec(node: Any) -> Any:
 def get_const_value(node: Any) -> Any:
     try:
         return get_const_value_rec(node)
-    except ValueError:
+    except (ValueError, KeyError):
         return None
 
 

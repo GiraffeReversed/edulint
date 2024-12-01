@@ -80,7 +80,7 @@ class ScopeListener(BaseVisitor[T]):
             self._init_var_in_scope(node.args.vararg_node.name, node.args.vararg_node)
 
         if node.args.kwarg_node is not None:
-            self._init_var_in_scope(node.args.vararg_node.name, node.args.kwarg_node)
+            self._init_var_in_scope(node.args.kwarg_node.name, node.args.kwarg_node)
 
         return self.visit_many(ScopeListener.statements_before_definitions(node))
 

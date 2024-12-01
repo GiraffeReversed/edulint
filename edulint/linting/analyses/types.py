@@ -398,10 +398,7 @@ class TypeVisitor(BaseVisitor[Types]):
                 )
             return TYPE_METHOD_TYPES.get(expr_type, {}).get(func.attrname, Types.empty())
 
-        if isinstance(func, nodes.Subscript):
-            return Types.empty()
-
-        assert False, "unreachable"
+        return Types.empty()
 
 
 def guess_type(expr: nodes.NodeNG) -> Optional[Types]:
