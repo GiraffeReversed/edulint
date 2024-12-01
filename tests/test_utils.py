@@ -7,7 +7,9 @@ from dataclasses import fields, replace
 import os
 import pathlib
 from typing import List
+
 import tempfile
+from loguru import logger
 
 LAZY_INT = -1
 FILLER_CODE = ""
@@ -85,7 +87,18 @@ def apply_and_lint_multiple(
     expected_output: List[Problem],
     from_empty: bool=True,
 ) -> None:
+
+    def stderr_reporter(m):
+        nonlocal fail
+        fail = True
+
+    fail = False
+    logger.add(stderr_reporter, level="ERROR")
+
     lazy_equal(just_lint(filenames, args, from_empty), expected_output)
+
+    if fail:
+        assert False, "error in stderr"
 
 def create_apply_and_lint(
     lines: List[str],
