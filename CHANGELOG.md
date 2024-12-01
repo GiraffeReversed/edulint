@@ -1,5 +1,9 @@
 ## WIP
 
+## v4.2.2
+
+- fix bug in overriders, which caused overriden message to be removed, even if it was in a different file
+
 ## v4.2.0
 
 - update support for Python 3.13
