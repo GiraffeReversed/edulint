@@ -2035,7 +2035,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "condition-always-true-or-false",
     )
     def visit_compare(self, node: nodes.Compare) -> None:
-        if isinstance(node.parent, nodes.BoolOp):
+        if isinstance(node.parent, nodes.BoolOp) or not self._is_pure_expression(node):
             return
 
         initialized_variables: Dict[str, ArithRef] = {}
