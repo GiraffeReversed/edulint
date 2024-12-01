@@ -782,9 +782,24 @@ def test_redundant_condition_part_custom(lines: List[str], expected_output: List
         .set_text("The body of this 'elif' is never executed, because its condition is always False when reached."),
     ]),
 ])
-def test_redundant_condition_part_in_if(lines: List[str], expected_output: List[Problem]) -> None:
+def test_redundant_condition_part_in_if_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
+        [Arg(Option.PYLINT, "--enable=R6217,R6218,R6219,R6220,R6221")],
+        expected_output,
+    )
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("cf_b_1139_16.py", [lazy_problem().set_line(11).set_code("R6218")]),
+    ("ksi_1015_d7fac4e409.py", [lazy_problem().set_line(5).set_code("R6218")]),
+    ("ad182172de-sort_nested.py", [lazy_problem().set_line(25).set_code("R6218")]),
+    ("8e2e8bd6b3-hw3.py", [lazy_problem().set_line(155).set_code("R6218")]),
+    ("273f1b5456-a_minesweeper.py", [lazy_problem().set_code(152).set_code("R6218")]),
+    ("39bee13ac5-p3_children.py", [lazy_problem().set_line(26).set_code("R6218")]),
+])
+def test_redundant_condition_part_in_if(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
         [Arg(Option.PYLINT, "--enable=R6217,R6218,R6219,R6220,R6221")],
         expected_output,
     )
@@ -833,7 +848,9 @@ def test_condition_always_true_or_false(lines: List[str], expected_output: List[
         lazy_problem().set_line(60)
         .set_text("This 'elif' can be replaced with just 'else'."),
     ]),
-    ("cf_61_b_3.py", [])
+    ("cf_61_b_3.py", []),
+    ("cf_d_560_24.py", []),
+    ("uc_81_08_13.py", []),
 ])
 def test_redundant_condition_part(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
