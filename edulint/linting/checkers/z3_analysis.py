@@ -90,6 +90,16 @@ def _not_allowed_node(
                 or (is_descendant_of_integer_operation and isinstance(node.value, float))
             )
         )
+        or isinstance(
+            node,
+            (
+                nodes.Slice,
+                nodes.List,
+                nodes.Set,
+                nodes.Dict,
+                nodes.Tuple,
+            ),
+        )
     )
 
 
