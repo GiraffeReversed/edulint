@@ -1012,24 +1012,29 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if i >= len(if_statement) and len(else_block) > 0:
             self.add_message("unreachable-elif-else", node=else_block[0], args=("else"))
 
-    def _check_elif_instead_of_else(self, node: nodes.If, next_if: nodes.If) -> None:
+    def _check_elif_instead_of_else(self, node: nodes.If) -> None:
         "this is basically _check_redundant_elif() form local_defects.py"
-        if not (self._is_pure_expression(node.test) and self._is_pure_expression(next_if.test)):
-            return False
+        while node.has_elif_block():
+            next_if = node.orelse[0]
+            if (
+                self._is_pure_expression(node.test)
+                and self._is_pure_expression(next_if.test)
+                and is_negation(node.test, next_if.test, negated_rt=False)
+            ):
+                self.add_message(
+                    "condition-always-true-in-elif",
+                    node=next_if,
+                )
+                while next_if.has_elif_block():
+                    next_if = next_if.orelse[0]
+                    self.add_message("unreachable-elif-else", node=next_if, args=("elif"))
 
-        if is_negation(node.test, next_if.test, negated_rt=False):
-            self.add_message(
-                "condition-always-true-in-elif",
-                node=next_if,
-            )
-            while next_if.has_elif_block():
-                next_if = next_if.orelse[0]
-                self.add_message("unreachable-elif-else", node=next_if, args=("elif"))
+                if len(next_if.orelse) > 0:
+                    self.add_message("unreachable-elif-else", node=next_if.orelse[0], args=("else"))
 
-            if len(next_if.orelse) > 0:
-                self.add_message("unreachable-elif-else", node=next_if.orelse[0], args=("else"))
+                return True
 
-            return True
+            node = next_if
 
         return False
 
@@ -1039,7 +1044,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if not skip_reordering and self._is_elif_branch(node) or not node.has_elif_block():
             return
 
-        if self._check_elif_instead_of_else(node, node.orelse[0]):
+        if self._check_elif_instead_of_else(node):
             return
 
         initialized_variables: Dict[str, ArithRef] = {}
@@ -1062,6 +1067,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if_statement
         )
 
+        elif_order_changed = False
+
         if not skip_reordering:
             if if_statement[-1].condition is None:
                 self._convert_else_to_elif_when_simple_enough(if_statement, initialized_variables)
@@ -1079,7 +1086,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if has_else_block:
             if_statement[-1].condition = None
 
-        if not skip_reordering and elif_order_changed:
+        if elif_order_changed:
             self._give_suggestion_for_changed_order_in_if(node, if_statement)
         else:
             self._give_suggestion_for_same_order_in_if(node, if_statement)
@@ -1410,6 +1417,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             or isinstance(node, nodes.Compare)
             or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
             or isinstance(node, nodes.Attribute)
+            or isinstance(node, nodes.Slice)
             or (
                 isinstance(node, nodes.Call)
                 and len(node.keywords) == 0
