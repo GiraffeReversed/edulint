@@ -1044,7 +1044,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if not skip_reordering and self._is_elif_branch(node) or not node.has_elif_block():
             return
 
-        if self._check_elif_instead_of_else(node):
+        if not skip_reordering and self._check_elif_instead_of_else(node):
             return
 
         initialized_variables: Dict[str, ArithRef] = {}
