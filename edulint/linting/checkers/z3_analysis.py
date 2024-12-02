@@ -128,35 +128,23 @@ def initialize_variables(
         variable_key = node.as_string()
         variable = initialized_variables.get(variable_key)
 
-        if isinstance(node, nodes.Call) and (
-            variable_key.startswith("str") or variable_key.startswith("chr")
-        ):
+        guessed_type = guess_type(node)
+        if guessed_type is None:
             return False
 
-        added_new_var = False
-
         if variable is None:
-            added_new_var = True
             initialized_variables[variable_key] = (
                 Int(str(len(initialized_variables)))
                 if is_descendant_of_integer_operation
                 else Real(str(len(initialized_variables)))
             )
         elif is_descendant_of_integer_operation and variable.is_real():
-            added_new_var = True
             initialized_variables[variable_key] = Int(variable.decl().name())
 
-        if added_new_var and not isinstance(node, nodes.Call) and not nonlinear_arithmetic:
-            guessed_type = guess_type(node)
-            if guessed_type is None:
-                return False
+        if is_descendant_of_integer_operation:
+            return guessed_type.has_only(Type.INT)
 
-            if is_descendant_of_integer_operation:
-                return guessed_type.has_only(Type.INT)
-
-            return guessed_type.has_only([Type.BOOL, Type.FLOAT, Type.INT])
-
-        return True
+        return guessed_type.has_only([Type.BOOL, Type.FLOAT, Type.INT])
 
     if isinstance(node, nodes.BinOp) and (node.op == "%" or node.op == "//"):
         return initialize_variables(node.left, initialized_variables, True, node)
