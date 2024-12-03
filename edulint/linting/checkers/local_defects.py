@@ -514,13 +514,7 @@ class Local(BaseChecker):
             return isinstance(node, (nodes.Name, nodes.Call, nodes.Subscript, nodes.Attribute))
 
         def takes_only_int_values(node: nodes.NodeNG) -> bool:
-            name = node.as_string()
-
-            if isinstance(node, nodes.Call) and (name.startswith("str") or name.startswith("chr")):
-                return False
-
             guessed_type = guess_type(node)
-
             return guessed_type is not None and guessed_type.has_only(Type.INT)
 
         def add_brackets_if_necessary(node: nodes.NodeNG) -> str:
@@ -641,35 +635,45 @@ class Local(BaseChecker):
             )
             return
 
-        connection_operation = "and"
+        left_compare = "<="
+        right_compare = "<"
+        left = start.as_string()
+        right = stop.as_string()
 
-        step_compare = "=="
-        if step_val > 0:
-            start_compare = "<="
-            stop_compare = "<"
-        else:
-            start_compare = ">="
-            stop_compare = ">"
-
-        if node.ops[0][0] == "not in":
-            start_compare = NEGATED_OP[start_compare]
-            stop_compare = NEGATED_OP[stop_compare]
-            step_compare = NEGATED_OP[step_compare]
-            connection_operation = NEGATED_OP[connection_operation]
+        if step_val < 0:
+            left_compare, right_compare, left, right = right_compare, left_compare, right, left
 
         var = node.left.as_string()
 
-        suggested_replacement = " ".join(
-            [
-                start.as_string(),
-                start_compare,
-                var,
-                connection_operation,
-                var,
-                stop_compare,
-                stop.as_string(),
-            ]
-        )
+        connection_operation = "and"
+        step_compare = "=="
+
+        if node.ops[0][0] == "in":
+            suggested_replacement = " ".join(
+                [
+                    left,
+                    left_compare,
+                    var,
+                    connection_operation,
+                    var,
+                    right_compare,
+                    right,
+                ]
+            )
+        else:
+            connection_operation = "or"
+            step_compare = "!="
+            suggested_replacement = " ".join(
+                [
+                    var,
+                    right_compare,
+                    left,
+                    connection_operation,
+                    right,
+                    left_compare,
+                    var,
+                ]
+            )
 
         if abs(step_val) == 1:
             self.add_message(
