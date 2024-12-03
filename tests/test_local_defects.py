@@ -137,7 +137,8 @@ def test_no_is_custom(lines: List[str], expected_output: List[Problem]) -> None:
         "x in range(1)",
         "x in range(start, start + 2)",
         "x in range(start + 1, start - 5, -3)",
-        "x in range(start, stop, -3)"
+        "x in range(start, stop, -3)",
+        "x not in range(1, -10, -1)",
     ], [
         lazy_problem().set_line(2)
         .set_text("Consider replacing 'x in range(1, 10)' with '1 <= x and x < 10'"),
@@ -159,6 +160,8 @@ def test_no_is_custom(lines: List[str], expected_output: List[Problem]) -> None:
         .set_text("Consider replacing 'x in range(start + 1, start - 5, -3)' with 'x == start + 1 or x == start - 2'"),
         lazy_problem().set_line(11)
         .set_text("Consider replacing 'x in range(start, stop, -3)' with 'stop < x and x <= start and x % 3 == start % 3'"),
+        lazy_problem().set_line(12)
+        .set_text("Consider replacing 'x not in range(1, -10, -1)' with 'x <= -10 or 1 < x'"),
     ]),
 ])
 def test_redundant_compare_with_variables(lines: List[str], expected_output: List[Problem]) -> None:
