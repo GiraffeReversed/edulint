@@ -109,8 +109,6 @@ BUILTIN_TYPES = {
     "issubclass": Types.bool(),
     "len": Types.int(),
     "list": Types.list(),
-    "max": Types.int() | Types.float(),
-    "min": Types.int() | Types.float(),
     "oct": Types.string(),
     "ord": Types.int(),
     "pow": Types.int() | Types.float(),
@@ -333,12 +331,16 @@ class TypeVisitor(BaseVisitor[Types]):
         if node.op == "%":
             if (self.visit(node.left) | self.visit(node.right)).has(Type.STRING):
                 return Types.string()
-            return Types.int()
+            if (self.visit(node.left) | self.visit(node.right)).has(Type.INT):
+                return Types.int()
+            return Types.empty()
 
         if node.op == "**":
             if (self.visit(node.left) | self.visit(node.right)).has(Type.FLOAT):
                 return Types.float()
-            return Types.int()
+            if (self.visit(node.left) | self.visit(node.right)).has(Type.INT):
+                return Types.int()
+            return Types.empty()
 
         if node.op in ("&", "|", "^"):
             lt = self.visit(node.left)
