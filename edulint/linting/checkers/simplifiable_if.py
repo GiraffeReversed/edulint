@@ -26,14 +26,7 @@ from edulint.linting.checkers.utils import (
     is_any_assign,
     get_const_value,
     is_number,
-    implies,
     is_pure_expression,
-    first_implied_index,
-    all_implied_indeces,
-    initialize_variables,
-    convert_condition_to_z3_expression,
-    initialize_solver,
-    implies_with_solver,
     is_negation,
 )
 
@@ -1401,53 +1394,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             node=node,
             args=(group_string, new_expr),
         )
-
-        return True
-
-    def _is_pure_node(self, node: nodes.NodeNG):
-        """
-        Note: This method does not check children of the node, just the node itself.
-        """
-        return (
-            isinstance(
-                node,
-                (
-                    nodes.Name,
-                    nodes.Const,
-                    nodes.BinOp,
-                    nodes.BoolOp,
-                    nodes.UnaryOp,
-                    nodes.Compare,
-                    nodes.Attribute,
-                    nodes.Slice,
-                    nodes.List,
-                    nodes.Set,
-                    nodes.Dict,
-                    nodes.Tuple,
-                ),
-            )
-            or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
-            or (
-                isinstance(node, nodes.Call)
-                and len(node.keywords) == 0
-                and len(node.kwargs) == 0
-                and len(node.starargs) == 0
-                and is_pure_builtin(node.func)
-            )
-        )
-
-    def _is_pure_expression(self, node: nodes.NodeNG) -> bool:
-        if not self._is_pure_node(node):
-            return False
-
-        children = node.get_children()
-        if isinstance(node, nodes.Call):
-            # the first child of Call is always the function itself and we know it is pure by now.
-            next(children)
-
-        for child in children:
-            if not self._is_pure_expression(child):
-                return False
 
         return True
 

@@ -166,14 +166,24 @@ def is_pure_node(node: nodes.NodeNG):
     Note: This method does not check children of the node, just the node itself.
     """
     return (
-        isinstance(node, nodes.Name)
-        or isinstance(node, nodes.Const)
-        or isinstance(node, nodes.BinOp)
-        or isinstance(node, nodes.BoolOp)
-        or isinstance(node, nodes.UnaryOp)
-        or isinstance(node, nodes.Compare)
+        isinstance(
+            node,
+            (
+                nodes.Name,
+                nodes.Const,
+                nodes.BinOp,
+                nodes.BoolOp,
+                nodes.UnaryOp,
+                nodes.Compare,
+                nodes.Attribute,
+                nodes.Slice,
+                nodes.List,
+                nodes.Set,
+                nodes.Dict,
+                nodes.Tuple,
+            ),
+        )
         or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
-        or isinstance(node, nodes.Attribute)
         or (
             isinstance(node, nodes.Call)
             and len(node.keywords) == 0
