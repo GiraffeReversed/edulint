@@ -637,14 +637,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         """
         while current_if_block.has_elif_block():
             if not (
-                self._is_pure_expression(current_if_block.test)
+                is_pure_expression(current_if_block.test)
                 and initialize_variables(current_if_block.test, initialized_variables, False, None)
             ):
                 return True, current_if_block
 
             current_if_block = current_if_block.orelse[0]
 
-        if self._is_pure_expression(current_if_block.test) and initialize_variables(
+        if is_pure_expression(current_if_block.test) and initialize_variables(
             current_if_block.test, initialized_variables, False, None
         ):
             return False, None
@@ -1010,8 +1010,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         while node.has_elif_block():
             next_if = node.orelse[0]
             if (
-                self._is_pure_expression(node.test)
-                and self._is_pure_expression(next_if.test)
+                is_pure_expression(node.test)
+                and is_pure_expression(next_if.test)
                 and is_negation(node.test, next_if.test, negated_rt=False)
             ):
                 self.add_message(
@@ -1998,7 +1998,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "condition-always-true-or-false",
     )
     def visit_compare(self, node: nodes.Compare) -> None:
-        if isinstance(node.parent, nodes.BoolOp) or not self._is_pure_expression(node):
+        if isinstance(node.parent, nodes.BoolOp) or not is_pure_expression(node):
             return
 
         initialized_variables: Dict[str, ArithRef] = {}
