@@ -369,7 +369,12 @@ def infer_to_value(node: nodes.NodeNG) -> Optional[nodes.NodeNG]:
 
 def is_parents_elif(node: nodes.If) -> bool:
     parent = node.parent
-    return isinstance(parent, nodes.If) and parent.has_elif_block() and parent.orelse[0] == node
+    return (
+        parent is not None
+        and isinstance(parent, nodes.If)
+        and len(parent.orelse) == 1
+        and node is parent.orelse[0]
+    )
 
 
 def has_else_block(node: Union[nodes.For, nodes.While, nodes.If, nodes.IfExp]):
