@@ -161,7 +161,7 @@ def is_pure_builtin(node: nodes.NodeNG) -> bool:
     return is_builtin(node) and inferred and inferred.name in PURE_FUNCTIONS
 
 
-def is_pure_node(node: nodes.NodeNG):
+def _is_pure_node(node: nodes.NodeNG):
     """
     Note: This method does not check children of the node, just the node itself.
     """
@@ -195,7 +195,7 @@ def is_pure_node(node: nodes.NodeNG):
 
 
 def is_pure_expression(node: nodes.NodeNG) -> bool:
-    if not is_pure_node(node):
+    if not _is_pure_node(node):
         return False
 
     children = node.get_children()
