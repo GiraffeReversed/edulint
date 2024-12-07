@@ -28,6 +28,7 @@ from edulint.linting.checkers.utils import (
     is_number,
     is_pure_expression,
     is_negation,
+    is_parents_elif,
 )
 
 ExprRepresentation = str
@@ -935,14 +936,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return if_statement, made_simplification
 
-    def _is_elif_branch(self, node: nodes.If) -> bool:
-        return (
-            node.parent is not None
-            and isinstance(node.parent, nodes.If)
-            and len(node.parent.orelse) == 1
-            and node is node.parent.orelse[0]
-        )
-
     def _give_suggestion_for_changed_order_in_if(
         self, node: nodes.If, if_statement: List[IfBlock]
     ) -> None:
@@ -1034,7 +1027,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def _check_for_redundant_condition_part_in_if(
         self, node: nodes.If, skip_reordering: bool
     ) -> None:
-        if not skip_reordering and self._is_elif_branch(node) or not node.has_elif_block():
+        if not skip_reordering and is_parents_elif(node) or not node.has_elif_block():
             return
 
         if not skip_reordering and self._check_elif_instead_of_else(node):
