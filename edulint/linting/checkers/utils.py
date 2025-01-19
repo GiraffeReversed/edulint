@@ -161,6 +161,10 @@ def is_pure_builtin(node: nodes.NodeNG) -> bool:
     return is_builtin(node) and inferred and inferred.name in PURE_FUNCTIONS
 
 
+def is_pure_call(node: nodes.NodeNG) -> bool:
+    return isinstance(node, nodes.Call) and is_pure_builtin(node.func)
+
+
 def _is_pure_node(node: nodes.NodeNG):
     """
     Note: This method does not check children of the node, just the node itself.
@@ -185,11 +189,10 @@ def _is_pure_node(node: nodes.NodeNG):
         )
         or (isinstance(node, nodes.Subscript) and node.ctx == Context.Load)
         or (
-            isinstance(node, nodes.Call)
+            is_pure_call(node)
             and len(node.keywords) == 0
             and len(node.kwargs) == 0
             and len(node.starargs) == 0
-            and is_pure_builtin(node.func)
         )
     )
 
