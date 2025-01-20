@@ -31,6 +31,8 @@ from edulint.linting.checkers.utils import (
     is_parents_elif,
 )
 
+from edulint.linting.analyses.cfg.utils import syntactic_children_locs
+
 ExprRepresentation = str
 Comparison = str
 Value = Any
@@ -1077,6 +1079,82 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         else:
             self._give_suggestion_for_same_order_in_if(node, if_statement)
 
+    def _get_all_consecutive_ifs(self, node: nodes.If) -> List[nodes.If]:
+        consecutive_ifs = []
+        while isinstance(node, nodes.If):
+            consecutive_ifs.append(node)
+            node = node.next_sibling()
+
+        return consecutive_ifs
+
+    ALLOWED_EXPR_NODES_USE_IF_ELIF_ELSE = (
+        nodes.BinOp,
+        nodes.BoolOp,
+        nodes.Call,
+        nodes.Compare,
+        nodes.Const,
+        nodes.Name,
+        nodes.Tuple,
+        nodes.UnaryOp,
+    )
+
+    ALWAYS_PURE_ALLOWED_NODES_FOR_USE_IF_ELIF_ELSE = (
+        nodes.Break,
+        nodes.Continue,
+        nodes.Pass,
+        nodes.Raise,
+        nodes.Return,
+    )
+
+    def _check_purity_for_use_if_elif_else(self, node: nodes.NodeNG) -> bool:
+        if isinstance(node, self.ALLOWED_EXPR_NODES_USE_IF_ELIF_ELSE):
+            return is_pure_expression(node)
+
+        if isinstance(node, self.ALWAYS_PURE_ALLOWED_NODES_FOR_USE_IF_ELIF_ELSE):
+            return True
+
+        if isinstance(node, (nodes.Assign, nodes.AnnAssign, nodes.AugAssign, nodes.Expr)):
+            return is_pure_expression(node.value)
+
+        if isinstance(node, nodes.Assert):
+            return is_pure_expression(node.test)
+
+        if isinstance(node, nodes.IfExp):
+            return (
+                is_pure_expression(node.test)
+                and is_pure_expression(node.body)
+                and is_pure_expression(node.orelse)
+            )
+
+        return False
+
+    def _validate_and_initialize_variables_for_use_if_elif_else(
+        self, consecutive_ifs: List[nodes.If]
+    ) -> bool:
+        for if_stmt in consecutive_ifs:
+            for loc in syntactic_children_locs(if_stmt):
+                # TODO - maybe not sufficient - needs testing (maybe problem with nested code, but probably fine)
+                if not (
+                    isinstance(loc.node.parent, nodes.If)
+                    and self._check_purity_for_use_if_elif_else(loc.node)
+                ):
+                    return False
+
+                # TODO - check whether the variables are of immutable types
+                # TODO - check whether the variables that are in some non-arithmetic expression in this 'loc' are
+                # modified in our consecutive ifs (using vars_in() and probably modified_in() functions)
+                # TODO - initialize variables
+
+    def _check_for_use_if_elif_else(self, node: nodes.If) -> None:
+        if isinstance(node.previous_sibling(), nodes.If):
+            return
+
+        consecutive_ifs = self._get_all_consecutive_ifs(node)
+        if len(
+            consecutive_ifs
+        ) < 2 or not self._validate_and_initialize_variables_for_use_if_elif_else(node):
+            return
+
     @only_required_for_messages(
         "simplifiable-if-return",
         "simplifiable-if-return-conj",
@@ -1095,6 +1173,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def visit_if(self, node: nodes.If) -> None:
         self._basic_checks(node)
         self._check_for_redundant_condition_part_in_if(node, False)
+        self._check_for_use_if_elif_else(node)
 
     @only_required_for_messages("simplifiable-if-expr", "simplifiable-if-expr-conj")
     def visit_ifexp(self, node: nodes.IfExp) -> None:
