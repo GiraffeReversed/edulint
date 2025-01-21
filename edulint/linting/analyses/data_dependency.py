@@ -154,7 +154,7 @@ def vars_in(
         for var, event in loc.var_events.all():
             if event_types is None or event.type in event_types:
                 if loc_node == node or (event.node == node or node in event.node.node_ancestors()):
-                    result[var] = event.node
+                    result.setdefault(var, []).append(event.node)
     return result
 
 
