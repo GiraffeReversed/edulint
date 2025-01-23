@@ -29,9 +29,14 @@ from edulint.linting.checkers.utils import (
     is_pure_expression,
     is_negation,
     is_parents_elif,
+    if_elif_has_else_block,
+    is_chained_assignment,
+    has_more_assign_targets,
 )
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs
+from edulint.linting.analyses.utils import may_contain_mutable_var
+from edulint.linting.analyses.data_dependency import vars_in, modified_in
 
 ExprRepresentation = str
 Comparison = str
@@ -1087,7 +1092,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return consecutive_ifs
 
-    ALLOWED_EXPR_NODES_USE_IF_ELIF_ELSE = (
+    ALLOWED_EXPR_NODES_FOR_Z3_BLOCK_ANALYSIS = (
         nodes.BinOp,
         nodes.BoolOp,
         nodes.Call,
@@ -1098,27 +1103,44 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         nodes.UnaryOp,
     )
 
-    ALWAYS_PURE_ALLOWED_NODES_FOR_USE_IF_ELIF_ELSE = (
+    END_NODES = (
         nodes.Break,
         nodes.Continue,
-        nodes.Pass,
         nodes.Raise,
         nodes.Return,
     )
 
-    def _check_purity_for_use_if_elif_else(self, node: nodes.NodeNG) -> bool:
-        if isinstance(node, self.ALLOWED_EXPR_NODES_USE_IF_ELIF_ELSE):
+    ALWAYS_PURE_ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS = (
+        *END_NODES,
+        nodes.Pass,
+    )
+
+    ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS = (
+        *ALLOWED_EXPR_NODES_FOR_Z3_BLOCK_ANALYSIS,
+        *ALWAYS_PURE_ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS,
+        nodes.Assign,
+        nodes.AnnAssign,
+        nodes.AugAssign,
+        nodes.Expr,
+        nodes.Assert,
+        nodes.IfExp,
+        nodes.If,
+    )
+
+    def _check_purity_for_Z3_block_analysis(self, node: nodes.NodeNG) -> bool:
+        if isinstance(node, nodes.Assert):
+            node = node.test
+
+        if isinstance(node, self.ALLOWED_EXPR_NODES_FOR_Z3_BLOCK_ANALYSIS):
             return is_pure_expression(node)
 
-        if isinstance(node, self.ALWAYS_PURE_ALLOWED_NODES_FOR_USE_IF_ELIF_ELSE):
+        if isinstance(node, self.ALWAYS_PURE_ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS):
             return True
 
         if isinstance(node, (nodes.Assign, nodes.AnnAssign, nodes.AugAssign, nodes.Expr)):
-            return is_pure_expression(node.value)
+            return self._check_purity_for_Z3_block_analysis(node.value)
 
-        if isinstance(node, nodes.Assert):
-            return is_pure_expression(node.test)
-
+        # not doing nested IfExps
         if isinstance(node, nodes.IfExp):
             return (
                 is_pure_expression(node.test)
@@ -1128,32 +1150,126 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return False
 
+    def _vars_from_non_linear_arithmetic_are_modified_in(
+        self, node: nodes.NodeNG, nodes: List[nodes.NodeNG]
+    ) -> bool:
+        """
+        Note that could be enhanced by checking only the variables from expressions of this node
+        that are non-linear arithmetic (given by function _is_expression_with_nonlinear_arithmetic()
+        from z3_analysis) or that are a function call (not including abs()).
+
+        Here we check whether any variable from this node is modified in `nodes` for simplification,
+        most likely it will be only the two variables anyway, like in expressions `m % n == 0`, ...
+        """
+        return modified_in(list(vars_in(node).keys()), nodes)
+
+    def _allowed_node_for_Z3_block_analysis(self, node: nodes.NodeNG) -> bool:
+        return isinstance(
+            node, self.ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS
+        ) and not is_chained_assignment(node)
+
+    def _initialize_variables_in_node(
+        self,
+        node: nodes.NodeNG,
+        context: List[nodes.NodeNG],
+        initialized_variables: Dict[str, ArithRef],
+    ) -> bool:
+        if isinstance(node, nodes.Assert):
+            node = node.test
+
+        nodes_for_initialization = [node]
+
+        if isinstance(node, nodes.Assign) and has_more_assign_targets(node):
+            nodes_for_initialization = list(node.value.get_children())
+        elif isinstance(node, (nodes.Assign, nodes.AnnAssign, nodes.AugAssign)):
+            nodes_for_initialization = [node.value]
+        elif isinstance(node, nodes.IfExp):
+            nodes_for_initialization = [node.test, node.body, node.orelse]
+
+        for current_node in nodes_for_initialization:
+            if not isinstance(current_node, self.ALLOWED_EXPR_NODES_FOR_Z3_BLOCK_ANALYSIS):
+                return False
+            # because the variables from `m%n == 0` for example are modified later we cannot take `m%n` as
+            # a variable, because it would have different value later then now.
+            dont_make_up_new_vars = self._vars_from_non_linear_arithmetic_are_modified_in(
+                current_node, context
+            )
+            if not initialize_variables(
+                current_node, initialized_variables, False, None, dont_make_up_new_vars
+            ):
+                return False
+
+        return True
+
+    def _validate_and_initialize_variables_for_Z3_block_analysis(
+        self,
+        node: nodes.NodeNG,
+        initialized_variables: Dict[str, ArithRef],
+        context: List[nodes.NodeNG],
+    ) -> bool:
+        if may_contain_mutable_var(node):
+            return False
+
+        for loc in syntactic_children_locs(node):
+            if not (
+                self._allowed_node_for_Z3_block_analysis(loc.node)
+                and self._check_purity_for_Z3_block_analysis(loc.node)
+            ) or (isinstance(loc.node, self.END_NODES) and loc.node.parent is node):
+                return False
+
+            if isinstance(
+                loc.node, self.ALWAYS_PURE_ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS
+            ) or isinstance(loc.node, nodes.Expr):
+                continue
+
+            if not self._initialize_variables_in_node(loc.node, context, initialized_variables):
+                return False
+
+        return True
+
     def _validate_and_initialize_variables_for_use_if_elif_else(
         self, consecutive_ifs: List[nodes.If]
-    ) -> bool:
-        for if_stmt in consecutive_ifs:
-            for loc in syntactic_children_locs(if_stmt):
-                # TODO - maybe not sufficient - needs testing (maybe problem with nested code, but probably fine)
-                if not (
-                    isinstance(loc.node.parent, nodes.If)
-                    and self._check_purity_for_use_if_elif_else(loc.node)
-                ):
-                    return False
+    ) -> List[Tuple[List[nodes.If], Dict[str, ArithRef]]]:
+        ifs_with_initialized_vars: List[Tuple[List[nodes.If], Dict[str, ArithRef]]] = []
 
-                # TODO - check whether the variables are of immutable types
-                # TODO - check whether the variables that are in some non-arithmetic expression in this 'loc' are
-                # modified in our consecutive ifs (using vars_in() and probably modified_in() functions)
-                # TODO - initialize variables
+        current_ifs: List[nodes.If] = []
+        initialized_variables: Dict[str, ArithRef] = {}
+
+        for i, if_stmt in enumerate(consecutive_ifs):
+            if not if_elif_has_else_block(
+                if_stmt
+            ) and self._validate_and_initialize_variables_for_Z3_block_analysis(
+                if_stmt,
+                initialized_variables,
+                consecutive_ifs[i:],
+            ):
+                current_ifs.append(if_stmt)
+            else:
+                if len(current_ifs) > 1:
+                    ifs_with_initialized_vars.append((current_ifs, initialized_variables))
+
+                current_ifs = []
+                initialized_variables = {}
+
+        if len(current_ifs) > 1:
+            ifs_with_initialized_vars.append((current_ifs, initialized_variables))
+
+        return ifs_with_initialized_vars
 
     def _check_for_use_if_elif_else(self, node: nodes.If) -> None:
         if isinstance(node.previous_sibling(), nodes.If):
             return
 
         consecutive_ifs = self._get_all_consecutive_ifs(node)
-        if len(
-            consecutive_ifs
-        ) < 2 or not self._validate_and_initialize_variables_for_use_if_elif_else(node):
+        if len(consecutive_ifs) < 2:
             return
+
+        validated_if_groups = self._validate_and_initialize_variables_for_use_if_elif_else(
+            consecutive_ifs
+        )
+
+        for ifs, initialized_variables in validated_if_groups:
+            pass
 
     @only_required_for_messages(
         "simplifiable-if-return",

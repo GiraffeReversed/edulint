@@ -248,6 +248,23 @@ def get_assigned_to(node: nodes.NodeNG) -> List[nodes.NodeNG]:
     return []
 
 
+def is_chained_assignment(node: nodes.NodeNG) -> bool:
+    return isinstance(node, nodes.Assign) and len(node.targets) > 1
+
+
+def has_more_assign_targets(node: nodes.Assign) -> bool:
+    return isinstance(node.targets[0], nodes.Tuple)
+
+
+def get_assign_targets(
+    node: Union[nodes.Assign, nodes.AnnAssign, nodes.AugAssign]
+) -> List[nodes.NodeNG]:
+    if isinstance(node, nodes.Assign) and isinstance(node.targets, nodes.Tuple):
+        return [node.targets.get_children()]
+
+    return [node.target]
+
+
 Named = Union[nodes.Name, nodes.Attribute, nodes.AssignName]
 
 
@@ -384,6 +401,13 @@ def has_else_block(node: Union[nodes.For, nodes.While, nodes.If, nodes.IfExp]):
     if isinstance(node, nodes.IfExp):
         return True
     return len(node.orelse) > 0 and (not isinstance(node, nodes.If) or not node.has_elif_block())
+
+
+def if_elif_has_else_block(node: nodes.If) -> bool:
+    while node.has_elif_block():
+        node = node.orelse[0]
+
+    return len(node.orelse) != 0
 
 
 def get_lines_between(first: nodes.NodeNG, last: nodes.NodeNG, including_last: bool) -> int:
