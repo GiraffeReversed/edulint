@@ -52,6 +52,12 @@ def _is_expression_with_nonlinear_arithmetic(node: nodes.NodeNG) -> bool:
     )
 
 
+def is_considered_var_but_is_not(node: nodes.NodeNG) -> bool:
+    return isinstance(
+        node, (nodes.Subscript, nodes.Attribute, nodes.Call)
+    ) or _is_expression_with_nonlinear_arithmetic(node)
+
+
 def _not_allowed_node(
     node: nodes.NodeNG, is_descendant_of_integer_operation: bool, parent: Optional[nodes.NodeNG]
 ) -> bool:
@@ -116,6 +122,7 @@ def initialize_variables(
     initialized_variables: Dict[str, ArithRef],
     is_descendant_of_integer_operation: bool,
     parent: Optional[nodes.NodeNG],
+    dont_make_up_new_vars=False,
 ) -> bool:
     """
     Supposes that node is pure. And we exclude bit operations, because Z3 supports them only on bitvectors.
@@ -128,10 +135,19 @@ def initialize_variables(
 
     if _is_abs_function(node):
         return initialize_variables(
-            node.args[0], initialized_variables, is_descendant_of_integer_operation, node
+            node.args[0],
+            initialized_variables,
+            is_descendant_of_integer_operation,
+            node,
+            dont_make_up_new_vars,
         )
 
     nonlinear_arithmetic = _is_expression_with_nonlinear_arithmetic(node)
+
+    if dont_make_up_new_vars and (
+        nonlinear_arithmetic or isinstance(node, (nodes.Subscript, nodes.Attribute, nodes.Call))
+    ):
+        return False
 
     # Thanks to the purity of the original node we can work with all these types as variables.
     if _is_variable_in_pure_expression(node) or nonlinear_arithmetic:
@@ -157,12 +173,18 @@ def initialize_variables(
         return guessed_type.has_only([Type.BOOL, Type.FLOAT, Type.INT])
 
     if isinstance(node, nodes.BinOp) and (node.op == "%" or node.op == "//"):
-        return initialize_variables(node.left, initialized_variables, True, node)
+        return initialize_variables(
+            node.left, initialized_variables, True, node, dont_make_up_new_vars
+        )
 
     if isinstance(node, (nodes.BoolOp, nodes.Compare, nodes.UnaryOp, nodes.BinOp)):
         for child in node.get_children():
             if not initialize_variables(
-                child, initialized_variables, is_descendant_of_integer_operation, node
+                child,
+                initialized_variables,
+                is_descendant_of_integer_operation,
+                node,
+                dont_make_up_new_vars,
             ):
                 return False
 
@@ -206,7 +228,7 @@ def convert_condition_to_z3_expression(
     parent: Optional[nodes.NodeNG],
 ) -> tuple[Optional[ExprRef], bool]:
     """
-    We assume that the expression is pure in the sense of _is_pure_expression from simplifiable_if.
+    We assume that the expression is pure in the sense of is_pure_expression from utils.
     Before using this function you have to use the initialize_variables funcion on all nodes that
     you are interested about, to fill in the initialized_variables dictionary with variables of
     correct types.
