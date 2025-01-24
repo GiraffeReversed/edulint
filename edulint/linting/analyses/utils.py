@@ -3,6 +3,7 @@ from astroid import nodes
 
 from edulint.linting.analyses.types import guess_type, Type
 from edulint.linting.analyses.data_dependency import vars_in
+from edulint.linting.checkers.utils import has_more_assign_targets, is_chained_assignment
 
 IMMUTABLE_TYPES = [Type.BOOL, Type.FLOAT, Type.INT, Type.STRING, Type.TUPLE]
 
@@ -21,10 +22,13 @@ def _can_be_mutable_name(node: Union[nodes.Name, nodes.AssignName]) -> bool:
     if isinstance(node.parent, (nodes.AugAssign, nodes.AnnAssign)):
         return _can_be_mutable(node.parent.value)
     elif isinstance(node.parent, nodes.Assign):
-        if len(node.parent.targets) < 2:
+        if is_chained_assignment(node.parent):
+            return True
+
+        if not has_more_assign_targets(node.parent):
             return _can_be_mutable(node.parent.value)
 
-        for val in node.parent.value:
+        for val in node.parent.value.get_children():
             if _can_be_mutable(val):
                 return True
 
