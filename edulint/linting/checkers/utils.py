@@ -61,7 +61,7 @@ def new_node(node_type, **attr_vals):
         attr_vals_before["kwarg"] = attr_vals_before.get("kwarg", "")
         attr_vals_before["vararg"] = attr_vals_before.get("vararg", "")
         node = node_type(parent=None, **attr_vals_before)
-    elif node_type == nodes.Module:
+    elif node_type in (nodes.Module, nodes.MatchCase):
         node = node_type(**attr_vals_before)
     else:
         if node_type == nodes.ImportFrom:

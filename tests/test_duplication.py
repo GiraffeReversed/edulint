@@ -726,6 +726,7 @@ def test_similar_if_to_use(filename: str, expected_output: List[Problem]) -> Non
     # TODO suggest breaking up the string
     ("uc_82_1702_19_11.py", []),
     ("uc_87_5303_19_15.py", []),  # dubious
+    ("abde78bafa-du07_min_tree.py", []),
 ])
 def test_interactions(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(

@@ -79,6 +79,7 @@ ASTROID_EXTRA_FIELDS = {
     nodes.Starred: ("ctx",),
     nodes.DelName: ("name",),
     nodes.DelAttr: ("attrname",),
+    nodes.MatchSingleton: ("value",),
 }
 
 
