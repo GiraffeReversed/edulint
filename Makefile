@@ -40,7 +40,8 @@ cov:
 check: mypy test
 
 run:
-	export PYTHONPATH=${EDULINT_PATH} && \
+	. ${EDULINT_VENV_PATH}/bin/activate && \
+		export PYTHONPATH=${EDULINT_PATH} && \
 		python3 -m edulint check --disable-version-check --disable-explanations-update ${ARGS}
 
 perf:
