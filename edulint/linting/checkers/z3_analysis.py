@@ -409,3 +409,18 @@ def all_implied_indeces(condition: ExprRef, conditions: List[ExprRef], rlimit=17
             implied_indeces.append(i)
 
     return implied_indeces
+
+
+def create_prefixed_var(prefix: str, var: ArithRef) -> ArithRef:
+    """
+    Creates a new variable of same type as `var` and same name, but prefixed with `prefix`.
+    (if you use different type then int and real, add them to this function)
+    """
+    new_name = prefix + var.decl().name()
+
+    if var.is_int():
+        return Int(new_name)
+    elif var.is_real():
+        return Real(new_name)
+    else:
+        raise ValueError("Unsupported variable type")
