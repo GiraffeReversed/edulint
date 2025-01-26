@@ -4,7 +4,7 @@ from astroid import extract_node
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
 
-from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not
+from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not, If, Implies, BoolVal
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -18,6 +18,7 @@ from edulint.linting.checkers.z3_analysis import (
     initialize_variables,
     convert_condition_to_z3_expression,
     unsatisfiable,
+    create_prefixed_var,
 )
 
 from edulint.linting.checkers.utils import (
@@ -1255,6 +1256,208 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             ifs_with_initialized_vars.append((current_ifs, initialized_variables))
 
         return ifs_with_initialized_vars
+
+    def _change_assertions_and_vars_after_elif_block(
+        self,
+        if_conditions: List[ExprRef],
+        return_encountered: bool,
+        new_assertions: List[ExprRef],
+        var_changes: Dict[str, ArithRef],
+        assertions: List[ExprRef],
+        current_condition: ExprRef,
+        changed_vars_in_any_branch: Set[str],
+        var_changes_in_each_branch: List[Dict[str, ArithRef]],
+    ):
+        previous_conditions_negated = And([Not(cond) for cond in if_conditions])
+
+        if return_encountered:
+            assertions.append(
+                Implies(previous_conditions_negated, Not(current_condition))
+                if len(if_conditions) > 0
+                else Not(current_condition)
+            )
+        else:
+            for assertion in new_assertions:
+                assertions.append(
+                    Implies(
+                        (
+                            And(previous_conditions_negated, current_condition)
+                            if len(if_conditions) > 0
+                            else current_condition
+                        ),
+                        assertion,
+                    )
+                )
+
+            for var_name in var_changes.keys():
+                changed_vars_in_any_branch.add(var_name)
+
+            var_changes_in_each_branch.append((var_changes, return_encountered))
+
+            if_conditions.append(current_condition)
+
+    def _how_var_changed_after_if(
+        self,
+        var_name: str,
+        if_conditions: List[ExprRef],
+        var_changes_in_each_branch: List[Tuple[Dict[str, ArithRef], bool]],
+        initialized_variables: Dict[str, ArithRef],
+        current_block: int,
+    ):
+        # TODO - FINISH
+        if current_block >= len(var_changes_in_each_branch):
+            return initialized_variables[var_name]
+
+        variables, return_found = var_changes_in_each_branch[current_block]
+
+        if return_found:
+            return self._how_var_changed_after_if(
+                var_name, if_conditions, var_changes_in_each_branch, current_block + 1
+            )
+
+        return If(
+            if_conditions[0],
+        )
+
+    def _create_new_var_after_if(
+        self,
+        var_name: str,
+        if_conditions: List[ExprRef],
+        var_changes_in_each_branch: List[Tuple[Dict[str, ArithRef], bool]],
+        accumulated_relations_between_vars: List[ExprRef],
+        var_rewrite_counts: Dict[str, int],
+        initialized_variables: Dict[str, ArithRef],
+    ) -> ArithRef:
+        var_rewrite_counts[var_name] += 1
+        prefix = str(var_rewrite_counts[var_name])
+
+        var = create_prefixed_var(prefix, initialized_variables[var_name])
+
+    def _changed_vars_after_if(
+        self,
+        node: nodes.If,
+        initialized_variables: Dict[str, ArithRef],
+        accumulated_relations_between_vars: List[ExprRef],
+        var_rewrite_counts: Dict[str, int],
+    ) -> Optional[Tuple[Dict[str, ArithRef], List[ExprRef], bool]]:
+        new_vars: Dict[str, ArithRef] = {}
+        assertions: List[ExprRef] = []
+        changed_vars_in_any_branch: Set[str] = set()
+
+        all_branches_include_return = True
+        if_conditions: List[ExprRef] = []
+        var_changes_in_each_branch: List[Tuple[Dict[str, ArithRef], bool]] = []
+        current_node = node
+        while True:
+            current_condition = convert_condition_to_z3_expression(
+                current_node.test, initialized_variables, None
+            )
+            after_block = self._changed_vars_after_block(
+                current_node.body,
+                initialized_variables.copy(),
+                accumulated_relations_between_vars,
+                var_rewrite_counts,
+            )
+
+            if current_condition is None or after_block is None:
+                return None
+
+            var_changes, new_assertions, return_encountered = after_block
+            all_branches_include_return = all_branches_include_return and return_encountered
+
+            self._change_assertions_and_vars_after_elif_block(
+                if_conditions,
+                return_encountered,
+                new_assertions,
+                var_changes,
+                assertions,
+                current_condition,
+                changed_vars_in_any_branch,
+                var_changes_in_each_branch,
+            )
+
+            if not current_node.has_elif_block():
+                break
+
+            current_node = current_node.orelse[0]
+
+        if len(current_node.orelse) > 0:
+            after_block = self._changed_vars_after_block(
+                current_node.orelse,
+                initialized_variables.copy(),
+                accumulated_relations_between_vars,
+                var_rewrite_counts,
+            )
+
+            if after_block is None:
+                return None
+
+            var_changes, new_assertions, return_encountered = after_block
+            all_branches_include_return = all_branches_include_return and return_encountered
+
+            if return_encountered:
+                assertions.append(Or(if_conditions))
+            else:
+                for assertion in new_assertions:
+                    assertions.append(
+                        Implies(And([Not(cond) for cond in if_conditions]), assertion)
+                    )
+
+                for var_name in var_changes.keys():
+                    changed_vars_in_any_branch.add(var_name)
+
+                var_changes_in_each_branch.append((var_changes, return_encountered))
+
+        if all_branches_include_return:
+            return {}, [], True
+
+        for var_name in changed_vars_in_any_branch:
+            pass
+
+    def _changed_vars_after_block(
+        self,
+        block: List[nodes.NodeNG],
+        initialized_variables: Dict[str, ArithRef],
+        accumulated_relations_between_vars: List[ExprRef],
+        var_rewrite_counts: Dict[str, int],
+    ) -> Optional[Tuple[Dict[str, ArithRef], List[ExprRef], bool]]:
+        new_vars: Dict[str, ArithRef] = {}
+        assertions: List[ExprRef] = []
+
+        for node in block:
+            if isinstance(node, nodes.If):
+                pass
+
+    def convert_conditions_with_blocks_after_each_to_Z3(
+        self,
+        conditions: List[nodes.NodeNG],
+        blocks: List[List[nodes.NodeNG]],
+        initialized_variables: Dict[str, ArithRef],
+    ) -> Tuple[List[ExprRef], List[ExprRef]]:
+        assert len(conditions) == len(blocks) + 1
+
+        accumulated_relations_between_vars: List[ExprRef] = []
+        converted_conditions: List[ExprRef] = []
+
+        var_rewrite_counts = {var: 0 for var in initialized_variables}
+
+        for i, cond in enumerate(conditions):
+            converted = convert_condition_to_z3_expression(cond, initialized_variables, None)
+            if converted is None:
+                return ([], [])
+
+            converted_conditions.append(converted)
+
+            if i < len(blocks):
+                # TODO - finish, think through whether a .copy() is correct here
+                self._changed_vars_after_block(
+                    blocks[i], initialized_variables.copy(), accumulated_relations_between_vars
+                )
+
+    def _merge_consecutive_ifs(
+        self, ifs: List[nodes.If], initialized_variables: Dict[str, ArithRef]
+    ) -> None:
+        pass
 
     def _check_for_use_if_elif_else(self, node: nodes.If) -> None:
         if isinstance(node.previous_sibling(), nodes.If):
