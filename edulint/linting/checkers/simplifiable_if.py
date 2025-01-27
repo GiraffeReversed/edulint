@@ -1301,22 +1301,35 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         var_name: str,
         if_conditions: List[ExprRef],
         var_changes_in_each_branch: List[Tuple[Dict[str, ArithRef], bool]],
-        initialized_variables: Dict[str, ArithRef],
+        var_value_before_if: ArithRef,
         current_block: int,
+        has_else_block: bool,
     ):
-        # TODO - FINISH
-        if current_block >= len(var_changes_in_each_branch):
-            return initialized_variables[var_name]
-
-        variables, return_found = var_changes_in_each_branch[current_block]
+        var_changes, return_found = var_changes_in_each_branch[current_block]
 
         if return_found:
             return self._how_var_changed_after_if(
                 var_name, if_conditions, var_changes_in_each_branch, current_block + 1
             )
 
-        return If(
-            if_conditions[0],
+        if current_block < len(var_changes_in_each_branch) - 1:
+            return If(
+                if_conditions[current_block],
+                var_changes.get(var_name, var_value_before_if),
+                self._how_var_changed_after_if(
+                    var_name,
+                    if_conditions,
+                    var_changes_in_each_branch,
+                    var_value_before_if,
+                    current_block + 1,
+                    has_else_block,
+                ),
+            )
+
+        return (
+            var_changes.get(var_name, var_value_before_if)
+            if has_else_block
+            else var_value_before_if
         )
 
     def _create_new_var_after_if(
@@ -1327,11 +1340,26 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         accumulated_relations_between_vars: List[ExprRef],
         var_rewrite_counts: Dict[str, int],
         initialized_variables: Dict[str, ArithRef],
+        has_else_block: bool,
     ) -> ArithRef:
         var_rewrite_counts[var_name] += 1
         prefix = str(var_rewrite_counts[var_name])
 
         var = create_prefixed_var(prefix, initialized_variables[var_name])
+
+        accumulated_relations_between_vars.append(
+            var
+            == self._how_var_changed_after_if(
+                var_name,
+                if_conditions,
+                var_changes_in_each_branch,
+                initialized_variables[var_name],
+                0,
+                has_else_block,
+            )
+        )
+
+        return var
 
     def _changed_vars_after_if(
         self,
@@ -1381,6 +1409,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             current_node = current_node.orelse[0]
 
+        has_else_block = False
         if len(current_node.orelse) > 0:
             after_block = self._changed_vars_after_block(
                 current_node.orelse,
@@ -1408,11 +1437,28 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
                 var_changes_in_each_branch.append((var_changes, return_encountered))
 
+            has_else_block = True
+
         if all_branches_include_return:
             return {}, [], True
 
+        i = len(var_changes_in_each_branch) - 1
+        while i >= 0 and var_changes_in_each_branch[i][1]:
+            var_changes_in_each_branch.pop()
+            i -= 1
+
         for var_name in changed_vars_in_any_branch:
-            pass
+            new_vars[var_name] = self._create_new_var_after_if(
+                var_name,
+                if_conditions,
+                var_changes_in_each_branch,
+                accumulated_relations_between_vars,
+                var_rewrite_counts,
+                initialized_variables,
+                has_else_block,
+            )
+
+        return new_vars, assertions, False
 
     def _changed_vars_after_block(
         self,
@@ -1449,10 +1495,15 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             converted_conditions.append(converted)
 
             if i < len(blocks):
-                # TODO - finish, think through whether a .copy() is correct here
-                self._changed_vars_after_block(
-                    blocks[i], initialized_variables.copy(), accumulated_relations_between_vars
+                new_vars, assertions, _ = self._changed_vars_after_block(
+                    blocks[i],
+                    initialized_variables.copy(),
+                    accumulated_relations_between_vars,
+                    var_rewrite_counts,
                 )
+
+                initialized_variables.update(new_vars)
+                accumulated_relations_between_vars.extend(assertions)
 
     def _merge_consecutive_ifs(
         self, ifs: List[nodes.If], initialized_variables: Dict[str, ArithRef]
