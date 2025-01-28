@@ -259,8 +259,8 @@ def has_more_assign_targets(node: nodes.Assign) -> bool:
 def get_assign_targets(
     node: Union[nodes.Assign, nodes.AnnAssign, nodes.AugAssign]
 ) -> List[nodes.NodeNG]:
-    if isinstance(node, nodes.Assign) and isinstance(node.targets, nodes.Tuple):
-        return [node.targets.get_children()]
+    if isinstance(node, nodes.Assign) and isinstance(node.targets[0], nodes.Tuple):
+        return list(node.targets[0].get_children())
 
     return [node.target]
 

@@ -226,7 +226,7 @@ def convert_condition_to_z3_expression(
     node: Optional[nodes.NodeNG],
     initialized_variables: Dict[str, ArithRef],
     parent: Optional[nodes.NodeNG],
-) -> tuple[Optional[ExprRef], bool]:
+) -> Tuple[Optional[ExprRef], bool]:
     """
     We assume that the expression is pure in the sense of is_pure_expression from utils.
     Before using this function you have to use the initialize_variables funcion on all nodes that
@@ -360,7 +360,6 @@ def convert_condition_to_z3_expression(
         converted_condition, bool_conversion = _convert_to_bool_if_necessary(node, parent, expr)
         return converted_condition, (bool_conversion or conversion_to_bool)
 
-    # Should not be reachable
     return None, False
 
 

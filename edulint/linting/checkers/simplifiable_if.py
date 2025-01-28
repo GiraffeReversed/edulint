@@ -33,6 +33,7 @@ from edulint.linting.checkers.utils import (
     if_elif_has_else_block,
     is_chained_assignment,
     has_more_assign_targets,
+    get_assign_targets,
 )
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs
@@ -1151,6 +1152,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return False
 
+    def is_assignment(self, node: nodes.NodeNG) -> bool:
+        return isinstance(node, (nodes.Assign, nodes.AnnAssign, nodes.AugAssign))
+
     def _vars_from_non_linear_arithmetic_are_modified_in(
         self, node: nodes.NodeNG, nodes: List[nodes.NodeNG]
     ) -> bool:
@@ -1165,9 +1169,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         return modified_in(list(vars_in(node).keys()), nodes)
 
     def _allowed_node_for_Z3_block_analysis(self, node: nodes.NodeNG) -> bool:
-        return isinstance(
-            node, self.ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS
-        ) and not is_chained_assignment(node)
+        return (
+            isinstance(node, self.ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS)
+            and not is_chained_assignment(node)
+            and (not isinstance(node, nodes.IfExp) or self.is_assignment(node.parent))
+        )
 
     def _initialize_variables_in_node(
         self,
@@ -1182,7 +1188,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         if isinstance(node, nodes.Assign) and has_more_assign_targets(node):
             nodes_for_initialization = list(node.value.get_children())
-        elif isinstance(node, (nodes.Assign, nodes.AnnAssign, nodes.AugAssign)):
+        elif self.is_assignment(node):
             nodes_for_initialization = [node.value]
         elif isinstance(node, nodes.IfExp):
             nodes_for_initialization = [node.test, node.body, node.orelse]
@@ -1379,7 +1385,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         while True:
             current_condition = convert_condition_to_z3_expression(
                 current_node.test, initialized_variables, None
-            )
+            )[0]
             after_block = self._changed_vars_after_block(
                 current_node.body,
                 initialized_variables.copy(),
@@ -1460,6 +1466,72 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return new_vars, assertions, False
 
+    def _convert_expression_in_assignment_to_Z3(
+        self, node: nodes.NodeNG, initialized_variables: Dict[str, ArithRef]
+    ) -> Optional[ExprRef]:
+        is_in_assignment = self.is_assignment(node.parent)
+
+        if isinstance(node, nodes.IfExp):
+            test = convert_condition_to_z3_expression(node.test, initialized_variables, None)[0]
+            body = convert_condition_to_z3_expression(
+                node.body, initialized_variables, node.parent if is_in_assignment else None
+            )[0]
+            orelse = convert_condition_to_z3_expression(
+                node.orelse, initialized_variables, node.parent if is_in_assignment else None
+            )[0]
+
+            if test is None or body is None or orelse is None:
+                return None
+
+            return If(test, body, orelse)
+
+        return convert_condition_to_z3_expression(
+            node, initialized_variables, node.parent if is_in_assignment else None
+        )[0]
+
+    def _get_assigned_expression_in_AugAssign(self, node: nodes.AugAssign) -> nodes.NodeNG:
+        return nodes.BinOp(op=node.op[:-1], left=node.target, right=node.value, parent=node)
+
+    def _update_vars_after_assignment(
+        self,
+        assignment: Union[nodes.Assign, nodes.AnnAssign, nodes.AugAssign],
+        initialized_variables: Dict[str, ArithRef],
+        accumulated_relations_between_vars: List[ExprRef],
+        var_rewrite_counts: Dict[str, int],
+    ) -> Optional[Dict[str, ArithRef]]:
+        if isinstance(assignment, nodes.Assign) and has_more_assign_targets(assignment):
+            values = list(assignment.value.get_children())
+        elif isinstance(assignment, nodes.AugAssign):
+            values = [self._get_assigned_expression_in_AugAssign(assignment)]
+        else:
+            values = [assignment.value]
+
+        targets = get_assign_targets(assignment)
+
+        new_vars: Dict[str, ArithRef] = {}
+
+        for i, target in enumerate(targets):
+            if not isinstance(target, nodes.AssignName):
+                return None
+
+            if target.name not in initialized_variables:
+                continue
+
+            converted = convert_condition_to_z3_expression(values[i])[0]
+
+            if converted is None:
+                return None
+
+            var_rewrite_counts[target.name] += 1
+            prefix = str(var_rewrite_counts[target.name])
+            var = create_prefixed_var(prefix, initialized_variables[target.name])
+
+            accumulated_relations_between_vars.append(var == converted)
+            new_vars[target.name] = var
+
+        initialized_variables.update(new_vars)
+        return new_vars
+
     def _changed_vars_after_block(
         self,
         block: List[nodes.NodeNG],
@@ -1471,39 +1543,93 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         assertions: List[ExprRef] = []
 
         for node in block:
-            if isinstance(node, nodes.If):
-                pass
+            if self.is_assignment(node):
+                updated_vars = self._update_vars_after_assignment(
+                    node,
+                    initialized_variables,
+                    accumulated_relations_between_vars,
+                    var_rewrite_counts,
+                )
+
+                if updated_vars is None:
+                    return None
+
+                new_vars.update(updated_vars)
+            elif isinstance(node, self.END_NODES):
+                return ({}, [], True)
+            elif isinstance(node, nodes.If):
+                after_if = self._changed_vars_after_if(
+                    node,
+                    initialized_variables,
+                    accumulated_relations_between_vars,
+                    var_rewrite_counts,
+                )
+
+                if after_if is None:
+                    return None
+
+                var_changes, new_assertions, return_in_all_branches = after_if
+
+                if return_in_all_branches:
+                    return ({}, [], True)
+
+                new_vars.update(var_changes)
+                initialized_variables.update(var_changes)
+                assertions.extend(new_assertions)
+            elif isinstance(node, nodes.Assert):
+                converted = convert_condition_to_z3_expression(
+                    node.test, initialized_variables, None
+                )[0]
+                if converted is None:
+                    return None
+
+                assertions.append(converted)
+
+        return new_vars, assertions, False
 
     def convert_conditions_with_blocks_after_each_to_Z3(
         self,
-        conditions: List[nodes.NodeNG],
+        conditions: List[List[nodes.NodeNG]],
         blocks: List[List[nodes.NodeNG]],
         initialized_variables: Dict[str, ArithRef],
-    ) -> Tuple[List[ExprRef], List[ExprRef]]:
+    ) -> Tuple[List[ExprRef], List[List[ExprRef]]]:
+        """
+        `conditions[i]` is a list of conditions and `blocks[i]` is a block (list of nodes) between the conditions
+        on position `i` and conditions on position `i + 1`. So it must hold that len(conditions) == len(blocks) + 1
+        """
         assert len(conditions) == len(blocks) + 1
 
         accumulated_relations_between_vars: List[ExprRef] = []
-        converted_conditions: List[ExprRef] = []
+        converted_conditions: List[List[ExprRef]] = []
 
         var_rewrite_counts = {var: 0 for var in initialized_variables}
 
-        for i, cond in enumerate(conditions):
-            converted = convert_condition_to_z3_expression(cond, initialized_variables, None)
-            if converted is None:
-                return ([], [])
+        for i, conds in enumerate(conditions):
+            converted_conditions.append([])
+            for cond in conds:
+                converted = convert_condition_to_z3_expression(cond, initialized_variables, None)[0]
+                if converted is None:
+                    return ([], [])
 
-            converted_conditions.append(converted)
+                converted_conditions[i].append(converted)
 
             if i < len(blocks):
-                new_vars, assertions, _ = self._changed_vars_after_block(
+                after_block = self._changed_vars_after_block(
                     blocks[i],
                     initialized_variables.copy(),
                     accumulated_relations_between_vars,
                     var_rewrite_counts,
                 )
 
+                if after_block is None:
+                    return ([], [])
+
+                new_vars, assertions, _ = after_block
+
                 initialized_variables.update(new_vars)
                 accumulated_relations_between_vars.extend(assertions)
+
+        return accumulated_relations_between_vars, converted_conditions
 
     def _merge_consecutive_ifs(
         self, ifs: List[nodes.If], initialized_variables: Dict[str, ArithRef]
