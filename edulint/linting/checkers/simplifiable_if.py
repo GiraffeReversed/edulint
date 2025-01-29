@@ -417,6 +417,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),  # in overriders
+        "R6223": (
+            "This elif can be merged with the next %s.",
+            "use-if-elif-else",
+            "Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.",
+        ),
     }
 
     def _is_bool(self, node: nodes.NodeNG) -> bool:
@@ -1631,10 +1636,74 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return accumulated_relations_between_vars, converted_conditions
 
+    def _get_list_of_test_conditions(self, node: nodes.If) -> List[nodes.NodeNG]:
+        test_conditions: List[nodes.NodeNG] = []
+
+        while True:
+            test_conditions.append(node.test)
+
+            if not node.has_elif_block():
+                break
+
+            node = node.orelse[0]
+
+        return test_conditions
+
+    def can_merge_ifs_together(
+        self,
+        if1_conditions: List[ExprRef],
+        if2_conditions: List[ExprRef],
+        relations_between_vars: List[ExprRef],
+    ) -> bool:
+        # TODO - implement
+        return False
+
+    def _index_of_first_unmergable_consecutive_ifs(
+        self,
+        relations_between_vars: List[ExprRef],
+        converted_conditions: List[List[ExprRef]],
+        start_if_index: int,
+    ) -> int:
+        merged_if_conditions = converted_conditions[start_if_index]
+
+        i = start_if_index + 1
+        while i < len(converted_conditions) and self.can_merge_ifs_together(
+            merged_if_conditions, converted_conditions[i], relations_between_vars
+        ):
+            merged_if_conditions.extend(converted_conditions[i])
+            i += 1
+
+        return i
+
     def _merge_consecutive_ifs(
         self, ifs: List[nodes.If], initialized_variables: Dict[str, ArithRef]
     ) -> None:
-        pass
+        relations_between_vars, converted_conditions = (
+            self.convert_conditions_with_blocks_after_each_to_Z3(
+                [self._get_list_of_test_conditions(if_node) for if_node in ifs],
+                ifs[:-1],
+                initialized_variables,
+            )
+        )
+
+        i = 0
+        while i < len(converted_conditions):
+            first_unmergable_index = self._index_of_first_unmergable_consecutive_ifs(
+                relations_between_vars, converted_conditions, i
+            )
+
+            if first_unmergable_index == i + 1:
+                continue
+
+            self.add_message(
+                "use-if-elif-else",
+                node=ifs[i],
+                args=(
+                    "one"
+                    if first_unmergable_index - i == 2
+                    else f"{first_unmergable_index - i - 1} elifs"
+                ),
+            )
 
     def _check_for_use_if_elif_else(self, node: nodes.If) -> None:
         if isinstance(node.previous_sibling(), nodes.If):
@@ -1649,7 +1718,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         )
 
         for ifs, initialized_variables in validated_if_groups:
-            pass
+            self._merge_consecutive_ifs(ifs, initialized_variables)
 
     @only_required_for_messages(
         "simplifiable-if-return",
@@ -1665,6 +1734,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "condition-always-true-in-elif",
         "condition-always-false-in-elif",
         "unreachable-elif-else",
+        "use-if-elif-else",
     )
     def visit_if(self, node: nodes.If) -> None:
         self._basic_checks(node)
