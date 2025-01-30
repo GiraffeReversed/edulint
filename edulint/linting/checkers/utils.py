@@ -262,6 +262,9 @@ def get_assign_targets(
     if isinstance(node, nodes.Assign) and isinstance(node.targets[0], nodes.Tuple):
         return list(node.targets[0].get_children())
 
+    if isinstance(node, nodes.Assign):
+        return node.targets
+
     return [node.target]
 
 
