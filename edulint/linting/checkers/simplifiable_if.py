@@ -1316,31 +1316,35 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         current_block: int,
         has_else_block: bool,
     ):
+        if current_block >= len(var_changes_in_each_branch) and not has_else_block:
+            return var_value_before_if
+
         var_changes, return_found = var_changes_in_each_branch[current_block]
+
+        if current_block == len(var_changes_in_each_branch) - 1 and has_else_block:
+            return var_changes.get(var_name, var_value_before_if)
 
         if return_found:
             return self._how_var_changed_after_if(
-                var_name, if_conditions, var_changes_in_each_branch, current_block + 1
+                var_name,
+                if_conditions,
+                var_changes_in_each_branch,
+                var_value_before_if,
+                current_block + 1,
+                has_else_block,
             )
 
-        if current_block < len(var_changes_in_each_branch) - 1:
-            return If(
-                if_conditions[current_block],
-                var_changes.get(var_name, var_value_before_if),
-                self._how_var_changed_after_if(
-                    var_name,
-                    if_conditions,
-                    var_changes_in_each_branch,
-                    var_value_before_if,
-                    current_block + 1,
-                    has_else_block,
-                ),
-            )
-
-        return (
-            var_changes.get(var_name, var_value_before_if)
-            if has_else_block
-            else var_value_before_if
+        return If(
+            if_conditions[current_block],
+            var_changes.get(var_name, var_value_before_if),
+            self._how_var_changed_after_if(
+                var_name,
+                if_conditions,
+                var_changes_in_each_branch,
+                var_value_before_if,
+                current_block + 1,
+                has_else_block,
+            ),
         )
 
     def _create_new_var_after_if(
@@ -1495,7 +1499,30 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         )[0]
 
     def _get_assigned_expression_in_AugAssign(self, node: nodes.AugAssign) -> nodes.NodeNG:
-        return nodes.BinOp(op=node.op[:-1], left=node.target, right=node.value, parent=node)
+        assigned_expression = nodes.BinOp(
+            op=node.op[:-1],
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+            parent=node,
+            end_lineno=node.end_lineno,
+            end_col_offset=node.end_col_offset,
+        )
+
+        if not isinstance(node.target, nodes.AssignName):
+            return assigned_expression
+
+        assigned_expression.postinit(
+            nodes.Name(
+                name=node.target.name,
+                lineno=node.target.lineno,
+                col_offset=node.target.col_offset,
+                parent=assigned_expression,
+                end_lineno=node.target.end_lineno,
+                end_col_offset=node.target.end_col_offset,
+            ),
+            node.value,
+        )
+        return assigned_expression
 
     def _update_vars_after_assignment(
         self,
@@ -1522,7 +1549,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if target.name not in initialized_variables:
                 continue
 
-            converted = convert_condition_to_z3_expression(values[i])[0]
+            converted = convert_condition_to_z3_expression(
+                values[i], initialized_variables, assignment
+            )[0]
 
             if converted is None:
                 return None
@@ -1620,7 +1649,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             if i < len(blocks):
                 after_block = self._changed_vars_after_block(
-                    blocks[i],
+                    [blocks[i]],
                     initialized_variables.copy(),
                     accumulated_relations_between_vars,
                     var_rewrite_counts,
@@ -1653,14 +1682,30 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         self,
         if1_conditions: List[ExprRef],
         if2_conditions: List[ExprRef],
-        relations_between_vars: List[ExprRef],
+        relations_between_vars: BoolRef,
     ) -> bool:
-        # TODO - implement
-        return False
+        negated_if2_conditions = (
+            Not(if2_conditions[0])
+            if len(if2_conditions) == 1
+            else And([Not(cond) for cond in if2_conditions])
+        )
 
-    def _index_of_first_unmergable_consecutive_ifs(
+        not_true_conditions = []
+        for cond in if1_conditions:
+            # This is same as `relations_between_vars => ('cond is the first true condition' => negated_if2_conditions)`
+            if not implies(
+                relations_between_vars,
+                Or(Not(cond), *not_true_conditions, negated_if2_conditions),
+            ):
+                return False
+
+            not_true_conditions.append(cond)
+
+        return True
+
+    def _index_of_first_unmergable_consecutive_if(
         self,
-        relations_between_vars: List[ExprRef],
+        relations_between_vars: BoolRef,
         converted_conditions: List[List[ExprRef]],
         start_if_index: int,
     ) -> int:
@@ -1686,24 +1731,26 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             )
         )
 
+        relations_between_vars_in_Z3 = And(relations_between_vars)
+
         i = 0
         while i < len(converted_conditions):
-            first_unmergable_index = self._index_of_first_unmergable_consecutive_ifs(
-                relations_between_vars, converted_conditions, i
+            first_unmergable_index = self._index_of_first_unmergable_consecutive_if(
+                relations_between_vars_in_Z3, converted_conditions, i
             )
 
-            if first_unmergable_index == i + 1:
-                continue
+            if first_unmergable_index > i + 1:
+                self.add_message(
+                    "use-if-elif-else",
+                    node=ifs[i],
+                    args=(
+                        "one"
+                        if first_unmergable_index - i == 2
+                        else f"{first_unmergable_index - i - 1} elifs"
+                    ),
+                )
 
-            self.add_message(
-                "use-if-elif-else",
-                node=ifs[i],
-                args=(
-                    "one"
-                    if first_unmergable_index - i == 2
-                    else f"{first_unmergable_index - i - 1} elifs"
-                ),
-            )
+            i = first_unmergable_index
 
     def _check_for_use_if_elif_else(self, node: nodes.If) -> None:
         if isinstance(node.previous_sibling(), nodes.If):
