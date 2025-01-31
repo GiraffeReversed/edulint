@@ -30,7 +30,7 @@ EXCLUDED_OPERATIONS_IN_Z3 = {"<<", ">>", "|", "&", "^", "@"}
 def _is_bool_node(node: Optional[nodes.NodeNG]) -> bool:
     return (
         node is None
-        or isinstance(node, nodes.BoolOp)
+        or isinstance(node, (nodes.BoolOp, nodes.If, nodes.While))
         or (isinstance(node, nodes.UnaryOp) and node.op == "not")
     )
 
@@ -410,12 +410,12 @@ def all_implied_indeces(condition: ExprRef, conditions: List[ExprRef], rlimit=17
     return implied_indeces
 
 
-def create_prefixed_var(prefix: str, var: ArithRef) -> ArithRef:
+def create_prefixed_var(prefix: str, var: ArithRef, var_name: str) -> ArithRef:
     """
-    Creates a new variable of same type as `var` and same name, but prefixed with `prefix`.
+    Creates a new variable of same type as `var` and same name, but prefixed with `prefix + '_'`.
     (if you use different type then int and real, add them to this function)
     """
-    new_name = prefix + var.decl().name()
+    new_name = f"{prefix}_{var_name}"
 
     if var.is_int():
         return Int(new_name)
