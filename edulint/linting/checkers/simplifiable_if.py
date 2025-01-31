@@ -19,6 +19,7 @@ from edulint.linting.checkers.z3_analysis import (
     convert_condition_to_z3_expression,
     unsatisfiable,
     create_prefixed_var,
+    _is_bool_node,
 )
 
 from edulint.linting.checkers.utils import (
@@ -1360,7 +1361,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         var_rewrite_counts[var_name] += 1
         prefix = str(var_rewrite_counts[var_name])
 
-        var = create_prefixed_var(prefix, initialized_variables[var_name])
+        var = create_prefixed_var(prefix, initialized_variables[var_name], var_name)
 
         accumulated_relations_between_vars.append(
             var
@@ -1558,7 +1559,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             var_rewrite_counts[target.name] += 1
             prefix = str(var_rewrite_counts[target.name])
-            var = create_prefixed_var(prefix, initialized_variables[target.name])
+            var = create_prefixed_var(prefix, initialized_variables[target.name], target.name)
 
             accumulated_relations_between_vars.append(var == converted)
             new_vars[target.name] = var
@@ -1696,6 +1697,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if not implies(
                 relations_between_vars,
                 Or(Not(cond), *not_true_conditions, negated_if2_conditions),
+                100000,
             ):
                 return False
 
@@ -2545,6 +2547,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if not initialize_variables(node, initialized_variables, False, None):
             return
 
+        bool_parent = _is_bool_node(node.parent)
+
         converted_conditions = []
         for child in node.values:
             condition, bool_conversion = convert_condition_to_z3_expression(
@@ -2557,6 +2561,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 and isinstance(child.value, bool)
                 or condition is None
                 or bool_conversion
+                and not bool_parent
             ):
                 return
 
