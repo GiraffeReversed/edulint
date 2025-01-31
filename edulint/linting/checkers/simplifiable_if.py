@@ -4,7 +4,7 @@ from astroid import extract_node
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
 
-from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not, If, Implies, is_bool
+from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not, If, Implies, is_bool, BoolVal
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -1162,6 +1162,11 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def is_assignment(self, node: nodes.NodeNG) -> bool:
         return isinstance(node, (nodes.Assign, nodes.AnnAssign, nodes.AugAssign))
 
+    def _vars_from_node_are_modified_in(
+        self, node: nodes.NodeNG, nodes: List[nodes.NodeNG]
+    ) -> bool:
+        return modified_in(list(vars_in(node).keys()), nodes)
+
     def _vars_from_non_linear_arithmetic_are_modified_in(
         self, node: nodes.NodeNG, nodes: List[nodes.NodeNG]
     ) -> bool:
@@ -1243,11 +1248,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _validate_and_initialize_variables_for_use_if_elif_else(
         self, consecutive_ifs: List[nodes.If]
-    ) -> List[Tuple[List[nodes.If], Dict[str, ArithRef]]]:
+    ) -> Tuple[List[Tuple[List[nodes.If], Dict[str, ArithRef]]], List[List[nodes.If]]]:
         ifs_with_initialized_vars: List[Tuple[List[nodes.If], Dict[str, ArithRef]]] = []
 
         current_ifs: List[nodes.If] = []
         initialized_variables: Dict[str, ArithRef] = {}
+
+        not_valid_consecutive_ifs: List[List[nodes.If]] = []
+        last_not_valid: Optional[int] = None
 
         for i, if_stmt in enumerate(consecutive_ifs):
             if not if_elif_has_else_block(
@@ -1262,13 +1270,25 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 if len(current_ifs) > 1:
                     ifs_with_initialized_vars.append((current_ifs, initialized_variables))
 
+                if last_not_valid == i - 1:
+                    not_valid_consecutive_ifs[-1].append(if_stmt)
+                else:
+                    if not_valid_consecutive_ifs and len(not_valid_consecutive_ifs[-1]) == 1:
+                        not_valid_consecutive_ifs.pop()
+
+                    not_valid_consecutive_ifs.append([if_stmt])
+
+                last_not_valid = i
                 current_ifs = []
                 initialized_variables = {}
+
+        if not_valid_consecutive_ifs and len(not_valid_consecutive_ifs[-1]) == 1:
+            not_valid_consecutive_ifs.pop()
 
         if len(current_ifs) > 1:
             ifs_with_initialized_vars.append((current_ifs, initialized_variables))
 
-        return ifs_with_initialized_vars
+        return ifs_with_initialized_vars, not_valid_consecutive_ifs
 
     def _change_assertions_and_vars_after_elif_block(
         self,
@@ -1718,7 +1738,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if not implies(
                 relations_between_vars,
                 Or(Not(cond), *not_true_conditions, negated_if2_conditions),
-                100000,
+                10000,
             ):
                 return False
 
@@ -1743,19 +1763,12 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return i
 
-    def _merge_consecutive_ifs(
-        self, ifs: List[nodes.If], initialized_variables: Dict[str, ArithRef]
+    def _find_mergable_consecutive_ifs(
+        self,
+        ifs: List[nodes.If],
+        converted_conditions: List[List[ExprRef]],
+        relations_between_vars_in_Z3: BoolRef,
     ) -> None:
-        relations_between_vars, converted_conditions = (
-            self.convert_conditions_with_blocks_after_each_to_Z3(
-                [self._get_list_of_test_conditions(if_node) for if_node in ifs],
-                ifs[:-1],
-                initialized_variables,
-            )
-        )
-
-        relations_between_vars_in_Z3 = And(relations_between_vars)
-
         i = 0
         while i < len(converted_conditions):
             first_unmergable_index = self._index_of_first_unmergable_consecutive_if(
@@ -1775,6 +1788,61 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             i = first_unmergable_index
 
+    def _merge_consecutive_ifs(
+        self, ifs: List[nodes.If], initialized_variables: Dict[str, ArithRef]
+    ) -> None:
+        relations_between_vars, converted_conditions = (
+            self.convert_conditions_with_blocks_after_each_to_Z3(
+                [self._get_list_of_test_conditions(if_node) for if_node in ifs],
+                ifs[:-1],
+                initialized_variables,
+            )
+        )
+
+        relations_between_vars_in_Z3 = And(relations_between_vars)
+
+        self._find_mergable_consecutive_ifs(ifs, converted_conditions, relations_between_vars_in_Z3)
+
+    def _if_elif_has_end_node_in_any_branch(self, node: nodes.If) -> bool:
+        for loc in syntactic_children_locs(node):
+            if isinstance(loc.node, self.END_NODES):
+                return True
+
+        return False
+
+    def _merge_consecutive_ifs_without_var_modifications(
+        self, consecutive_ifs: List[nodes.If]
+    ) -> None:
+        initialized_variables: Dict[str, ArithRef] = {}
+        converted_conditions: List[List[ExprRef]] = []
+
+        for i, if_stmt in enumerate(consecutive_ifs):
+            if if_elif_has_else_block(if_stmt) or self._if_elif_has_end_node_in_any_branch(if_stmt):
+                return
+
+            for condition in self._get_list_of_test_conditions(if_stmt):
+                if (
+                    may_contain_mutable_var(condition)
+                    or self._vars_from_node_are_modified_in(condition, consecutive_ifs[i:])
+                    or not is_pure_expression(condition)
+                    or not initialize_variables(condition, initialized_variables, False, None)
+                ):
+                    return
+
+        converted_conditions: List[List[ExprRef]] = []
+
+        for if_stmt in consecutive_ifs:
+            converted_conditions.append([])
+
+            for cond in self._get_list_of_test_conditions(if_stmt):
+                converted = convert_condition_to_z3_expression(cond, initialized_variables, None)[0]
+                if converted is None:
+                    return
+
+                converted_conditions[-1].append(converted)
+
+        self._find_mergable_consecutive_ifs(consecutive_ifs, converted_conditions, BoolVal(True))
+
     def _check_for_use_if_elif_else(self, node: nodes.If) -> None:
         if isinstance(node.previous_sibling(), nodes.If):
             return
@@ -1783,9 +1851,12 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if len(consecutive_ifs) < 2:
             return
 
-        validated_if_groups = self._validate_and_initialize_variables_for_use_if_elif_else(
-            consecutive_ifs
+        validated_if_groups, not_valid_if_groups = (
+            self._validate_and_initialize_variables_for_use_if_elif_else(consecutive_ifs)
         )
+
+        for group in not_valid_if_groups:
+            self._merge_consecutive_ifs_without_var_modifications(group)
 
         for ifs, initialized_variables in validated_if_groups:
             self._merge_consecutive_ifs(ifs, initialized_variables)

@@ -36,6 +36,7 @@ def _can_be_mutable_name(node: Union[nodes.Name, nodes.AssignName]) -> bool:
 
 
 def may_contain_mutable_var(node: nodes.NodeNG) -> bool:
+    "If this function returns `False`, then we are sure that the node does not contain any mutable vars."
     for _, var_nodes in vars_in(node).items():
         for node in var_nodes:
             if isinstance(node, (nodes.Name, nodes.AssignName)) and _can_be_mutable_name(node):
