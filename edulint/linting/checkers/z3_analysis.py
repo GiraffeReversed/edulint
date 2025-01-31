@@ -7,6 +7,7 @@ from edulint.linting.analyses.types import guess_type, Type
 from z3 import (
     ExprRef,
     ArithRef,
+    BoolRef,
     Int,
     Real,
     And,
@@ -191,6 +192,11 @@ def initialize_variables(
     return True
 
 
+def convert_to_bool(expr: ExprRef) -> BoolRef:
+    "`expr` must be a number"
+    return expr != 0
+
+
 def _convert_to_bool_if_necessary(
     node: nodes.NodeNG, parent: nodes.NodeNG, z3_node_representation: Optional[ExprRef]
 ) -> Tuple[Optional[ExprRef], bool]:
@@ -204,7 +210,7 @@ def _convert_to_bool_if_necessary(
         or isinstance(node, nodes.Compare)
         or (isinstance(node, nodes.Const) and isinstance(node.value, bool))
     ):
-        return z3_node_representation != 0, True
+        return convert_to_bool(z3_node_representation), True
 
     return z3_node_representation, False
 
