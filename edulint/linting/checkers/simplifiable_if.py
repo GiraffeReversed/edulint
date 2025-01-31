@@ -4,7 +4,7 @@ from astroid import extract_node
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
 
-from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not, If, Implies, BoolVal
+from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not, If, Implies, is_bool
 
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
@@ -20,6 +20,7 @@ from edulint.linting.checkers.z3_analysis import (
     unsatisfiable,
     create_prefixed_var,
     _is_bool_node,
+    convert_to_bool,
 )
 
 from edulint.linting.checkers.utils import (
@@ -1316,7 +1317,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         var_value_before_if: ArithRef,
         current_block: int,
         has_else_block: bool,
-    ):
+    ) -> ExprRef:
         if current_block >= len(var_changes_in_each_branch) and not has_else_block:
             return var_value_before_if
 
@@ -1348,6 +1349,25 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             ),
         )
 
+    def update_relations_between_vars(
+        self,
+        var_name: str,
+        var_value: ExprRef,
+        var_rewrite_counts: Dict[str, int],
+        accumulated_relations_between_vars: List[ExprRef],
+        initialized_variables: Dict[str, ArithRef],
+    ) -> ArithRef:
+        var_rewrite_counts[var_name] += 1
+        prefix = str(var_rewrite_counts[var_name])
+
+        var = create_prefixed_var(prefix, initialized_variables[var_name], var_name)
+
+        accumulated_relations_between_vars.append(
+            (convert_to_bool(var) if is_bool(var_value) else var) == var_value
+        )
+
+        return var
+
     def _create_new_var_after_if(
         self,
         var_name: str,
@@ -1358,24 +1378,22 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         initialized_variables: Dict[str, ArithRef],
         has_else_block: bool,
     ) -> ArithRef:
-        var_rewrite_counts[var_name] += 1
-        prefix = str(var_rewrite_counts[var_name])
-
-        var = create_prefixed_var(prefix, initialized_variables[var_name], var_name)
-
-        accumulated_relations_between_vars.append(
-            var
-            == self._how_var_changed_after_if(
-                var_name,
-                if_conditions,
-                var_changes_in_each_branch,
-                initialized_variables[var_name],
-                0,
-                has_else_block,
-            )
+        new_var_value = self._how_var_changed_after_if(
+            var_name,
+            if_conditions,
+            var_changes_in_each_branch,
+            initialized_variables[var_name],
+            0,
+            has_else_block,
         )
 
-        return var
+        return self.update_relations_between_vars(
+            var_name,
+            new_var_value,
+            var_rewrite_counts,
+            accumulated_relations_between_vars,
+            initialized_variables,
+        )
 
     def _changed_vars_after_if(
         self,
@@ -1557,11 +1575,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if converted is None:
                 return None
 
-            var_rewrite_counts[target.name] += 1
-            prefix = str(var_rewrite_counts[target.name])
-            var = create_prefixed_var(prefix, initialized_variables[target.name], target.name)
+            var = self.update_relations_between_vars(
+                target.name,
+                converted,
+                var_rewrite_counts,
+                accumulated_relations_between_vars,
+                initialized_variables,
+            )
 
-            accumulated_relations_between_vars.append(var == converted)
             new_vars[target.name] = var
 
         initialized_variables.update(new_vars)
