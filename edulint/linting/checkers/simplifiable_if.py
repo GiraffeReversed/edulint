@@ -1196,14 +1196,19 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if isinstance(node, nodes.Assert):
             node = node.test
 
-        nodes_for_initialization = [node]
+        nodes_tmp = [node]
 
         if isinstance(node, nodes.Assign) and has_more_assign_targets(node):
-            nodes_for_initialization = list(node.value.get_children())
+            nodes_tmp = list(node.value.get_children())
         elif self.is_assignment(node):
-            nodes_for_initialization = [node.value]
-        elif isinstance(node, nodes.IfExp):
-            nodes_for_initialization = [node.test, node.body, node.orelse]
+            nodes_tmp = [node.value]
+
+        nodes_for_initialization: List[nodes.NodeNG] = []
+        for node in nodes_tmp:
+            if isinstance(node, nodes.IfExp):
+                nodes_for_initialization.extend([node.test, node.body, node.orelse])
+            else:
+                nodes_for_initialization.append(node)
 
         for current_node in nodes_for_initialization:
             if not isinstance(current_node, self.ALLOWED_EXPR_NODES_FOR_Z3_BLOCK_ANALYSIS):
@@ -1517,15 +1522,13 @@ class SimplifiableIf(BaseChecker):  # type: ignore
     def _convert_expression_in_assignment_to_Z3(
         self, node: nodes.NodeNG, initialized_variables: Dict[str, ArithRef]
     ) -> Optional[ExprRef]:
-        is_in_assignment = self.is_assignment(node.parent)
-
         if isinstance(node, nodes.IfExp):
             test = convert_condition_to_z3_expression(node.test, initialized_variables, None)[0]
             body = convert_condition_to_z3_expression(
-                node.body, initialized_variables, node.parent if is_in_assignment else None
+                node.body, initialized_variables, node.parent
             )[0]
             orelse = convert_condition_to_z3_expression(
-                node.orelse, initialized_variables, node.parent if is_in_assignment else None
+                node.orelse, initialized_variables, node.parent
             )[0]
 
             if test is None or body is None or orelse is None:
@@ -1533,9 +1536,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             return If(test, body, orelse)
 
-        return convert_condition_to_z3_expression(
-            node, initialized_variables, node.parent if is_in_assignment else None
-        )[0]
+        return convert_condition_to_z3_expression(node, initialized_variables, node.parent)[0]
 
     def _get_assigned_expression_in_AugAssign(self, node: nodes.AugAssign) -> nodes.NodeNG:
         assigned_expression = nodes.BinOp(
@@ -1588,9 +1589,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if target.name not in initialized_variables:
                 continue
 
-            converted = convert_condition_to_z3_expression(
-                values[i], initialized_variables, assignment
-            )[0]
+            converted = self._convert_expression_in_assignment_to_Z3(
+                values[i], initialized_variables
+            )
 
             if converted is None:
                 return None
