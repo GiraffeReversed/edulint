@@ -1138,7 +1138,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _check_purity_for_Z3_block_analysis(self, node: nodes.NodeNG) -> bool:
         if isinstance(node, nodes.Assert):
-            node = node.test
+            return is_pure_expression(node.test)
 
         if isinstance(node, self.ALLOWED_EXPR_NODES_FOR_Z3_BLOCK_ANALYSIS):
             return is_pure_expression(node)
@@ -1692,7 +1692,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             if i < len(blocks):
                 after_block = self._changed_vars_after_block(
-                    [blocks[i]],
+                    blocks[i],
                     initialized_variables.copy(),
                     accumulated_relations_between_vars,
                     var_rewrite_counts,
@@ -1795,7 +1795,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         relations_between_vars, converted_conditions = (
             self.convert_conditions_with_blocks_after_each_to_Z3(
                 [self._get_list_of_test_conditions(if_node) for if_node in ifs],
-                ifs[:-1],
+                [[if_stmt] for if_stmt in ifs[:-1]],
                 initialized_variables,
             )
         )
