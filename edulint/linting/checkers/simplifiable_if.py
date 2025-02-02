@@ -1319,7 +1319,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 assertions.append(
                     Implies(
                         (
-                            And(previous_conditions_negated, current_condition)
+                            And(*previous_conditions_negated, current_condition)
                             if len(if_conditions) > 0
                             else current_condition
                         ),
@@ -1431,7 +1431,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         assertions: List[ExprRef] = []
         changed_vars_in_any_branch: Set[str] = set()
 
-        all_branches_include_return = True
+        always_returns = True
         if_conditions: List[ExprRef] = []
         var_changes_in_each_branch: List[Tuple[Dict[str, ArithRef], bool]] = []
         current_node = node
@@ -1450,7 +1450,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 return None
 
             var_changes, new_assertions, return_encountered = after_block
-            all_branches_include_return = all_branches_include_return and return_encountered
+            always_returns = always_returns and return_encountered
 
             self._change_assertions_and_vars_after_elif_block(
                 if_conditions,
@@ -1481,9 +1481,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 return None
 
             var_changes, new_assertions, return_encountered = after_block
-            all_branches_include_return = all_branches_include_return and return_encountered
+            always_returns = always_returns and return_encountered
 
             if return_encountered:
+                # this is negation of And([Not(cond) for cond in if_conditions]) (ie condition that holds when we get to else)
                 assertions.append(Or(if_conditions))
             else:
                 for assertion in new_assertions:
@@ -1497,8 +1498,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 var_changes_in_each_branch.append((var_changes, return_encountered))
 
             has_else_block = True
+        else:
+            always_returns = False
 
-        if all_branches_include_return:
+        if always_returns:
             return {}, [], True
 
         i = len(var_changes_in_each_branch) - 1
@@ -1645,9 +1648,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 if after_if is None:
                     return None
 
-                var_changes, new_assertions, return_in_all_branches = after_if
+                var_changes, new_assertions, always_returns = after_if
 
-                if return_in_all_branches:
+                if always_returns:
                     return ({}, [], True)
 
                 new_vars.update(var_changes)
