@@ -1742,7 +1742,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             if not implies(
                 relations_between_vars,
                 Or(Not(cond), *not_true_conditions, negated_if2_conditions),
-                10000,
+                3000,
             ):
                 return False
 
