@@ -20,7 +20,10 @@ from z3 import (
     Tactic,
     Not,
     unsat,
+    unknown,
+    sat,
     Abs,
+    CheckSatResult,
 )
 
 
@@ -378,11 +381,30 @@ Z3_TACTIC = Then(
 )
 
 
-def unsatisfiable(condition: ExprRef, rlimit=1700) -> bool:
+def sat_check_condition(condition: ExprRef, rlimit=1700) -> CheckSatResult:
     solver = Z3_TACTIC.solver()
     solver.set("rlimit", rlimit)
     solver.add(condition)
-    return solver.check() == unsat
+    return solver.check()
+
+
+def unsatisfiable(condition: ExprRef, rlimit=1700) -> bool:
+    return sat_check_condition(condition, rlimit) == unsat
+
+
+def sat_condition(condition: nodes.NodeNG, rlimit=1700) -> Optional[bool]:
+    "Returns: `True` if condition is SAT, `False` if it is UNSAT, `None` if don't know."
+    initialized_variables: Dict[str, ArithRef] = {}
+
+    if not initialize_variables(condition, initialized_variables, False, None, True):
+        return None
+
+    converted = convert_condition_to_z3_expression(condition, initialized_variables, None)[0]
+
+    if converted is None or (result := sat_check_condition(converted, rlimit)) == unknown:
+        return None
+
+    return result == sat
 
 
 def implies(condition1: ExprRef, condition2: ExprRef, rlimit=1700) -> bool:
