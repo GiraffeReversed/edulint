@@ -24,7 +24,7 @@ from edulint.linting.analyses.data_dependency import (
     get_events_by_var,
     filter_events_for,
 )
-from edulint.linting.analyses.utils import vars_from_node_are_modified_in
+from edulint.linting.analyses.utils import vars_from_node_may_be_modified_in
 from edulint.linting.checkers.z3_block_analysis import (
     END_NODES,
     condition_implies_another_with_block_in_between,
@@ -222,11 +222,10 @@ class UnsuitedLoop(BaseChecker):
 
     def _check_infinite_loop(self, node: nodes.While) -> None:
         if (
-            not may_contain_mutable_var(node.test)
-            and sat_condition(node.test)
+            sat_condition(node.test)
             and not node_contains_cfg_loc_node_of_type(node, (*END_NODES, nodes.Assert))
             and (
-                not vars_from_node_are_modified_in(node, node.body)
+                not vars_from_node_may_be_modified_in(node.test, node.body)
                 or condition_implies_another_with_block_in_between(node.test, node.body, node.test)
             )
         ):

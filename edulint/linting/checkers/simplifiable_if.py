@@ -41,7 +41,10 @@ from edulint.linting.checkers.utils import (
 )
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs
-from edulint.linting.analyses.utils import may_contain_mutable_var, vars_from_node_are_modified_in
+from edulint.linting.analyses.utils import (
+    may_contain_mutable_var,
+    vars_from_node_may_be_modified_in,
+)
 
 ExprRepresentation = str
 Comparison = str
@@ -1252,8 +1255,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             for condition in self._get_list_of_test_conditions(if_stmt):
                 if (
-                    may_contain_mutable_var(condition)
-                    or vars_from_node_are_modified_in(condition, consecutive_ifs[i:])
+                    vars_from_node_may_be_modified_in(condition, consecutive_ifs[i:])
                     or not is_pure_expression(condition)
                     or not initialize_variables(condition, initialized_variables, False, None)
                 ):

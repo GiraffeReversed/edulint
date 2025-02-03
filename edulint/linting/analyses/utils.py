@@ -45,5 +45,5 @@ def may_contain_mutable_var(node: nodes.NodeNG) -> bool:
     return False
 
 
-def vars_from_node_are_modified_in(node: nodes.NodeNG, nodes: List[nodes.NodeNG]) -> bool:
-    return modified_in(list(vars_in(node).keys()), nodes)
+def vars_from_node_may_be_modified_in(node: nodes.NodeNG, nodes: List[nodes.NodeNG]) -> bool:
+    return may_contain_mutable_var(node) or modified_in(list(vars_in(node).keys()), nodes)
