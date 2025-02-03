@@ -711,7 +711,8 @@ def test_simplifiable_test_by_equals(lines: List[str], expected_output: List[Pro
         "t = x % 2 == 0 and x % 6 == 0 and x % 3 == 0",
         # "t = m % n + 1 == 1 or m % n == 0", this will start working, when guess_type() will be able to guess the type of m % n
         "t = x < y and y > x + 50 and x + y < 2*y",
-        "hour_format = (hours % 12) or 12"
+        "hour_format = (hours % 12) or 12",
+        "t = x != y or ((x - y) if x > y else (y - x)) != 0 # I didn't allow if-exps in this checker",
     ], [
         lazy_problem().set_line(4)
         .set_text("'x != y or abs(x - y) != 0' can be replaced with 'x != y'"),
