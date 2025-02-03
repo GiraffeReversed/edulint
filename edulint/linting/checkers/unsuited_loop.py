@@ -29,6 +29,7 @@ from edulint.linting.checkers.z3_block_analysis import (
     END_NODES,
     condition_implies_another_with_block_in_between,
     node_contains_cfg_loc_node_of_type,
+    may_contain_mutable_var,
 )
 from edulint.linting.checkers.z3_analysis import sat_condition
 
@@ -221,7 +222,8 @@ class UnsuitedLoop(BaseChecker):
 
     def _check_infinite_loop(self, node: nodes.While) -> None:
         if (
-            sat_condition(node.test)
+            not may_contain_mutable_var(node.test)
+            and sat_condition(node.test)
             and not node_contains_cfg_loc_node_of_type(node, (*END_NODES, nodes.Assert))
             and (
                 not vars_from_node_are_modified_in(node, node.body)
