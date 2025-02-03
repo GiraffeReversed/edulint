@@ -438,3 +438,94 @@ def test_use_enumerate_custom(lines: List[str], expected_output: List[Problem]) 
 ])
 def test_use_enumerate(filename: str, expected_output: List[Problem]):
     apply_and_lint(filename, [Arg(Option.PYLINT, "--enable=use-enumerate")], expected_output)
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "x = 1",
+        "y = 2",
+        "left = 0",
+        "right = 10",
+        "while left < right:",
+        "    assert(left - 1 > right + 1)",
+        "    pass",
+        "while True:",
+        "    print('Hello world.')",
+        "while False:",
+        "    print('Hello world.')",
+        "while x + y > 2:",
+        "    tmp = y",
+        "    y = x",
+        "    x = tmp",
+        "    x += 1",
+        "    y -= 1",
+        "while x + y > 2:",
+        "    tmp = y",
+        "    y = x",
+        "    x = tmp",
+        "    x -= 1",
+        "while x > 0:",
+        "    x -= 1",
+        "    if x > -1:",
+        "        x += 2",
+        "    x -= 1",
+        "while x * y < 0:",
+        "    x *= -1",
+        "    y *= -1",
+        "def digit_sum1(n: int) -> int:",
+        "    s = 0",
+        "",
+        "    while n > 0:",
+        "        s += n % 10",
+        "        n //= 10",
+        "",
+        "    return s",
+        "def digit_sum2(n: int) -> int:",
+        "    s = 0",
+        "",
+        "    while n >= 0: # the mistake here is that it should be `n > 0`",
+        "        s += n % 10",
+        "        n //= 10",
+        "",
+        "    return s",
+        "",
+        "def fast_mod2_exp1(b, exp):",
+        "    res = 1",
+        "    while exp >= 1:",
+        "        if exp % 2 == 1:",
+        "            res = (res * b) % 2",
+        "        b = (b * b) % 2",
+        "        exp //= 2",
+        "",
+        "    return res",
+        "",
+        "def fast_mod2_exp2(b, exp):",
+        "    res = 1",
+        "    while exp >= 1:",
+        "        if exp % 2 == 1:",
+        "            res = (res * b) % 2",
+        "            exp += 1 # should not be here",
+        "        b = (b * b) % 2",
+        "        exp //= 2",
+        "",
+        "    return res",
+    ], [
+        lazy_problem().set_line(8)
+        .set_text("This while loop is infinite."),
+        lazy_problem().set_line(12)
+        .set_text("This while loop is infinite."),
+        lazy_problem().set_line(23)
+        .set_text("This while loop is infinite."),
+        lazy_problem().set_line(28)
+        .set_text("This while loop is infinite."),
+        lazy_problem().set_line(42)
+        .set_text("This while loop is infinite."),
+        lazy_problem().set_line(60)
+        .set_text("This while loop is infinite."),
+    ]),
+])
+def test_infinite_loop(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=infinite-loop")],
+        expected_output
+    )
