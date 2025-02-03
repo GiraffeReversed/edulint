@@ -1,7 +1,7 @@
 from typing import List, Tuple, Dict, Set, Optional, Union
 from astroid import nodes
 
-from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not, If, Implies, is_bool, BoolVal
+from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not, If, Implies, is_bool
 
 from edulint.linting.checkers.utils import (
     is_pure_expression,
@@ -57,6 +57,18 @@ ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS = (
     nodes.IfExp,
     nodes.If,
 )
+
+
+def node_contains_cfg_loc_node_of_type(node: nodes.NodeNG, types) -> bool:
+    for loc in syntactic_children_locs(node):
+        if isinstance(loc.node, types):
+            return True
+
+    return False
+
+
+def node_contains_end_node(node: nodes.NodeNG) -> bool:
+    return node_contains_cfg_loc_node_of_type(node, END_NODES)
 
 
 def is_assignment(node: nodes.NodeNG) -> bool:
@@ -559,7 +571,7 @@ def convert_conditions_with_blocks_after_each_to_Z3(
 ) -> Tuple[BoolRef, List[List[ExprRef]]]:
     """
     Before using this function use `validate_and_initialize_variables_for_Z3_block_analysis` to get `initialized_variables`.
-    This function converts the `conditions` with `blocks` in between them.
+    This function converts the `conditions` with `blocks` in between them (there cannot be any cycles).
 
     Returns:
         A tuple where the first entry is BoolRef representing relations between all the newly created variables and the second entry
@@ -585,7 +597,7 @@ def convert_conditions_with_blocks_after_each_to_Z3(
         for cond in conds:
             converted = convert_condition_to_z3_expression(cond, initialized_variables, None)[0]
             if converted is None:
-                return ([], [])
+                return (And(), [])
 
             converted_conditions[i].append(converted)
 
@@ -598,7 +610,7 @@ def convert_conditions_with_blocks_after_each_to_Z3(
             )
 
             if after_block is None:
-                return ([], [])
+                return (And(), [])
 
             new_vars, assertions, _ = after_block
 
@@ -606,3 +618,44 @@ def convert_conditions_with_blocks_after_each_to_Z3(
             accumulated_relations_between_vars.extend(assertions)
 
     return And(accumulated_relations_between_vars), converted_conditions
+
+
+def condition_implies_another_with_block_in_between(
+    condition1: nodes.NodeNG,
+    block: List[nodes.NodeNG],
+    condition2: nodes.NodeNG,
+) -> bool:
+    """
+    Note: Bevare of potential problems when the block contains `asserts`, `returns`, `raise`, `continue`, `break`.
+    (should work mostly, but cannot guarantee.)
+
+    Args:
+        `condition1`: first condition
+        `block`: block in between `condition1` and `condition2` (note that if `condition1` is test condition of `if`,
+                 then the `if` node should be part of the block)
+        `condition2`: the implied condition
+
+    Returns:
+        `True` only when we can be sure that the implication holds.
+    """
+    initialized_variables: Dict[str, ArithRef] = {}
+
+    for node in (
+        [*block, condition2]
+        if block and condition1.parent is block[0]
+        else [condition1, *block, condition2]
+    ):
+        if not _allowed_node_for_Z3_block_analysis(
+            node
+        ) or not validate_and_initialize_variables_for_Z3_block_analysis(
+            node, initialized_variables, block
+        ):
+            return False
+
+    relations_between_vars, conditions = convert_conditions_with_blocks_after_each_to_Z3(
+        [[condition1], [condition2]], [block], initialized_variables
+    )
+
+    return conditions and implies(
+        relations_between_vars, Implies(conditions[0][0], conditions[1][0]), 3000
+    )

@@ -1,8 +1,8 @@
-from typing import Union
+from typing import Union, List
 from astroid import nodes
 
 from edulint.linting.analyses.types import guess_type, Type
-from edulint.linting.analyses.data_dependency import vars_in
+from edulint.linting.analyses.data_dependency import vars_in, modified_in
 from edulint.linting.checkers.utils import has_more_assign_targets, is_chained_assignment
 
 IMMUTABLE_TYPES = [Type.BOOL, Type.FLOAT, Type.INT, Type.STRING, Type.TUPLE]
@@ -43,3 +43,7 @@ def may_contain_mutable_var(node: nodes.NodeNG) -> bool:
                 return True
 
     return False
+
+
+def vars_from_node_are_modified_in(node: nodes.NodeNG, nodes: List[nodes.NodeNG]) -> bool:
+    return modified_in(list(vars_in(node).keys()), nodes)

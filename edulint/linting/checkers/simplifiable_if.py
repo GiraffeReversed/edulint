@@ -25,6 +25,7 @@ from edulint.linting.checkers.z3_block_analysis import (
     END_NODES,
     validate_and_initialize_variables_for_Z3_block_analysis,
     convert_conditions_with_blocks_after_each_to_Z3,
+    node_contains_end_node,
 )
 
 from edulint.linting.checkers.utils import (
@@ -40,8 +41,7 @@ from edulint.linting.checkers.utils import (
 )
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs
-from edulint.linting.analyses.utils import may_contain_mutable_var
-from edulint.linting.analyses.data_dependency import vars_in, modified_in
+from edulint.linting.analyses.utils import may_contain_mutable_var, vars_from_node_are_modified_in
 
 ExprRepresentation = str
 Comparison = str
@@ -1102,11 +1102,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return consecutive_ifs
 
-    def _vars_from_node_are_modified_in(
-        self, node: nodes.NodeNG, nodes: List[nodes.NodeNG]
-    ) -> bool:
-        return modified_in(list(vars_in(node).keys()), nodes)
-
     def _validate_and_initialize_variables_for_use_if_elif_else(
         self, consecutive_ifs: List[nodes.If]
     ) -> Tuple[List[Tuple[List[nodes.If], Dict[str, ArithRef]]], List[List[nodes.If]]]:
@@ -1245,13 +1240,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         self._find_mergable_consecutive_ifs(ifs, converted_conditions, relations_between_vars)
 
-    def _if_elif_has_end_node_in_any_branch(self, node: nodes.If) -> bool:
-        for loc in syntactic_children_locs(node):
-            if isinstance(loc.node, END_NODES):
-                return True
-
-        return False
-
     def _merge_consecutive_ifs_without_var_modifications(
         self, consecutive_ifs: List[nodes.If]
     ) -> None:
@@ -1259,13 +1247,13 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         converted_conditions: List[List[ExprRef]] = []
 
         for i, if_stmt in enumerate(consecutive_ifs):
-            if if_elif_has_else_block(if_stmt) or self._if_elif_has_end_node_in_any_branch(if_stmt):
+            if if_elif_has_else_block(if_stmt) or node_contains_end_node(if_stmt):
                 return
 
             for condition in self._get_list_of_test_conditions(if_stmt):
                 if (
                     may_contain_mutable_var(condition)
-                    or self._vars_from_node_are_modified_in(condition, consecutive_ifs[i:])
+                    or vars_from_node_are_modified_in(condition, consecutive_ifs[i:])
                     or not is_pure_expression(condition)
                     or not initialize_variables(condition, initialized_variables, False, None)
                 ):

@@ -24,6 +24,13 @@ from edulint.linting.analyses.data_dependency import (
     get_events_by_var,
     filter_events_for,
 )
+from edulint.linting.analyses.utils import vars_from_node_are_modified_in
+from edulint.linting.checkers.z3_block_analysis import (
+    END_NODES,
+    condition_implies_another_with_block_in_between,
+    node_contains_cfg_loc_node_of_type,
+)
+from edulint.linting.checkers.z3_analysis import sat_condition
 
 
 class UnsuitedLoop(BaseChecker):
@@ -70,6 +77,11 @@ class UnsuitedLoop(BaseChecker):
             "use-enumerate",
             "Emitted when a for-range loop is used with the element at each index is accessed as well.",
             {"old_names": [("R6102", "old-use-enumerate")]},
+        ),
+        "R6309": (
+            "This while loop is infinite.",
+            "infinite-loop",
+            "Emitted when a while loop is infinite (when the loop condition is once True it will stay True forever).",
         ),
     }
 
@@ -207,10 +219,22 @@ class UnsuitedLoop(BaseChecker):
         ):
             self.add_message("use-for-loop", node=node)
 
-    @only_required_for_messages("no-while-true", "use-for-loop")
+    def _check_infinite_loop(self, node: nodes.While) -> None:
+        if (
+            sat_condition(node.test)
+            and not node_contains_cfg_loc_node_of_type(node, (*END_NODES, nodes.Assert))
+            and (
+                not vars_from_node_are_modified_in(node, node.body)
+                or condition_implies_another_with_block_in_between(node.test, node.body, node.test)
+            )
+        ):
+            self.add_message("infinite-loop", node=node)
+
+    @only_required_for_messages("no-while-true", "use-for-loop", "infinite-loop")
     def visit_while(self, node: nodes.While) -> None:
         self._check_no_while_true(node)
         self._check_use_for_loop(node)
+        self._check_infinite_loop(node)
 
     def _check_use_tighter_bounds(self, node: nodes.For) -> None:
         def compares_equality(node: nodes.NodeNG) -> bool:
