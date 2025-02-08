@@ -424,7 +424,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             """,
         ),  # in overriders
         "R6223": (
-            "This elif can be merged with the next %s.",
+            "The next %d if statements after this one can be elif statements.",
             "use-if-elif-else",
             "Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.",
         ),
@@ -1221,11 +1221,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 self.add_message(
                     "use-if-elif-else",
                     node=ifs[i],
-                    args=(
-                        "one"
-                        if first_unmergable_index - i == 2
-                        else f"{first_unmergable_index - i - 1} elifs"
-                    ),
+                    args=(first_unmergable_index - i - 1,),
                 )
 
             i = first_unmergable_index
