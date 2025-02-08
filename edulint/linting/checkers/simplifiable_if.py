@@ -36,6 +36,7 @@ from edulint.linting.checkers.utils import (
     is_pure_expression,
     is_negation,
     is_parents_elif,
+    are_same_expression,
     if_elif_has_else_block,
     contains_node_of_type,
 )
@@ -181,6 +182,12 @@ def get_boolOp_as_condition(operands: List[ExprRef], is_or: bool):
     return Or(operands) if is_or else And(operands)
 
 
+def get_boolOp_as_string_from_operands(operands: List[nodes.NodeNG], op: str) -> str:
+    return f" {op} ".join(
+        [add_brackets_if_composed(operand, len(operands) == 1) for operand in operands]
+    )
+
+
 def get_converted_test_and_operands(
     test: nodes.BoolOp, initialized_variables: Dict[str, ArithRef]
 ) -> Tuple[Optional[ExprRef], List[ExprRef]]:
@@ -267,12 +274,7 @@ class IfBlock:
         return self.negated_boolOp_operands if self.is_or else self.boolOp_operands
 
     def get_test_as_string(self) -> str:
-        return f" {'or' if self.is_or else 'and'} ".join(
-            [
-                add_brackets_if_composed(self.operands[i], len(self.operands) == 1)
-                for i in range(len(self.operands))
-            ]
-        )
+        return get_boolOp_as_string_from_operands(self.operands, "or" if self.is_or else "and")
 
 
 class SimplifiableIf(BaseChecker):  # type: ignore
@@ -418,6 +420,16 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "use-if-elif-else-modifying",
             """Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.
             But some variable from test conditions is modified.""",
+        ),
+        "R6225": (
+            "'%s' can be replaced with '%s'",
+            "collectively-exhaustive-condition-part",
+            """
+            Emitted when a condition like `(A and B) or (A and C) ≡ A and (B or C)` can be simplified to just `A`, because `B or C ≡ True` and similarly when `and`
+            and `or` are switched.
+
+            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
+            """,  # in overriders
         ),
     }
 
@@ -2170,13 +2182,107 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             node=node,
             args=(
                 node.as_string(),
-                f" {node.op} ".join(
-                    [
-                        add_brackets_if_composed(operand, len(suggestion_operands) == 1)
-                        for operand in suggestion_operands
-                    ]
-                ),
+                get_boolOp_as_string_from_operands(suggestion_operands, node.op),
             ),
+        )
+
+    def _find_collectively_exhaustive_condition_part(
+        self,
+        node: nodes.BoolOp,
+        opposite_boolop_operands: List[nodes.BoolOp],
+        converted_operands: List[List[ExprRef]],
+    ) -> Optional[Tuple[str, str]]:
+        for i, operand1 in enumerate(opposite_boolop_operands):
+            operands_including_left_part: List[nodes.NodeNG] = [operand1]
+            factored_expression_left: List[ExprRef] = [converted_operands[i][1]]
+
+            operands_including_right_part: List[nodes.NodeNG] = [operand1]
+            factored_expression_right: List[ExprRef] = [converted_operands[i][0]]
+
+            left1, right1 = operand1.values
+            for j, operand2 in enumerate(opposite_boolop_operands[i + 1 :]):
+                left2, right2 = operand2.values
+                if are_same_expression(left1, left2):
+                    operands_including_left_part.append(operand2)
+                    factored_expression_left.append(converted_operands[i + 1 + j][1])
+                elif are_same_expression(left1, right2):
+                    operands_including_left_part.append(operand2)
+                    factored_expression_left.append(converted_operands[i + 1 + j][0])
+                elif are_same_expression(right1, left2):
+                    operands_including_right_part.append(operand2)
+                    factored_expression_right.append(converted_operands[i + 1 + j][1])
+                elif are_same_expression(right1, right2):
+                    operands_including_right_part.append(operand2)
+                    factored_expression_right.append(converted_operands[i + 1 + j][0])
+
+            if len(factored_expression_left) >= 2 and unsatisfiable(
+                Not(get_boolOp_as_condition(factored_expression_left, node.op == "or"))
+            ):
+                return (
+                    left1.as_string(),
+                    get_boolOp_as_string_from_operands(operands_including_left_part, node.op),
+                )
+
+            if len(factored_expression_right) >= 2 and unsatisfiable(
+                Not(get_boolOp_as_condition(factored_expression_right, node.op == "or"))
+            ):
+                return (
+                    right1.as_string(),
+                    get_boolOp_as_string_from_operands(operands_including_right_part, node.op),
+                )
+
+        return None
+
+    def _make_suggestion_for_collectively_exhaustive_condition_part(
+        self, node: nodes.BoolOp
+    ) -> None:
+        opposite_boolop_operands: List[nodes.BoolOp] = []
+        opposite_boolop = "and" if node.op == "or" else "or"
+
+        for operand in node.values:
+            if (
+                isinstance(operand, nodes.BoolOp)
+                and len(operand.values) == 2
+                and operand.op == opposite_boolop
+            ):
+                opposite_boolop_operands.append(operand)
+
+        if len(opposite_boolop_operands) < 2:
+            return
+
+        initialized_variables: Dict[str, ArithRef] = {}
+
+        if not initialize_variables(node, initialized_variables, False, None):
+            return
+
+        converted_operands: List[List[ExprRef]] = []
+        bool_parent = _is_bool_node(node.parent)
+
+        for operand in opposite_boolop_operands:
+            converted_operands.append([])
+            for part in operand.values:
+                converted, bool_conversion = convert_condition_to_z3_expression(
+                    part, initialized_variables, None
+                )
+
+                if converted is None or bool_conversion and not bool_parent:
+                    return
+
+                converted_operands[-1].append(converted)
+
+        result = self._find_collectively_exhaustive_condition_part(
+            node, opposite_boolop_operands, converted_operands
+        )
+
+        if result is None:
+            return
+
+        suggested_replacement, operands_to_replace = result
+
+        self.add_message(
+            "collectively-exhaustive-condition-part",
+            node=node,
+            args=(operands_to_replace, suggested_replacement),
         )
 
     def _check_for_simplification_of_boolop(self, node: nodes.BoolOp) -> None:
@@ -2235,6 +2341,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         if not isinstance(node.parent, nodes.BoolOp):
             self._make_suggestion_for_redundant_condition_part(node)
+            self._make_suggestion_for_collectively_exhaustive_condition_part(node)
 
     @only_required_for_messages(
         "simplifiable-with-abs",

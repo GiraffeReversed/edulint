@@ -689,3 +689,8 @@ def are_identical(
     strings2 = [n.as_string() for n in block2]
 
     return strings1 == strings2
+
+
+def are_same_expression(expr1: nodes.NodeNG, expr2: nodes.NodeNG) -> bool:
+    "Could be improved to take commutativity into account, ie: `x + y` could be considered same as `y + x`."
+    return expr1.as_string() == expr2.as_string()

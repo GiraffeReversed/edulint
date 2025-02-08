@@ -26,6 +26,7 @@ OVERRIDERS = {
         "R6212",
         "R6214",
         "R6215",
+        "R6224",
     },  # checkers that might make conflicting or same suggestion as redundant-condition-part
     # R6216=redundant-condition-part, simplifiable-with-abs, redundant-compare-in-condition, using-compare-instead-of-equal, simplifiable-test-by-equals
     "R6213": {"R6216"},
@@ -34,6 +35,7 @@ OVERRIDERS = {
     # R6221=condition-always-false-in-elif, R6222=condition-always-true-or-false
     "R6218": {"R6222"},
     # R6218=condition-always-true-in-elif, R6222=condition-always-true-or-false
+    "R6224": {"R6222"},
 }
 
 
