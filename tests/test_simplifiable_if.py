@@ -1102,3 +1102,29 @@ def test_use_if_elif_else_modifying(filename: str, expected_output: List[Problem
         [Arg(Option.PYLINT, "--enable=R6224")],
         expected_output,
     )
+
+@pytest.mark.parametrize("lines,expected_output", [
+    ([
+        "day = 24",
+        "a = 1",
+        "x = 1",
+        "y = 2",
+        "t = (x == y and a % 2 == 0) or (day % 10 == 0 and day % 20 != 0) or x == y or (day % 10 == 0 and day % 20 == 0)",
+        "t = (x == y or a % 2 == 0) and (a % 2 == 0 or x != y)",
+        "t = (x == y or a % 2 == 0) and (a % 2 == 0 or x == 2 * y)",
+        "t = (x == y and x % 3 == 0) or (x % 3 == 1 and x == y) or (x % 3 == 0 and x != y)",
+    ], [
+        lazy_problem().set_line(5)
+        .set_text("'day % 10 == 0 and day % 20 != 0 or day % 10 == 0 and day % 20 == 0' can be replaced with 'day % 10 == 0'"),
+        lazy_problem().set_line(6)
+        .set_text("'(x == y or a % 2 == 0) and (a % 2 == 0 or x != y)' can be replaced with 'a % 2 == 0'"),
+        lazy_problem().set_line(8)
+        .set_text("'x == y and x % 3 == 0 or x % 3 == 0 and x != y' can be replaced with 'x % 3 == 0'"),
+    ]),
+])
+def test_collectively_exhaustive_condition_part(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=collectively-exhaustive-condition-part")],
+        expected_output,
+    )
