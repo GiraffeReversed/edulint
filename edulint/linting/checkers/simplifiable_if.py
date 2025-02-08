@@ -2192,6 +2192,19 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         opposite_boolop_operands: List[nodes.BoolOp],
         converted_operands: List[List[ExprRef]],
     ) -> Optional[Tuple[str, str]]:
+        def get_matching_subexpression_index(
+            sub_expr: nodes.NodeNG, operand: nodes.BoolOp
+        ) -> Optional[int]:
+            left_sub_expr, right_sub_expr = operand.values
+
+            if are_same_expression(sub_expr, left_sub_expr):
+                return 0
+
+            if are_same_expression(sub_expr, right_sub_expr):
+                return 1
+
+            return None
+
         def get_result_if_collectively_exhaustive(
             factored_expression_operands: List[ExprRef],
             operands_sharing_sub_expr: List[nodes.NodeNG],
@@ -2222,19 +2235,20 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             left_sub_expr1, right_sub_expr1 = operand1.values
             for j in range(i + 1, len(opposite_boolop_operands)):
                 operand2 = opposite_boolop_operands[j]
-                left_sub_expr2, right_sub_expr2 = operand2.values
-                if are_same_expression(left_sub_expr1, left_sub_expr2):
+
+                sub_expr_index = get_matching_subexpression_index(left_sub_expr1, operand2)
+
+                if sub_expr_index is not None:
                     operands_sharing_left_sub_expr.append(operand2)
-                    factored_expression_left.append(converted_operands[j][1])
-                elif are_same_expression(left_sub_expr1, right_sub_expr2):
-                    operands_sharing_left_sub_expr.append(operand2)
-                    factored_expression_left.append(converted_operands[j][0])
-                elif are_same_expression(right_sub_expr1, left_sub_expr2):
+                    # the `1 - sub_expr_index` is to get the remaining factor in the operand2
+                    factored_expression_left.append(converted_operands[j][1 - sub_expr_index])
+                    continue
+
+                sub_expr_index = get_matching_subexpression_index(right_sub_expr1, operand2)
+
+                if sub_expr_index is not None:
                     operands_sharing_right_sub_expr.append(operand2)
-                    factored_expression_right.append(converted_operands[j][1])
-                elif are_same_expression(right_sub_expr1, right_sub_expr2):
-                    operands_sharing_right_sub_expr.append(operand2)
-                    factored_expression_right.append(converted_operands[j][0])
+                    factored_expression_right.append(converted_operands[j][1 - sub_expr_index])
 
             result = get_result_if_collectively_exhaustive(
                 factored_expression_left, operands_sharing_left_sub_expr, left_sub_expr1
@@ -2370,6 +2384,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "simplifiable-test-by-equals",
         "redundant-condition-part",
         "condition-always-true-or-false",
+        "collectively-exhaustive-condition-part",
     )
     def visit_boolop(self, node: nodes.BoolOp) -> None:
         self._check_for_simplification_of_boolop(node)
