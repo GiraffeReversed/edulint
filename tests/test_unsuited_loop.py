@@ -523,9 +523,38 @@ def test_use_enumerate(filename: str, expected_output: List[Problem]):
         .set_text("This while loop is infinite."),
     ]),
 ])
-def test_infinite_loop(lines: List[str], expected_output: List[Problem]) -> None:
+def test_infinite_loop_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=infinite-loop")],
         expected_output
     )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("79042c37d3-p1_digit_sum.py", []),
+    ("cf_1110_e_38.py", []),
+    ("cf_1228_e_10.py", []),
+    ("cf_1270_e_20.py", [lazy_problem().set_line(4)]),
+    ("1f246b4326-a_clock.py", []),
+])
+def test_explicit_infinite_loop(filename: str, expected_output: List[Problem]):
+    apply_and_lint(filename, [Arg(Option.PYLINT, "--enable=explicit-infinite-loop")], expected_output)
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("79042c37d3-p1_digit_sum.py", []),
+    ("cf_1110_e_38.py", []),
+    ("cf_1228_e_10.py", []),
+    ("1f246b4326-a_clock.py", [
+        lazy_problem().set_line(77),
+        lazy_problem().set_line(79),
+        lazy_problem().set_line(71),
+        lazy_problem().set_line(73),
+        lazy_problem().set_line(75),
+        lazy_problem().set_line(77),
+        lazy_problem().set_line(79),
+    ])
+])
+def test_implicit_infinite_loop(filename: str, expected_output: List[Problem]):
+    apply_and_lint(filename, [Arg(Option.PYLINT, "--enable=implicit-infinite-loop")], expected_output)
