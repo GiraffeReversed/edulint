@@ -1029,9 +1029,37 @@ def test_redundant_condition_part(filename: str, expected_output: List[Problem])
         .set_text("This elif can be merged with the next 2 elifs."),
     ]),
 ])
-def test_use_if_elif_else(lines: List[str], expected_output: List[Problem]) -> None:
+def test_use_if_elif_else_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
         lines,
         [Arg(Option.PYLINT, "--enable=use-if-elif-else")],
+        expected_output,
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("9da213a694-person_id.py", []),
+    ("cf_978_d_13.py", []),
+    ("cf_1409_f_4.py", []),
+    ("ut_66_8957_12_17.py", [lazy_problem().set_line(7)]),
+])
+def test_use_if_elif_else(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=use-if-elif-else")],
+        expected_output,
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("9da213a694-person_id.py", []),
+    ("cf_978_d_13.py", [lazy_problem().set_line(35)]),
+    ("cf_1409_f_4.py", []),
+    ("ut_66_8957_12_17.py", []),
+])
+def test_use_if_elif_else_modifying(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=use-if-elif-else-modifying")],
         expected_output,
     )
