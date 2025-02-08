@@ -2192,44 +2192,63 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         opposite_boolop_operands: List[nodes.BoolOp],
         converted_operands: List[List[ExprRef]],
     ) -> Optional[Tuple[str, str]]:
+        def get_result_if_collectively_exhaustive(
+            factored_expression_operands: List[ExprRef],
+            operands_sharing_sub_expr: List[nodes.NodeNG],
+            common_sub_expr: nodes.NodeNG,
+        ) -> Optional[Tuple[str, str]]:
+            if len(factored_expression_operands) < 2:
+                return None
+
+            factored_expression = get_boolOp_as_condition(
+                factored_expression_operands, node.op == "or"
+            )
+
+            if unsatisfiable(Not(factored_expression) if node.op == "or" else factored_expression):
+                return (
+                    common_sub_expr.as_string(),
+                    get_boolOp_as_string_from_operands(operands_sharing_sub_expr, node.op),
+                )
+
+            return None
+
         for i, operand1 in enumerate(opposite_boolop_operands):
-            operands_including_left_part: List[nodes.NodeNG] = [operand1]
+            operands_sharing_left_sub_expr: List[nodes.NodeNG] = [operand1]
             factored_expression_left: List[ExprRef] = [converted_operands[i][1]]
 
-            operands_including_right_part: List[nodes.NodeNG] = [operand1]
+            operands_sharing_right_sub_expr: List[nodes.NodeNG] = [operand1]
             factored_expression_right: List[ExprRef] = [converted_operands[i][0]]
 
-            left1, right1 = operand1.values
-            for j, operand2 in enumerate(opposite_boolop_operands[i + 1 :]):
-                left2, right2 = operand2.values
-                if are_same_expression(left1, left2):
-                    operands_including_left_part.append(operand2)
-                    factored_expression_left.append(converted_operands[i + 1 + j][1])
-                elif are_same_expression(left1, right2):
-                    operands_including_left_part.append(operand2)
-                    factored_expression_left.append(converted_operands[i + 1 + j][0])
-                elif are_same_expression(right1, left2):
-                    operands_including_right_part.append(operand2)
-                    factored_expression_right.append(converted_operands[i + 1 + j][1])
-                elif are_same_expression(right1, right2):
-                    operands_including_right_part.append(operand2)
-                    factored_expression_right.append(converted_operands[i + 1 + j][0])
+            left_sub_expr1, right_sub_expr1 = operand1.values
+            for j in range(i + 1, len(opposite_boolop_operands)):
+                operand2 = opposite_boolop_operands[j]
+                left_sub_expr2, right_sub_expr2 = operand2.values
+                if are_same_expression(left_sub_expr1, left_sub_expr2):
+                    operands_sharing_left_sub_expr.append(operand2)
+                    factored_expression_left.append(converted_operands[j][1])
+                elif are_same_expression(left_sub_expr1, right_sub_expr2):
+                    operands_sharing_left_sub_expr.append(operand2)
+                    factored_expression_left.append(converted_operands[j][0])
+                elif are_same_expression(right_sub_expr1, left_sub_expr2):
+                    operands_sharing_right_sub_expr.append(operand2)
+                    factored_expression_right.append(converted_operands[j][1])
+                elif are_same_expression(right_sub_expr1, right_sub_expr2):
+                    operands_sharing_right_sub_expr.append(operand2)
+                    factored_expression_right.append(converted_operands[j][0])
 
-            if len(factored_expression_left) >= 2 and unsatisfiable(
-                Not(get_boolOp_as_condition(factored_expression_left, node.op == "or"))
-            ):
-                return (
-                    left1.as_string(),
-                    get_boolOp_as_string_from_operands(operands_including_left_part, node.op),
-                )
+            result = get_result_if_collectively_exhaustive(
+                factored_expression_left, operands_sharing_left_sub_expr, left_sub_expr1
+            )
 
-            if len(factored_expression_right) >= 2 and unsatisfiable(
-                Not(get_boolOp_as_condition(factored_expression_right, node.op == "or"))
-            ):
-                return (
-                    right1.as_string(),
-                    get_boolOp_as_string_from_operands(operands_including_right_part, node.op),
-                )
+            if result is not None:
+                return result
+
+            result = get_result_if_collectively_exhaustive(
+                factored_expression_right, operands_sharing_right_sub_expr, right_sub_expr1
+            )
+
+            if result is not None:
+                return result
 
         return None
 
