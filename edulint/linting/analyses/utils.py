@@ -46,5 +46,6 @@ def may_contain_mutable_var(node: nodes.NodeNG) -> bool:
 
 
 def vars_from_node_may_be_modified_in(node: nodes.NodeNG, nodes: List[nodes.NodeNG]) -> bool:
-    "Note: may not work when there are some global variables in `node`."
+    """If returns `False`, then vars from `node` are not modified in `nodes` for sure.
+    Note: may not work when there are some global variables in `node`."""
     return may_contain_mutable_var(node) or modified_in(list(vars_in(node).keys()), nodes)

@@ -425,7 +425,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "R6223": (
             "The next %d if statements after this one can be elif statements.",
             "use-if-elif-else",
-            "Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.",
+            """Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.
+            But no variables from test conditions are modified.""",
+        ),
+        "R6224": (
+            "The next %d if statements after this one can be elif statements.",
+            "use-if-elif-else-modifying",
+            """Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.
+            But some variable from test conditions is modified.""",
         ),
     }
 
@@ -1204,11 +1211,20 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return i
 
+    def _test_conditions_might_be_modified(self, ifs: List[nodes.If]) -> bool:
+        for if_stmt in ifs:
+            for test in self._get_list_of_test_conditions(if_stmt):
+                if vars_from_node_may_be_modified_in(test, ifs):
+                    return True
+
+        return False
+
     def _find_mergable_consecutive_ifs(
         self,
         ifs: List[nodes.If],
         converted_conditions: List[List[ExprRef]],
         relations_between_vars: BoolRef,
+        vars_from_test_conditions_might_be_modified: bool,
     ) -> None:
         i = 0
         while i < len(converted_conditions):
@@ -1218,7 +1234,16 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             if first_unmergable_index > i + 1:
                 self.add_message(
-                    "use-if-elif-else",
+                    (
+                        "use-if-elif-else-modifying"
+                        if (
+                            vars_from_test_conditions_might_be_modified
+                            and self._test_conditions_might_be_modified(
+                                ifs[i:first_unmergable_index]
+                            )
+                        )
+                        else "use-if-elif-else"
+                    ),
                     node=ifs[i],
                     args=(first_unmergable_index - i - 1,),
                 )
@@ -1236,7 +1261,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             )
         )
 
-        self._find_mergable_consecutive_ifs(ifs, converted_conditions, relations_between_vars)
+        self._find_mergable_consecutive_ifs(ifs, converted_conditions, relations_between_vars, True)
 
     def _merge_consecutive_ifs_without_var_modifications(
         self, consecutive_ifs: List[nodes.If]
@@ -1268,7 +1293,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
                 converted_conditions[-1].append(converted)
 
-        self._find_mergable_consecutive_ifs(consecutive_ifs, converted_conditions, BoolVal(True))
+        self._find_mergable_consecutive_ifs(
+            consecutive_ifs, converted_conditions, BoolVal(True), False
+        )
 
     def _check_for_use_if_elif_else(self, node: nodes.If) -> None:
         if isinstance(node.previous_sibling(), nodes.If):
@@ -1303,6 +1330,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "condition-always-false-in-elif",
         "unreachable-elif-else",
         "use-if-elif-else",
+        "use-if-elif-else-modifying",
     )
     def visit_if(self, node: nodes.If) -> None:
         self._basic_checks(node)
