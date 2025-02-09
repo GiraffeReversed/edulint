@@ -151,6 +151,7 @@ PURE_FUNCTIONS = {
     "ord",
     "chr",
     "isinstance",
+    "print",
 }
 
 EXPR_FUNCTIONS = PURE_FUNCTIONS | {"all", "any", "map", "filter"}

@@ -206,11 +206,11 @@ def _change_assertions_and_vars_after_elif_block(
     changed_vars_in_any_branch: Set[str],
     var_changes_in_each_branch: List[Dict[str, ArithRef]],
 ):
-    previous_conditions_negated = And([Not(cond) for cond in if_conditions])
+    previous_conditions_negated = [Not(cond) for cond in if_conditions]
 
     if return_encountered:
         assertions.append(
-            Implies(previous_conditions_negated, Not(current_condition))
+            Implies(And(previous_conditions_negated), Not(current_condition))
             if len(if_conditions) > 0
             else Not(current_condition)
         )

@@ -42,7 +42,6 @@ from edulint.linting.checkers.utils import (
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs
 from edulint.linting.analyses.utils import (
-    may_contain_mutable_var,
     vars_from_node_may_be_modified_in,
 )
 
