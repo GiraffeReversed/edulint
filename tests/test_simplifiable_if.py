@@ -1052,7 +1052,7 @@ def test_redundant_condition_part(filename: str, expected_output: List[Problem])
     ]),
 ])
 def test_use_if_elif_else_modifying_custom(lines: List[str], expected_output: List[Problem]) -> None:
-    _test_simplify_if(lines, expected_output, "use-if-elif-else")
+    _test_simplify_if(lines, expected_output, "R6224")
 
 @pytest.mark.parametrize("lines,expected_output", [
     ([
@@ -1068,7 +1068,7 @@ def test_use_if_elif_else_modifying_custom(lines: List[str], expected_output: Li
     ])
 ])
 def test_use_if_elif_else_custom(lines: List[str], expected_output: List[Problem]) -> None:
-    _test_simplify_if(lines, expected_output, "use-if-elif-else-modifying")
+    _test_simplify_if(lines, expected_output, "R6223")
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("9da213a694-person_id.py", [lazy_problem().set_line(39)]),
@@ -1079,7 +1079,7 @@ def test_use_if_elif_else_custom(lines: List[str], expected_output: List[Problem
 def test_use_if_elif_else(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=use-if-elif-else")],
+        [Arg(Option.PYLINT, "--enable=R6223")],
         expected_output,
     )
 
@@ -1093,6 +1093,6 @@ def test_use_if_elif_else(filename: str, expected_output: List[Problem]) -> None
 def test_use_if_elif_else_modifying(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=use-if-elif-else-modifying")],
+        [Arg(Option.PYLINT, "--enable=R6224")],
         expected_output,
     )
