@@ -20,6 +20,7 @@ from edulint.linting.checkers.z3_analysis import (
     convert_condition_to_z3_expression,
     create_prefixed_var,
     convert_to_bool,
+    _is_expression_with_nonlinear_arithmetic,
 )
 
 
@@ -130,6 +131,11 @@ def _initialize_variables_in_node(
         node = node.test
 
     nodes_tmp = [node]
+
+    if isinstance(node, nodes.AugAssign) and _is_expression_with_nonlinear_arithmetic(
+        _get_assigned_expression_in_AugAssign(node)
+    ):
+        return False
 
     if isinstance(node, nodes.Assign) and has_more_assign_targets(node):
         nodes_tmp = list(node.value.get_children())
