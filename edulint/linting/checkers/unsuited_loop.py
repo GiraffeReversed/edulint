@@ -13,6 +13,8 @@ from edulint.linting.checkers.utils import (
     get_const_value,
     is_builtin,
     requires_data_dependency_analysis,
+    is_in_try_block,
+    contains_node_of_type,
 )
 from edulint.linting.analyses.cfg.utils import successors_from_loc, get_cfg_loc, CFGLoc
 from edulint.linting.analyses.var_events import VarEventType, Variable, VarEvent, strip_to_name
@@ -80,8 +82,21 @@ class UnsuitedLoop(BaseChecker):
         ),
         "R6309": (
             "This while loop is infinite.",
-            "infinite-loop",
-            "Emitted when a while loop is infinite (when the loop condition is once True it will stay True forever).",
+            "explicit-infinite-loop",
+            """
+            Emitted when a while loop condition is `True` and never terminates.
+            
+            Warning: If there is called some function that can raise some exception then this checker might not see it.
+            """,
+        ),
+        "R6310": (
+            "This while loop is infinite.",
+            "implicit-infinite-loop",
+            """
+            Emitted when a while loop never terminates (when the loop condition is once True it will stay True forever).
+            
+            Warning: If there is called some function that can raise some exception then this checker might not see it.
+            """,
         ),
     }
 
@@ -220,17 +235,22 @@ class UnsuitedLoop(BaseChecker):
             self.add_message("use-for-loop", node=node)
 
     def _check_infinite_loop(self, node: nodes.While) -> None:
-        if (
-            sat_condition(node.test)
-            and not node_contains_cfg_loc_node_of_type(node, (*END_NODES, nodes.Assert))
-            and (
-                not vars_from_node_may_be_modified_in(node.test, node.body)
-                or condition_implies_another_with_block_in_between(node.test, node.body, node.test)
-            )
+        if is_in_try_block(node) or contains_node_of_type(
+            node, (*END_NODES, nodes.Assert, nodes.Yield, nodes.YieldFrom)
         ):
-            self.add_message("infinite-loop", node=node)
+            return
 
-    @only_required_for_messages("no-while-true", "use-for-loop", "infinite-loop")
+        if isinstance(node.test, nodes.Const) and node.test.value is True:
+            self.add_message("explicit-infinite-loop", node=node)
+        elif sat_condition(node.test) and (
+            not vars_from_node_may_be_modified_in(node.test, node.body)
+            or condition_implies_another_with_block_in_between(node.test, node.body, node.test)
+        ):
+            self.add_message("implicit-infinite-loop", node=node)
+
+    @only_required_for_messages(
+        "no-while-true", "use-for-loop", "explicit-infinite-loop", "implicit-infinite-loop"
+    )
     def visit_while(self, node: nodes.While) -> None:
         self._check_no_while_true(node)
         self._check_use_for_loop(node)
