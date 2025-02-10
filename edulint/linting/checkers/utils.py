@@ -269,6 +269,31 @@ def get_assign_targets(
     return [node.target]
 
 
+def is_in_try_block(node: nodes.NodeNG) -> bool:
+    predecessor = node.parent
+
+    while predecessor:
+        if isinstance(predecessor, (nodes.Try, nodes.TryStar)):
+            return True
+
+        predecessor = predecessor.parent
+
+    return False
+
+
+def contains_node_of_type(node: nodes.NodeNG, types) -> bool:
+    stack = [node]
+
+    while stack:
+        current_node = stack.pop()
+        if isinstance(current_node, types):
+            return True
+
+        stack.extend(current_node.get_children())
+
+    return False
+
+
 Named = Union[nodes.Name, nodes.Attribute, nodes.AssignName]
 
 
