@@ -563,6 +563,16 @@ def test_explicit_infinite_loop_custom(lines: List[str], expected_output: List[P
         lazy_problem().set_line(3)
         .set_text("This while loop is infinite."),
     ]),
+    ([
+        "def foo(x):",
+        "    while x:",
+        "        x.pop()",
+    ], []),
+    ([
+        "def foo(x):",
+        "    while x:",
+        "        bar()",
+    ], []),
 ])
 def test_implicit_infinite_loop_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
