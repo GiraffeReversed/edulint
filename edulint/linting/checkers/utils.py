@@ -674,12 +674,13 @@ def is_negation(lt: nodes.NodeNG, rt: nodes.NodeNG, negated_rt: bool) -> bool:
 
 def have_same_value(lt: nodes.NodeNG, rt: nodes.NodeNG):
     # TODO improve, for example not all functions are pure
-    return are_identical(lt, rt)
+    return are_same_expression(lt, rt)
 
 
-def are_identical(
+def are_same_expression(
     block1: Union[nodes.NodeNG, List[nodes.NodeNG]], block2: Union[nodes.NodeNG, List[nodes.NodeNG]]
 ) -> bool:
+    "Could be improved to take commutativity into account, ie: `x + y` could be considered same as `y + x`."
     if isinstance(block1, nodes.NodeNG):
         assert isinstance(block2, nodes.NodeNG)
         block1 = [block1]
@@ -689,8 +690,3 @@ def are_identical(
     strings2 = [n.as_string() for n in block2]
 
     return strings1 == strings2
-
-
-def are_same_expression(expr1: nodes.NodeNG, expr2: nodes.NodeNG) -> bool:
-    "Could be improved to take commutativity into account, ie: `x + y` could be considered same as `y + x`."
-    return expr1.as_string() == expr2.as_string()
