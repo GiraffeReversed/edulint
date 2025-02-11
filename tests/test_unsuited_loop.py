@@ -571,20 +571,25 @@ def test_implicit_infinite_loop_custom(lines: List[str], expected_output: List[P
 
 
 @pytest.mark.parametrize("filename,expected_output", [
+    ("1f246b4326-a_clock.py", []),
+    ("3d300c1a5d-p2_nested.py", [
+        lazy_problem().set_line(40),
+        lazy_problem().set_line(44),
+    ]),
     ("79042c37d3-p1_digit_sum.py", []),
+    ("Calcy.py", []),
     ("cf_1110_e_38.py", []),
     ("cf_1228_e_10.py", []),
-    ("cf_1270_e_20.py", [lazy_problem().set_line(4)]),
-    ("1f246b4326-a_clock.py", []),
+    ("cf_1270_e_20.py", []),
+    ("cf_837_f_6.py", []),
+    ("cf_887_b_21.py", []),
+    ("matrix-rain.py", [lazy_problem().set_line(36)]),
 ])
 def test_explicit_infinite_loop(filename: str, expected_output: List[Problem]):
     apply_and_lint(filename, [Arg(Option.PYLINT, "--enable=explicit-infinite-loop")], expected_output)
 
 
 @pytest.mark.parametrize("filename,expected_output", [
-    ("79042c37d3-p1_digit_sum.py", []),
-    ("cf_1110_e_38.py", []),
-    ("cf_1228_e_10.py", []),
     ("1f246b4326-a_clock.py", [
         lazy_problem().set_line(77),
         lazy_problem().set_line(79),
@@ -593,7 +598,18 @@ def test_explicit_infinite_loop(filename: str, expected_output: List[Problem]):
         lazy_problem().set_line(85),
         lazy_problem().set_line(87),
         lazy_problem().set_line(89),
-    ])
+    ]),
+    ("248567df13-task.py", [lazy_problem().set_line(26)]),
+    ("3d300c1a5d-p2_nested.py", []),
+    ("79042c37d3-p1_digit_sum.py", []),
+    ("Calcy.py", []),
+    ("cf_1110_e_38.py", []),
+    ("cf_1228_e_10.py", []),
+    ("cf_1244_a_40.py", [lazy_problem().set_line(86)]),  # disputable
+    ("cf_371_b_20.py", []),
+    ("cf_641_d_4.py", [lazy_problem().set_line(3)]),
+    ("e68c682baf-task_3.py", [lazy_problem().set_line(36)]),
+    ("matrix-rain.py", []),
 ])
 def test_implicit_infinite_loop(filename: str, expected_output: List[Problem]):
     apply_and_lint(filename, [Arg(Option.PYLINT, "--enable=implicit-infinite-loop")], expected_output)
