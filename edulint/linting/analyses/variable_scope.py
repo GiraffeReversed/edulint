@@ -51,25 +51,23 @@ class ScopeListener(BaseVisitor[T]):
 
         self.stack[scope_index].pop(name)
 
-    @staticmethod
-    def statements_before_definitions(node: Union[nodes.Module, nodes.FunctionDef]):
+    def statements_before_definitions(self, node: Union[nodes.Module, nodes.FunctionDef]):
         sooner = []
         later = []
         for child in node.body:
             if not isinstance(child, (nodes.FunctionDef, nodes.ClassDef)):
                 sooner.append(child)
             else:
+                self._init_var_in_scope(child.name, child)
                 later.append(child)
         return sooner + later
 
     @in_new_scope
     def visit_module(self, node: nodes.Module) -> T:
-        return self.visit_many(ScopeListener.statements_before_definitions(node))
+        return self.visit_many(self.statements_before_definitions(node))
 
     @in_new_scope
     def visit_functiondef(self, node: nodes.FunctionDef) -> T:
-        self._init_var_in_scope(node.name, node, offset=-1)
-
         for arg in node.args.arguments:
             self._init_var_in_scope(arg.name, arg)
 
@@ -82,13 +80,11 @@ class ScopeListener(BaseVisitor[T]):
         if node.args.kwarg_node is not None:
             self._init_var_in_scope(node.args.kwarg_node.name, node.args.kwarg_node)
 
-        return self.visit_many(ScopeListener.statements_before_definitions(node))
+        return self.visit_many(self.statements_before_definitions(node))
 
     @in_new_scope
     def visit_classdef(self, node: nodes.ClassDef) -> T:
-        self._init_var_in_scope(node.name, node, offset=-1)
-
-        return self.visit_many(node.get_children())
+        return self.visit_many(self.statements_before_definitions(node))
 
     @in_new_scope
     def visit_lambda(self, node: nodes.Lambda) -> T:
