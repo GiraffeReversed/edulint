@@ -240,7 +240,7 @@ class UnsuitedLoop(BaseChecker):
         ):
             return
 
-        if isinstance(node.test, nodes.Const) and node.test.value is True:
+        if get_const_value(node.test):
             self.add_message("explicit-infinite-loop", node=node)
         elif sat_condition(node.test) and (
             not vars_from_node_may_be_modified_in(node.test, node.body)
