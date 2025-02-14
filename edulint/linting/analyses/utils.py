@@ -2,12 +2,7 @@ from typing import Union, List
 from astroid import nodes
 
 from edulint.linting.analyses.types import guess_type, Type
-from edulint.linting.analyses.data_dependency import (
-    vars_in,
-    modified_in,
-    get_events_for,
-    get_events_by_var,
-)
+from edulint.linting.analyses.data_dependency import vars_in, modified_in, get_events_in
 from edulint.linting.checkers.utils import has_more_assign_targets, is_chained_assignment
 from edulint.linting.analyses.var_events import VarEventType
 
@@ -56,19 +51,22 @@ def is_global_variable():
 
 
 def _may_contain_global_variable_modified_in_function(
-    node: nodes.NodeNG, nodes: List[nodes.NodeNG]
+    node: nodes.NodeNG, nodes_: List[nodes.NodeNG]
 ) -> bool:
-    variables = list(vars_in(node).keys())
+    for event in get_events_in(nodes_, [VarEventType.READ]):
+        if not isinstance(event.node.parent, nodes.Call) or event.node != event.node.parent.func:
+            continue
+        for definition in event.definitions:
+            if vars_from_node_may_be_modified_in(node, definition.node.body):
+                return True
+    return False
 
-    for event in get_events_for(variables, nodes, [VarEventType.READ]):
-        z = event
 
-
-def vars_from_node_may_be_modified_in(node: nodes.NodeNG, nodes: List[nodes.NodeNG]) -> bool:
+def vars_from_node_may_be_modified_in(node: nodes.NodeNG, nodes_: List[nodes.NodeNG]) -> bool:
     """If returns `False`, then vars from `node` are not modified in `nodes` for sure.
     Note: may not work when there are some global variables in `node`."""
     return (
         may_contain_mutable_var(node)
-        or modified_in(list(vars_in(node).keys()), nodes)
-        or _may_contain_global_variable_modified_in_function(node, nodes)
+        or modified_in(list(vars_in(node).keys()), nodes_)
+        or _may_contain_global_variable_modified_in_function(node, nodes_)
     )

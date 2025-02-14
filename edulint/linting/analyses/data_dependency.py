@@ -327,6 +327,23 @@ def is_changed_between(var: Variable, before_loc: CFGLoc, after_locs: List[CFGLo
     return False
 
 
+def get_events_in(
+    nodes: List[nodes.NodeNG], event_types: Optional[List[VarEventType]] = None
+) -> Iterator[VarEvent]:
+    if len(nodes) == 0:
+        return
+
+    loc_nodes = [get_cfg_loc(n).node for n in nodes]
+    check_ancestors = all(n == ln for n, ln in zip(nodes, loc_nodes))
+    for loc in syntactic_children_locs(loc_nodes, explore_functions=False, explore_classes=False):
+        for _var, event in loc.var_events.all():
+            if (event_types is None or event.type in event_types) and (
+                not check_ancestors
+                or any(event.node == n or n in event.node.node_ancestors() for n in nodes)
+            ):
+                yield event
+
+
 def get_events_for(
     vars: List[Variable],
     nodes: List[nodes.NodeNG],
