@@ -14,7 +14,7 @@ from edulint.linting.checkers.utils import (
     is_builtin,
     requires_data_dependency_analysis,
     is_in_try_block,
-    contains_node_of_type,
+    contains_node_of_type_or_exit,
 )
 from edulint.linting.analyses.cfg.utils import successors_from_loc, get_cfg_loc, CFGLoc
 from edulint.linting.analyses.var_events import VarEventType, Variable, VarEvent, strip_to_name
@@ -235,7 +235,7 @@ class UnsuitedLoop(BaseChecker):
             self.add_message("use-for-loop", node=node)
 
     def _check_infinite_loop(self, node: nodes.While) -> None:
-        if is_in_try_block(node) or contains_node_of_type(
+        if is_in_try_block(node) or contains_node_of_type_or_exit(
             node, (*END_NODES, nodes.Assert, nodes.Yield, nodes.YieldFrom)
         ):
             return
