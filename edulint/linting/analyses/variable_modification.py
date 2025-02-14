@@ -60,9 +60,9 @@ class VarEventListener(ScopeListener[None]):
             loc.var_events.add(var, VarEvent(var, name_node, action))
 
     # @override
-    def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG, offset: int = 0) -> None:
-        was_defined = name in self.stack[-1 + offset]
-        super()._init_var_in_scope(name, name_node, offset)
+    def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG) -> None:
+        was_defined = name in self.stack[-1]
+        super()._init_var_in_scope(name, name_node)
         self._add_var_event(
             name, name_node, VarEventType.ASSIGN if not was_defined else VarEventType.REASSIGN
         )

@@ -40,9 +40,13 @@ class ScopeListener(BaseVisitor[T]):
             return None
         return self.stack[scope_index][name]
 
-    def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG, offset: int = 0) -> None:
-        if name not in self.stack[-1 + offset]:
-            self.stack[-1 + offset][name] = name_node.scope()
+    def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG) -> None:
+        if name not in self.stack[-1]:
+            self.stack[-1][name] = (
+                name_node.scope()
+                if not isinstance(name_node, (nodes.FunctionDef, nodes.ClassDef))
+                else name_node.parent.scope()
+            )
 
     def _del_var_from_scope(self, name: VarName, _node: nodes.NodeNG):
         scope_index = self._get_var_scope_index(name)
