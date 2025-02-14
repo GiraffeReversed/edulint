@@ -281,17 +281,48 @@ def is_in_try_block(node: nodes.NodeNG) -> bool:
     return False
 
 
-def contains_node_of_type(node: nodes.NodeNG, types) -> bool:
+def condition_met_in_ast(node: nodes.NodeNG, condition: Callable[[nodes.NodeNG], bool]) -> bool:
     stack = [node]
 
     while stack:
         current_node = stack.pop()
-        if isinstance(current_node, types):
+        if condition(current_node):
             return True
 
         stack.extend(current_node.get_children())
 
     return False
+
+
+EXIT_FUNCS = {"exit", "quit"}
+ATTR_EXIT_FUNCS = {"exit", "_exit"}
+EXIT_MODULES = {"sys", "os"}
+
+
+def is_exit_call(node: nodes.NodeNG) -> bool:
+    if not isinstance(node, nodes.Call):
+        return False
+
+    func_node = node.func
+
+    is_direct_exit = isinstance(func_node, nodes.Name) and func_node.name in EXIT_FUNCS
+
+    is_module_exit = (
+        isinstance(func_node, nodes.Attribute)
+        and func_node.attrname in ATTR_EXIT_FUNCS
+        and isinstance(func_node.expr, nodes.Name)
+        and func_node.expr.name in EXIT_MODULES
+    )
+
+    return is_direct_exit or is_module_exit
+
+
+def contains_node_of_type(node: nodes.NodeNG, types) -> bool:
+    return condition_met_in_ast(node, lambda n: isinstance(n, types))
+
+
+def contains_node_of_type_or_exit(node: nodes.NodeNG, types) -> bool:
+    return condition_met_in_ast(node, lambda n: (isinstance(n, types) or is_exit_call(n)))
 
 
 Named = Union[nodes.Name, nodes.Attribute, nodes.AssignName]
@@ -383,6 +414,11 @@ def get_const_value_rec(node: Any) -> Any:
     if isinstance(node, nodes.BoolOp):
         assert len(node.values) > 1
         return reduce(BINARY_SYMBOL_TO_OP[node.op], map(get_const_value_rec, node.values))
+
+    if isinstance(node, nodes.Compare) and len(node.ops) == 1:
+        return BINARY_SYMBOL_TO_OP[node.ops[0][0]](
+            get_const_value_rec(node.left), get_const_value_rec(node.ops[0][1])
+        )
 
     raise ValueError(f"{type(node)} cannot be evaluated")
 
