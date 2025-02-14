@@ -132,8 +132,9 @@ def _initialize_variables_in_node(
 
     nodes_tmp = [node]
 
-    if isinstance(node, nodes.AugAssign) and _is_expression_with_nonlinear_arithmetic(
-        _get_assigned_expression_in_AugAssign(node)
+    if isinstance(node, nodes.AugAssign) and (
+        (assigned := _get_assigned_expression_in_AugAssign(node)) is None
+        or _is_expression_with_nonlinear_arithmetic(assigned)
     ):
         return False
 
@@ -445,7 +446,7 @@ def _convert_expression_in_assignment_to_Z3(
     return convert_condition_to_z3_expression(node, initialized_variables, node.parent)[0]
 
 
-def _get_assigned_expression_in_AugAssign(node: nodes.AugAssign) -> nodes.NodeNG:
+def _get_assigned_expression_in_AugAssign(node: nodes.AugAssign) -> Optional[nodes.NodeNG]:
     assigned_expression = nodes.BinOp(
         op=node.op[:-1],
         lineno=node.lineno,
@@ -456,7 +457,7 @@ def _get_assigned_expression_in_AugAssign(node: nodes.AugAssign) -> nodes.NodeNG
     )
 
     if not isinstance(node.target, nodes.AssignName):
-        return assigned_expression
+        return None
 
     assigned_expression.postinit(
         nodes.Name(

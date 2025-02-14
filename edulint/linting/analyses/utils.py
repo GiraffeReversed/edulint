@@ -46,10 +46,6 @@ def may_contain_mutable_var(node: nodes.NodeNG) -> bool:
     return False
 
 
-def is_global_variable():
-    pass
-
-
 def _may_contain_global_variable_modified_in_function(
     node: nodes.NodeNG, nodes_: List[nodes.NodeNG]
 ) -> bool:
