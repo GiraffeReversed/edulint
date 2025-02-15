@@ -573,6 +573,40 @@ def test_explicit_infinite_loop_custom(lines: List[str], expected_output: List[P
         "    while x:",
         "        bar()",
     ], []),
+    ([
+        "glob = 2",
+        "",
+        "def func2(x = 1):",
+        "    global glob",
+        "",
+        "    if x < 100:",
+        "        print(x)",
+        "        x += 1",
+        "        func2(x)",
+        "",
+        "def func():",
+        "    x = 10",
+        "",
+        "    while x > 8 and glob == 2:",
+        "        func2()",
+        ], [
+            lazy_problem().set_line(14)
+            .set_text("This while loop is infinite."),
+        ]),
+        ([
+            "counter = 0",
+            "",
+            "def increment_counter(amount):",
+            "",
+            "    global counter",
+            "    counter += amount",
+            "",
+            "update_counter = lambda x: increment_counter(x)",
+            "",
+            "def func():",
+            "    while counter:",
+            "        update_counter(2)",
+        ], []),
 ])
 def test_implicit_infinite_loop_custom(lines: List[str], expected_output: List[Problem]) -> None:
     create_apply_and_lint(
