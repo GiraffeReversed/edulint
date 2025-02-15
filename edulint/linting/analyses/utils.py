@@ -47,17 +47,12 @@ def may_contain_mutable_var(node: nodes.NodeNG) -> bool:
 
 
 def _get_body_of_called_function(definition: VarEvent) -> Optional[List[nodes.NodeNG]]:
-    if not (
-        isinstance(definition.node, nodes.FunctionDef)
-        or isinstance(definition.node.parent, (nodes.AnnAssign, nodes.Assign))
-    ):
-        return None
-
     if isinstance(definition.node, nodes.FunctionDef):
         return definition.node.body
 
     if (
-        is_chained_assignment(definition.node.parent)
+        not isinstance(definition.node.parent, (nodes.AnnAssign, nodes.Assign))
+        or is_chained_assignment(definition.node.parent)
         or has_more_assign_targets(definition.node.parent)
         or not isinstance(definition.node.parent.value, nodes.Lambda)
     ):
