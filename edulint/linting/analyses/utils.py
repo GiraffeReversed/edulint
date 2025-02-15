@@ -47,7 +47,10 @@ def may_contain_mutable_var(node: nodes.NodeNG) -> bool:
 
 
 def _get_body_of_called_function(definition: VarEvent) -> Optional[List[nodes.NodeNG]]:
-    if not isinstance(definition.node.parent, (nodes.AnnAssign, nodes.Assign, nodes.FunctionDef)):
+    if not (
+        isinstance(definition.node, nodes.FunctionDef)
+        or isinstance(definition.node.parent, (nodes.AnnAssign, nodes.Assign))
+    ):
         return None
 
     if isinstance(definition.node, nodes.FunctionDef):
@@ -64,7 +67,7 @@ def _get_body_of_called_function(definition: VarEvent) -> Optional[List[nodes.No
 
 
 def _may_contain_global_variable_modified_in_function(
-    node: nodes.NodeNG, nodes_: List[nodes.NodeNG], checked_function_names: Set[str] = set()
+    node: nodes.NodeNG, nodes_: List[nodes.NodeNG], checked_function_names: Set[str]
 ) -> bool:
     for event in get_events_in(nodes_, [VarEventType.READ]):
         if not isinstance(event.node.parent, nodes.Call) or event.node != event.node.parent.func:
@@ -80,7 +83,7 @@ def _may_contain_global_variable_modified_in_function(
 
             if (
                 body is None
-                or vars_from_node_may_be_directly_modified_in(node, body)
+                or _vars_from_node_may_be_directly_modified_in(node, body)
                 or _may_contain_global_variable_modified_in_function(
                     node, body, checked_function_names
                 )
@@ -90,7 +93,7 @@ def _may_contain_global_variable_modified_in_function(
     return False
 
 
-def vars_from_node_may_be_directly_modified_in(
+def _vars_from_node_may_be_directly_modified_in(
     node: nodes.NodeNG, nodes_: List[nodes.NodeNG]
 ) -> bool:
     return may_contain_mutable_var(node) or modified_in(list(vars_in(node).keys()), nodes_)
@@ -98,6 +101,6 @@ def vars_from_node_may_be_directly_modified_in(
 
 def vars_from_node_may_be_modified_in(node: nodes.NodeNG, nodes_: List[nodes.NodeNG]) -> bool:
     """If returns `False`, then vars from `node` are not modified in `nodes` for sure."""
-    return vars_from_node_may_be_directly_modified_in(
+    return _vars_from_node_may_be_directly_modified_in(
         node, nodes_
-    ) or _may_contain_global_variable_modified_in_function(node, nodes_)
+    ) or _may_contain_global_variable_modified_in_function(node, nodes_, set())
