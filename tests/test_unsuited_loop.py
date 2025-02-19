@@ -644,6 +644,7 @@ def test_explicit_infinite_loop(filename: str, expected_output: List[Problem]):
         lazy_problem().set_line(89),
     ]),
     ("248567df13-task.py", [lazy_problem().set_line(26)]),
+    ("2c26d6e737-hw1.py", []),
     ("3d300c1a5d-p2_nested.py", []),
     ("79042c37d3-p1_digit_sum.py", []),
     ("Calcy.py", []),
@@ -653,6 +654,7 @@ def test_explicit_infinite_loop(filename: str, expected_output: List[Problem]):
     ("cf_371_b_20.py", []),
     ("cf_641_d_4.py", [lazy_problem().set_line(3)]),
     ("e68c682baf-task_3.py", [lazy_problem().set_line(36)]),
+    ("f267db4b9e-p6_next.py", [lazy_problem().set_line(16)]),
     ("matrix-rain.py", []),
 ])
 def test_implicit_infinite_loop(filename: str, expected_output: List[Problem]):
