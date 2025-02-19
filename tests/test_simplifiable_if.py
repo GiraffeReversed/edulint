@@ -1072,7 +1072,9 @@ def test_use_if_elif_else_custom(lines: List[str], expected_output: List[Problem
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("9da213a694-person_id.py", [lazy_problem().set_line(39)]),
+    ("bf6ed0f044-p6_workdays.py", [lazy_problem().set_line(67)]),
     ("d3f42d6f4b-p3_person_id.py", [lazy_problem().set_line(50)]),
+    ("cf_888_d_49.py", [lazy_problem().set_line(4)]),
     ("cf_978_d_13.py", []),
     ("cf_1409_f_4.py", [lazy_problem().set_line(22)]),
     ("cf_734_d_14.py", [lazy_problem().set_line(11), lazy_problem().set_line(28)]),
@@ -1089,6 +1091,7 @@ def test_use_if_elif_else(filename: str, expected_output: List[Problem]) -> None
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("9da213a694-person_id.py", []),
+    ("bf6ed0f044-p6_workdays.py", []),
     ("cf_978_d_13.py", [lazy_problem().set_line(35)]),
     ("cf_1409_f_4.py", []),
     ("ut_66_8957_12_17.py", []),
