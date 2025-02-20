@@ -1239,7 +1239,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                         if (
                             vars_from_test_conditions_might_be_modified
                             and self._test_conditions_might_be_modified(
-                                ifs[i:first_unmergable_index]
+                                ifs[i : first_unmergable_index - 1]
                             )
                         )
                         else "use-if-elif-else"
@@ -1275,7 +1275,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             for condition in self._get_list_of_test_conditions(if_stmt):
                 if (
-                    vars_from_node_may_be_modified_in(condition, consecutive_ifs[i:])
+                    vars_from_node_may_be_modified_in(condition, consecutive_ifs[i:-1])
                     or not is_pure_expression(condition)
                     or not initialize_variables(condition, initialized_variables, False, None)
                 ):
