@@ -60,18 +60,6 @@ ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS = (
 )
 
 
-def node_contains_cfg_loc_node_of_type(node: nodes.NodeNG, types) -> bool:
-    for loc in syntactic_children_locs(node):
-        if isinstance(loc.node, types):
-            return True
-
-    return False
-
-
-def node_contains_end_node(node: nodes.NodeNG) -> bool:
-    return node_contains_cfg_loc_node_of_type(node, END_NODES)
-
-
 def is_assignment(node: nodes.NodeNG) -> bool:
     return isinstance(node, (nodes.Assign, nodes.AnnAssign, nodes.AugAssign))
 
@@ -185,19 +173,27 @@ def validate_and_initialize_variables_for_Z3_block_analysis(
     if may_contain_mutable_var(node):
         return False
 
-    for loc in syntactic_children_locs(node):
+    nodes_to_validate = [node]
+
+    while nodes_to_validate:
+        current_node = nodes_to_validate.pop()
+
+        if isinstance(current_node, nodes.If):
+            nodes_to_validate.extend(current_node.get_children())
+            continue
+
         if not (
-            _allowed_node_for_Z3_block_analysis(loc.node)
-            and check_purity_for_Z3_block_analysis(loc.node)
-        ) or (isinstance(loc.node, END_NODES) and loc.node.parent is node):
+            _allowed_node_for_Z3_block_analysis(current_node)
+            and check_purity_for_Z3_block_analysis(current_node)
+        ) or (isinstance(current_node, END_NODES) and current_node.parent is node):
             return False
 
-        if isinstance(loc.node, ALWAYS_PURE_ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS) or isinstance(
-            loc.node, nodes.Expr
+        if isinstance(current_node, ALWAYS_PURE_ALLOWED_NODES_FOR_Z3_BLOCK_ANALYSIS) or isinstance(
+            current_node, nodes.Expr
         ):
             continue
 
-        if not _initialize_variables_in_node(loc.node, context, initialized_variables):
+        if not _initialize_variables_in_node(current_node, context, initialized_variables):
             return False
 
     return True

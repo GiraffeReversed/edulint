@@ -30,7 +30,6 @@ from edulint.linting.analyses.utils import vars_from_node_may_be_modified_in
 from edulint.linting.checkers.z3_block_analysis import (
     END_NODES,
     condition_implies_another_with_block_in_between,
-    node_contains_cfg_loc_node_of_type,
 )
 from edulint.linting.checkers.z3_analysis import sat_condition
 

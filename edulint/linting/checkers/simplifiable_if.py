@@ -25,7 +25,6 @@ from edulint.linting.checkers.z3_block_analysis import (
     END_NODES,
     validate_and_initialize_variables_for_Z3_block_analysis,
     convert_conditions_with_blocks_after_each_to_Z3,
-    node_contains_end_node,
 )
 
 from edulint.linting.checkers.utils import (
@@ -38,9 +37,9 @@ from edulint.linting.checkers.utils import (
     is_negation,
     is_parents_elif,
     if_elif_has_else_block,
+    contains_node_of_type,
 )
 
-from edulint.linting.analyses.cfg.utils import syntactic_children_locs
 from edulint.linting.analyses.utils import (
     vars_from_node_may_be_modified_in,
 )
@@ -1270,7 +1269,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         converted_conditions: List[List[ExprRef]] = []
 
         for i, if_stmt in enumerate(consecutive_ifs):
-            if if_elif_has_else_block(if_stmt) or node_contains_end_node(if_stmt):
+            if if_elif_has_else_block(if_stmt) or contains_node_of_type(if_stmt, END_NODES):
                 return
 
             for condition in self._get_list_of_test_conditions(if_stmt):
