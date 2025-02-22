@@ -1110,49 +1110,167 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return consecutive_ifs
 
-    def _validate_and_initialize_variables_for_use_if_elif_else(
-        self, consecutive_ifs: List[nodes.If]
-    ) -> Tuple[List[Tuple[List[nodes.If], Dict[str, ArithRef]]], List[List[nodes.If]]]:
-        ifs_with_initialized_vars: List[Tuple[List[nodes.If], Dict[str, ArithRef]]] = []
+    def _count_of_mergable_consecutive_ifs(
+        self,
+        relations_between_vars: BoolRef,
+        converted_conditions: List[List[ExprRef]],
+        start_if_index: int,
+    ) -> int:
+        "This function also counts the `if` at `start_index`. (if cannot merge any, returns 1)"
+        merged_if_conditions = converted_conditions[start_if_index] if converted_conditions else []
 
-        current_ifs: List[nodes.If] = []
+        i = start_if_index + 1
+        while i < len(converted_conditions) and self.can_merge_ifs_together(
+            merged_if_conditions, converted_conditions[i], relations_between_vars
+        ):
+            merged_if_conditions.extend(converted_conditions[i])
+            i += 1
+
+        return i - start_if_index
+
+    def _get_most_consecutive_ifs_suitable_for_z3_block_analysis(
+        self, consecutive_ifs: List[nodes.If], start_index: int
+    ) -> Tuple[BoolRef, List[List[ExprRef]]]:
         initialized_variables: Dict[str, ArithRef] = {}
 
-        not_valid_consecutive_ifs: List[List[nodes.If]] = []
-        last_not_valid: Optional[int] = None
-
-        for i, if_stmt in enumerate(consecutive_ifs):
-            if not if_elif_has_else_block(
-                if_stmt
-            ) and validate_and_initialize_variables_for_Z3_block_analysis(
-                if_stmt,
+        i = start_index
+        while (
+            i < len(consecutive_ifs)
+            and not if_elif_has_else_block(consecutive_ifs[i])
+            and validate_and_initialize_variables_for_Z3_block_analysis(
+                consecutive_ifs[i],
                 initialized_variables,
                 consecutive_ifs[i:],
+            )
+        ):
+            i += 1
+
+        if i <= start_index + 1:
+            return BoolVal(True), []
+
+        relations_between_vars, converted_conditions = (
+            convert_conditions_with_blocks_after_each_to_Z3(
+                [
+                    self._get_list_of_test_conditions(if_node)
+                    for if_node in consecutive_ifs[start_index:i]
+                ],
+                [[if_stmt] for if_stmt in consecutive_ifs[start_index : i - 1]],
+                initialized_variables,
+            )
+        )
+
+        return relations_between_vars, converted_conditions
+
+    def _get_most_consecutive_ifs_without_var_modification(
+        self, consecutive_ifs: List[nodes.If], start_index: int
+    ) -> List[List[ExprRef]]:
+        def is_valid_and_initialize(
+            consecutive_ifs: List[nodes.If], initialized_variables: Dict[str, ArithRef], i: int
+        ) -> bool:
+            if if_elif_has_else_block(consecutive_ifs[i]) or contains_node_of_type(
+                consecutive_ifs[i], END_NODES
             ):
-                current_ifs.append(if_stmt)
+                return False
+
+            for condition in self._get_list_of_test_conditions(consecutive_ifs[i]):
+                if (
+                    vars_from_node_may_be_modified_in(condition, consecutive_ifs[i:-1])
+                    or not is_pure_expression(condition)
+                    or not initialize_variables(condition, initialized_variables, False, None)
+                ):
+                    return False
+
+            return True
+
+        initialized_variables: Dict[str, ArithRef] = {}
+
+        i = start_index
+        while i < len(consecutive_ifs) and is_valid_and_initialize(
+            consecutive_ifs, initialized_variables, i
+        ):
+            i += 1
+
+        if i <= start_index + 1:
+            return []
+
+        converted_conditions: List[List[ExprRef]] = []
+
+        for if_stmt in consecutive_ifs[start_index:i]:
+            converted_conditions.append([])
+
+            for cond in self._get_list_of_test_conditions(if_stmt):
+                converted = convert_condition_to_z3_expression(cond, initialized_variables, None)[0]
+                if converted is None:
+                    return
+
+                converted_conditions[-1].append(converted)
+
+        return converted_conditions
+
+    def _find_all_mergable_consecutive_ifs(self, consecutive_ifs: List[nodes.If]) -> None:
+        converted_ifs_for_Z3_block_analysis = []
+        start_index_Z3_block_analysis = 0
+
+        converted_ifs_unmodified = []
+        start_index_unmodified = 0
+
+        i = 0
+        while i < len(consecutive_ifs):
+            if start_index_Z3_block_analysis >= len(converted_ifs_for_Z3_block_analysis):
+                relations_between_vars, converted_ifs_for_Z3_block_analysis = (
+                    self._get_most_consecutive_ifs_suitable_for_z3_block_analysis(
+                        consecutive_ifs, i
+                    )
+                )
+                start_index_Z3_block_analysis = 0
+
+            mergable_count = self._count_of_mergable_consecutive_ifs(
+                relations_between_vars,
+                converted_ifs_for_Z3_block_analysis,
+                start_index_Z3_block_analysis,
+            )
+
+            if start_index_unmodified >= len(converted_ifs_unmodified):
+                converted_ifs_unmodified = self._get_most_consecutive_ifs_without_var_modification(
+                    consecutive_ifs, i
+                )
+                start_index_unmodified = 0
+
+            mergable_count_unmodified = self._count_of_mergable_consecutive_ifs(
+                BoolVal(True), converted_ifs_unmodified, start_index_unmodified
+            )
+
+            corresponding_index_Z3_block_analysis = i + mergable_count
+            corresponding_index_unmodified = i + mergable_count_unmodified
+
+            if corresponding_index_unmodified < corresponding_index_Z3_block_analysis:
+                self.add_message(
+                    (
+                        "use-if-elif-else-modifying"
+                        if (
+                            self._test_conditions_might_be_modified(
+                                consecutive_ifs[i : corresponding_index_Z3_block_analysis - 1]
+                            )
+                        )
+                        else "use-if-elif-else"
+                    ),
+                    node=consecutive_ifs[i],
+                    args=(mergable_count - 1,),
+                )
+
+                i = corresponding_index_Z3_block_analysis
+                start_index_Z3_block_analysis += mergable_count
+                start_index_unmodified += mergable_count
             else:
-                if len(current_ifs) > 1:
-                    ifs_with_initialized_vars.append((current_ifs, initialized_variables))
-
-                if last_not_valid == i - 1:
-                    not_valid_consecutive_ifs[-1].append(if_stmt)
-                else:
-                    if not_valid_consecutive_ifs and len(not_valid_consecutive_ifs[-1]) == 1:
-                        not_valid_consecutive_ifs.pop()
-
-                    not_valid_consecutive_ifs.append([if_stmt])
-
-                last_not_valid = i
-                current_ifs = []
-                initialized_variables = {}
-
-        if not_valid_consecutive_ifs and len(not_valid_consecutive_ifs[-1]) == 1:
-            not_valid_consecutive_ifs.pop()
-
-        if len(current_ifs) > 1:
-            ifs_with_initialized_vars.append((current_ifs, initialized_variables))
-
-        return ifs_with_initialized_vars, not_valid_consecutive_ifs
+                if mergable_count_unmodified > 1:
+                    self.add_message(
+                        "use-if-elif-else",
+                        node=consecutive_ifs[i],
+                        args=(mergable_count_unmodified - 1,),
+                    )
+                i = corresponding_index_unmodified
+                start_index_Z3_block_analysis += mergable_count_unmodified
+                start_index_unmodified += mergable_count_unmodified
 
     def _get_list_of_test_conditions(self, node: nodes.If) -> List[nodes.NodeNG]:
         test_conditions: List[nodes.NodeNG] = []
@@ -1218,84 +1336,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return False
 
-    def _find_mergable_consecutive_ifs(
-        self,
-        ifs: List[nodes.If],
-        converted_conditions: List[List[ExprRef]],
-        relations_between_vars: BoolRef,
-        vars_from_test_conditions_might_be_modified: bool,
-    ) -> None:
-        i = 0
-        while i < len(converted_conditions):
-            first_unmergable_index = self._index_of_first_unmergable_consecutive_if(
-                relations_between_vars, converted_conditions, i
-            )
-
-            if first_unmergable_index > i + 1:
-                self.add_message(
-                    (
-                        "use-if-elif-else-modifying"
-                        if (
-                            vars_from_test_conditions_might_be_modified
-                            and self._test_conditions_might_be_modified(
-                                ifs[i : first_unmergable_index - 1]
-                            )
-                        )
-                        else "use-if-elif-else"
-                    ),
-                    node=ifs[i],
-                    args=(first_unmergable_index - i - 1,),
-                )
-
-            i = first_unmergable_index
-
-    def _merge_consecutive_ifs(
-        self, ifs: List[nodes.If], initialized_variables: Dict[str, ArithRef]
-    ) -> None:
-        relations_between_vars, converted_conditions = (
-            convert_conditions_with_blocks_after_each_to_Z3(
-                [self._get_list_of_test_conditions(if_node) for if_node in ifs],
-                [[if_stmt] for if_stmt in ifs[:-1]],
-                initialized_variables,
-            )
-        )
-
-        self._find_mergable_consecutive_ifs(ifs, converted_conditions, relations_between_vars, True)
-
-    def _merge_consecutive_ifs_without_var_modifications(
-        self, consecutive_ifs: List[nodes.If]
-    ) -> None:
-        initialized_variables: Dict[str, ArithRef] = {}
-        converted_conditions: List[List[ExprRef]] = []
-
-        for i, if_stmt in enumerate(consecutive_ifs):
-            if if_elif_has_else_block(if_stmt) or contains_node_of_type(if_stmt, END_NODES):
-                return
-
-            for condition in self._get_list_of_test_conditions(if_stmt):
-                if (
-                    vars_from_node_may_be_modified_in(condition, consecutive_ifs[i:-1])
-                    or not is_pure_expression(condition)
-                    or not initialize_variables(condition, initialized_variables, False, None)
-                ):
-                    return
-
-        converted_conditions: List[List[ExprRef]] = []
-
-        for if_stmt in consecutive_ifs:
-            converted_conditions.append([])
-
-            for cond in self._get_list_of_test_conditions(if_stmt):
-                converted = convert_condition_to_z3_expression(cond, initialized_variables, None)[0]
-                if converted is None:
-                    return
-
-                converted_conditions[-1].append(converted)
-
-        self._find_mergable_consecutive_ifs(
-            consecutive_ifs, converted_conditions, BoolVal(True), False
-        )
-
     def _check_for_use_if_elif_else(self, node: nodes.If) -> None:
         if isinstance(node.previous_sibling(), nodes.If):
             return
@@ -1304,15 +1344,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if len(consecutive_ifs) < 2:
             return
 
-        validated_if_groups, not_valid_if_groups = (
-            self._validate_and_initialize_variables_for_use_if_elif_else(consecutive_ifs)
-        )
-
-        for group in not_valid_if_groups:
-            self._merge_consecutive_ifs_without_var_modifications(group)
-
-        for ifs, initialized_variables in validated_if_groups:
-            self._merge_consecutive_ifs(ifs, initialized_variables)
+        self._find_all_mergable_consecutive_ifs(consecutive_ifs)
 
     @only_required_for_messages(
         "simplifiable-if-return",
