@@ -1207,56 +1207,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return converted_conditions
 
-    def _try_merging_using_Z3_block_analysis(
-        self,
-        consecutive_ifs: List[nodes.If],
-        current_index: int,
-        most_consecutive_converted_ifs_Z3: List[List[ExprRef]],
-        corresponding_index_Z3: int,
-    ) -> Tuple[List[List[ExprRef]], int, int]:
-        if corresponding_index_Z3 >= len(most_consecutive_converted_ifs_Z3):
-            relations_between_vars, most_consecutive_converted_ifs_Z3 = (
-                self._get_most_consecutive_ifs_suitable_for_z3_block_analysis(
-                    consecutive_ifs, current_index
-                )
-            )
-            corresponding_index_Z3 = 0
-
-        mergeable_count = self._count_of_mergeable_consecutive_ifs(
-            relations_between_vars,
-            most_consecutive_converted_ifs_Z3,
-            corresponding_index_Z3,
-        )
-
-        return (
-            most_consecutive_converted_ifs_Z3,
-            corresponding_index_Z3,
-            mergeable_count,
-        )
-
-    def _try_merging_unmodified(
-        self,
-        consecutive_ifs: List[nodes.If],
-        current_index: int,
-        most_consecutive_converted_ifs: List[List[ExprRef]],
-        corresponding_index: int,
-    ) -> Tuple[List[List[ExprRef]], int, int]:
-        if corresponding_index >= len(most_consecutive_converted_ifs):
-            most_consecutive_converted_ifs = (
-                self._get_most_consecutive_ifs_without_var_modification(
-                    consecutive_ifs, current_index
-                )
-            )
-            corresponding_index = 0
-
-        mergeable_count = self._count_of_mergeable_consecutive_ifs(
-            BoolVal(True),
-            most_consecutive_converted_ifs,
-            corresponding_index,
-        )
-
-        return most_consecutive_converted_ifs, corresponding_index, mergeable_count
-
     def _report_all_mergeable_consecutive_ifs(self, consecutive_ifs: List[nodes.If]) -> None:
         """
         High level overview of this function:
@@ -1275,21 +1225,30 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         i = 0
         while i < len(consecutive_ifs):
-            (
+            # try_merging_using_Z3_block_analysis
+            if corresponding_index_Z3 >= len(most_consecutive_converted_ifs_Z3):
+                relations_between_vars, most_consecutive_converted_ifs_Z3 = (
+                    self._get_most_consecutive_ifs_suitable_for_z3_block_analysis(
+                        consecutive_ifs, i
+                    )
+                )
+                corresponding_index_Z3 = 0
+
+            mergeable_count = self._count_of_mergeable_consecutive_ifs(
+                relations_between_vars,
                 most_consecutive_converted_ifs_Z3,
                 corresponding_index_Z3,
-                mergeable_count,
-            ) = self._try_merging_using_Z3_block_analysis(
-                consecutive_ifs, i, most_consecutive_converted_ifs_Z3, corresponding_index_Z3
             )
 
-            (
-                most_consecutive_converted_ifs_unmodified,
-                corresponding_index_unmodified,
-                mergeable_count_unmodified,
-            ) = self._try_merging_unmodified(
-                consecutive_ifs,
-                i,
+            # try_merging_unmodified
+            if corresponding_index_unmodified >= len(most_consecutive_converted_ifs_unmodified):
+                most_consecutive_converted_ifs_unmodified = (
+                    self._get_most_consecutive_ifs_without_var_modification(consecutive_ifs, i)
+                )
+                corresponding_index_unmodified = 0
+
+            mergeable_count_unmodified = self._count_of_mergeable_consecutive_ifs(
+                BoolVal(True),
                 most_consecutive_converted_ifs_unmodified,
                 corresponding_index_unmodified,
             )
@@ -1368,23 +1327,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             not_true_conditions.append(cond)
 
         return True
-
-    def _index_of_first_unmergeable_consecutive_if(
-        self,
-        relations_between_vars: BoolRef,
-        converted_conditions: List[List[ExprRef]],
-        start_if_index: int,
-    ) -> int:
-        merged_if_conditions = converted_conditions[start_if_index]
-
-        i = start_if_index + 1
-        while i < len(converted_conditions) and self.can_merge_ifs_together(
-            merged_if_conditions, converted_conditions[i], relations_between_vars
-        ):
-            merged_if_conditions.extend(converted_conditions[i])
-            i += 1
-
-        return i
 
     def _test_conditions_might_be_modified(self, ifs: List[nodes.If]) -> bool:
         for if_stmt in ifs:
