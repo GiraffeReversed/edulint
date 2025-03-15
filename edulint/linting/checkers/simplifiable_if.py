@@ -363,8 +363,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "redundant-condition-part",
             """
             Emitted when there is a problem like 'A or B', where A implies B and suggests to simplify the condition to just 'B'
-
-            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),  # in overriders
         "R6217": (
@@ -372,8 +370,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "unreachable-elif-else",
             """
             Emitted when the 'else/elif' branch is unreachable due to totally exhaustive conditions before.
-
-            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),
         "R6218": (
@@ -381,8 +377,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "condition-always-true-in-elif",
             """
             Emitted when a body of 'elif' in if statement is always executed when reached.
-
-            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),  # in overriders
         "R6219": (
@@ -390,8 +384,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "redundant-condition-part-in-elif",
             """
             Emitted when a test condition in 'elif' can be simplified, because when the control flow reaches this 'elif' we know that some parts of this condition are True (when the condition is 'and') or False (when the condition is 'or')
-
-            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),
         "R6220": (
@@ -399,8 +391,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "redundant-condition-part-in-elif-reorder",
             """
             Emitted when elifs in if-statement can be rearanged to get simpler conditions. (by moving some condition higher, parts of conditions below it can become redundant)
-
-            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),
         "R6221": (
@@ -408,8 +398,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "condition-always-false-in-elif",
             """
             Emitted when a condition in elif is always False, when reached.
-
-            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),  # in overriders
         "R6222": (
@@ -417,8 +405,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "condition-always-true-or-false",
             """
             Emitted when a condition is always True/False regardless of assignment to variables.
-
-            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,
         ),  # in overriders
         "R6223": (
