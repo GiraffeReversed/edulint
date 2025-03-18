@@ -427,8 +427,6 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             """
             Emitted when a condition like `(A and B) or (A and C) ≡ A and (B or C)` can be simplified to just `A`, because `B or C ≡ True` and similarly when `and`
             and `or` are switched.
-
-            Warning: If you use a variable that can contain float (not an integer) in expression involving %% or // this checker can give incorrect suggestion.
             """,  # in overriders
         ),
     }
