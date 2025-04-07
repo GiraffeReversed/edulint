@@ -254,7 +254,7 @@ def main() -> int:
     )  # get_explanations also can trigger update, but we're not calling it anywhere else.
 
     if args.command == "check":
-        return check_code(args, option_parses)
+        return check_and_print(args, option_parses)
     if args.command == "explain":
         return explain_messages(args)
     if args.command == "version":
