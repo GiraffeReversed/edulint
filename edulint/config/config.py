@@ -577,5 +577,5 @@ def get_config_many(
     return result
 
 
-def get_cmd_args(args: Namespace) -> List[str]:
-    return [s for arg in args.options for s in shlex.split(arg)]
+def get_cmd_args(options: List[str]) -> List[str]:
+    return [s for arg in options for s in shlex.split(arg)]

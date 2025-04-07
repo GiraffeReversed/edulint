@@ -7,7 +7,7 @@ from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
 from edulint.versions.version_checker import PackageInfoManager
 from edulint.explanations import update_explanations, get_explanations
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Tuple, Any, Optional
 import argparse
 import os
 import sys
@@ -155,11 +155,13 @@ def _update_check():
                 raise e
 
 
-def check_code(args, option_parses):
-    cmd_args = get_cmd_args(args)
+def _check_code(
+    files_or_dirs: List[str], options: List[str], option_parses: Dict[Option, OptionParse]
+) -> Optional[Tuple[ImmutableConfig, List[Problem]]]:
+    cmd_args = get_cmd_args(options)
 
     try:
-        file_configs = get_config_many(args.files_or_dirs, cmd_args, option_parses=option_parses)
+        file_configs = get_config_many(files_or_dirs, cmd_args, option_parses=option_parses)
     except FileNotFoundError as e:
         exception = str(e)
         if exception.lower().startswith("[errno"):
@@ -168,21 +170,29 @@ def check_code(args, option_parses):
         logger.opt(raw=True, colors=True).critical(
             "<red>FileNotFoundError:</red> {exception}\n", exception=exception
         )
-        return 3
+        return None
 
     try:
         results = lint_many(file_configs)
     except (TimeoutError, json.decoder.JSONDecodeError, EduLintLinterFailedException):
+        return None
+
+    return file_configs, sort(files_or_dirs, results)
+
+
+def check_and_print(args, option_parses) -> int:
+    result = _check_code(args.files_or_dirs, args.options, option_parses)
+    if result is None:
         return 2
 
-    sorted_results = sort(args.files_or_dirs, results)
-    checks_single_file = len(args.files_or_dirs) == 1 and not os.path.isdir(args.files_or_dirs[0])
+    file_configs, lint_results = result
 
+    checks_single_file = len(args.files_or_dirs) == 1 and not os.path.isdir(args.files_or_dirs[0])
     if args.json:
-        print(to_json(file_configs, sorted_results))
+        print(to_json(file_configs, lint_results))
     else:
         prev_problem = None
-        for problem in sorted_results:
+        for problem in lint_results:
             if not checks_single_file and (
                 prev_problem is None or prev_problem.path != problem.path
             ):
@@ -191,7 +201,13 @@ def check_code(args, option_parses):
 
             print(problem)
 
-    return 0 if len(sorted_results) == 0 else 1
+    return 0 if len(lint_results) == 0 else 1
+
+
+def check_code(
+    files_or_dirs: List[str], options: List[str]
+) -> Optional[Tuple[ImmutableConfig, List[Problem]]]:
+    return _check_code(files_or_dirs, options, get_option_parses())
 
 
 def explain_messages(args):
