@@ -158,19 +158,16 @@ def _update_check():
 def _check_code(
     files_or_dirs: List[str], options: List[str], option_parses: Dict[Option, OptionParse]
 ) -> Optional[Tuple[ImmutableConfig, List[Problem]]]:
-    cmd_args = get_cmd_args(options)
 
-    try:
-        file_configs = get_config_many(files_or_dirs, cmd_args, option_parses=option_parses)
-    except FileNotFoundError as e:
-        exception = str(e)
-        if exception.lower().startswith("[errno"):
-            assert "]" in exception
-            exception = exception[exception.index("]") + 2 :]
-        logger.opt(raw=True, colors=True).critical(
-            "<red>FileNotFoundError:</red> {exception}\n", exception=exception
-        )
-        return None
+    for file_or_dir in files_or_dirs:
+        if not os.path.exists(file_or_dir):
+            logger.opt(raw=True, colors=True).critical(
+                f"<red>FileNotFoundError:</red> {file_or_dir}\n"
+            )
+            return None
+
+    cmd_args = get_cmd_args(options)
+    file_configs = get_config_many(files_or_dirs, cmd_args, option_parses=option_parses)
 
     try:
         results = lint_many(file_configs)
