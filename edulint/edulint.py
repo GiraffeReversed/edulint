@@ -171,7 +171,8 @@ def _check_code(
 
     try:
         results = lint_many(file_configs)
-    except (TimeoutError, json.decoder.JSONDecodeError, EduLintLinterFailedException):
+    except (TimeoutError, json.decoder.JSONDecodeError, EduLintLinterFailedException) as e:
+        logger.opt(raw=True, colors=True).critical(f"<red>EduLint linting failed:</red> {e}")
         return None
 
     return file_configs, sort(files_or_dirs, results)
