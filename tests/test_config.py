@@ -83,7 +83,8 @@ def test_all_managed_options_are_advertised(
 
 def mock_contents(mocker, contents) -> None:
     mocked_file = mocker.mock_open(read_data=contents)
-    mocker.patch("builtins.open", mocked_file)
+    # use specific module path rather than builtins.open, to circumvent https://github.com/microsoft/vscode-python/issues/24811
+    mocker.patch("edulint.config.config.open", mocked_file)
 
 
 @pytest.mark.parametrize(
