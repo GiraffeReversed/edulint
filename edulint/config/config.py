@@ -26,7 +26,6 @@ from edulint.config.utils import print_invalid_type_message, config_file_val_to_
 from typing import Dict, List, Optional, Tuple, Iterator, Any
 
 from dataclasses import dataclass
-from argparse import Namespace
 from pathlib import Path
 import re
 import shlex
