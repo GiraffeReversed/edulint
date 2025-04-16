@@ -345,7 +345,8 @@ def get_removable(core, avar) -> bool:
             continue
         for il, loc in enumerate(core_loc.node.sub_locs):
             var = sub_to_variable(avar, il)
-            if var in loc.var_events:
+            # if var in loc.var_events:
+            if var in loc.var_events and len(loc.var_events[var]) > 0:
                 for loc_avar in get_avars(core_loc.node):
                     assert len(avar.subs) == len(loc_avar.subs)
                     if any(asub != lasub for asub, lasub in zip(avar.subs, loc_avar.subs)):

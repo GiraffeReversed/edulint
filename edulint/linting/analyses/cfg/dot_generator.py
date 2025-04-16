@@ -18,7 +18,7 @@ from astroid.builder import AstroidBuilder
 from edulint.linting.analyses.cfg.graph import CFGBlock, CFGLoc, ControlFlowGraph
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.analyses.cfg.utils import get_cfg_loc
-from edulint.linting.analyses.variable_modification import VarModificationAnalysis
+from edulint.linting.analyses.variable_scope import VarEventsAnalysis
 from edulint.linting.analyses.data_dependency import collect_reaching_definitions
 
 GRAPH_OPTIONS = {
@@ -72,8 +72,18 @@ def _generate(
     module.accept(visitor)
 
     if run_dda:
-        VarModificationAnalysis().collect(module)
-        collect_reaching_definitions(module)
+        variables, function_defs, call_graph, outside_scope_events = VarEventsAnalysis().collect(
+            module
+        )
+        try:
+            collect_reaching_definitions(
+                module, variables, function_defs, call_graph, outside_scope_events, None
+            )
+        except TypeError as e:
+            if str(e).startswith("collect_reaching_definitions() takes"):
+                collect_reaching_definitions(module)
+            else:
+                raise e
 
     return visitor.cfgs
 
@@ -137,7 +147,7 @@ def generate_dot(
 
 
 def display(graph: graphviz.Digraph, filename: str, auto_open: bool = False) -> None:
-    graph.render(filename, view=auto_open)
+    graph.render(outfile=filename, view=auto_open, cleanup=True)
 
 
 def display_from_block(block: CFGBlock, filename: str, auto_open: bool = False) -> None:

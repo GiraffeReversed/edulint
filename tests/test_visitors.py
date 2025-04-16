@@ -1,6 +1,6 @@
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.analyses.cfg.utils import successors_from_loc
-from edulint.linting.analyses.variable_modification import VarModificationAnalysis, VarEventType
+from edulint.linting.analyses.variable_scope import VarEventsAnalysis, VarEventType
 from edulint.linting.analyses.data_dependency import name_to_var, modified_in, node_to_var
 
 from typing import List, Tuple, Dict
@@ -265,7 +265,7 @@ def test_var_event_listener(program: List[str], init_lines: int, modified: Dict[
                         return True
         return False
 
-    VarModificationAnalysis.collect(module)
+    VarEventsAnalysis.collect(module)
     for varname, mod in modified.items():
         assert was_modified(varname) == mod
 
@@ -284,7 +284,7 @@ def test_node_to_name_for_global_defined_after():
 
     module = astroid.parse("\n".join(program))
     module.accept(CFGVisitor())
-    VarModificationAnalysis.collect(module)
+    VarEventsAnalysis.collect(module)
 
     assert name_to_var("OUT", module.body[0].body[0]) is not None
     assert node_to_var(module.body[0].body[0].value) is not None
