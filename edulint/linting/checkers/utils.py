@@ -151,7 +151,6 @@ PURE_FUNCTIONS = {
     "ord",
     "chr",
     "isinstance",
-    "print",
 }
 
 EXPR_FUNCTIONS = PURE_FUNCTIONS | {"all", "any", "map", "filter"}
@@ -258,7 +257,7 @@ def has_more_assign_targets(node: nodes.Assign) -> bool:
 
 
 def get_assign_targets(
-    node: Union[nodes.Assign, nodes.AnnAssign, nodes.AugAssign]
+    node: Union[nodes.Assign, nodes.AnnAssign, nodes.AugAssign],
 ) -> List[nodes.NodeNG]:
     if isinstance(node, nodes.Assign) and isinstance(node.targets[0], nodes.Tuple):
         return list(node.targets[0].get_children())
