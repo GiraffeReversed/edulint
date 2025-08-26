@@ -36,7 +36,7 @@ def html_to_nodes(siblings):
 def get_description_from(url, heading):
     descriptions_html = requests.get(url)
     if descriptions_html.status_code != 200:
-        raise RuntimeError("descriptions not available")
+        raise RuntimeError("descriptions not available for " + url)
     soup = BeautifulSoup(descriptions_html.text, "html.parser")
 
     result = {}
@@ -61,10 +61,10 @@ def get_description_from(url, heading):
 
 def get_descriptions():
     features = get_description_from(
-        "https://pylint.readthedocs.io/en/v3.3.0/user_guide/checkers/features.html", "h4"
+        "https://pylint.readthedocs.io/en/v3.3.8/user_guide/checkers/features.html", "h4"
     )
     extensions = get_description_from(
-        "https://pylint.readthedocs.io/en/v3.3.0/user_guide/checkers/extensions.html", "h3"
+        "https://pylint.readthedocs.io/en/v3.3.8/user_guide/checkers/extensions.html", "h3"
     )
 
     extensions.update(features)
