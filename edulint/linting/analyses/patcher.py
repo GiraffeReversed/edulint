@@ -28,15 +28,9 @@ def patch_ast_transforms():
                     variables, function_defs, call_graph, outside_scope_events = (
                         VarEventsAnalysis().collect(ast)
                     )
-                    try:
-                        collect_reaching_definitions(
-                            ast, variables, function_defs, call_graph, outside_scope_events, None
-                        )
-                    except TypeError as e:
-                        if str(e).startswith("collect_reaching_definitions() takes"):
-                            collect_reaching_definitions(ast)
-                        else:
-                            raise e
+                    collect_reaching_definitions(
+                        ast, variables, function_defs, call_graph, outside_scope_events, None
+                    )
                     ast.cfg_loc.var_events.successful = True
                 except UnknowableLocalsException as e:
                     ast.cfg_loc.var_events.successful = False
