@@ -30,7 +30,7 @@ mypy:
 test:
 	. ${EDULINT_VENV_PATH}/bin/activate && \
 		export PYTHONPATH=${EDULINT_PATH} && \
-		python3 -m pytest -n4 -k "${ARGS}" ${EDULINT_PATH}/tests/
+		python3 -m pytest -n10 -k "${ARGS}" ${EDULINT_PATH}/tests/
 
 cov:
 	. ${EDULINT_VENV_PATH}/bin/activate && \
@@ -46,13 +46,34 @@ run:
 
 perf:
 	export PYTHONPATH=${EDULINT_PATH} && \
-		time py-spy record -s -n -r1000 -o profile.ss -f speedscope -- \
+		time py-spy record -n -r500 -o perf-${NAME}.ss -f speedscope -- \
 		python3 -m edulint check \
 		--disable-version-check --disable-explanations-update \
 		-o ignore-infile-config-for=edulint \
 		${ARGS} \
-		> /dev/null \
-		&& code profile.ss
+		> /dev/null
+
+cperf:
+	export PYTHONPATH=${EDULINT_PATH} && \
+	    time python3 -m cProfile -o perf-${NAME}.prof \
+		-m edulint check \
+		--disable-version-check --disable-explanations-update \
+		-o ignore-infile-config-for=edulint \
+		${ARGS} \
+		> /dev/null && \
+		code perf-${NAME}.prof
+
+rmperf:
+	rm *.ss *.prof
+
+trace:
+	export PYTHONPATH=${EDULINT_PATH} && \
+	    time python3 -m trace --count -C cover-${NAME} \
+		fake_module.py check \
+		--disable-version-check --disable-explanations-update \
+		-o ignore-infile-config-for=edulint \
+		${ARGS} \
+		> /dev/null
 
 lint_data:
 	DATA_DIR=${DATA_PATH}/${YEAR}; \
@@ -73,3 +94,6 @@ lint_data:
 graph:
 	export PYTHONPATH=${EDULINT_PATH} && \
 	    python3 edulint/linting/analyses/cfg/dot_generator.py ${ARGS}
+
+rmgraph:
+	rm *.dot

@@ -135,6 +135,8 @@ dmypy.json
 
 # Profiler output
 *.ss
+*.prof
+*.dot
 
 .vscode/
 .idea/
