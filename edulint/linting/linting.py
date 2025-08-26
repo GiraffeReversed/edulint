@@ -1,3 +1,4 @@
+from io import StringIO
 from typing import List, Callable, Tuple, Dict, Set, Any
 from edulint.linting.problem import ProblemJson, Problem
 from edulint.linting.nonparsing_checkers import report_infile_config
@@ -158,16 +159,30 @@ def lint_edulint(files_or_dirs: List[str], config: ImmutableConfig) -> List[Prob
 
 
 def lint_flake8(files_or_dirs: List[str], config: ImmutableConfig) -> List[Problem]:
-    flake8_args = ["--format=json"]
-    return_code, outs, errs = lint_in_subprocess(
-        Linter.FLAKE8, files_or_dirs, flake8_args, config[Option.FLAKE8]
-    )
+    from flake8.main.application import Application
+
+    new_stdout = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = new_stdout
+
+    new_stderr = StringIO()
+    old_stderr = sys.stderr
+    sys.stderr = new_stderr
+
+    try:
+        Application()._run(["--format=json"] + list(config[Option.FLAKE8]) + files_or_dirs)
+        return_code = 0
+    except SystemExit as e:
+        return_code = e.code
+
+    sys.stdout = old_stdout
+    sys.stderr = old_stderr
 
     return process_results(
         Linter.FLAKE8,
         return_code,
-        outs,
-        errs,
+        new_stdout.getvalue(),
+        new_stderr.getvalue(),
         lambda r: [problem for problems in r.values() for problem in problems],
         flake8_to_problem,
         config.enablers,
@@ -177,7 +192,6 @@ def lint_flake8(files_or_dirs: List[str], config: ImmutableConfig) -> List[Probl
 def lint_pylint(files_or_dirs: List[str], config: ImmutableConfig) -> List[Problem]:
     pylint_args = ["--recursive=y"] + list(config[Option.PYLINT]) + files_or_dirs
 
-    from io import StringIO
     from pylint.lint import Run
     from pylint.reporters.json_reporter import JSON2Reporter
 
@@ -295,7 +309,7 @@ def translate(lang_translations: LangTranslations, problem: Problem):
 
 
 def lint_many(
-    partition: List[Tuple[List[str], ImmutableConfig, LangTranslations]]
+    partition: List[Tuple[List[str], ImmutableConfig, LangTranslations]],
 ) -> List[Problem]:
     return [
         translate(lang_translations, problem)
