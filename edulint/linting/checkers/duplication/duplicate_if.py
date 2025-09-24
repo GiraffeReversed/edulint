@@ -18,7 +18,7 @@ from edulint.linting.checkers.utils import (
     get_token_count,
     has_else_block,
     is_negation,
-    are_identical,
+    are_same_expression,
     new_node,
 )
 from edulint.linting.checkers.duplication.utils import (
@@ -315,13 +315,13 @@ def restructure_twisted_ifs(tests, inner_if: nodes.If, avars):
 
     # positive and negative branches are twisted
     if not (
-        are_identical(pos_pos, neg_neg)
-        and are_identical(pos_neg, neg_pos)
+        are_same_expression(pos_pos, neg_neg)
+        and are_same_expression(pos_neg, neg_pos)
         and not contains_avar(inner_test, avars)
     ) and not (
         # branches are correctly structured, but the inner condition is negated
-        are_identical(pos_pos, neg_pos)
-        and are_identical(pos_neg, neg_neg)
+        are_same_expression(pos_pos, neg_pos)
+        and are_same_expression(pos_neg, neg_neg)
         and is_negation(
             get_sub_variant(inner_test, 0), get_sub_variant(inner_test, 1), negated_rt=False
         )
@@ -369,13 +369,13 @@ def get_fixed_by_restructuring_twisted(tests, core, avars):
 
     # positive and negative branches are twisted
     if not (
-        are_identical(pos_pos, neg_neg)
-        and are_identical(pos_neg, neg_pos)
+        are_same_expression(pos_pos, neg_neg)
+        and are_same_expression(pos_neg, neg_pos)
         and not contains_avar(inner_test, avars)
     ) and not (
         # branches are correctly structured, but the inner condition is negated
-        are_identical(pos_pos, neg_pos)
-        and are_identical(pos_neg, neg_neg)
+        are_same_expression(pos_pos, neg_pos)
+        and are_same_expression(pos_neg, neg_neg)
         and is_negation(
             get_sub_variant(inner_test, 0), get_sub_variant(inner_test, 1), negated_rt=False
         )
