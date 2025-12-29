@@ -28,11 +28,13 @@ jobs:
         with:
           submodules: false
 
-      # - name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
-      # - name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -47,3 +49,4 @@ jobs:
           push: true
           tags: ${{ inputs.docker-labels }}
           file: 'Dockerfile.pypi'
+          platforms: linux/amd64,linux/arm64
