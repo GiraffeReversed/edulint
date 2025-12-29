@@ -21,6 +21,20 @@ on:
       PAT_PRIVATE_TESTS:
         required: true
 
+  workflow_dispatch:
+    inputs:
+      python_matrix:
+        type: string
+        default: '["3.11"]'
+      pylint_matrix:
+        type: string
+        default: '["default"]'
+      flake8_matrix:
+        type: string
+        default: '["default"]'
+      os_matrix:
+        type: string
+        default: '["ubuntu-latest"]'
 
 jobs:
   pytest:
