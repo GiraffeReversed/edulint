@@ -157,7 +157,7 @@ def _update_check():
 
 def _check_code(
     files_or_dirs: List[str], options: List[str], option_parses: Dict[Option, OptionParse]
-) -> Optional[Tuple[ImmutableConfig, List[Problem]]]:
+) -> Optional[Tuple[List[Tuple[List[str], ImmutableConfig, LangTranslations]], List[Problem]]]:
 
     for file_or_dir in files_or_dirs:
         if not os.path.exists(file_or_dir):
@@ -204,7 +204,7 @@ def check_and_print(args, option_parses) -> int:
 
 def check_code(
     files_or_dirs: List[str], options: List[str]
-) -> Optional[Tuple[ImmutableConfig, List[Problem]]]:
+) -> Optional[Tuple[List[Tuple[List[str], ImmutableConfig, LangTranslations]], List[Problem]]]:
     return _check_code(files_or_dirs, options, get_option_parses())
 
 
