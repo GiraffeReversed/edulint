@@ -61,10 +61,10 @@ def get_description_from(url, heading):
 
 def get_descriptions():
     features = get_description_from(
-        "https://pylint.readthedocs.io/en/v3.3.8/user_guide/checkers/features.html", "h4"
+        "https://pylint.readthedocs.io/en/v3.3.9/user_guide/checkers/features.html", "h4"
     )
     extensions = get_description_from(
-        "https://pylint.readthedocs.io/en/v3.3.8/user_guide/checkers/extensions.html", "h3"
+        "https://pylint.readthedocs.io/en/v3.3.9/user_guide/checkers/extensions.html", "h3"
     )
 
     extensions.update(features)
