@@ -1,5 +1,4 @@
 from astroid import nodes  # type: ignore
-from astroid.const import Context
 from astroid import extract_node
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
