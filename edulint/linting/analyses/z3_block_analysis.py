@@ -14,7 +14,7 @@ from edulint.linting.analyses.data_dependency import vars_in, modified_in
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs
 from edulint.linting.analyses.utils import may_contain_mutable_var
 
-from edulint.linting.checkers.z3_analysis import (
+from edulint.linting.analyses.z3_analysis import (
     implies,
     initialize_variables,
     convert_condition_to_z3_expression,

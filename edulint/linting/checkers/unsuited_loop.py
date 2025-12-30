@@ -27,11 +27,11 @@ from edulint.linting.analyses.data_dependency import (
     filter_events_for,
 )
 from edulint.linting.analyses.utils import vars_from_node_may_be_modified_in
-from edulint.linting.checkers.z3_block_analysis import (
+from edulint.linting.analyses.z3_block_analysis import (
     END_NODES,
     condition_implies_another_with_block_in_between,
 )
-from edulint.linting.checkers.z3_analysis import sat_condition
+from edulint.linting.analyses.z3_analysis import sat_condition
 
 
 class UnsuitedLoop(BaseChecker):
@@ -84,7 +84,7 @@ class UnsuitedLoop(BaseChecker):
             "explicit-infinite-loop",
             """
             Emitted when a while loop condition is `True` and never terminates.
-            
+
             Warning: If there is called some function that can raise some exception then this checker might not see it.
             """,
         ),
@@ -93,7 +93,7 @@ class UnsuitedLoop(BaseChecker):
             "implicit-infinite-loop",
             """
             Emitted when a while loop never terminates (when the loop condition is once True it will stay True forever).
-            
+
             Warning: If there is called some function that can raise some exception then this checker might not see it.
             """,
         ),

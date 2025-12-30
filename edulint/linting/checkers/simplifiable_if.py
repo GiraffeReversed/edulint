@@ -12,7 +12,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.z3_analysis import (
+from edulint.linting.analyses.z3_analysis import (
     implies,
     all_implied_indeces,
     initialize_variables,
@@ -21,7 +21,7 @@ from edulint.linting.checkers.z3_analysis import (
     _is_bool_node,
 )
 
-from edulint.linting.checkers.z3_block_analysis import (
+from edulint.linting.analyses.z3_block_analysis import (
     END_NODES,
     validate_and_initialize_variables_for_Z3_block_analysis,
     convert_conditions_with_blocks_after_each_to_Z3,
