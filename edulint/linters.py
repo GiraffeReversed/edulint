@@ -4,6 +4,8 @@ from edulint.options import Option
 
 
 class Linter(Enum):
+    """"""  # prevent inheriting docstring
+
     EDULINT = auto()
     PYLINT = auto()
     FLAKE8 = auto()

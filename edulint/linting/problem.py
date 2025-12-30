@@ -10,18 +10,32 @@ ProblemJson = Dict[str, Union[str, int]]
 @dataclass_json
 @dataclass
 class Problem:
+    """Holds a single occurrence of an issue."""
+
     source: Linter = field(
         metadata=config(encoder=Linter.to_name, decoder=Linter.from_name, mm_field=mm_fields.Str())
     )
+    """Linter that reported the issue."""
     enabled_by: Optional[str]
     path: str
+    """File that contains the issue."""
     line: int
+    """The line where the issue starts."""
     column: int
+    """The column where the issue starts."""
     code: str
+    """The message id of the issue (e.g., ``E0213``)."""
     text: str
+    """The text of the issue."""
     end_line: Optional[int] = None
+    """The line where the issue ends."""
     end_column: Optional[int] = None
+    """The column where the issue ends."""
     symbol: Optional[str] = None
+    """
+    The symbolic message id the issue has (e.g., ``no-self-argument``);
+    not set for Flake8 issues.
+    """
 
     def set_source(self, v: Linter) -> "Problem":
         self.source = v

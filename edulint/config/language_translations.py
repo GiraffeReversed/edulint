@@ -53,11 +53,28 @@ def get_patterns():
 
 @dataclass
 class Translation:
+    """Holds information on how to translate a message."""
+
     translation: str
+    """Template for the translated message."""
     extracts: Dict[str, Dict[str, str]]
+    """
+    Templates for the translations of extracts. Extracts are parts of the
+    message which are filled in dynamically, but which do not contain a code
+    but rather some words in the source language.
+    """
     patterns: ClassVar[Dict[str, str]] = get_patterns()
 
     def translate_extracts(self, extracts: List[str]) -> List[str]:
+        """
+        Translates passed extracts.
+
+        :param extracts: the extracts to translate
+        :type extracts: List[str]
+        :return: the list of translated extracts; if there is no translation
+          for a given extract, it is passed unchanged
+        :rtype: List[str]
+        """
         result = []
         for i, word in enumerate(extracts):
             mapping = self.extracts.get(str(i + 1))
@@ -68,6 +85,15 @@ class Translation:
         return result
 
     def translate(self, code: str, message: str):
+        """
+        Translates passed message using this translation template.
+
+        :param code: the message id of the translated message
+        :type code: str
+        :param message: the text to translate; if the message does not match
+          the expected pattern, it is returned unchanged
+        :type message: str
+        """
         pattern = self.patterns.get(code)
         if pattern is None or "(.*)" not in pattern:
             return self.translation

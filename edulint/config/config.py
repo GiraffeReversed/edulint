@@ -204,7 +204,10 @@ class hashabledict(dict):
 
 @dataclass(frozen=True)
 class ImmutableConfig:
+    """Configuration used for file checking."""
+
     config: Tuple[ImmutableArg, ...]
+    "The arguments contained in the configuration."
     enablers: Dict[str, str]
 
     def __str__(self) -> str:

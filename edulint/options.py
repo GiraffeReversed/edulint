@@ -16,6 +16,8 @@ ImmutableT = Union[bool, Tuple[str, ...], Optional[str], Optional[int]]
 
 
 class Option(NumberFromZero):
+    """"""  # prevent inheriting docstring
+
     CONFIG_FILE = ()
     PYLINT = ()
     FLAKE8 = ()
