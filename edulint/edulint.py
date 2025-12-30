@@ -203,19 +203,19 @@ def check_and_print(args, option_parses) -> int:
 
 
 def check_code(
-    files_or_dirs: List[str], options: List[str]
+    files_or_dirs: List[str], options: Optional[List[str]] = None
 ) -> Optional[Tuple[List[Tuple[List[str], ImmutableConfig, LangTranslations]], List[Problem]]]:
     """
     Analyzes the passed files or directories. If a directory is passed, it
     recursively walks its sub-directories and analyzes all found .py files.
 
-    :param files_or_dirs: Files or directories to analyze. If specified path
-      does not exist, it logs the information to stderr.
+    :param files_or_dirs: Files or directories to analyze. If the specified path
+      does not exist, it logs a warning to stderr.
     :type files_or_dirs: List[str]
     :param options: A list of options as specified by the package's argument
       OPTION (see ``edulint check -h`` for help) (a possible value could be
-      ``["pylint=--enable=duplicate key"]``)
-    :type options: List[str]
+      ``["pylint=--enable=duplicate-key"]``)
+    :type options: Optional[List[str]]
     :return: A configurations used for each file and encoutered issues. The
       first element of the returned tuple is a list of tuples containing three
       elements: a list of analyzed files, a configuration and message
@@ -223,15 +223,17 @@ def check_code(
       the translation (remember that different files can be linted using
       different configurations due to in-file configuration options). The
       second element of the returned tuple is the list of encountered problems.
+      If an error was encountered, the function returns None.
     :rtype: Tuple[List[Tuple[List[str], ImmutableConfig, LangTranslations]], List[Problem]] | None
     """
+    options = options if options is not None else []
     return _check_code(files_or_dirs, options, get_option_parses())
 
 
 def get_message_explanations(message_ids: Optional[List[str]] = None) -> Dict[str, Dict[str, str]]:
     """
     Returns explanations for given message ids. If an explanation is requested
-    for a message id that does not have an explanation, the information is
+    for a message id that does not have an explanation, the warning is
     logged to stderr.
 
     :param message_ids: An optional list of message ids to receive explanations
