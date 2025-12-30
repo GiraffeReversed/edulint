@@ -208,25 +208,37 @@ def check_code(
     return _check_code(files_or_dirs, options, get_option_parses())
 
 
-def explain_messages(args):
+def get_message_explanations(message_ids: Optional[List[str]] = None) -> Dict[str, Dict[str, str]]:
     explanations = get_explanations()
-    if any(id_.lower() == "all" for id_ in args.message_ids):
-        message_ids = explanations.keys()
-    else:
-        message_ids = args.message_ids
+    message_ids = message_ids if message_ids is not None else explanations.keys()
 
-    mid_expls = {}
-    for mid in message_ids:
-        expl = explanations.get(mid)
+    m_id_expls = {}
+    for m_id in message_ids:
+        expl = explanations.get(m_id)
         if expl is None:
-            logger.warning(f"Message {mid} does not have an explanation")
-        elif args.json:
-            mid_expls[mid] = expl
+            logger.warning(f"Message {m_id} does not have an explanation")
         else:
-            if len(args.message_ids) > 1:
-                if mid != args.message_ids[0]:
+            m_id_expls[m_id] = expl
+    return m_id_expls
+
+
+def print_message_explanations(args):
+    message_ids = (
+        args.message_ids if not any(id_.lower() == "all" for id_ in args.message_ids) else None
+    )
+    m_id_expls = get_message_explanations(message_ids)
+    if args.json:
+        data = {"explanations": m_id_expls}
+        print(json.dumps(data, indent=2))
+    else:
+        first = True
+        for m_id, expl in m_id_expls.items():
+            if len(m_id_expls) > 1:
+                if not first:
                     print("\n")
-                print(f"## {mid}")
+                else:
+                    first = False
+                print(f"## {m_id}")
             if expl.get("why", "").strip():
                 print("### Why is it a problem?")
                 print(expl["why"].strip())
@@ -234,10 +246,6 @@ def explain_messages(args):
             if expl.get("examples", "").strip():
                 print("### How to solve it?")
                 print(expl["examples"].strip())
-
-    if args.json:
-        data = {"explanations": mid_expls}
-        print(json.dumps(data, indent=2))
 
     return 0
 
@@ -256,7 +264,7 @@ def main() -> int:
     if args.command == "check":
         return check_and_print(args, option_parses)
     if args.command == "explain":
-        return explain_messages(args)
+        return print_message_explanations(args)
     if args.command == "version":
         print(f"edulint version {edulint.__version__}")
         return 0
