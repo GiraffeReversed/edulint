@@ -91,7 +91,7 @@ class Translation:
         :param code: the message id of the translated message
         :type code: str
         :param message: the text to translate; if the message does not match
-          the expected pattern, it is returned unchanged
+          the expected pattern, the template is returned
         :type message: str
         """
         pattern = self.patterns.get(code)
