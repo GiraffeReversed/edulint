@@ -32,6 +32,7 @@ Do you have any problem or could use a new feature? See `project's GitHub issues
    checkers
    translations
    explanations
+   package_api
 
 .. Indices and tables
 .. ------------------
