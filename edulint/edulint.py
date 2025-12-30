@@ -1,4 +1,3 @@
-import edulint
 from edulint.options import Option
 from edulint.option_parses import OptionParse, get_option_parses
 from edulint.config.config import get_config_many, get_cmd_args, ImmutableConfig
@@ -7,6 +6,7 @@ from edulint.linting.problem import Problem
 from edulint.linting.linting import lint_many, sort, EduLintLinterFailedException
 from edulint.versions.version_checker import PackageInfoManager
 from edulint.explanations import update_explanations, get_explanations
+from edulint.version import version
 from typing import List, Dict, Tuple, Any, Optional
 import argparse
 import os
@@ -266,6 +266,6 @@ def main() -> int:
     if args.command == "explain":
         return print_message_explanations(args)
     if args.command == "version":
-        print(f"edulint version {edulint.__version__}")
+        print(f"edulint version {version}")
         return 0
     assert False, "unreachable, but " + args.command

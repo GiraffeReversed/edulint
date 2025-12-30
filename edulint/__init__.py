@@ -3,6 +3,7 @@ from .config.config import ImmutableConfig, get_config_one, get_config_many
 from .linting.problem import Problem
 from .linting.linting import lint_one, lint_many
 from .explanations import get_explanations
+from .version import version
 
 __all__ = [
     "Linter",
@@ -15,5 +16,5 @@ __all__ = [
     "get_explanations",
 ]
 
-__version__ = "4.2.2"
+__version__ = version
 __version_info__ = tuple(map(int, __version__.split(".")))
