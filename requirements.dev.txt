@@ -1,9 +1,10 @@
-tomli-w~=1.0.0  # 1.0.0 is tested to be compatible
-tqdm~=4.64.1  # 4.64.1 is tested to be compatible
+tomli-w~=1.0  # 1.0.0 is tested to be compatible
+tqdm~=4.64  # 4.64.1 is tested to be compatible
 build
 mypy
 packaging
 py-spy
 pytest-cov
 graphviz
+z3-solver<5
 # additional in test/requirements.txt
