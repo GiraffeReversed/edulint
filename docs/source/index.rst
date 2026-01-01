@@ -18,6 +18,11 @@ EduLint is a linter that helps novice programmers learn writing good code. EduLi
 
 .. TODO: Feature list, good start is in first paragraph of configuration.rst
 
+.. tip::
+
+   Learn how to install and run EduLint :ref:`here <run edulint>`.
+
+----------------------
 
 Do you have any problem or could use a new feature? See `project's GitHub issues <https://github.com/GiraffeReversed/edulint/issues>`_.
 
