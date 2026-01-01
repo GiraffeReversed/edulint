@@ -7,13 +7,13 @@ import os
 
 def read(rel_path):
     here = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(here, rel_path), 'r', encoding='utf8') as fp:
+    with open(os.path.join(here, rel_path), "r", encoding="utf8") as fp:
         return fp.read()
 
 
 def get_version(rel_path):
     for line in read(rel_path).splitlines():
-        if line.startswith('__version__'):
+        if line.startswith("version"):
             delim = '"' if '"' in line else "'"
             return line.split(delim)[1]
     else:
@@ -21,4 +21,4 @@ def get_version(rel_path):
 
 
 if __name__ == "__main__":
-    setup(version=get_version(os.path.join("edulint", "__init__.py")))
+    setup(version=get_version(os.path.join("edulint", "version.py")))
