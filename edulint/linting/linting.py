@@ -133,10 +133,7 @@ def process_results(
     if (linter == Linter.FLAKE8 and return_code not in (0, 1)) or (
         linter == Linter.PYLINT and return_code == 32
     ):
-        logger.critical(
-            "{linter} exited with {return_code}", linter=linter, return_code=return_code
-        )
-        raise EduLintLinterFailedException()
+        raise EduLintLinterFailedException(f"{linter} exited with return code {return_code}")
 
     if not outs:
         return []

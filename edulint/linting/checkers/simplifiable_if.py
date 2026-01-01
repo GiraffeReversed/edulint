@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 from astroid import nodes  # type: ignore
 from astroid import extract_node
 from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, Dict, Set
 from enum import Enum
 
-from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not, BoolVal
-
 from pylint.checkers import BaseChecker  # type: ignore
 from pylint.checkers.utils import only_required_for_messages
 
 if TYPE_CHECKING:
+    import z3  # pyright: ignore[reportMissingImports]
     from pylint.lint import PyLinter  # type: ignore
+else:
+    from edulint.linting.analyses._z3 import z3
 
 from edulint.linting.analyses.z3_analysis import (
     implies,
@@ -176,14 +179,14 @@ def add_brackets_if_composed(node: nodes.NodeNG, is_standalone: bool) -> str:
     )
 
 
-def get_boolOp_as_condition(operands: List[ExprRef], is_or: bool):
-    return Or(operands) if is_or else And(operands)
+def get_boolOp_as_condition(operands: List[z3.ExprRef], is_or: bool):
+    return z3.Or(operands) if is_or else z3.And(operands)
 
 
 def get_converted_test_and_operands(
-    test: nodes.BoolOp, initialized_variables: Dict[str, ArithRef]
-) -> Tuple[Optional[ExprRef], List[ExprRef]]:
-    converted_operands: List[ExprRef] = []
+    test: nodes.BoolOp, initialized_variables: Dict[str, z3.ArithRef]
+) -> Tuple[Optional[z3.ExprRef], List[z3.ExprRef]]:
+    converted_operands: List[z3.ExprRef] = []
 
     for operand in test.values:
         converted_operands.append(
@@ -196,7 +199,7 @@ def get_converted_test_and_operands(
 
 
 class IfBlock:
-    def _set_test_info(self, test: nodes.NodeNG, initialized_variables: Dict[str, ArithRef]):
+    def _set_test_info(self, test: nodes.NodeNG, initialized_variables: Dict[str, z3.ArithRef]):
         if isinstance(test, (nodes.BoolOp)):
             self.condition, self.boolOp_operands = get_converted_test_and_operands(
                 test, initialized_variables
@@ -205,11 +208,11 @@ class IfBlock:
             if self.condition is None:
                 return
 
-            self.negated_condition = Not(self.condition)
+            self.negated_condition = z3.Not(self.condition)
             if test.op == "or":
                 self.is_or = True
                 # only 'or' cares about negated operands
-                self.negated_boolOp_operands = [Not(operand) for operand in self.boolOp_operands]
+                self.negated_boolOp_operands = [z3.Not(operand) for operand in self.boolOp_operands]
 
             self.operands = test.values
         else:
@@ -217,18 +220,18 @@ class IfBlock:
                 0
             ]
             if self.condition is not None:
-                self.negated_condition = Not(self.condition)
+                self.negated_condition = z3.Not(self.condition)
 
             # I take 'test' that is not BoolOp to be 'and node' with just one operand. (for simplification)
             self.operands = [test]
 
     def set_all_to_default(self):
-        self.condition: Optional[ExprRef] = None
-        self.negated_condition: Optional[ExprRef] = None
+        self.condition: Optional[z3.ExprRef] = None
+        self.negated_condition: Optional[z3.ExprRef] = None
         self.operands: List[nodes.NodeNG] = []
 
-        self.boolOp_operands: List[ExprRef] = []
-        self.negated_boolOp_operands: List[ExprRef] = []
+        self.boolOp_operands: List[z3.ExprRef] = []
+        self.negated_boolOp_operands: List[z3.ExprRef] = []
 
         self.is_or = False
 
@@ -236,7 +239,7 @@ class IfBlock:
         self,
         test: Optional[nodes.NodeNG],
         body: List[nodes.NodeNG],
-        initialized_variables: Dict[str, ArithRef],
+        initialized_variables: Dict[str, z3.ArithRef],
         position_in_if: int,
     ) -> None:
         self.set_all_to_default()
@@ -257,7 +260,7 @@ class IfBlock:
         )
 
         self.condition = get_boolOp_as_condition(self.boolOp_operands, self.is_or)
-        self.negated_condition = Not(self.condition)
+        self.negated_condition = z3.Not(self.condition)
 
     def is_boolOp(self):
         return len(self.boolOp_operands) > 1
@@ -361,61 +364,61 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             "'%s' can be replaced with '%s'",
             "redundant-condition-part",
             """
-            Emitted when there is a problem like 'A or B', where A implies B and suggests to simplify the condition to just 'B'
+            [REQUIRES Z3] Emitted when there is a problem like 'A or B', where A implies B and suggests to simplify the condition to just 'B'
             """,
         ),  # in overriders
         "R6217": (
             "This '%s' is unreachable.",
             "unreachable-elif-else",
             """
-            Emitted when the 'else/elif' branch is unreachable due to totally exhaustive conditions before.
+            [REQUIRES Z3] Emitted when the 'else/elif' branch is unreachable due to totally exhaustive conditions before.
             """,
         ),
         "R6218": (
             "This 'elif' can be replaced with just 'else'.",
             "condition-always-true-in-elif",
             """
-            Emitted when a body of 'elif' in if statement is always executed when reached.
+            [REQUIRES Z3] Emitted when a body of 'elif' in if statement is always executed when reached.
             """,
         ),  # in overriders
         "R6219": (
             "'%s' can be replaced with '%s', because some operands of the '%s' are always %s.",
             "redundant-condition-part-in-elif",
             """
-            Emitted when a test condition in 'elif' can be simplified, because when the control flow reaches this 'elif' we know that some parts of this condition are True (when the condition is 'and') or False (when the condition is 'or')
+            [REQUIRES Z3] Emitted when a test condition in 'elif' can be simplified, because when the control flow reaches this 'elif' we know that some parts of this condition are True (when the condition is 'and') or False (when the condition is 'or')
             """,
         ),
         "R6220": (
             "Conditions in the if statement can be simplified by reordering elif blocks, we suggest this order: '%s' with these possibly simplified test conditions respectively: '%s'.",
             "redundant-condition-part-in-elif-reorder",
             """
-            Emitted when elifs in if-statement can be rearanged to get simpler conditions. (by moving some condition higher, parts of conditions below it can become redundant)
+            [REQUIRES Z3] Emitted when elifs in if-statement can be rearanged to get simpler conditions. (by moving some condition higher, parts of conditions below it can become redundant)
             """,
         ),
         "R6221": (
             "The body of this 'elif' is never executed, because its condition is always False when reached.",
             "condition-always-false-in-elif",
             """
-            Emitted when a condition in elif is always False, when reached.
+            [REQUIRES Z3] Emitted when a condition in elif is always False, when reached.
             """,
         ),  # in overriders
         "R6222": (
             "This condition is always %s.",
             "condition-always-true-or-false",
             """
-            Emitted when a condition is always True/False regardless of assignment to variables.
+            [REQUIRES Z3] Emitted when a condition is always True/False regardless of assignment to variables.
             """,
         ),  # in overriders
         "R6223": (
             "The next %d if statements after this one can be elif statements.",
             "use-if-elif-else",
-            """Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.
+            """[REQUIRES Z3] Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.
             But no variables from test conditions are modified.""",
         ),
         "R6224": (
             "The next %d if statements after this one can be elif statements.",
             "use-if-elif-else-modifying",
-            """Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.
+            """[REQUIRES Z3] Emmited when there are at least two consecutive if-statements that can be merged into just one if-elif-statement.
             But some variable from test conditions is modified.""",
         ),
     }
@@ -640,7 +643,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             self._simplifiable_if_message(node, then, new_cond, only_replaces)
 
     def _test_pureness_and_initialize_variables_for_if(
-        self, current_if_block: nodes.If, initialized_variables: Dict[str, ArithRef]
+        self, current_if_block: nodes.If, initialized_variables: Dict[str, z3.ArithRef]
     ) -> Tuple[bool, Optional[nodes.If]]:
         """Returns tuple, where first value indicates whether there are problems with pureness or initialization.
         And the second value is the first elif, where there was some problem or None if there was
@@ -663,7 +666,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         return True, current_if_block
 
     def _convert_else_to_elif_when_simple_enough(
-        self, if_statement: List[IfBlock], initialized_variables: Dict[str, ArithRef]
+        self, if_statement: List[IfBlock], initialized_variables: Dict[str, z3.ArithRef]
     ) -> None:
         """
         This function converts else in the if statement to elif, such that it is
@@ -672,7 +675,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if len(initialized_variables) != 2:
             return
 
-        else_condition = And([block.negated_condition for block in if_statement[:-1]])
+        else_condition = z3.And([block.negated_condition for block in if_statement[:-1]])
 
         var1, var2 = list(initialized_variables.items())
         desired_simplifications = [
@@ -685,12 +688,12 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         for simplification, string_representation in desired_simplifications:
             if implies(else_condition, simplification) and implies(simplification, else_condition):
                 if_statement[-1].condition = simplification
-                if_statement[-1].negated_condition = Not(simplification)
+                if_statement[-1].negated_condition = z3.Not(simplification)
                 if_statement[-1].operands = [extract_node(string_representation)]
                 return
 
     def _decompose_if(
-        self, node: nodes.If, initialized_variables: Dict[str, ArithRef]
+        self, node: nodes.If, initialized_variables: Dict[str, z3.ArithRef]
     ) -> List[IfBlock]:
         if_statement: List[IfBlock] = []
         current_if_block = node
@@ -732,7 +735,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         return if_statement
 
     def _condition_simplifications_under_assumption(
-        self, block: IfBlock, assumption: ExprRef
+        self, block: IfBlock, assumption: z3.ExprRef
     ) -> Tuple[Optional[bool], List[int]]:
         condition_always: Optional[bool] = None
         redundant_operand_indeces: List[int] = []
@@ -813,7 +816,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 elif_count = self._get_elif_count(if_statement)
 
             if not deleted_block:
-                previous_conditions_negated = And(
+                previous_conditions_negated = z3.And(
                     previous_conditions_negated, if_statement[i].negated_condition
                 )
                 i += 1
@@ -829,18 +832,18 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         block_index: int,
         goal_index: int,
         if_statement: List[IfBlock],
-        negated_conditions_before_goal: BoolRef,
+        negated_conditions_before_goal: z3.BoolRef,
     ) -> bool:
         "assumes goal_index < block_index"
         return implies(
-            And(negated_conditions_before_goal, if_statement[block_index].condition),
-            And([block.negated_condition for block in if_statement[goal_index:block_index]]),
+            z3.And(negated_conditions_before_goal, if_statement[block_index].condition),
+            z3.And([block.negated_condition for block in if_statement[goal_index:block_index]]),
         )
 
     def _first_movable_block_for_simplification(
         self, if_statement: List[IfBlock], current_block: int, elif_count: int
     ) -> Optional[Tuple[int, Optional[bool], List[int]]]:
-        previous_conditions_negated = And(
+        previous_conditions_negated = z3.And(
             [block.negated_condition for block in if_statement[:current_block]]
         )
 
@@ -853,7 +856,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             condition_always, redundant_operand_indeces = (
                 self._condition_simplifications_under_assumption(
                     if_statement[current_block],
-                    And(previous_conditions_negated, if_statement[block_index].negated_condition),
+                    z3.And(
+                        previous_conditions_negated, if_statement[block_index].negated_condition
+                    ),
                 )
             )
 
@@ -1043,7 +1048,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if not skip_reordering and self._check_elif_instead_of_else(node):
             return
 
-        initialized_variables: Dict[str, ArithRef] = {}
+        initialized_variables: Dict[str, z3.ArithRef] = {}
 
         problems, first_problematic_if = self._test_pureness_and_initialize_variables_for_if(
             node, initialized_variables
@@ -1097,8 +1102,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _count_of_mergeable_consecutive_ifs(
         self,
-        relations_between_vars: BoolRef,
-        converted_conditions: List[List[ExprRef]],
+        relations_between_vars: z3.BoolRef,
+        converted_conditions: List[List[z3.ExprRef]],
         start_if_index: int,
     ) -> int:
         "This function also counts the `if` at `start_index`. (if cannot merge any, returns 1)"
@@ -1115,8 +1120,8 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _get_most_consecutive_ifs_suitable_for_z3_block_analysis(
         self, consecutive_ifs: List[nodes.If], start_index: int
-    ) -> Tuple[BoolRef, List[List[ExprRef]]]:
-        initialized_variables: Dict[str, ArithRef] = {}
+    ) -> Tuple[z3.BoolRef, List[List[z3.ExprRef]]]:
+        initialized_variables: Dict[str, z3.ArithRef] = {}
 
         i = start_index
         while (
@@ -1131,7 +1136,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             i += 1
 
         if i <= start_index + 1:
-            return BoolVal(True), []
+            return z3.BoolVal(True), []
 
         relations_between_vars, converted_conditions = (
             convert_conditions_with_blocks_after_each_to_Z3(
@@ -1148,9 +1153,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def _get_most_consecutive_ifs_without_var_modification(
         self, consecutive_ifs: List[nodes.If], start_index: int
-    ) -> List[List[ExprRef]]:
+    ) -> List[List[z3.ExprRef]]:
         def is_valid_and_initialize(
-            consecutive_ifs: List[nodes.If], initialized_variables: Dict[str, ArithRef], i: int
+            consecutive_ifs: List[nodes.If], initialized_variables: Dict[str, z3.ArithRef], i: int
         ) -> bool:
             if if_elif_has_else_block(consecutive_ifs[i]) or contains_node_of_type(
                 consecutive_ifs[i], END_NODES
@@ -1167,7 +1172,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
             return True
 
-        initialized_variables: Dict[str, ArithRef] = {}
+        initialized_variables: Dict[str, z3.ArithRef] = {}
 
         i = start_index
         while i < len(consecutive_ifs) and is_valid_and_initialize(
@@ -1178,7 +1183,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if i <= start_index + 1:
             return []
 
-        converted_conditions: List[List[ExprRef]] = []
+        converted_conditions: List[List[z3.ExprRef]] = []
 
         for if_stmt in consecutive_ifs[start_index:i]:
             converted_conditions.append([])
@@ -1202,10 +1207,10 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         It then suggests the merge that results in the most if statements being merged and repeats the process.
         """
-        most_consecutive_converted_ifs_Z3: List[List[ExprRef]] = []
+        most_consecutive_converted_ifs_Z3: List[List[z3.ExprRef]] = []
         corresponding_index_Z3 = 0
 
-        most_consecutive_converted_ifs_unmodified: List[List[ExprRef]] = []
+        most_consecutive_converted_ifs_unmodified: List[List[z3.ExprRef]] = []
         corresponding_index_unmodified = 0
 
         i = 0
@@ -1233,7 +1238,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 corresponding_index_unmodified = 0
 
             mergeable_count_unmodified = self._count_of_mergeable_consecutive_ifs(
-                BoolVal(True),
+                z3.BoolVal(True),
                 most_consecutive_converted_ifs_unmodified,
                 corresponding_index_unmodified,
             )
@@ -1289,14 +1294,14 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
     def can_merge_ifs_together(
         self,
-        if1_conditions: List[ExprRef],
-        if2_conditions: List[ExprRef],
-        relations_between_vars: BoolRef,
+        if1_conditions: List[z3.ExprRef],
+        if2_conditions: List[z3.ExprRef],
+        relations_between_vars: z3.BoolRef,
     ) -> bool:
         negated_if2_conditions = (
-            Not(if2_conditions[0])
+            z3.Not(if2_conditions[0])
             if len(if2_conditions) == 1
-            else And([Not(cond) for cond in if2_conditions])
+            else z3.And([z3.Not(cond) for cond in if2_conditions])
         )
 
         not_true_conditions = []
@@ -1304,7 +1309,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             # This is same as `relations_between_vars => ('cond is the first true condition' => negated_if2_conditions)`
             if not implies(
                 relations_between_vars,
-                Or(Not(cond), *not_true_conditions, negated_if2_conditions),
+                z3.Or(z3.Not(cond), *not_true_conditions, negated_if2_conditions),
                 3000,
             ):
                 return False
@@ -1349,9 +1354,35 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         "use-if-elif-else-modifying",
     )
     def visit_if(self, node: nodes.If) -> None:
-        self._basic_checks(node)
-        self._check_for_redundant_condition_part_in_if(node, False)
-        self._check_for_use_if_elif_else(node)
+        if any(
+            self.linter.is_message_enabled(symbol)
+            for symbol in (
+                "simplifiable-if-return",
+                "simplifiable-if-return-conj",
+                "simplifiable-if-assignment",
+                "simplifiable-if-assignment-conj",
+                "simplifiable-if-pass",
+                "no-value-in-one-branch-return",
+                "simplifiable-if-nested",
+                "simplifiable-if-seq",
+            )
+        ):
+            self._basic_checks(node)
+        if any(
+            self.linter.is_message_enabled(symbol)
+            for symbol in (
+                "redundant-condition-part-in-elif-reorder",
+                "redundant-condition-part-in-elif",
+                "condition-always-true-in-elif",
+                "condition-always-false-in-elif",
+                "unreachable-elif-else",
+            )
+        ):
+            self._check_for_redundant_condition_part_in_if(node, False)
+        if any(
+            self.linter.is_message_enabled(f"use-if-elif-else{end}") for end in ("", "-modifying")
+        ):
+            self._check_for_use_if_elif_else(node)
 
     @only_required_for_messages("simplifiable-if-expr", "simplifiable-if-expr-conj")
     def visit_ifexp(self, node: nodes.IfExp) -> None:
@@ -2023,16 +2054,18 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             # want to prefer shorter suggestions
         )
 
-    def _ith_is_redundant(self, excluded_i: List[ExprRef], condition: ExprRef, is_or: bool) -> bool:
+    def _ith_is_redundant(
+        self, excluded_i: List[z3.ExprRef], condition: z3.ExprRef, is_or: bool
+    ) -> bool:
         return (
             is_or
-            and implies(condition, Or(excluded_i))
+            and implies(condition, z3.Or(excluded_i))
             or not is_or
-            and implies(And(excluded_i), condition)
+            and implies(z3.And(excluded_i), condition)
         )
 
     def _redundant_condition_parts(
-        self, node: nodes.BoolOp, converted_conditions: List[ExprRef]
+        self, node: nodes.BoolOp, converted_conditions: List[z3.ExprRef]
     ) -> List[bool]:
         """
         Returns a list of same length as node.values with boolean values indicating whether the operand on same index
@@ -2043,7 +2076,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         is_or = node.op == "or"
 
         for i, operand in enumerate(converted_conditions):
-            if is_or and unsatisfiable(operand) or not is_or and unsatisfiable(Not(operand)):
+            if is_or and unsatisfiable(operand) or not is_or and unsatisfiable(z3.Not(operand)):
                 removed_condition[i] = True
 
         # deal with equivalent operands (and implications between single operands)
@@ -2086,7 +2119,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return removed_condition
 
-    def _check_always_true_or_false(self, node: nodes.NodeNG, condition: ExprRef) -> bool:
+    def _check_always_true_or_false(self, node: nodes.NodeNG, condition: z3.ExprRef) -> bool:
         if unsatisfiable(condition):
             self.add_message(
                 "condition-always-true-or-false",
@@ -2095,7 +2128,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             )
             return True
 
-        if unsatisfiable(Not(condition)):
+        if unsatisfiable(z3.Not(condition)):
             self.add_message(
                 "condition-always-true-or-false",
                 node=node,
@@ -2106,7 +2139,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         return False
 
     def _make_suggestion_for_redundant_condition_part(self, node: nodes.BoolOp) -> None:
-        initialized_variables: Dict[str, ArithRef] = {}
+        initialized_variables: Dict[str, z3.ArithRef] = {}
         if not initialize_variables(node, initialized_variables, False, None):
             return
 
@@ -2152,7 +2185,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             new_condition = converted_conditions[0]
         else:
             new_condition = (
-                Or(converted_conditions) if node.op == "or" else And(converted_conditions)
+                z3.Or(converted_conditions) if node.op == "or" else z3.And(converted_conditions)
             )
 
         if self._check_always_true_or_false(node, new_condition):
@@ -2232,7 +2265,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             comparisons_with_numbers, comparisons, node
         )
 
-        if not isinstance(node.parent, nodes.BoolOp):
+        if not isinstance(node.parent, nodes.BoolOp) and self.linter.is_message_enabled(
+            "redundant-condition-part", "condition-always-true-or-false"
+        ):
             self._make_suggestion_for_redundant_condition_part(node)
 
     @only_required_for_messages(
@@ -2254,7 +2289,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
         if isinstance(node.parent, nodes.BoolOp) or not is_pure_expression(node):
             return
 
-        initialized_variables: Dict[str, ArithRef] = {}
+        initialized_variables: Dict[str, z3.ArithRef] = {}
         if not initialize_variables(node, initialized_variables, False, None):
             return
 

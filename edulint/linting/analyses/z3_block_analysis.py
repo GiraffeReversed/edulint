@@ -1,7 +1,12 @@
-from typing import List, Tuple, Dict, Set, Optional, Union
+from __future__ import annotations
+
+from typing import List, Tuple, Dict, Set, Optional, Union, TYPE_CHECKING
 from astroid import nodes
 
-from z3 import ArithRef, ExprRef, BoolRef, And, Or, Not, If, Implies, is_bool
+if TYPE_CHECKING:
+    import z3  # pyright: ignore[reportMissingImports]
+else:
+    from edulint.linting.analyses._z3 import z3
 
 from edulint.linting.checkers.utils import (
     is_pure_expression,
@@ -112,7 +117,7 @@ def _allowed_node_for_Z3_block_analysis(node: nodes.NodeNG) -> bool:
 def _initialize_variables_in_node(
     node: nodes.NodeNG,
     context: List[nodes.NodeNG],
-    initialized_variables: Dict[str, ArithRef],
+    initialized_variables: Dict[str, z3.ArithRef],
 ) -> bool:
     if isinstance(node, nodes.Assert):
         node = node.test
@@ -155,7 +160,7 @@ def _initialize_variables_in_node(
 
 def validate_and_initialize_variables_for_Z3_block_analysis(
     node: nodes.NodeNG,
-    initialized_variables: Dict[str, ArithRef],
+    initialized_variables: Dict[str, z3.ArithRef],
     context: List[nodes.NodeNG],
 ) -> bool:
     """
@@ -199,29 +204,29 @@ def validate_and_initialize_variables_for_Z3_block_analysis(
 
 
 def _change_assertions_and_vars_after_elif_block(
-    if_conditions: List[ExprRef],
+    if_conditions: List[z3.ExprRef],
     return_encountered: bool,
-    new_assertions: List[ExprRef],
-    var_changes: Dict[str, ArithRef],
-    assertions: List[ExprRef],
-    current_condition: ExprRef,
+    new_assertions: List[z3.ExprRef],
+    var_changes: Dict[str, z3.ArithRef],
+    assertions: List[z3.ExprRef],
+    current_condition: z3.ExprRef,
     changed_vars_in_any_branch: Set[str],
-    var_changes_in_each_branch: List[Dict[str, ArithRef]],
+    var_changes_in_each_branch: List[Dict[str, z3.ArithRef]],
 ):
-    previous_conditions_negated = [Not(cond) for cond in if_conditions]
+    previous_conditions_negated = [z3.Not(cond) for cond in if_conditions]
 
     if return_encountered:
         assertions.append(
-            Implies(And(previous_conditions_negated), Not(current_condition))
+            z3.Implies(z3.And(previous_conditions_negated), z3.Not(current_condition))
             if len(if_conditions) > 0
-            else Not(current_condition)
+            else z3.Not(current_condition)
         )
     else:
         for assertion in new_assertions:
             assertions.append(
-                Implies(
+                z3.Implies(
                     (
-                        And(*previous_conditions_negated, current_condition)
+                        z3.And(*previous_conditions_negated, current_condition)
                         if len(if_conditions) > 0
                         else current_condition
                     ),
@@ -239,12 +244,12 @@ def _change_assertions_and_vars_after_elif_block(
 
 def _how_var_changed_after_if(
     var_name: str,
-    if_conditions: List[ExprRef],
-    var_changes_in_each_branch: List[Tuple[Dict[str, ArithRef], bool]],
-    var_value_before_if: ArithRef,
+    if_conditions: List[z3.ExprRef],
+    var_changes_in_each_branch: List[Tuple[Dict[str, z3.ArithRef], bool]],
+    var_value_before_if: z3.ArithRef,
     current_block: int,
     has_else_block: bool,
-) -> ExprRef:
+) -> z3.ExprRef:
     if current_block >= len(var_changes_in_each_branch) and not has_else_block:
         return var_value_before_if
 
@@ -263,7 +268,7 @@ def _how_var_changed_after_if(
             has_else_block,
         )
 
-    return If(
+    return z3.If(
         if_conditions[current_block],
         var_changes.get(var_name, var_value_before_if),
         _how_var_changed_after_if(
@@ -279,18 +284,18 @@ def _how_var_changed_after_if(
 
 def _update_relations_between_vars(
     var_name: str,
-    var_value: ExprRef,
+    var_value: z3.ExprRef,
     var_rewrite_counts: Dict[str, int],
-    accumulated_relations_between_vars: List[ExprRef],
-    initialized_variables: Dict[str, ArithRef],
-) -> ArithRef:
+    accumulated_relations_between_vars: List[z3.ExprRef],
+    initialized_variables: Dict[str, z3.ArithRef],
+) -> z3.ArithRef:
     var_rewrite_counts[var_name] += 1
     prefix = str(var_rewrite_counts[var_name])
 
     var = create_prefixed_var(prefix, initialized_variables[var_name], var_name)
 
     accumulated_relations_between_vars.append(
-        (convert_to_bool(var) if is_bool(var_value) else var) == var_value
+        (convert_to_bool(var) if z3.is_bool(var_value) else var) == var_value
     )
 
     return var
@@ -298,13 +303,13 @@ def _update_relations_between_vars(
 
 def _create_new_var_after_if(
     var_name: str,
-    if_conditions: List[ExprRef],
-    var_changes_in_each_branch: List[Tuple[Dict[str, ArithRef], bool]],
-    accumulated_relations_between_vars: List[ExprRef],
+    if_conditions: List[z3.ExprRef],
+    var_changes_in_each_branch: List[Tuple[Dict[str, z3.ArithRef], bool]],
+    accumulated_relations_between_vars: List[z3.ExprRef],
     var_rewrite_counts: Dict[str, int],
-    initialized_variables: Dict[str, ArithRef],
+    initialized_variables: Dict[str, z3.ArithRef],
     has_else_block: bool,
-) -> ArithRef:
+) -> z3.ArithRef:
     new_var_value = _how_var_changed_after_if(
         var_name,
         if_conditions,
@@ -325,17 +330,17 @@ def _create_new_var_after_if(
 
 def _changed_vars_after_if(
     node: nodes.If,
-    initialized_variables: Dict[str, ArithRef],
-    accumulated_relations_between_vars: List[ExprRef],
+    initialized_variables: Dict[str, z3.ArithRef],
+    accumulated_relations_between_vars: List[z3.ExprRef],
     var_rewrite_counts: Dict[str, int],
-) -> Optional[Tuple[Dict[str, ArithRef], List[ExprRef], bool]]:
-    new_vars: Dict[str, ArithRef] = {}
-    assertions: List[ExprRef] = []
+) -> Optional[Tuple[Dict[str, z3.ArithRef], List[z3.ExprRef], bool]]:
+    new_vars: Dict[str, z3.ArithRef] = {}
+    assertions: List[z3.ExprRef] = []
     changed_vars_in_any_branch: Set[str] = set()
 
     always_returns = True
-    if_conditions: List[ExprRef] = []
-    var_changes_in_each_branch: List[Tuple[Dict[str, ArithRef], bool]] = []
+    if_conditions: List[z3.ExprRef] = []
+    var_changes_in_each_branch: List[Tuple[Dict[str, z3.ArithRef], bool]] = []
     current_node = node
     while True:
         current_condition = convert_condition_to_z3_expression(
@@ -386,11 +391,13 @@ def _changed_vars_after_if(
         always_returns = always_returns and return_encountered
 
         if return_encountered:
-            # this is negation of And([Not(cond) for cond in if_conditions]) (ie condition that holds when we get to else)
-            assertions.append(Or(if_conditions))
+            # this is negation of z3.And([z3.Not(cond) for cond in if_conditions]) (ie condition that holds when we get to else)
+            assertions.append(z3.Or(if_conditions))
         else:
             for assertion in new_assertions:
-                assertions.append(Implies(And([Not(cond) for cond in if_conditions]), assertion))
+                assertions.append(
+                    z3.Implies(z3.And([z3.Not(cond) for cond in if_conditions]), assertion)
+                )
 
             for var_name in var_changes.keys():
                 changed_vars_in_any_branch.add(var_name)
@@ -424,8 +431,8 @@ def _changed_vars_after_if(
 
 
 def _convert_expression_in_assignment_to_Z3(
-    node: nodes.NodeNG, initialized_variables: Dict[str, ArithRef]
-) -> Optional[ExprRef]:
+    node: nodes.NodeNG, initialized_variables: Dict[str, z3.ArithRef]
+) -> Optional[z3.ExprRef]:
     if isinstance(node, nodes.IfExp):
         test = convert_condition_to_z3_expression(node.test, initialized_variables, None)[0]
         body = convert_condition_to_z3_expression(node.body, initialized_variables, node.parent)[0]
@@ -436,7 +443,7 @@ def _convert_expression_in_assignment_to_Z3(
         if test is None or body is None or orelse is None:
             return None
 
-        return If(test, body, orelse)
+        return z3.If(test, body, orelse)
 
     return convert_condition_to_z3_expression(node, initialized_variables, node.parent)[0]
 
@@ -470,10 +477,10 @@ def _get_assigned_expression_in_AugAssign(node: nodes.AugAssign) -> Optional[nod
 
 def _update_vars_after_assignment(
     assignment: Union[nodes.Assign, nodes.AnnAssign, nodes.AugAssign],
-    initialized_variables: Dict[str, ArithRef],
-    accumulated_relations_between_vars: List[ExprRef],
+    initialized_variables: Dict[str, z3.ArithRef],
+    accumulated_relations_between_vars: List[z3.ExprRef],
     var_rewrite_counts: Dict[str, int],
-) -> Optional[Dict[str, ArithRef]]:
+) -> Optional[Dict[str, z3.ArithRef]]:
     if isinstance(assignment, nodes.Assign) and has_more_assign_targets(assignment):
         values = list(assignment.value.get_children())
     elif isinstance(assignment, nodes.AugAssign):
@@ -483,7 +490,7 @@ def _update_vars_after_assignment(
 
     targets = get_assign_targets(assignment)
 
-    new_vars: Dict[str, ArithRef] = {}
+    new_vars: Dict[str, z3.ArithRef] = {}
 
     for i, target in enumerate(targets):
         if not isinstance(target, nodes.AssignName):
@@ -513,12 +520,12 @@ def _update_vars_after_assignment(
 
 def _changed_vars_after_block(
     block: List[nodes.NodeNG],
-    initialized_variables: Dict[str, ArithRef],
-    accumulated_relations_between_vars: List[ExprRef],
+    initialized_variables: Dict[str, z3.ArithRef],
+    accumulated_relations_between_vars: List[z3.ExprRef],
     var_rewrite_counts: Dict[str, int],
-) -> Optional[Tuple[Dict[str, ArithRef], List[ExprRef], bool]]:
-    new_vars: Dict[str, ArithRef] = {}
-    assertions: List[ExprRef] = []
+) -> Optional[Tuple[Dict[str, z3.ArithRef], List[z3.ExprRef], bool]]:
+    new_vars: Dict[str, z3.ArithRef] = {}
+    assertions: List[z3.ExprRef] = []
 
     for node in block:
         if is_assignment(node):
@@ -569,8 +576,8 @@ def _changed_vars_after_block(
 def convert_conditions_with_blocks_after_each_to_Z3(
     conditions: List[List[nodes.NodeNG]],
     blocks: List[List[nodes.NodeNG]],
-    initialized_variables: Dict[str, ArithRef],
-) -> Tuple[BoolRef, List[List[ExprRef]]]:
+    initialized_variables: Dict[str, z3.ArithRef],
+) -> Tuple[z3.BoolRef, List[List[z3.ExprRef]]]:
     """
     Before using this function use `validate_and_initialize_variables_for_Z3_block_analysis` to get `initialized_variables`.
     This function converts the `conditions` with `blocks` in between them (there cannot be any cycles).
@@ -589,8 +596,8 @@ def convert_conditions_with_blocks_after_each_to_Z3(
     """
     assert len(conditions) == len(blocks) + 1
 
-    accumulated_relations_between_vars: List[ExprRef] = []
-    converted_conditions: List[List[ExprRef]] = []
+    accumulated_relations_between_vars: List[z3.ExprRef] = []
+    converted_conditions: List[List[z3.ExprRef]] = []
 
     var_rewrite_counts = {var: 0 for var in initialized_variables}
 
@@ -599,7 +606,7 @@ def convert_conditions_with_blocks_after_each_to_Z3(
         for cond in conds:
             converted = convert_condition_to_z3_expression(cond, initialized_variables, None)[0]
             if converted is None:
-                return (And(), [])
+                return (z3.And(), [])
 
             converted_conditions[i].append(converted)
 
@@ -612,14 +619,14 @@ def convert_conditions_with_blocks_after_each_to_Z3(
             )
 
             if after_block is None:
-                return (And(), [])
+                return (z3.And(), [])
 
             new_vars, assertions, _ = after_block
 
             initialized_variables.update(new_vars)
             accumulated_relations_between_vars.extend(assertions)
 
-    return And(accumulated_relations_between_vars), converted_conditions
+    return z3.And(accumulated_relations_between_vars), converted_conditions
 
 
 def condition_implies_another_with_block_in_between(
@@ -640,7 +647,7 @@ def condition_implies_another_with_block_in_between(
     Returns:
         `True` only when we can be sure that the implication holds.
     """
-    initialized_variables: Dict[str, ArithRef] = {}
+    initialized_variables: Dict[str, z3.ArithRef] = {}
 
     for node in (
         [*block, condition2]
@@ -659,5 +666,5 @@ def condition_implies_another_with_block_in_between(
     )
 
     return conditions and implies(
-        relations_between_vars, Implies(conditions[0][0], conditions[1][0]), 3000
+        relations_between_vars, z3.Implies(conditions[0][0], conditions[1][0]), 3000
     )

@@ -1,30 +1,14 @@
-from typing import List, Optional, Dict, Tuple
+from __future__ import annotations
+from typing import List, Optional, Dict, Tuple, TYPE_CHECKING
 
 from astroid import nodes
 from edulint.linting.checkers.utils import get_const_value, is_integer, is_number, is_float
 from edulint.linting.analyses.types import guess_type, Type
 
-from z3 import (
-    ExprRef,
-    ArithRef,
-    BoolRef,
-    Int,
-    Real,
-    And,
-    Or,
-    IntVal,
-    RealVal,
-    BoolVal,
-    is_int,
-    Then,
-    Tactic,
-    Not,
-    unsat,
-    unknown,
-    sat,
-    Abs,
-    CheckSatResult,
-)
+if TYPE_CHECKING:
+    import z3  # pyright: ignore[reportMissingImports]
+else:
+    from edulint.linting.analyses._z3 import z3
 
 
 EXCLUDED_COMPARES_IN_Z3 = {"in", "not in", "is", "is not"}
@@ -123,7 +107,7 @@ def _is_abs_function(node: nodes.NodeNG) -> bool:
 
 def initialize_variables(
     node: nodes.NodeNG,
-    initialized_variables: Dict[str, ArithRef],
+    initialized_variables: Dict[str, z3.ArithRef],
     is_descendant_of_integer_operation: bool,
     parent: Optional[nodes.NodeNG],
     dont_make_up_new_vars=False,
@@ -164,12 +148,12 @@ def initialize_variables(
 
         if variable is None:
             initialized_variables[variable_key] = (
-                Int(str(len(initialized_variables)))
+                z3.Int(str(len(initialized_variables)))
                 if is_descendant_of_integer_operation
-                else Real(str(len(initialized_variables)))
+                else z3.Real(str(len(initialized_variables)))
             )
         elif is_descendant_of_integer_operation and variable.is_real():
-            initialized_variables[variable_key] = Int(variable.decl().name())
+            initialized_variables[variable_key] = z3.Int(variable.decl().name())
 
         if is_descendant_of_integer_operation:
             return guessed_type.has_only(Type.INT)
@@ -195,14 +179,14 @@ def initialize_variables(
     return True
 
 
-def convert_to_bool(expr: ExprRef) -> BoolRef:
+def convert_to_bool(expr: z3.ExprRef) -> z3.BoolRef:
     "`expr` must be a number"
     return expr != 0
 
 
 def _convert_to_bool_if_necessary(
-    node: nodes.NodeNG, parent: nodes.NodeNG, z3_node_representation: Optional[ExprRef]
-) -> Tuple[Optional[ExprRef], bool]:
+    node: nodes.NodeNG, parent: nodes.NodeNG, z3_node_representation: Optional[z3.ExprRef]
+) -> Tuple[Optional[z3.ExprRef], bool]:
     "returns a tuple with possibly converted expression as the first value and the second indicates whether the conversion happend or not"
     if z3_node_representation is None:
         return None, False
@@ -218,24 +202,24 @@ def _convert_to_bool_if_necessary(
     return z3_node_representation, False
 
 
-def _convert_const_to_z3(node: nodes.Const) -> Optional[ExprRef]:
+def _convert_const_to_z3(node: nodes.Const) -> Optional[z3.ExprRef]:
     if isinstance(node.value, bool):
-        return BoolVal(node.value)
+        return z3.BoolVal(node.value)
 
     if isinstance(node.value, int):
-        return IntVal(node.value)
+        return z3.IntVal(node.value)
 
     if isinstance(node.value, float):
-        return RealVal(node.value)
+        return z3.RealVal(node.value)
 
     return None
 
 
 def convert_condition_to_z3_expression(
     node: Optional[nodes.NodeNG],
-    initialized_variables: Dict[str, ArithRef],
+    initialized_variables: Dict[str, z3.ArithRef],
     parent: Optional[nodes.NodeNG],
-) -> Tuple[Optional[ExprRef], bool]:
+) -> Tuple[Optional[z3.ExprRef], bool]:
     """
     We assume that the expression is pure in the sense of is_pure_expression from utils.
     Before using this function you have to use the initialize_variables funcion on all nodes that
@@ -255,7 +239,7 @@ def convert_condition_to_z3_expression(
         expr, conversion_to_bool = convert_condition_to_z3_expression(
             node.args[0], initialized_variables, node
         )
-        expr, bool_conversion = _convert_to_bool_if_necessary(node, parent, Abs(expr))
+        expr, bool_conversion = _convert_to_bool_if_necessary(node, parent, z3.Abs(expr))
         return expr, bool_conversion or conversion_to_bool
 
     if _is_variable_in_pure_expression(node) or _is_expression_with_nonlinear_arithmetic(node):
@@ -277,7 +261,7 @@ def convert_condition_to_z3_expression(
 
             operands.append(expr)
 
-        return (And(operands) if node.op == "and" else Or(operands)), conversion_to_bool
+        return (z3.And(operands) if node.op == "and" else z3.Or(operands)), conversion_to_bool
 
     if isinstance(node, nodes.Compare):
         left, bool_conversion = convert_condition_to_z3_expression(
@@ -327,11 +311,11 @@ def convert_condition_to_z3_expression(
         if (
             left is None
             or (node.op in ("+", "-", "*") and right is None)
-            or ((node.op == "%" or node.op == "//") and not is_int(left))
+            or ((node.op == "%" or node.op == "//") and not z3.is_int(left))
         ):
             return None, False
 
-        z3_expr: Optional[ExprRef] = None
+        z3_expr: Optional[z3.ExprRef] = None
 
         if node.op == "%":
             modulo = get_const_value(node.right)
@@ -364,7 +348,7 @@ def convert_condition_to_z3_expression(
         if node.op == "-":
             expr = -expr
         elif node.op == "not":
-            expr = Not(expr)
+            expr = z3.Not(expr)
 
         converted_condition, bool_conversion = _convert_to_bool_if_necessary(node, parent, expr)
         return converted_condition, (bool_conversion or conversion_to_bool)
@@ -372,48 +356,45 @@ def convert_condition_to_z3_expression(
     return None, False
 
 
-Z3_TACTIC = Then(
-    Tactic("simplify"),
-    Tactic("solve-eqs"),
-    Tactic("propagate-values"),
-    Tactic("solve-eqs"),
-    Tactic("smt"),
-)
-
-
-def sat_check_condition(condition: ExprRef, rlimit=1700) -> CheckSatResult:
-    solver = Z3_TACTIC.solver()
+def sat_check_condition(condition: z3.ExprRef, rlimit=1700) -> z3.CheckSatResult:
+    solver = z3.Then(
+        z3.Tactic("simplify"),
+        z3.Tactic("solve-eqs"),
+        z3.Tactic("propagate-values"),
+        z3.Tactic("solve-eqs"),
+        z3.Tactic("smt"),
+    ).solver()
     solver.set("rlimit", rlimit)
     solver.add(condition)
     return solver.check()
 
 
-def unsatisfiable(condition: ExprRef, rlimit=1700) -> bool:
-    return sat_check_condition(condition, rlimit) == unsat
+def unsatisfiable(condition: z3.ExprRef, rlimit=1700) -> bool:
+    return sat_check_condition(condition, rlimit) == z3.unsat
 
 
 def sat_condition(condition: nodes.NodeNG, rlimit=1700) -> Optional[bool]:
     "Returns: `True` if condition is SAT, `False` if it is UNSAT, `None` if don't know."
-    initialized_variables: Dict[str, ArithRef] = {}
+    initialized_variables: Dict[str, z3.ArithRef] = {}
 
     if not initialize_variables(condition, initialized_variables, False, None, True):
         return None
 
     converted = convert_condition_to_z3_expression(condition, initialized_variables, None)[0]
 
-    if converted is None or (result := sat_check_condition(converted, rlimit)) == unknown:
+    if converted is None or (result := sat_check_condition(converted, rlimit)) == z3.unknown:
         return None
 
-    return result == sat
+    return result == z3.sat
 
 
-def implies(condition1: ExprRef, condition2: ExprRef, rlimit=1700) -> bool:
+def implies(condition1: z3.ExprRef, condition2: z3.ExprRef, rlimit=1700) -> bool:
     "Returns if implication 'condition1 => condition2' is valid. (but if it cannot decide return False)"
-    return unsatisfiable(And(condition1, Not(condition2)), rlimit)
+    return unsatisfiable(z3.And(condition1, z3.Not(condition2)), rlimit)
 
 
 def first_implied_index(
-    condition: ExprRef, conditions: List[ExprRef], rlimit=1700
+    condition: z3.ExprRef, conditions: List[z3.ExprRef], rlimit=1700
 ) -> Optional[int]:
     for i in range(len(conditions)):
         if implies(condition, conditions[i], rlimit):
@@ -422,7 +403,9 @@ def first_implied_index(
     return None
 
 
-def all_implied_indeces(condition: ExprRef, conditions: List[ExprRef], rlimit=1700) -> List[int]:
+def all_implied_indeces(
+    condition: z3.ExprRef, conditions: List[z3.ExprRef], rlimit=1700
+) -> List[int]:
     implied_indeces = []
 
     for i in range(len(conditions)):
@@ -432,7 +415,7 @@ def all_implied_indeces(condition: ExprRef, conditions: List[ExprRef], rlimit=17
     return implied_indeces
 
 
-def create_prefixed_var(prefix: str, var: ArithRef, var_name: str) -> ArithRef:
+def create_prefixed_var(prefix: str, var: z3.ArithRef, var_name: str) -> z3.ArithRef:
     """
     Creates a new variable of same type as `var` and same name, but prefixed with `prefix + '_'`.
     (if you use different type then int and real, add them to this function)
@@ -440,8 +423,8 @@ def create_prefixed_var(prefix: str, var: ArithRef, var_name: str) -> ArithRef:
     new_name = f"{prefix}_{var_name}"
 
     if var.is_int():
-        return Int(new_name)
+        return z3.Int(new_name)
     elif var.is_real():
-        return Real(new_name)
+        return z3.Real(new_name)
     else:
         raise ValueError("Unsupported variable type")

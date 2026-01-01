@@ -506,10 +506,10 @@ def test_simplify_if_pass_custom(lines: List[str], expected_output: List[Problem
     ("024423-p5_credit.py", []),
     ("044669-p3_person_id.py", [lazy_problem().set_code("R6206").set_line(30)])
 ])
-def test_simplify_if_files(filename: str, expected_output: List[Problem]) -> None:
+def test_basic_simplify_if_files(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
         filename,
-        [Arg(Option.PYLINT, "--enable=simplifiable-if")],
+        [Arg(Option.PYLINT, "--enable=R6201,R6202,R6203,R6204,R6205,R6206,R6207,R6208")],
         expected_output
     )
 

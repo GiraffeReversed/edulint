@@ -83,7 +83,7 @@ class UnsuitedLoop(BaseChecker):
             "This while loop is infinite.",
             "explicit-infinite-loop",
             """
-            Emitted when a while loop condition is `True` and never terminates.
+            [REQUIRES Z3] Emitted when a while loop condition is `True` and never terminates.
 
             Warning: If there is called some function that can raise some exception then this checker might not see it.
             """,
@@ -92,7 +92,7 @@ class UnsuitedLoop(BaseChecker):
             "This while loop is infinite.",
             "implicit-infinite-loop",
             """
-            Emitted when a while loop never terminates (when the loop condition is once True it will stay True forever).
+            [REQUIRES Z3] Emitted when a while loop never terminates (when the loop condition is once True it will stay True forever).
 
             Warning: If there is called some function that can raise some exception then this checker might not see it.
             """,
@@ -253,7 +253,11 @@ class UnsuitedLoop(BaseChecker):
     def visit_while(self, node: nodes.While) -> None:
         self._check_no_while_true(node)
         self._check_use_for_loop(node)
-        self._check_infinite_loop(node)
+        if any(
+            self.linter.is_message_enabled(f"{mode}-infinite-loop")
+            for mode in ("implicit", "explicit")
+        ):
+            self._check_infinite_loop(node)
 
     def _check_use_tighter_bounds(self, node: nodes.For) -> None:
         def compares_equality(node: nodes.NodeNG) -> bool:
