@@ -1,5 +1,6 @@
 from enum import Enum, auto
 from functools import reduce
+import sys
 from typing import Optional, List, Union
 import operator
 
@@ -63,6 +64,8 @@ class Types(metaclass=MetaTypes):
         return Types._from(self.types | other.types)
 
     def __len__(self):
+        if sys.version_info < (3, 10):
+            return bin(self.types).count("1")
         return self.types.bit_count()
 
     def has(self, type):
