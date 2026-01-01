@@ -1,3 +1,5 @@
+.. _run edulint:
+
 Running EduLint
 ---------------
 
@@ -18,12 +20,27 @@ Installation
 
 To install EduLint locally, open an interactive shell and run:
 
-.. code::
+.. code:: bash
 
     python3 -m pip install --user edulint
 
 .. note::
    EduLint needs Python 3.8 (or higher).
+
+EduLint has an optional dependency, Z3, used for some of the checkers. The checkers that require Z3 are explicitly marked as such in :ref:`the list of checkers <checkers>`. None of these checkers are enabled by default. If you want to install EduLint including this dependency, run:
+
+.. code:: bash
+
+   python3 -m pip install --user edulint[z3]
+
+.. note::
+   If you run the basic version of EduLint without Z3, but enable one of the checkers using Z3, an error will be printed, instructing you to install the optional dependency.
+
+If you are not sure what to install, you can always run the following command, which installs all optional dependencies.
+
+.. code:: bash
+
+   python3 -m pip install --user edulint[all]
 
 Run EduLint locally
 """""""""""""""""""
