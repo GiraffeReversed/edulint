@@ -6,12 +6,14 @@ Student
 
 To run EduLint, use the :ref:`the online instance <online instance>` or :ref:`the Thonny plugin <thonny plugin>`. `Thonny <https://thonny.org/>`_ is an integrated development environment for novice programmers that we recommend if you are starting to learn programming.
 
+Alternatively, you can :ref:`install and run EduLint locally <local installation>`, but that can be challenging for if you have never installed software from the command line. If you have troubles setting it up, you can always use one of the other means.
+
 If you were asked to use a specific configuration, make sure that the file with your code contains a line like :code:`# edulint: config-file=<the-configuration-name>`.
 
 Teacher
 ^^^^^^^
 
-EduLint can provide feedback for a lot of different code quality defects, not all of which may be relevant for your students. Therefore, a good first step to using EduLint in class is to choose which set of defects (described in a configuration files) the students should use. Several presets do exist, see them `here <packaged configurations>`.
+EduLint can provide basic code quality feedback to your students. You have a large degree of control over which defects get reported by choosing a specific configuration. You can also integrate EduLint into a submission system or host your own instance of the web interface.
 
 Choosing configuration
 """"""""""""""""""""""
@@ -35,15 +37,19 @@ Then you need to instruct the students to put the configuration line into the fi
 
 The configuration line can be anywhere in the file. More on configuring through in-file comments can be found :ref:`here <infile configuration>`.
 
+If you integrate EduLint into your submission system, then you can just let students run EduLint through the system and handle setting the correct configuration only on the server side, not bothering students with it.
+
 Students use EduLint
 """"""""""""""""""""
 
-There are several ways in which the students themselves can use EduLint, described in section `Student`_.
+There are several ways in which the students themselves can use EduLint, described in section `Student`_. You should recommend the way that aligns best with your integration of EduLint.
 
 Running EduLint for evaluation
 """"""""""""""""""""""""""""""
 
-To evaluate students, we recommend :ref:`running EduLint locally <local installation>`.
+If you use a submission system and it is sufficiently flexible, then we recommend integrating EduLint directly into it. EduLint can either be run on the server side, either as a subprocess, or using its :ref:`package API <package api>`). Alternatively, you can setup an `EduLint backend <https://github.com/GiraffeReversed/edulint-web>`_ and use its API. On top of the backend, you can host your own `frontend <https://github.com/GiraffeReversed/edulint-web-frontend>`_ and refer your students to that.
+
+Alternatively, you can :ref:`run EduLint locally <local installation>` to evaluate students' submissions.
 
 You may want to enforce that students implement all of EduLint's feedback generated based on the configuration you selected. For evaluation, we recommend setting the :link_option:`ignore-infile-config-for` to :code:`all`. This way, EduLint will report comments used to suppress Flake8's and Pylint's messages by using :code:`# noqa` and :code:`# pylint: disable=all`. Students will therefore not be able to suppress all reports, there will always be at least the report of these comments. But careful, the student will still be able to change the *number* of reported defects, just not bring it down to zero.
 
@@ -52,6 +58,12 @@ The command used for evaluation should look as follows:
 .. code:: bash
 
     python3 -m edulint check -o config-file=<selected-config-file> -o ignore-infile-config-for=all <file-or-directory>
+
+.. code:: python
+
+    from edulint import check_code
+
+    _config, problems = check_code(["<file-or-directory>"], ["config-file=<selected-config-file>", "ignore-infile-config-for=all"])
 
 It is necessary to specify the config file to use, even if it is already specified in the checked file itself. The :code:`ignore-infile-config-for=all` will ignore even EduLint's configuration.
 

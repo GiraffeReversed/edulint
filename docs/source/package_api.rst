@@ -1,4 +1,4 @@
-.. _package-api:
+.. _package api:
 
 Package API
 ===========
@@ -11,20 +11,20 @@ Basic usage example
     from edulint import check_code
 
     # using default configuration
-    _, problems = check_code(["/path/to/file.py"])
+    _config, problems = check_code(["/path/to/file.py"])
 
     # changing configuration; options are treated as if passed through the command line interface
-    _, problems = check_code(["/path/to/file.py"], ["config-file=empty", "pylint=--enable=identical-if-branches"])
+    _config, problems = check_code(["/path/to/file.py"], ["config-file=empty", "pylint=--enable=identical-if-branches"])
 
 In each case, variable ``problems`` now contains a list of all detected :any:`Problem` instances.
 
-If the detection does not behave as expected, the first element of the returned tuple (here ignored) contains detailed information on what exact configuration options were used.
+If the detection does not behave as expected, the first element of the returned tuple (here ignored) contains detailed information on what exact configuration options were used. For the exact structure of the config, refer to :any:`check_code`.
 
 .. warning::
 
     Encountered errors are logged to stderr using `loguru <https://loguru.readthedocs.io/en/stable/>`_. By default, the package API uses loguru's default settings, which also display INFO level logs, which edulint emits frequently. To get rid of these, change the minimal log level or redirect the logs to a different sink.
 
-    This code changes the minimal log level to WARNING. Place it before the first call to :any:`check_code` to get rid of the INFO logs.
+    The following code changes the minimal log level to WARNING. Place it before the first call to :any:`check_code` to get rid of the INFO logs.
 
     .. code:: python
 
