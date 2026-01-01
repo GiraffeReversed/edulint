@@ -2265,8 +2265,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
             comparisons_with_numbers, comparisons, node
         )
 
-        if not isinstance(node.parent, nodes.BoolOp) and self.linter.is_message_enabled(
-            "redundant-condition-part", "condition-always-true-or-false"
+        if not isinstance(node.parent, nodes.BoolOp) and any(
+            self.linter.is_message_enabled(symbol)
+            for symbol in ("redundant-condition-part", "condition-always-true-or-false")
         ):
             self._make_suggestion_for_redundant_condition_part(node)
 
