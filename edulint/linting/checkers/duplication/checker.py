@@ -137,15 +137,7 @@ def get_duplicate_nodes(ns: List[nodes.NodeNG]) -> Set[nodes.NodeNG]:
 
 
 def is_similar_to_loop(checker, siblings: List[nodes.NodeNG]) -> bool:
-    if (
-        (
-            not checker.linter.is_message_enabled("similar-block-to-loop-range")
-            and not checker.linter.is_message_enabled("similar-block-to-loop-collection")
-            and not checker.linter.is_message_enabled("similar-block-to-loop-merge")
-        )
-        or len(siblings) < 3
-        or any(isinstance(node, nodes.FunctionDef) for node in siblings)
-    ):
+    if len(siblings) < 3 or any(isinstance(node, nodes.FunctionDef) for node in siblings):
         return False
 
     for end, to_aunify in get_loop_repetitions(siblings):
@@ -353,6 +345,16 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "similar-if-to-extracted",
             "Emitted when the duplication between if statement's branches can be avoided "
             "using helper variables or functions.",
+        ),
+        "R6561": (
+            "The if statements can be avoided using a list.",
+            "similar-if-to-list",
+            "Emitted when duplication between conditions and branches of if statements can be avoided using a list.",
+        ),
+        "R6562": (
+            "The if statements can be avoided using a dictionary.",
+            "similar-if-to-dict",
+            "Emitted when duplication between conditions and branches of if statements can be avoided using a dictionary.",
         ),
     }
 
