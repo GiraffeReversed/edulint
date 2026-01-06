@@ -170,7 +170,7 @@ def get_similar_to_block_candidates(
     i: int,
 ):
     if not checker.linter.is_message_enabled(
-        "similar-to-function"
+        "similar-block-to-function"
     ) and not checker.linter.is_message_enabled("similar-block-to-call"):
         return
 
