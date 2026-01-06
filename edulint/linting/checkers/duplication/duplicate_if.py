@@ -380,30 +380,28 @@ def get_fixed_by_restructuring_twisted(tests, core, avars):
     neg_pos = get_sub_variant(inner_if.body, 1)
     neg_neg = get_sub_variant(inner_if.orelse, 1)
 
-    # positive and negative branches are twisted
-    if not (
-        are_identical(pos_pos, neg_neg)
-        and are_identical(pos_neg, neg_pos)
-        and not contains_avar(inner_test, avars)
-    ) and not (
-        # branches are correctly structured, but the inner condition is negated
-        are_identical(pos_pos, neg_pos)
-        and are_identical(pos_neg, neg_neg)
-        and is_negation(
-            get_sub_variant(inner_test, 0), get_sub_variant(inner_test, 1), negated_rt=False
-        )
-    ):
+    pos_inner_test = get_sub_variant(inner_test, 0)
+    neg_inner_variant = get_sub_variant(inner_test, 1)
+
+    if are_identical(pos_pos, neg_neg) and are_identical(pos_neg, neg_pos):
+        neg_inner_test = new_node(nodes.UnaryOp, op="not", operand=neg_inner_variant)
+    elif are_identical(pos_pos, neg_pos) and are_identical(pos_neg, neg_neg):
+        neg_inner_test = neg_inner_variant
+    else:
         return None
 
-    inner_test_variant = get_sub_variant(inner_test, 0)
-    pp_test = new_node(nodes.BoolOp, op="and", values=[outer_test, inner_test_variant])
-
-    neg_outer_test = new_node(nodes.UnaryOp, op="not", operand=outer_test)
-    neg_inner_test = new_node(nodes.UnaryOp, op="not", operand=inner_test_variant)
-
-    nn_test = new_node(nodes.BoolOp, op="and", values=[neg_outer_test, neg_inner_test])
-
-    test = new_node(nodes.BoolOp, op="or", values=[pp_test, nn_test])
+    test = new_node(
+        nodes.BoolOp,
+        op="or",
+        values=[
+            new_node(nodes.BoolOp, op="and", values=[outer_test, pos_inner_test]),
+            new_node(
+                nodes.BoolOp,
+                op="and",
+                values=[new_node(nodes.UnaryOp, op="not", operand=outer_test), neg_inner_test],
+            ),
+        ],
+    )
 
     if_ = new_node(
         nodes.If,
