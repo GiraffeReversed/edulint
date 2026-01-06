@@ -453,7 +453,7 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
         if fixed is None:
             return False
 
-    if not saves_enough_tokens(tokens_before, stmts_before, fixed):
+    if not saves_enough_tokens(tokens_before, stmts_before, fixed.tokens, fixed.statements):
         return False
 
     message_id, _tokens, _statements, message_args = fixed

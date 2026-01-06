@@ -66,12 +66,13 @@ def is_duplication_candidate(stmtss) -> bool:
 
 
 def saves_enough_tokens(
-    tokens_before: int, stmts_before: int, fixed: Fixed, min_saved_ratio: float = 0.2
+    tokens_before: int,
+    stmts_before: int,
+    tokens_after: int,
+    stmts_after: int,
+    min_saved_ratio: float = 0.2,
 ):
-    return (
-        fixed.statements <= stmts_before + 1
-        and fixed.tokens < (1 - min_saved_ratio) * tokens_before
-    )
+    return stmts_after <= stmts_before + 1 and tokens_after < (1 - min_saved_ratio) * tokens_before
 
 
 def get_loop_repetitions(
@@ -122,3 +123,15 @@ def get_common_parent(ns: List[nodes.NodeNG]) -> bool:
 
 def to_start_lines(to_aunify: List[List[nodes.NodeNG]]) -> str:
     return ", ".join(str(n[0].fromlineno) for n in to_aunify)
+
+
+def get_unique_avars(avars):
+    seen = {}
+    for avar in avars:
+        var_vals = tuple(avar.subs)
+        varname = seen.get(var_vals, avar.name)
+
+        if varname != avar.name:
+            continue
+        seen[var_vals] = avar.name
+        yield avar
