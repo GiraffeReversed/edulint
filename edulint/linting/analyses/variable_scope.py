@@ -103,7 +103,7 @@ class VarEventListener(BaseVisitor[None]):
         )
         while scope != read_scope:
             self.outside_scope_events[read_scope].append(event)
-            read_scope = read_scope.parent.scope()
+            read_scope = read_scope.parent
 
     def _get_var_scope_index(self, name: VarName) -> Optional[int]:
         for i, name_scope in enumerate(reversed(self.stack), 1):

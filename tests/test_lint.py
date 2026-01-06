@@ -79,7 +79,12 @@ from typing import List
             "z202817-zkouska.py",
             [Arg(Option.CONFIG_FILE, "empty"), Arg(Option.PYLINT, "--enable=all")],
             [lazy_problem().set_source(Linter.PYLINT) for _ in range(33)]
-        )
+        ),
+        (
+            "d1af5907c8-p3_histogram.py",
+            [Arg(Option.CONFIG_FILE, "empty"), Arg(Option.PYLINT, "--enable=identical-seq-elifs")],
+            []
+        ),
     ],
 )
 def test_lint_basic(filename: str, args: List[Arg], expected_output: List[Problem]) -> None:
