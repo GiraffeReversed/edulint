@@ -1,9 +1,11 @@
 from collections import namedtuple
 from functools import cached_property
 from inspect import signature
-from typing import Tuple, List
+from itertools import product
+from typing import Tuple, List, Union, Optional
 
 from astroid import nodes  # type: ignore
+from astroid.const import Context
 
 from edulint.linting.analyses.antiunify import (
     antiunify,
@@ -36,6 +38,7 @@ from edulint.linting.checkers.duplication.utils import (
     to_node,
     to_parent,
     get_common_parent,
+    get_unique_avars,
 )
 
 ### constructive helper functions
@@ -75,7 +78,7 @@ def get_bodies(ifs: List[nodes.If]) -> List[List[nodes.NodeNG]]:
     result = []
     for i, if_ in enumerate(ifs):
         result.append(if_.body)
-        if i == len(ifs) - 1:
+        if i == len(ifs) - 1 and len(if_.orelse) > 0:
             result.append(if_.orelse)
     return result
 
@@ -125,7 +128,7 @@ def is_one_of_parents_ifs(node: nodes.If) -> bool:
     return all(any(isinstance(n, nodes.If) for n in body) for body in if_bodies)
 
 
-def contains_other_duplication(core, avars) -> bool:
+def core_contains_other_duplication(core, avars) -> bool:
     parent = get_common_parent(avars)
     if parent is None:
         body = get_sub_variant(core, 0)
@@ -134,6 +137,10 @@ def contains_other_duplication(core, avars) -> bool:
     else:
         return False
 
+    return body_contains_other_duplication(body)
+
+
+def body_contains_other_duplication(body) -> bool:
     if len(body) < 3:
         return False
 
@@ -607,16 +614,9 @@ def get_fixed_by_moving_if(tests, core, avars):
 # @check_enabled("similar-if-to-extracted")
 def get_fixed_by_vars(tests, core, avars):
     root, if_bodies = create_ifs(tests)
-    seen = {}
-    for avar in avars:
-        var_vals = tuple(avar.subs)
-        varname = seen.get(var_vals, avar.name)
+    for avar in get_unique_avars(avars):
 
-        if varname != avar.name:
-            continue
-        seen[var_vals] = avar.name
-
-        for val, body in zip(var_vals, if_bodies):
+        for val, body in zip(avar.subs, if_bodies):
             assign = new_node(nodes.Assign)
             assign.targets = [new_node(nodes.AssignName, name=avar.name)]
             assign.value = to_node(val, avar)
@@ -628,6 +628,207 @@ def get_fixed_by_vars(tests, core, avars):
         + get_statements_count(core, include_defs=False, include_name_main=True),
         (),
     )
+
+
+### if to container
+
+
+def get_simple_val(val: nodes.NodeNG, toplevel) -> Optional[Union[nodes.Name, nodes.Const]]:
+    if toplevel or not isinstance(val, (nodes.Name, nodes.Const)):
+        return None
+    return val
+
+
+def vals_from_simple_test(
+    test, toplevel=True
+) -> Optional[List[List[Tuple[nodes.Name, nodes.Const]]]]:
+    if isinstance(test, nodes.Compare):
+        if len(test.ops) != 1 or test.ops[0][0] != "==":
+            return None
+        lt = get_simple_val(test.left, toplevel=False)
+        rt = get_simple_val(test.ops[0][1], toplevel=False)
+        if lt is None or rt is None:
+            return None
+        if isinstance(lt, nodes.Name) and isinstance(rt, nodes.Const):
+            return [[(lt, rt)]]
+        if isinstance(rt, nodes.Name) and isinstance(lt, nodes.Const):
+            return [[(rt, lt)]]
+        return None
+
+    if isinstance(test, nodes.BoolOp):
+        if test.op not in ("and", "or"):
+            return None
+        partitions = []
+        for operand in test.values:
+            vals = vals_from_simple_test(operand)
+            if vals is None:
+                return None
+            partitions.append(vals)
+        if test.op == "or":
+            return [part for partition in partitions for part in partition]
+        else:
+            return [
+                sorted([pair for part in partition for pair in part], key=lambda pair: pair[0].name)
+                for partition in product(*partitions)
+            ]
+
+    return get_simple_val(test, toplevel)
+
+
+def get_node_fixed_by_container(core, avars, tests_propositions, has_else_block):
+    container_values = []
+    for i in range(len(tests_propositions)):
+        for _ in tests_propositions[i]:
+            if len(avars) == 1:
+                new_item = new_node(nodes.Const, value=avars[0].subs[i])
+            else:
+                new_item = new_node(
+                    nodes.Tuple,
+                    elts=[new_node(nodes.Const, value=avar.subs[i]) for avar in avars],
+                )
+            container_values.append(new_item)
+
+    if len(tests_propositions[0][0]) == 1 and sorted(
+        test_proposition[0][1].value
+        for test_propositions in tests_propositions
+        for test_proposition in test_propositions
+    ) == list(range(sum(len(test_propositions) for test_propositions in tests_propositions))):
+        container = new_node(nodes.List, elts=container_values)
+    else:
+        dict_items = []
+        value_index = 0
+        for test_propositions in tests_propositions:
+            for test_proposition in test_propositions:
+                test_propositions = tests_propositions[i]
+
+                if len(test_proposition) == 1:
+                    key = new_node(nodes.Const, value=test_proposition[0][1].value)
+                else:
+                    key = new_node(
+                        nodes.Tuple,
+                        elts=[
+                            new_node(nodes.Const, value=pair[1].value) for pair in test_proposition
+                        ],
+                    )
+
+                val = container_values[value_index]
+                value_index += 1
+
+                dict_items.append((key, val))
+
+        container = new_node(nodes.Dict, items=dict_items)
+
+    assignment = new_node(
+        nodes.Assign, targets=[new_node(nodes.AssignName, name="CONTAINER")], value=container
+    )
+    variables = [pair[0].name for pair in tests_propositions[0][0]]
+    var_tuple = (
+        new_node(nodes.Name, name=variables[0])
+        if len(variables) == 1
+        else new_node(nodes.Tuple, elts=[new_node(nodes.Name, name=name) for name in variables])
+    )
+
+    if_ = new_node(
+        nodes.If,
+        test=new_node(
+            nodes.Compare,
+            left=var_tuple,
+            ops=[("in", new_node(nodes.Name, name="CONTAINER"))],
+        ),
+        body=(core if isinstance(core, list) else [core])
+        + [
+            new_node(
+                nodes.Subscript,
+                value=new_node(nodes.Name, name="CONTAINER"),
+                slice=var_tuple,
+                ctx=Context.Load,
+            )
+        ],
+        orelse=[] if not has_else_block else core if isinstance(core, list) else [core],
+    )
+
+    return "similar-if-to-" + ("list" if isinstance(container, nodes.List) else "dict"), [
+        assignment,
+        if_,
+    ]
+
+
+def get_fixed_by_container(checker, seq_ifs, has_else_block):
+    tests_propositions = [vals_from_simple_test(if_.test) for if_ in seq_ifs]
+    start_index = 0
+    end_index = 0
+    inc_start = True
+    for i in range(len(tests_propositions)):
+        if inc_start:
+            if tests_propositions[i] is None:
+                start_index += 1
+            else:
+                inc_start = False
+                end_index = start_index
+        else:
+            if tests_propositions[i] is None:
+                break
+            else:
+                end_index += 1
+
+    if end_index - start_index + 1 < 3 or (
+        start_index != 0 and end_index != len(tests_propositions) - 1
+    ):
+        return False
+    tests_propositions = tests_propositions[start_index : end_index + 1]
+    ifs = seq_ifs[start_index : end_index + 1]
+
+    for test_propositions in tests_propositions:
+        for test_proposition in test_propositions:
+            if len(test_proposition) != len(tests_propositions[0][0]):
+                return False
+            for i in range(len(test_proposition)):
+                if test_proposition[i][0].name != tests_propositions[0][0][i][0].name:
+                    return False
+
+    if_bodies = [if_.body for if_ in ifs] + ([ifs[-1].orelse] if has_else_block else [])
+    result = antiunify(
+        if_bodies,
+        stop_on=lambda avars: length_mismatch(avars) or type_mismatch(avars),
+        stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
+    )
+    if result is None:
+        return False
+    core, avars = result
+    avars = list(get_unique_avars(avars))
+    if (
+        len(avars) > 2
+        or core_contains_other_duplication(core, avars)
+        or called_aunify_var(avars)
+        or test_variables_change([if_.test for if_ in ifs], core, avars)
+    ):
+        return False
+
+    symbol, fixed = get_node_fixed_by_container(core, avars, tests_propositions, has_else_block)
+
+    tokens_before = (
+        sum(get_token_count(body) for body in if_bodies)
+        + sum(get_token_count(if_.test) for if_ in ifs)
+        + len(ifs)
+        + (1 if has_else_block else 0)
+    )
+    stmts_before = (
+        get_statements_count(if_bodies, include_defs=False, include_name_main=True)
+        + len(ifs)
+        + (1 if has_else_block else 0)
+    )
+    # subtract 1 as subscript is not a part of the core and adds one statement and one token
+    tokens_after = get_token_count(fixed) - 1
+    stmts_after = get_statements_count(fixed, include_defs=False, include_name_main=True) - 1
+
+    if saves_enough_tokens(tokens_before, stmts_before, tokens_after, stmts_after):
+        checker.add_message(
+            symbol,
+            line=ifs[0].fromlineno,
+            col_offset=ifs[0].col_offset,
+            end_lineno=ifs[-1].tolineno,
+            end_col_offset=ifs[-1].end_col_offset,
+        )
 
 
 ### structure cache
@@ -685,8 +886,8 @@ class IfStructures:
         return self.core_avars[1] if self.core_avars is not None else None
 
     @cached_property
-    def contains_other_duplication(self):
-        return contains_other_duplication(self.core, self.avars)
+    def core_contains_other_duplication(self):
+        return core_contains_other_duplication(self.core, self.avars)
 
     @cached_property
     def tokens_before(self):
@@ -714,129 +915,14 @@ class IfStructures:
             self.ends_with_else
             and not self.is_one_of_parents_ifs  # do not break up consistent ifs
             and self.core is not None
-            and not self.contains_other_duplication
+            and not self.core_contains_other_duplication
         )
 
     def eval(self, f):
         return f(*[getattr(self, name) for name in signature(f).parameters.keys()])
 
 
-# class IfStructures:
-#     def __init__(self, checker, if_: nodes.If):
-#         self.checker = checker
-#         self.if_ = if_
-
-#         self.ends_with_else, self.ifs = extract_from_elif(if_)
-#         self.tests = [if_.test for if_ in self.ifs]
-#         self.branches = get_bodies(self.ifs)
-
-#         prev_sibling = self.ifs[0].previous_sibling()
-#         if isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]:
-#             self.seq_ifs = None
-#         else:
-#             self.seq_ifs = self.ifs.copy()
-#             extract_from_siblings(self.seq_ifs[0], self.seq_ifs)
-
-#         self.tokens_before = get_token_count(self.ifs[0])
-#         self.stmts_before = get_statements_count(
-#             self.ifs[0], include_defs=False, include_name_main=True
-#         )
-
-#         self.is_one_of_parents_ifs = is_one_of_parents_ifs(self.ifs[0])
-
-#         result = antiunify(
-#             self.branches,
-#             stop_on=lambda avars: length_mismatch(avars) or type_mismatch(avars),
-#             stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
-#         )
-#         if result is not None:
-#             self.core, self.avars = result
-#             self.contains_other_duplication = contains_other_duplication(self.core, self.avars)
-#             self.called_avar = called_aunify_var(self.avars)
-#             self.tvs_change = test_variables_change(self.tests, self.core, self.avars)
-#         else:
-#             self.core, self.avars = None, None
-
-#         self.shared_for_similar = (
-#             self.ends_with_else
-#             and not self.is_one_of_parents_ifs  # do not break up consistent ifs
-#             and self.core is not None
-#             and not self.contains_other_duplication
-#         )
-
-
-def similar_blocks_in_if(checker, structs: IfStructures) -> bool:
-    if not structs.ends_with_else:
-        return False
-
-    # do not break up consistent ifs
-    if is_one_of_parents_ifs(structs.ifs[0]):
-        return False
-
-    if_bodies = structs.branches
-    assert len(if_bodies) >= 2
-    result = antiunify(
-        if_bodies,
-        stop_on=lambda avars: length_mismatch(avars) or type_mismatch(avars),
-        stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
-    )
-    if result is None:
-        return False
-    core, avars = result
-
-    if contains_other_duplication(core, avars):
-        return False
-
-    if len(avars) == 0:
-        checker.add_message("identical-if-branches", node=structs.ifs[0])
-        return True
-
-    tokens_before = get_token_count(structs.ifs[0])
-    stmts_before = get_statements_count(structs.ifs[0], include_defs=False, include_name_main=True)
-
-    tests = [if_.test for if_ in structs.ifs]
-    called_avar = called_aunify_var(avars)
-    tvs_change = test_variables_change(tests, core, avars)
-
-    # tests = [if_.test for if_ in ifs]
-    # called_avar = called_aunify_var(avars)
-    # tvs_change = test_variables_change(tests, core, avars)
-
-    # tokens_before = (
-    #     sum(get_token_count(body) for body in if_bodies)
-    #     + get_token_count(tests)
-    #     + len(tests)
-    #     + (1 if ends_with_else else 0)
-    # )
-    # stmts_before = (
-    #     get_statements_count(if_bodies, include_defs=False, include_name_main=True)
-    #     + len(tests)
-    #     + (1 if ends_with_else else 0)
-    # )
-
-    for fix_function in (
-        get_fixed_by_restructuring_twisted if not tvs_change else None,
-        get_fixed_by_if_to_use if not tvs_change else None,
-        get_fixed_by_moving_if if not tvs_change else None,
-        get_fixed_by_ternary if not called_avar and not tvs_change else None,
-        get_fixed_by_vars if not called_avar else None,
-    ):
-        if fix_function is None:
-            continue
-
-        suggestion = fix_function(checker, tests, core, avars)
-        if suggestion is None:
-            continue
-
-        if not saves_enough_tokens(tokens_before, stmts_before, suggestion):
-            continue
-
-        message_id, _tokens, _statements, message_args = suggestion
-        checker.add_message(message_id, node=structs.ifs[0], args=message_args)
-        return True
-
-    return False
-
+### control functions
 
 FixAttempt = namedtuple(
     "FixAttempt",
@@ -864,7 +950,9 @@ def fixes_and_saves_enough_tokens(
         symbol, *result = result
         suggestion = Fixed(symbol, *result)
 
-    if not saves_enough_tokens(tokens_before, stmts_before, suggestion, min_saved_ratio):
+    if not saves_enough_tokens(
+        tokens_before, stmts_before, suggestion.tokens, suggestion.statements, min_saved_ratio
+    ):
         return False
 
     checker.add_message(suggestion.symbol, node=ifs[0], args=suggestion.message_args)
@@ -962,6 +1050,17 @@ def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
                 result,
                 min_saved_ratio=0,
             ),
+            check_message_enabled=True,
+            check_first_body=False,
+        ),
+        FixAttempt(
+            ["similar-if-to-list", "similar-if-to-dict"],
+            # not structs.is_one_of_parents_ifs and not structs.contains_other_duplication,
+            not structs.is_one_of_parents_ifs  # do not break up consistent ifs
+            and structs.seq_ifs is not None,
+            get_fixed_by_container,
+            (checker, structs.seq_ifs, structs.ends_with_else),
+            lambda symbols, result: result,
             check_message_enabled=True,
             check_first_body=False,
         ),

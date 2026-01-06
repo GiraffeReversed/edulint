@@ -115,7 +115,7 @@ def similar_to_function(self, to_aunify: List[List[nodes.NodeNG]], core, avars) 
     )
 
     fixed = get_fixed_by_function(to_aunify, core, avars)
-    if not saves_enough_tokens(tokens_before, stmts_before, fixed):
+    if not saves_enough_tokens(tokens_before, stmts_before, fixed.tokens, fixed.statements):
         return False
 
     message_id, _tokens, _statements, message_args = fixed

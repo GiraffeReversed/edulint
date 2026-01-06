@@ -708,6 +708,126 @@ def test_similar_if_to_use(filename: str, expected_output: List[Problem]) -> Non
     )
 
 
+@pytest.mark.parametrize("lines,expected_output", [
+    ([  # 0
+        "if v == 0:",
+        "    print(0)",
+        "elif v == 1:",
+        "    print(1)",
+        "elif v == 2:",
+        "    print(2)",
+        "elif v == 3:",
+        "    print(3)"
+    ], [lazy_problem().set_line(1).set_symbol("similar-if-to-list")]),
+    ([  # 1
+        "if v == 0 and w == 1:",
+        "    print(0)",
+        "elif v == 1 and w == 2:",
+        "    print(1)",
+        "elif v == 2 and w == 3:",
+        "    print(2)",
+        "elif v == 3 and w == 4:",
+        "    print(3)"
+    ], [lazy_problem().set_line(1)]),
+    ([  # 2
+        "if v == 0 or w == 1:",
+        "    print(0)",
+        "elif v == 1 or w == 2:",
+        "    print(1)",
+        "elif v == 2 or w == 3:",
+        "    print(2)",
+        "elif v == 3 or w == 4:",
+        "    print(3)"
+    ], []),
+    ([  # 3
+        "if v == 0 or v == 1:",
+        "    print(0)",
+        "elif v == 2 or v == 3:",
+        "    print(1)",
+        "elif v == 4 or v == 5:",
+        "    print(2)",
+        "elif v == 6 or v == 7:",
+        "    print(3)"
+    ], [lazy_problem().set_line(1)]),
+    ([  # 4
+        "if (v == 0 or v == 1) and w == 1:",
+        "    print(0)",
+        "elif (v == 2 or v == 3) and w == 2:",
+        "    print(1)",
+        "elif (v == 4 or v == 5) and w == 3:",
+        "    print(2)",
+        "elif (v == 6 or v == 7) and w == 4:",
+        "    print(3)"
+    ],  [
+        # lazy_problem().set_line(1)  # the resulting dict is too long
+    ]),
+    ([  # 5
+        "if (v == 0 or x == 1) and w == 1:",
+        "    print(0)",
+        "elif (v == 2 or x == 3) and w == 2:",
+        "    print(1)",
+        "elif (v == 4 or x == 5) and w == 3:",
+        "    print(2)",
+        "elif (v == 6 or x == 7) and w == 4:",
+        "    print(3)"
+    ], []),
+    ([  # 6
+        "if (v == 0 or v == 1) and (w == 1 or w == 5):",
+        "    print(0)",
+        "elif (v == 2 or v == 3) and (w == 2 or w == 6):",
+        "    print(1)",
+        "elif (v == 4 or v == 5) and (w == 3 or w == 7):",
+        "    print(2)",
+        "elif (v == 6 or v == 7) and (w == 4 or w == 8):",
+        "    print(3)"
+    ], [
+        # lazy_problem().set_line(1)  # the resulting dict is too long
+    ]),
+    ([  # 7
+        "if (v == 0 and w == 1) or (v == 1 and w == 5):",
+        "    print(0)",
+        "elif (v == 2 and w == 3) or (v == 2 and w == 6):",
+        "    print(1)",
+        "elif (v == 4 and w == 5) or (v == 3 and w == 7):",
+        "    print(2)",
+        "elif (v == 6 and w == 7) or (v == 4 and w == 8):",
+        "    print(3)"
+    ], [lazy_problem().set_line(1)]),
+])
+def test_similar_if_to_container_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=similar-if-to-list,similar-if-to-dict")],
+        expected_output
+    )
+
+
+@pytest.mark.parametrize("filename,expected_output", [
+    ("19f1147329-hw6.py", [
+        lazy_problem().set_line(35),
+        lazy_problem().set_line(56)
+    ]),
+    ("21ce959a65-f_freecell.py", []),
+    ("30a4d6f494-hw6.py", [
+        lazy_problem().set_line(33),
+        lazy_problem().set_line(55)
+    ]),
+    ("9870c41e7d-exam1.py", []),
+    ("a859ab197a-hw6.py", [lazy_problem().set_line(31)]),  # TODO improve
+    ("cdecfece89-task.py", []),
+    ("uc_66_7365_09_16.py", [
+        lazy_problem().set_line(4)
+    ]),
+    ("uc_9619_29_13.py", []),
+])
+def test_similar_if_to_container(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=similar-if-to-list,similar-if-to-dict")],
+        expected_output
+    )
+
+
 @pytest.mark.parametrize("filename,expected_output", [
     ("0379f32d24-p6_workdays.py", [lazy_problem().set_symbol("similar-block-to-loop-collection").set_line(75)]),
     ("406561e0ae-workdays.py", []),  # contains duplication, but no good advice
