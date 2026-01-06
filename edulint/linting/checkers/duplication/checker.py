@@ -180,7 +180,14 @@ def get_similar_to_block_candidates(
     for j, snd in candidate_snd(stmt_nodes, i):
         snd_siblings = get_memoized_siblings(siblings, snd)
 
-        for length in range(min(len(fst_siblings), len(snd_siblings), j - i), 0, -1):
+        max_length = 0
+        for index in range(min(len(fst_siblings), len(snd_siblings), j - i)):
+            if isinstance(fst_siblings[index], type(snd_siblings[index])):
+                max_length += 1
+            else:
+                break
+
+        for length in range(max_length, 0, -1):
             if length == 1 and (
                 isinstance(fst, (nodes.Assign, nodes.Expr))
                 or isinstance(snd, (nodes.Assign, nodes.Expr))
@@ -197,6 +204,7 @@ def get_similar_to_block_candidates(
                 [stmt_nodes[r1:r2] for r1, r2 in ranges]
             ):
                 yield ranges, to_aunify
+                break
 
 
 def is_any_similar_to_block(checker, duplicate: Set[nodes.NodeNG], candidates):
