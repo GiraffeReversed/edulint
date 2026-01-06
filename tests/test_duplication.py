@@ -123,6 +123,24 @@ def test_identical_seq_ifs(filename: str, expected_output: List[Problem]) -> Non
         expected_output
     )
 
+@pytest.mark.parametrize("filename,expected_output", [
+    ("012889-geometry.py", [
+        lazy_problem().set_line(7).set_end_line(12)
+        .set_text("Identical code inside 3 consecutive elifs, join their conditions using 'or'."),
+    ]),
+    ("0ac41c2af0-task_2.py", [
+        lazy_problem().set_line(63),
+        lazy_problem().set_line(69)
+    ]),
+    ("uc_74_4666_17_20.py", [lazy_problem().set_line(5)]),
+])
+def test_identical_seq_elifs(filename: str, expected_output: List[Problem]) -> None:
+    apply_and_lint(
+        filename,
+        [Arg(Option.PYLINT, "--enable=identical-seq-elifs")],
+        expected_output
+    )
+
 
 @pytest.mark.parametrize("filename,expected_output", [
     ("012853-geometry.py", [  # TODO detect this
