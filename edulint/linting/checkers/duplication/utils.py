@@ -65,10 +65,13 @@ def is_duplication_candidate(stmtss) -> bool:
     return True
 
 
-def saves_enough_tokens(tokens_before: int, stmts_before: int, fixed: Fixed):
-    if fixed.symbol in ("similar-if-to-untwisted", "similar-if-into-block", "similar-if-to-use"):
-        return fixed.statements <= stmts_before and fixed.tokens < tokens_before
-    return fixed.statements <= stmts_before + 1 and fixed.tokens < 0.8 * tokens_before
+def saves_enough_tokens(
+    tokens_before: int, stmts_before: int, fixed: Fixed, min_saved_ratio: float = 0.2
+):
+    return (
+        fixed.statements <= stmts_before + 1
+        and fixed.tokens < (1 - min_saved_ratio) * tokens_before
+    )
 
 
 def get_loop_repetitions(

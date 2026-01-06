@@ -1,4 +1,7 @@
-from typing import Tuple, List, Union
+from collections import namedtuple
+from functools import cached_property
+from inspect import signature
+from typing import Tuple, List
 
 from astroid import nodes  # type: ignore
 
@@ -159,33 +162,35 @@ def test_variables_change(tests, core, avars):
     )
 
 
-def check_enabled(message_ids: Union[str, List[str]]):
-    if isinstance(message_ids, str):
-        message_ids = [message_ids]
+# def check_enabled(message_ids: Union[str, List[str]]):
+#     if isinstance(message_ids, str):
+#         message_ids = [message_ids]
 
-    def middle(func):
-        def inner(checker, *args, **kwargs):
-            if not any(checker.linter.is_message_enabled(mi) for mi in message_ids):
-                return None
-            result = func(*args, **kwargs)
-            if result is None:
-                return result
+#     def middle(func):
+#         def inner(checker, *args, **kwargs):
+#             if not any(checker.linter.is_message_enabled(mi) for mi in message_ids):
+#                 return None
+#             result = func(*args, **kwargs)
+#             if result is None:
+#                 return result
 
-            if len(message_ids) == 1:
-                return Fixed(message_ids[0], *result)
-            symbol, *result = result
-            return Fixed(symbol, *result)
+#             if len(message_ids) == 1:
+#                 return Fixed(message_ids[0], *result)
+#             symbol, *result = result
+#             return Fixed(symbol, *result)
 
-        inner.__name__ = func.__name__
-        return inner
+#         inner.__name__ = func.__name__
+#         return inner
 
-    return middle
+#     return middle
 
 
 ### identical code before/after branch
 
 
-def identical_before_after_branch(checker, ends_with_else: bool, ifs: List[nodes.If]) -> bool:
+def identical_before_after_branch(
+    checker, ifs: List[nodes.If], branches: List[List[nodes.NodeNG]]
+) -> bool:
 
     def get_stmts_difference(branches: List[nodes.NodeNG], forward: bool) -> int:
         reference = branches[0]
@@ -213,11 +218,6 @@ def identical_before_after_branch(checker, ends_with_else: bool, ifs: List[nodes
             node=defect_node,
             args=(lines_difference, "before" if forward else "after"),
         )
-
-    if not ends_with_else:
-        return False
-
-    branches = get_bodies(ifs)
 
     any_message = False
     same_prefix_len = get_stmts_difference(branches, forward=True)
@@ -247,7 +247,9 @@ def identical_before_after_branch(checker, ends_with_else: bool, ifs: List[nodes
 ### identical sequential ifs
 
 
-def identical_seq_ifs(checker, ends_with_else: bool, ifs: List[nodes.If]) -> bool:
+def identical_seq_ifs(
+    checker, ends_with_else: bool, ifs: List[nodes.If], seq_ifs: List[nodes.If]
+) -> bool:
 
     def same_ifs_count(seq_ifs: List[nodes.NodeNG], start: int) -> int:
         reference = seq_ifs[start].body
@@ -265,13 +267,12 @@ def identical_seq_ifs(checker, ends_with_else: bool, ifs: List[nodes.If]) -> boo
         return len(seq_ifs) - start
 
     if not ends_with_else:
-        prev_sibling = ifs[0].previous_sibling()
-        if isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]:
+        ifs = seq_ifs
+        if ifs is None:
             return False
-
-        extract_from_siblings(ifs[0], ifs)
         symbol = "identical-seq-ifs"
     else:
+        ifs = ifs
         symbol = "identical-seq-elifs"
 
     if len(ifs) == 1:
@@ -355,7 +356,7 @@ def restructure_twisted_ifs(tests, inner_if: nodes.If, avars):
     return if_
 
 
-@check_enabled("similar-if-to-untwisted")
+# @check_enabled("similar-if-to-untwisted")
 def get_fixed_by_restructuring_twisted(tests, core, avars):
     if len(tests) > 1 or len(core) != 1 or not isinstance(core[0], nodes.If):
         return None
@@ -414,7 +415,7 @@ def get_fixed_by_restructuring_twisted(tests, core, avars):
 ### if to use
 
 
-@check_enabled("similar-if-to-use")
+# @check_enabled("similar-if-to-use")
 def get_fixed_by_if_to_use(tests, core, avars):
     if len(tests) > 1 or len(avars) > 1:
         return None
@@ -466,7 +467,7 @@ def is_part_of_complex_expression(avars) -> bool:
     return False
 
 
-@check_enabled("similar-if-to-expr")
+# @check_enabled("similar-if-to-expr")
 def get_fixed_by_ternary(tests, core, avars):
     # the condition would get too complicated
     if len(tests) > 1 and any(isinstance(test, nodes.BoolOp) for test in tests):
@@ -578,7 +579,7 @@ def get_fixed_by_moving_if_rec(tests, core, avars):
     return new_core, lines
 
 
-@check_enabled("similar-if-into-block")
+# @check_enabled("similar-if-into-block")
 def get_fixed_by_moving_if(tests, core, avars):
     # too restrictive -- the change may be before the avar but after the place
     # where the if would be inserted
@@ -603,7 +604,7 @@ def get_fixed_by_moving_if(tests, core, avars):
 ### if to variables
 
 
-@check_enabled("similar-if-to-extracted")
+# @check_enabled("similar-if-to-extracted")
 def get_fixed_by_vars(tests, core, avars):
     root, if_bodies = create_ifs(tests)
     seen = {}
@@ -629,25 +630,150 @@ def get_fixed_by_vars(tests, core, avars):
     )
 
 
-### control functions
+### structure cache
 
 
-def identical_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> bool:
-    if identical_before_after_branch(checker, ends_with_else, ifs):
-        return True
+class IfStructures:
+    def __init__(self, checker, if_: nodes.If):
+        self.checker = checker
+        self.if_ = if_
 
-    return identical_seq_ifs(checker, ends_with_else, ifs)
+    @cached_property
+    def _ends_with_else_ifs(self):
+        return extract_from_elif(self.if_)
+
+    @property
+    def ends_with_else(self):
+        return self._ends_with_else_ifs[0]
+
+    @property
+    def ifs(self):
+        return self._ends_with_else_ifs[1]
+
+    @cached_property
+    def branches(self):
+        return get_bodies(self.ifs)
+
+    @cached_property
+    def seq_ifs(self):
+        prev_sibling = self.ifs[0].previous_sibling()
+        if isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]:
+            return None
+
+        seq_ifs = self.ifs.copy()
+        extract_from_siblings(seq_ifs[0], seq_ifs)
+        return seq_ifs
+
+    @cached_property
+    def is_one_of_parents_ifs(self):
+        return is_one_of_parents_ifs(self.ifs[0])
+
+    @cached_property
+    def core_avars(self):
+        return antiunify(
+            self.branches,
+            stop_on=lambda avars: length_mismatch(avars) or type_mismatch(avars),
+            stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
+        )
+
+    @property
+    def core(self):
+        return self.core_avars[0] if self.core_avars is not None else None
+
+    @property
+    def avars(self):
+        return self.core_avars[1] if self.core_avars is not None else None
+
+    @cached_property
+    def contains_other_duplication(self):
+        return contains_other_duplication(self.core, self.avars)
+
+    @cached_property
+    def tokens_before(self):
+        return get_token_count(self.ifs[0])
+
+    @cached_property
+    def stmts_before(self):
+        return get_statements_count(self.ifs[0], include_defs=False, include_name_main=True)
+
+    @cached_property
+    def tests(self):
+        return [if_.test for if_ in self.ifs]
+
+    @cached_property
+    def called_avar(self):
+        return called_aunify_var(self.avars)
+
+    @cached_property
+    def tvs_change(self):
+        return test_variables_change(self.tests, self.core, self.avars)
+
+    @cached_property
+    def shared_for_similar(self):
+        return (
+            self.ends_with_else
+            and not self.is_one_of_parents_ifs  # do not break up consistent ifs
+            and self.core is not None
+            and not self.contains_other_duplication
+        )
+
+    def eval(self, f):
+        return f(*[getattr(self, name) for name in signature(f).parameters.keys()])
 
 
-def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> bool:
-    if not ends_with_else:
+# class IfStructures:
+#     def __init__(self, checker, if_: nodes.If):
+#         self.checker = checker
+#         self.if_ = if_
+
+#         self.ends_with_else, self.ifs = extract_from_elif(if_)
+#         self.tests = [if_.test for if_ in self.ifs]
+#         self.branches = get_bodies(self.ifs)
+
+#         prev_sibling = self.ifs[0].previous_sibling()
+#         if isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]:
+#             self.seq_ifs = None
+#         else:
+#             self.seq_ifs = self.ifs.copy()
+#             extract_from_siblings(self.seq_ifs[0], self.seq_ifs)
+
+#         self.tokens_before = get_token_count(self.ifs[0])
+#         self.stmts_before = get_statements_count(
+#             self.ifs[0], include_defs=False, include_name_main=True
+#         )
+
+#         self.is_one_of_parents_ifs = is_one_of_parents_ifs(self.ifs[0])
+
+#         result = antiunify(
+#             self.branches,
+#             stop_on=lambda avars: length_mismatch(avars) or type_mismatch(avars),
+#             stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
+#         )
+#         if result is not None:
+#             self.core, self.avars = result
+#             self.contains_other_duplication = contains_other_duplication(self.core, self.avars)
+#             self.called_avar = called_aunify_var(self.avars)
+#             self.tvs_change = test_variables_change(self.tests, self.core, self.avars)
+#         else:
+#             self.core, self.avars = None, None
+
+#         self.shared_for_similar = (
+#             self.ends_with_else
+#             and not self.is_one_of_parents_ifs  # do not break up consistent ifs
+#             and self.core is not None
+#             and not self.contains_other_duplication
+#         )
+
+
+def similar_blocks_in_if(checker, structs: IfStructures) -> bool:
+    if not structs.ends_with_else:
         return False
 
     # do not break up consistent ifs
-    if is_one_of_parents_ifs(ifs[0]):
+    if is_one_of_parents_ifs(structs.ifs[0]):
         return False
 
-    if_bodies = get_bodies(ifs)
+    if_bodies = structs.branches
     assert len(if_bodies) >= 2
     result = antiunify(
         if_bodies,
@@ -662,15 +788,31 @@ def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> 
         return False
 
     if len(avars) == 0:
-        checker.add_message("identical-if-branches", node=ifs[0])
+        checker.add_message("identical-if-branches", node=structs.ifs[0])
         return True
 
-    tokens_before = get_token_count(ifs[0])
-    stmts_before = get_statements_count(ifs[0], include_defs=False, include_name_main=True)
+    tokens_before = get_token_count(structs.ifs[0])
+    stmts_before = get_statements_count(structs.ifs[0], include_defs=False, include_name_main=True)
 
-    tests = [if_.test for if_ in ifs]
+    tests = [if_.test for if_ in structs.ifs]
     called_avar = called_aunify_var(avars)
     tvs_change = test_variables_change(tests, core, avars)
+
+    # tests = [if_.test for if_ in ifs]
+    # called_avar = called_aunify_var(avars)
+    # tvs_change = test_variables_change(tests, core, avars)
+
+    # tokens_before = (
+    #     sum(get_token_count(body) for body in if_bodies)
+    #     + get_token_count(tests)
+    #     + len(tests)
+    #     + (1 if ends_with_else else 0)
+    # )
+    # stmts_before = (
+    #     get_statements_count(if_bodies, include_defs=False, include_name_main=True)
+    #     + len(tests)
+    #     + (1 if ends_with_else else 0)
+    # )
 
     for fix_function in (
         get_fixed_by_restructuring_twisted if not tvs_change else None,
@@ -690,18 +832,184 @@ def similar_blocks_in_if(checker, ends_with_else: bool, ifs: List[nodes.If]) -> 
             continue
 
         message_id, _tokens, _statements, message_args = suggestion
-        checker.add_message(message_id, node=ifs[0], args=message_args)
+        checker.add_message(message_id, node=structs.ifs[0], args=message_args)
         return True
 
     return False
+
+
+FixAttempt = namedtuple(
+    "FixAttempt",
+    [
+        "symbols",
+        "should_run",
+        "fix_function",
+        "args",
+        "postprocess",
+        "check_message_enabled",
+        "check_first_body",
+    ],
+)
+
+
+def fixes_and_saves_enough_tokens(
+    checker, tokens_before, stmts_before, ifs, symbols, result, min_saved_ratio
+):
+    if result is None:
+        return False
+
+    if len(symbols) == 1:
+        suggestion = Fixed(symbols[0], *result)
+    else:
+        symbol, *result = result
+        suggestion = Fixed(symbol, *result)
+
+    if not saves_enough_tokens(tokens_before, stmts_before, suggestion, min_saved_ratio):
+        return False
+
+    checker.add_message(suggestion.symbol, node=ifs[0], args=suggestion.message_args)
+    return True
+
+
+def emit_message_if(checker, symbols, node, result: bool):
+    assert len(symbols) == 1
+    if result:
+        checker.add_message(symbols[0], node=node)
+    return result
 
 
 def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
     if is_parents_elif(node):
         return False, False
 
-    ends_with_else, ifs = extract_from_elif(node)
-    if identical_blocks_in_if(checker, ends_with_else, ifs):
-        return True, True
+    structs = IfStructures(checker, node)
 
-    return similar_blocks_in_if(checker, ends_with_else, ifs), False
+    for fix_attempt in (
+        FixAttempt(
+            ["identical-if-branches-part"],
+            structs.ends_with_else,
+            identical_before_after_branch,
+            (checker, structs.ifs, structs.branches),
+            postprocess=lambda _symbols, result: result,
+            check_message_enabled=False,
+            check_first_body=True,
+        ),
+        FixAttempt(
+            ["identical-seq-ifs", "identical-seq-elifs"],
+            True,
+            identical_seq_ifs,
+            (checker, structs.ends_with_else, structs.ifs, structs.seq_ifs),
+            postprocess=lambda _symbols, result: result,
+            check_message_enabled=False,
+            check_first_body=True,
+        ),
+        FixAttempt(
+            ["identical-if-branches"],
+            structs.shared_for_similar,
+            lambda avars: len(avars) == 0,
+            (structs.avars,),
+            postprocess=lambda symbols, result: emit_message_if(
+                checker, symbols, structs.ifs[0], result
+            ),
+            check_message_enabled=False,
+            check_first_body=False,
+        ),
+        FixAttempt(
+            ["similar-if-to-untwisted"],
+            structs.shared_for_similar and not structs.tvs_change,
+            get_fixed_by_restructuring_twisted,
+            (structs.tests, structs.core, structs.avars),
+            lambda symbols, result: fixes_and_saves_enough_tokens(
+                checker,
+                structs.tokens_before,
+                structs.stmts_before,
+                structs.ifs,
+                symbols,
+                result,
+                min_saved_ratio=0,
+            ),
+            check_message_enabled=True,
+            check_first_body=False,
+        ),
+        FixAttempt(
+            ["similar-if-to-use"],
+            structs.shared_for_similar and not structs.tvs_change,
+            get_fixed_by_if_to_use,
+            (structs.tests, structs.core, structs.avars),
+            lambda symbols, result: fixes_and_saves_enough_tokens(
+                checker,
+                structs.tokens_before,
+                structs.stmts_before,
+                structs.ifs,
+                symbols,
+                result,
+                min_saved_ratio=0,
+            ),
+            check_message_enabled=True,
+            check_first_body=False,
+        ),
+        FixAttempt(
+            ["similar-if-into-block"],
+            structs.shared_for_similar and not structs.tvs_change,
+            get_fixed_by_moving_if,
+            (structs.tests, structs.core, structs.avars),
+            lambda symbols, result: fixes_and_saves_enough_tokens(
+                checker,
+                structs.tokens_before,
+                structs.stmts_before,
+                structs.ifs,
+                symbols,
+                result,
+                min_saved_ratio=0,
+            ),
+            check_message_enabled=True,
+            check_first_body=False,
+        ),
+        FixAttempt(
+            ["similar-if-to-expr"],
+            structs.shared_for_similar and not structs.tvs_change and not structs.called_avar,
+            get_fixed_by_ternary,
+            (structs.tests, structs.core, structs.avars),
+            lambda symbols, result: fixes_and_saves_enough_tokens(
+                checker,
+                structs.tokens_before,
+                structs.stmts_before,
+                structs.ifs,
+                symbols,
+                result,
+                min_saved_ratio=0.2,
+            ),
+            check_message_enabled=True,
+            check_first_body=False,
+        ),
+        FixAttempt(
+            ["similar-if-to-extracted"],
+            structs.shared_for_similar and not structs.called_avar,
+            get_fixed_by_vars,
+            (structs.tests, structs.core, structs.avars),
+            lambda symbols, result: fixes_and_saves_enough_tokens(
+                checker,
+                structs.tokens_before,
+                structs.stmts_before,
+                structs.ifs,
+                symbols,
+                result,
+                min_saved_ratio=0.2,
+            ),
+            check_message_enabled=True,
+            check_first_body=False,
+        ),
+    ):
+        if (
+            (
+                not fix_attempt.check_message_enabled
+                or any(checker.linter.is_message_enabled(symbol) for symbol in fix_attempt.symbols)
+            )
+            and fix_attempt.should_run
+            and fix_attempt.postprocess(
+                fix_attempt.symbols, fix_attempt.fix_function(*fix_attempt.args)
+            )
+        ):
+            return True, fix_attempt.check_first_body
+
+    return False, False
