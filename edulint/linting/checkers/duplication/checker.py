@@ -274,6 +274,12 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
             "Emitted when several consecutive if statements have identical bodies and thus can be "
             "joined by or in their conditions.",
         ),
+        "R6504": (
+            "Identical code inside %d consecutive elifs, join their conditions using 'or'.",
+            "identical-seq-elifs",
+            "Emitted when several consecutive elif branches have identical bodies and thus their "
+            "conditions can be joined by or.",
+        ),
         "R6551": (
             "There are %d repetitions of %d similar statements, starting on lines %s. "
             "Extract them to a helper function.",

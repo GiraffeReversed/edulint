@@ -264,14 +264,15 @@ def identical_seq_ifs(checker, ends_with_else: bool, ifs: List[nodes.If]) -> boo
                     return i - start
         return len(seq_ifs) - start
 
-    if ends_with_else:
-        return False
+    if not ends_with_else:
+        prev_sibling = ifs[0].previous_sibling()
+        if isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]:
+            return False
 
-    prev_sibling = ifs[0].previous_sibling()
-    if isinstance(prev_sibling, nodes.If) and not extract_from_elif(prev_sibling)[0]:
-        return False
-
-    extract_from_siblings(ifs[0], ifs)
+        extract_from_siblings(ifs[0], ifs)
+        symbol = "identical-seq-ifs"
+    else:
+        symbol = "identical-seq-elifs"
 
     if len(ifs) == 1:
         return False
@@ -286,7 +287,7 @@ def identical_seq_ifs(checker, ends_with_else: bool, ifs: List[nodes.If]) -> boo
             last = ifs[i + count - 1].body[-1]
 
             checker.add_message(
-                "identical-seq-ifs",
+                symbol,
                 line=first.fromlineno,
                 col_offset=first.col_offset,
                 end_lineno=last.tolineno,
