@@ -329,24 +329,28 @@ def restructure_twisted_ifs(tests, inner_if: nodes.If, avars):
     ):
         return None
 
-    pp_test = nodes.BoolOp(op="and")
-    pp_test.values = [outer_test, inner_test]
+    test = new_node(
+        nodes.BoolOp,
+        op="or",
+        values=[
+            new_node(nodes.BoolOp, op="and", values=[outer_test, inner_test]),
+            new_node(
+                nodes.BoolOp,
+                op="and",
+                values=[
+                    new_node(nodes.UnaryOp, op="not", operand=outer_test),
+                    new_node(nodes.UnaryOp, op="not", operand=inner_test),
+                ],
+            ),
+        ],
+    )
 
-    neg_outer_test = nodes.UnaryOp(op="not")
-    neg_outer_test.operand = outer_test
-    neg_inner_test = nodes.UnaryOp(op="not")
-    neg_inner_test.operand = inner_test
-
-    nn_test = nodes.BoolOp(op="and")
-    nn_test.values = [neg_outer_test, neg_inner_test]
-
-    test = nodes.BoolOp(op="or")
-    test.values = [pp_test, nn_test]
-
-    if_ = nodes.If()
-    if_.test = test
-    if_.body = inner_if.sub_locs[0].node.body
-    if_.orelse = inner_if.sub_locs[0].node.orelse
+    if_ = new_node(
+        nodes.If,
+        test=test,
+        body=inner_if.sub_locs[0].node.body,
+        orelse=inner_if.sub_locs[0].node.orelse,
+    )
 
     return if_
 
