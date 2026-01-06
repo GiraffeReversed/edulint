@@ -410,7 +410,7 @@ def test_similar_if_to_untwisted_custom(lines: List[str], expected_output: List[
 @pytest.mark.parametrize("filename,expected_output", [
     ("cf_1316_b_41.py", [
         lazy_problem().set_line(12)
-        .set_text("The branches of the 'if' statement are similar. Use condition 'n % 2 == 0 and i % 2 == 0 or not n % 2 == 0 and not i % 2 == 0' to avoid the duplication.")
+        .set_text("The branches of the 'if' statement are similar. Use condition 'n % 2 == 0 and i % 2 == 0 or not n % 2 == 0 and i % 2 != 0' to avoid the duplication.")
     ]),
 ])
 def test_similar_if_to_untwisted(filename: str, expected_output: List[Problem]) -> None:
