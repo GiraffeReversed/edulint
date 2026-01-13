@@ -631,39 +631,67 @@ def modified_in(vars: List[Variable], nodes: List[nodes.NodeNG]) -> bool:
     return False
 
 
-def get_vars_defined_before(core) -> Dict[Variable, Set[nodes.NodeNG]]:
+def get_vars_defined_before_core(core) -> Dict[int, Dict[Variable, Set[nodes.NodeNG]]]:
     # FIXME counts all read variables, including avars
-    result = defaultdict(set)
-    for i in range(len(core[0].sub_locs)):
-        core_sub_locs = [c.sub_locs[i] for c in core]
-        children_locs = set(
-            syntactic_children_locs_from(core_sub_locs[0], [loc.node for loc in core_sub_locs])
-        )
-        for loc in children_locs:
-            for var, event in loc.var_events.all():
-                # if event.type not in GENERATING_EVENTS:
-                #     continue
-                for def_event in event.definitions:
-                    if get_cfg_loc(def_event.node) not in children_locs:
-                        result[var].add(def_event.node)
+    result = {}
+    core = core if isinstance(core, list) else [core]
+    for i in range(len(core[0].subs)):
+        core_subs = [c.subs[i] for c in core]
+        result[i] = get_vars_defined_before(core_subs)
     return result
 
 
-def get_vars_used_after(core) -> Dict[Variable, Set[nodes.NodeNG]]:
-    """DANGER: variables used in core are not returned, even if core is in a loop"""
+def get_vars_defined_before(ns: List[nodes.NodeNG]) -> Dict[Variable, Set[nodes.NodeNG]]:
     result = defaultdict(set)
-    for i in range(len(core[0].sub_locs)):
-        core_sub_locs = [c.sub_locs[i] for c in core]
-        children_locs = set(
-            syntactic_children_locs_from(core_sub_locs[0], [loc.node for loc in core_sub_locs])
-        )
-        for loc in children_locs:
-            for var, event in loc.var_events.all():
-                # if event.type not in MODIFYING_EVENTS:
-                #     continue
-                for use_event in event.uses:
-                    if get_cfg_loc(use_event.node) not in children_locs:
-                        result[var].add(use_event.node)
+    check_parents = len(ns) == 1 and not hasattr(ns[0], "cfg_loc")
+    block = ns if not check_parents else [get_cfg_loc(ns[0]).node]
+    children_locs = set(syntactic_children_locs(block))
+    for loc in children_locs:
+        for var, event in loc.var_events.all():
+            if check_parents and event.node != ns[0] and ns[0] not in event.node.node_ancestors():
+                continue
+            for def_event in event.definitions:
+                if get_cfg_loc(def_event.node) not in children_locs and (
+                    not check_parents
+                    or (def_event.node != ns[0] and ns[0] not in def_event.node.node_ancestors())
+                ):
+                    result[var].add(def_event.node)
+    return result
+
+
+def get_vars_used_after_core(core) -> Dict[int, Dict[Variable, Set[nodes.NodeNG]]]:
+    """DANGER: variables used in core are not returned, even if core is in a loop"""
+    result = {}
+    core = core if isinstance(core, list) else [core]
+    for i in range(len(core[0].subs)):
+        core_subs = [c.subs[i] for c in core]
+        result[i] = get_vars_used_after(core_subs)
+    return result
+
+
+def get_vars_used_after(ns: List[nodes.NodeNG]) -> Dict[Variable, Set[nodes.NodeNG]]:
+    """DANGER: variables used in block are not returned, even if block is in a loop"""
+    # TODO include only dominating uses
+    result = defaultdict(set)
+    check_parents = len(ns) == 1 and not hasattr(ns[0], "cfg_loc")
+    block = ns if not check_parents else [get_cfg_loc(ns[0]).node]
+    children_locs = set(syntactic_children_locs(block))
+    for loc in children_locs:
+        for var, event in loc.var_events.all():
+            if check_parents and event.node != ns[0] and ns[0] not in event.node.node_ancestors():
+                continue
+            for use_event in event.uses:
+                if (
+                    use_event.type not in (VarEventType.ASSIGN, VarEventType.REASSIGN)
+                    and get_cfg_loc(use_event.node) not in children_locs
+                    and (
+                        not check_parents
+                        or (
+                            use_event.node != ns[0] and ns[0] not in use_event.node.node_ancestors()
+                        )
+                    )
+                ):
+                    result[var].add(use_event.node)
     return result
 
 
