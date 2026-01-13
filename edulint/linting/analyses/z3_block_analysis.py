@@ -130,7 +130,7 @@ def _initialize_variables_in_node(
     ):
         return False
 
-    if isinstance(node, nodes.Assign) and has_more_assign_targets(node):
+    if has_more_assign_targets(node):
         nodes_tmp = list(node.value.get_children())
     elif is_assignment(node):
         nodes_tmp = [node.value]
@@ -481,7 +481,7 @@ def _update_vars_after_assignment(
     accumulated_relations_between_vars: List[z3.ExprRef],
     var_rewrite_counts: Dict[str, int],
 ) -> Optional[Dict[str, z3.ArithRef]]:
-    if isinstance(assignment, nodes.Assign) and has_more_assign_targets(assignment):
+    if has_more_assign_targets(assignment):
         values = list(assignment.value.get_children())
     elif isinstance(assignment, nodes.AugAssign):
         values = [_get_assigned_expression_in_AugAssign(assignment)]

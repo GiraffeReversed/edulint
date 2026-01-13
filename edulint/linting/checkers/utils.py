@@ -253,7 +253,7 @@ def is_chained_assignment(node: nodes.NodeNG) -> bool:
 
 
 def has_more_assign_targets(node: nodes.Assign) -> bool:
-    return isinstance(node.targets[0], nodes.Tuple)
+    return isinstance(node, nodes.Assign) and isinstance(node.targets[0], nodes.Tuple)
 
 
 def get_assign_targets(
