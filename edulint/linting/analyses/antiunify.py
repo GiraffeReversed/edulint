@@ -8,6 +8,7 @@ from edulint.linting.analyses.cfg.utils import syntactic_children_locs_from, get
 from edulint.linting.analyses.data_dependency import (
     get_vars_defined_before_core,
     get_vars_used_after_core,
+    scopes_are_nested,
 )
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.checkers.utils import new_node, eprint
@@ -408,20 +409,6 @@ def get_merge_candidates(
         groups.setdefault(canonical, []).extend(avars)
 
     return groups
-
-
-def scope_is_nested(inner, outer):
-    if inner == outer:
-        return True
-    while inner.parent is not None:
-        inner = inner.parent.scope()
-        if inner == outer:
-            return True
-    return False
-
-
-def scopes_are_nested(s1, s2):
-    return scope_is_nested(s1, s2) or scope_is_nested(s2, s1)
 
 
 def vars_can_be_merged(names, avar_group, vars_defined_before, vars_used_after):
