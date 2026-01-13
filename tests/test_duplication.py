@@ -435,10 +435,153 @@ def test_similar_block_to_loop_merge(filename: str, expected_output: List[Proble
         expected_output
     )
 
+@pytest.mark.parametrize("lines,expected_output", [
+    ([  # 0
+        "def fun():",
+        "    lst = []",
+        "    for i in range(10):",
+        "        lst.append(i)",
+        "    return lst[0]",
+        "",
+        "def fun2():",
+        "    lst2 = []",
+        "    for i in range(10):",
+        "        lst2.append(i)",
+        "    print(lst2)",
+    ], []),
+    ([  # 1
+        "def fun():",
+        "    lst = []",
+        "    for i in range(10):",
+        "        lst.append(i)",
+        "    return lst",
+        "",
+        "def fun2():",
+        "    lst2 = []",
+        "    for i in range(10):",
+        "        lst2.append(i)",
+        "    print(lst2)",
+    ], [lazy_problem().set_line(8)]),
+    ([  # 2
+        "def fun():",
+        "    lst = []",
+        "    for i in range(10):",
+        "        lst.append(i)",
+        "    return lst",
+        "",
+        "def fun2():",
+        "    lst = []",
+        "    for i in range(10):",
+        "        lst.append(i)",
+        "    print(lst)",
+    ], [lazy_problem().set_line(8)]),
+    ([  # 3
+        "def fun():",
+        "    lst = []",
+        "    for i in range(10):",
+        "        lst.append(i)",
+        "    return lst[0]",
+        "",
+        "def fun2():",
+        "    lst2 = []",
+        "    for i in range(10):",
+        "        lst2.append(i)",
+        "    print(lst2[0])",
+    ], [lazy_problem().set_line(8)]),
+    ([  # 4
+        "def fun():",
+        "    lst = []",
+        "    a = 10",
+        "    for i in range(a):",
+        "        lst.append(i)",
+        "    return lst",
+        "",
+        "def fun2():",
+        "    lst = []",
+        "    b = 10",
+        "    for i in range(b):",
+        "        lst.append(i)",
+        "    print(lst)",
+    ], [lazy_problem().set_line(9)]),
+    ([  # 5
+        "def fun():",
+        "    print('foo')",
+        "    print('foo')",
+        "    print('foo')",
+        "",
+        "def bar():",
+        "    print('foo')",
+        "    print('foo')",
+        "    print('bar')",
+        "    r = None",
+        "    print(r)",
+    ], []),
+    ([  # 6
+        "def fun():",
+        "    print('foo')",
+        "    print('foo')",
+        "    print('foo')",
+        "",
+        "def bar():",
+        "    print('foo')",
+        "    print('foo')",
+        "    print('foo')",
+        "    print('bar')",
+    ], [
+        # lazy_problem().set_line(7)  # TODO
+    ]),
+    ([  # 7
+        "def fun(foo):",
+        "    print(foo)",
+        "    print(foo)",
+        "    print(foo)",
+        "",
+        "def bar(foo, bar):",
+        "    print(foo)",
+        "    print(foo)",
+        "    print(bar)",
+        "    r = None",
+        "    print(r)",
+    ], []),
+    ([ # 8
+        "def fun(foo):",
+        "    print(foo)",
+        "    print(foo)",
+        "    print(foo)",
+        "",
+        "def bar(foo, bar):",
+        "    print(foo)",
+        "    print(foo)",
+        "    print(foo)",
+        "    r = bar",
+        "    print(r)",
+    ], [lazy_problem().set_line(7)]),
+    ([  # 9
+        "a = 'foo'"
+        "def fun(foo):",
+        "    print(foo)",
+        "    print(foo)",
+        "    print(a)",
+        "",
+        "def bar(foo, bar):",
+        "    print(foo)",
+        "    print(foo)",
+        "    print(bar)",
+        "    r = None",
+        "    print(r)",
+    ], []),
+])
+def test_similar_block_into_call_custom(lines: List[str], expected_output: List[Problem]) -> None:
+    create_apply_and_lint(
+        lines,
+        [Arg(Option.PYLINT, "--enable=similar-block-to-call")],
+        expected_output
+    )
+
 @pytest.mark.parametrize("filename,expected_output", [
     ("051746-gps.py", [lazy_problem().set_line(71)]),
     ("c93682fee8-p4_digits.py", []),
-    ("cf_1440_c1_2.py", []), # TODO lazy_problem().set_line(50)
+    ("cf_1440_c1_2.py", [lazy_problem().set_line(50)]), # TODO lazy_problem().set_line(50)
     ("ut_80_0402_13_19.py", [
         lazy_problem().set_line(8).set_end_line(10),
         # remaining are also true, but currently overriden by loop suggestion
@@ -449,6 +592,16 @@ def test_similar_block_to_loop_merge(filename: str, expected_output: List[Proble
         # lazy_problem().set_line(28),
     ]),
     ("ut_92_5508_03_10.py", [lazy_problem().set_line(7)]),
+    ("19ef20d8c1-p1_database.py", []),
+    ("0e125da703-p1_numbers.py", [
+        lazy_problem().set_line(50),
+        lazy_problem().set_line(57),
+    ]),
+    ("0e125da703-p1_numbers_custom.py", [
+        lazy_problem().set_line(50),
+        lazy_problem().set_line(57),
+    ]),
+    ("5de4a80ecc-a_connect_four.py", []),
 ])
 def test_similar_block_to_call(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(

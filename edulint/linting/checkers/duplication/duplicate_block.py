@@ -2,25 +2,28 @@ from typing import List
 
 from astroid import nodes  # type: ignore
 
-from edulint.linting.analyses.antiunify import antiunify, cprint  # noqa: F401
+from edulint.linting.analyses.antiunify import antiunify, cprint, core_as_string  # noqa: F401
+from edulint.linting.analyses.cfg.utils import syntactic_children_locs
+from edulint.linting.analyses.var_events import VarEventType
 from edulint.linting.analyses.data_dependency import (
     get_vars_defined_before,
     get_vars_defined_before_core,
     get_vars_used_after_core,
     get_control_statements,
+    get_events_for,
 )
 from edulint.linting.checkers.utils import (
     get_statements_count,
     get_token_count,
     EXPRESSION_TYPES,
     new_node,
+    are_identical,
 )
 from edulint.linting.checkers.duplication.utils import (
     Fixed,
     length_mismatch,
     type_mismatch,
     called_aunify_var,
-    assignment_to_aunify_var,
     saves_enough_tokens,
     to_node,
     to_start_lines,
@@ -164,18 +167,38 @@ def get_possible_callees(to_aunify):
     return possible_callees
 
 
-def returns_used_value(return_, returned_values, node):
-    # TODO do properly, not by checking for substring
-    if node == return_ or any(r in node.as_string() for r in returned_values):
-        return True
+def returns_used_value(returned_values, i, j, avars, use):
+    if isinstance(use, nodes.AugAssign):
+        use = use.target  # a READ event of the assigned variable is created on whole AugAssign
+    assert isinstance(use, (nodes.Name, nodes.AssignName))
 
-    for parent in node.node_ancestors():
-        if parent == return_:
-            return True
-        if any(r in parent.as_string() for r in returned_values):
-            return True
+    original_name = use.name
+    for avar in avars:
+        if avar.subs[j] == use.name:
+            use.name = avar.subs[i]
+            break
 
+    current = use
+    while not current.is_statement:
+        if any(are_identical(current, val) for val in returned_values):
+            use.name = original_name
+            return True
+        current = current.parent
+
+    use.name = original_name
     return False
+
+
+def returns_used_values(returned_values, i, j, avars, uses):
+    return all(returns_used_value(returned_values, i, j, avars, use) for use in uses)
+
+
+def var_only_modified(var, vars_defined_before, nodes):
+    return (
+        var in vars_defined_before
+        and len(list(get_events_for([var], nodes, (VarEventType.ASSIGN, VarEventType.REASSIGN))))
+        == 0
+    )
 
 
 def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> bool:
@@ -184,31 +207,64 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         return False
 
     i, function = possible_callees[0]
-    args = function.args.arguments
-    argnames = {arg.name for arg in args}
 
-    for avar in avars:
-        sub = avar.subs[i]
-        if not isinstance(sub, nodes.Name) or sub.name not in argnames:
-            return False
+    result = antiunify(
+        to_aunify,
+        stop_on=lambda avars: length_mismatch(avars)
+        or type_mismatch(avars, allowed_mismatches=[{nodes.Name, t} for t in EXPRESSION_TYPES]),
+        stop_on_after_renamed_identical=lambda avars: called_aunify_var(avars),
+        require_name_consistency=True,
+    )
+    if result is None:
+        return False
+    core, avars = result
 
-    vars_used_after = get_vars_used_after(core)
-    if len(vars_used_after) != 0:
-        if len(function.body) <= len(to_aunify[i]):
-            return False
-        last = function.body[len(to_aunify[i])]  # handle unreachable code
-        if not isinstance(last, nodes.Return) or last.value is None:
-            return False
+    if not all(
+        (isinstance(avar.subs[i], str) and isinstance(avar.parent, (nodes.Name, nodes.AssignName)))
+        or isinstance(avar.subs[i], (nodes.Name, nodes.AssignName))
+        for avar in avars
+    ):
+        return False
 
-        returned_values = (
-            [last.value.as_string()]
-            if not isinstance(last.value, nodes.Tuple)
-            else [e.as_string() for e in last.value.elts]
-        )
-        for users in vars_used_after.values():
-            for node in users:
-                if not returns_used_value(last, returned_values, node):
-                    return False
+    syntactic_children = {
+        j: [loc.node for loc in syntactic_children_locs([c.subs[j] for c in core])]
+        for j in range(len(to_aunify))
+        if j != i
+    }
+    if any(
+        node in syntactic_children[j]
+        for avar in avars
+        if not isinstance(avar.parent, (nodes.Name, nodes.AssignName))
+        for j, sub in enumerate(avar.subs)
+        if i != j
+        for _var, defs in get_vars_defined_before([sub]).items()
+        for node in defs
+    ):
+        return False
+
+    return_ = function.body[len(to_aunify[i])] if len(function.body) > len(to_aunify[i]) else None
+    if return_ is not None and not isinstance(return_, nodes.Return):
+        return False
+
+    if return_ is None or return_.value is None:
+        returned_values = []
+    elif not isinstance(return_.value, nodes.Tuple):
+        returned_values = [return_.value]
+    else:
+        returned_values = return_.value.elts
+
+    vars_defined_before = get_vars_defined_before_core(core)
+    vars_used_after = get_vars_used_after_core(core)
+    if i in vars_used_after:
+        vars_used_after.pop(i)
+
+    for j, vars_uses in vars_used_after.items():
+        sub_vars_defined_before = vars_defined_before[j]
+        for var, uses in vars_uses.items():
+            if not var_only_modified(
+                var, sub_vars_defined_before, core
+            ) and not returns_used_values(returned_values, i, j, avars, uses):
+                return False
 
     other_body = to_aunify[0] if i != 0 else to_aunify[1]
     first = other_body[0]
