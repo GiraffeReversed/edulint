@@ -6,10 +6,8 @@ from astroid import nodes
 
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs_from, get_cfg_loc
 from edulint.linting.analyses.data_dependency import (
-    Variable,
     get_vars_defined_before_core,
     get_vars_used_after_core,
-    MODIFYING_EVENTS,
 )
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.checkers.utils import new_node, eprint
@@ -370,10 +368,111 @@ def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
     return core, get_avars(core)
 
 
+def get_merge_candidates(
+    avars: List[AunifyVar], require_name_consistency: bool
+) -> Optional[List[List[AunifyVar]]]:
+    value_owner = {}  # (index, value) -> canonical tuple
+    groups = {}  # canonical tuple -> list of lists
+    forced_groups = {}
+
+    for avar in avars:
+        if not isinstance(avar.parent, (nodes.Name, nodes.AssignName)):
+            continue
+
+        subs = tuple(avar.subs)
+        if not require_name_consistency and all(s == subs[0] for s in subs):
+            forced_groups.setdefault(subs, []).append(avar)
+            continue
+
+        canonicals = {value_owner[(i, v)] for i, v in enumerate(subs) if (i, v) in value_owner}
+
+        if not canonicals:
+            groups.setdefault(subs, []).append(avar)
+            for i, v in enumerate(subs):
+                value_owner[(i, v)] = subs
+
+        elif len(canonicals) == 1:
+            (canon,) = canonicals
+            if canon == subs and canon in groups:
+                groups[canon].append(avar)
+            else:
+                if require_name_consistency:
+                    return None
+                groups.pop(canon, None)
+
+        else:
+            for s in canonicals:
+                groups.pop(s, None)
+
+    for canonical, avars in forced_groups.items():
+        groups.setdefault(canonical, []).extend(avars)
+
+    return groups
+
+
+def scope_is_nested(inner, outer):
+    if inner == outer:
+        return True
+    while inner.parent is not None:
+        inner = inner.parent.scope()
+        if inner == outer:
+            return True
+    return False
+
+
+def scopes_are_nested(s1, s2):
+    return scope_is_nested(s1, s2) or scope_is_nested(s2, s1)
+
+
+def vars_can_be_merged(names, avar_group, vars_defined_before, vars_used_after):
+    if all(n == names[0] for n in names):
+        return True
+
+    for avar in avar_group:
+        vars_ = set()
+        for ia, sub in enumerate(avar.subs):
+            var = sub_to_variable(avar, ia)
+            if var is None:
+                return False
+            vars_.add(var)
+        if len(vars_ & vars_used_after) > 0 or (
+            len(vars_ & vars_defined_before) > 0
+            and any(
+                scopes_are_nested(v1.scope, v2.scope)
+                for i1, v1 in enumerate(vars_)
+                for i2, v2 in enumerate(vars_)
+                if i1 != i2
+            )
+        ):
+            return False
+    return True
+
+
+def merge_indistinguishable_vars(core, avars: List[AunifyVar], require_name_consistency: bool):
+    vars_defined_before = {
+        v for vars_uses in get_vars_defined_before_core(core).values() for v in vars_uses.keys()
+    }
+    vars_used_after = {
+        v for vars_uses in get_vars_used_after_core(core).values() for v in vars_uses.keys()
+    }
+
+    candidates = get_merge_candidates(avars, require_name_consistency)
+    if candidates is None:
+        return None
+
+    for names, avar_group in candidates.items():
+        if vars_can_be_merged(names, avar_group, vars_defined_before, vars_used_after):
+            for avar in avar_group:
+                avar.parent.name = avar.subs[0]
+
+    return core, get_avars(core)
+
+
 def antiunify(
     to_aunify: List[Union[nodes.NodeNG, List[nodes.NodeNG]]],
     stop_on: Callable[[List[AunifyVar]], bool] = lambda _: False,
     stop_on_after_renamed_identical: Callable[[List[AunifyVar]], bool] = lambda _: False,
+    require_name_consistency: bool = False,
 ) -> Optional[Tuple[Any, List[AunifyVar]]]:
     try:
         core, avars = Antiunify().antiunify(to_aunify, stop_on)
@@ -383,7 +482,11 @@ def antiunify(
     wrapper = new_node(nodes.Module, name="tmp", body=core if isinstance(core, list) else [core])
     wrapper.accept(CFGVisitor())
 
-    core, avars = remove_renamed_identical_vars(core, avars)
+    result = merge_indistinguishable_vars(core, avars, require_name_consistency)
+    if result is None:
+        return None
+    core, avars = result
+
     if stop_on_after_renamed_identical(avars):
         return None
     return core, avars

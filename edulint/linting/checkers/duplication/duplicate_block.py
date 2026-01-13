@@ -231,9 +231,8 @@ def similar_to_block(checker, to_aunify: List[List[nodes.NodeNG]]) -> bool:
     result = antiunify(
         to_aunify,
         stop_on=lambda avars: length_mismatch(avars)
-        or type_mismatch(avars, allowed_mismatches=[{nodes.Name, t} for t in EXPRESSION_TYPES])
-        or called_aunify_var(avars),
-        stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
+        or type_mismatch(avars, allowed_mismatches=[{nodes.Name, t} for t in EXPRESSION_TYPES]),
+        stop_on_after_renamed_identical=lambda avars: called_aunify_var(avars),
     )
     if result is None:
         return False
