@@ -96,6 +96,30 @@ def collect_reaching_definitions(  # blocks fun gen kills
         )
         return sorted_fun_unprocessed_callees[0][0]
 
+    def collect_called_functions(graph, node_values, start):
+        """
+        graph: dict[node, set[node]]
+        node_values: dict[node, iterable]
+        start: node to start traversal from
+        """
+        visited = set()
+        collected = []
+
+        def dfs(node):
+            if node in visited:
+                return
+            visited.add(node)
+
+            # Collect this node's values
+            collected.extend(node_values.get(node, []))
+
+            # Visit neighbors
+            for neighbor in graph.get(node, []):
+                dfs(neighbor)
+
+        dfs(start)
+        return collected
+
     def collect_original_kills(
         var_to_index: Dict[Variable, int],
         index_to_block: List[CFGBlock],
@@ -135,7 +159,9 @@ def collect_reaching_definitions(  # blocks fun gen kills
                             continue
                         called_fun = possible_callees[0]
 
-                        for event in outside_scope_events[called_fun]:
+                        for event in collect_called_functions(
+                            call_graph, outside_scope_events, called_fun
+                        ):
                             in_call_var_i = var_to_index[event.var]
                             if event.type in GENERATING_EVENTS:
                                 if len(kill[in_call_var_i]) == 0:
@@ -259,9 +285,9 @@ def collect_reaching_definitions(  # blocks fun gen kills
                             kill_event.uses.append(gen_event)
 
     def make_up_calls(blocks, computed_kills, original_gens_kills):
-        uncalled_functions = set(call_graph.keys()) - set(
-            callee for callees in call_graph.values() for callee in callees
-        )
+        uncalled_functions = {
+            fun for fun in call_graph.keys() if isinstance(fun, nodes.FunctionDef)
+        } - {callee for callees in call_graph.values() for callee in callees}
         if len(uncalled_functions) == 0:
             return
 
@@ -278,16 +304,25 @@ def collect_reaching_definitions(  # blocks fun gen kills
         for uncalled_fun in uncalled_functions:
             gens.append(defaultdict(list))
             kills.append(defaultdict(list))
-            for event in outside_scope_events[uncalled_fun]:
-                var_i = var_to_index[event.var]
-                if event.type in GENERATING_EVENTS:
-                    gens[-1][var_i].append(event)
-                if event.type in KILLING_EVENTS:
-                    kills[-1][var_i].append(event)
+            block_i = index_to_block.index(uncalled_fun.args.cfg_loc.block)
+            while (
+                block_i < len(index_to_block)
+                and index_to_block[block_i].locs[0].node.scope() == uncalled_fun
+            ):
+                original_gens, original_kills = original_gens_kills[block_i]
 
-        for var_i in range(len(variables)):
-            for kill in [module_kills] + kills:
-                for kill_event in kill[var_i]:
+                for var_i, gen_events in original_gens.items():
+                    gens[-1][var_i].extend(gen_events)
+
+                for var_i, kill_events in original_kills.items():
+                    if len(kill_events) > 0:
+                        kills[-1][var_i].extend(kill_events[0])
+
+                block_i += 1
+
+        for kill in [module_kills] + kills:
+            for var_i, kill_events in kill.items():
+                for kill_event in kill_events:
                     for gen in gens:
                         for gen_event in gen[var_i]:
                             if kill_event not in gen_event.definitions:
