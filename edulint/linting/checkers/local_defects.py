@@ -15,7 +15,6 @@ from edulint.linting.checkers.utils import (
     get_statements_count,
     is_negation,
     is_pure_expression,
-    NEGATED_OP,
 )
 
 
@@ -181,15 +180,12 @@ class Local(BaseChecker):
                 self.add_message("use-elif", node=node.orelse[0])
 
     def _check_iteration_count(self, node: nodes.For) -> None:
-        def get_const(node: nodes.NodeNG) -> Any:
-            return node.value if isinstance(node, nodes.Const) else None
-
         range_params = get_range_params(node.iter)
         if range_params is None:
             return
 
         start, stop, step = range_params
-        start, stop, step = get_const(start), get_const(stop), get_const(step)
+        start, stop, step = get_const_value(start), get_const_value(stop), get_const_value(step)
 
         if all(v is not None and isinstance(v, int) for v in (start, stop, step)):
             if start >= stop:
