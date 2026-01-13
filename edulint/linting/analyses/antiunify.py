@@ -224,6 +224,7 @@ class Antiunify:
             attr_cores, avars = self._aunify_many_attrs(attrs, to_aunify, stop_on)
 
         core = new_node(type(some), **attr_cores)
+        setattr(core, "subs", to_aunify)
 
         # pylint overloads __getitem__ on constants, so hasattr would fail
         try:
@@ -312,30 +313,16 @@ def get_avar_parent_in_sub(avar_node, sub_node, avar):
 
 
 def sub_to_variable(avar, i):
-    assert isinstance(avar.parent, nodes.AssignName)
+    assert isinstance(avar.parent, (nodes.Name, nodes.AssignName))
 
-    sub = avar.subs[i]
-    avar_loc = get_cfg_loc(avar)
-    sub_loc = avar_loc.node.sub_locs[i]
+    event_node = avar.parent.subs[i]
+    sub_loc = get_cfg_loc(event_node)
 
-    event_nodes = list(
-        {
-            (var.scope, event.node)
-            for var, event in sub_loc.var_events.for_name(sub)
-            if event.type in MODIFYING_EVENTS
-        }
-    )
-    if len(event_nodes) == 1:
-        return Variable(sub, event_nodes[0][0])
-    assert len(event_nodes) > 1
+    for var, event in sub_loc.var_events.for_name(avar.subs[i]):
+        if event_node == event.node:
+            return var
 
-    sub_node = get_avar_parent_in_sub(avar_loc.node, sub_loc.node, avar)
-
-    for scope, node in event_nodes:
-        if node == sub_node:
-            return Variable(sub, scope)
-
-    assert False, f"unreachable, but {sub}"
+    return None  # probably undefined var
 
 
 def get_removable(core, avar) -> bool:
@@ -418,31 +405,10 @@ def set_parents(parent: nodes.NodeNG, node: Any, recursive):
 
 
 def get_sub_variant(core, index: int):
-    if isinstance(core, (list, tuple)):
-        return type(core)([get_sub_variant(c, index) for c in core])
-
-    if not isinstance(core, nodes.NodeNG):
-        return core
-
-    if isinstance(core, AunifyVar):
-        variant = core.subs[index]
-
-    else:
-        attr_variants = {
-            attr: get_sub_variant(getattr(core, attr), index) for attr in get_all_fields(core)
-        }
-        variant = new_node(type(core), **attr_variants)
-
-        for attr, attr_variant in attr_variants.items():
-            set_parents(variant, attr_variant, recursive=False)
-
-    try:
-        if len(core.sub_locs) > 0:
-            variant.cfg_loc = core.sub_locs[index]
-    except AttributeError:
-        pass
-
-    return variant
+    """Returns read-only version"""
+    if isinstance(core, list):
+        return [c.subs[index] for c in core]
+    return core.subs[index]
 
 
 ##############################################################################
