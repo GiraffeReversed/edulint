@@ -403,12 +403,14 @@ def get_const_value_rec(node: Any) -> Any:
         return node.value
 
     if isinstance(node, nodes.UnaryOp):
-        return UNARY_SYMBOL_TO_OP[node.op](get_const_value_rec(node.operand))
+        val = get_const_value_rec(node.operand)
+        if isinstance(val, (int, float)):
+            return UNARY_SYMBOL_TO_OP[node.op](val)
 
     if isinstance(node, nodes.BinOp):
-        return BINARY_SYMBOL_TO_OP[node.op](
-            get_const_value_rec(node.left), get_const_value_rec(node.right)
-        )
+        rt_val = get_const_value_rec(node.right)
+        if node.op not in ("/", "//", "%") or rt_val != 0:
+            return BINARY_SYMBOL_TO_OP[node.op](get_const_value_rec(node.left), rt_val)
 
     if isinstance(node, nodes.BoolOp):
         assert len(node.values) > 1
@@ -425,7 +427,7 @@ def get_const_value_rec(node: Any) -> Any:
 def get_const_value(node: Any) -> Any:
     try:
         return get_const_value_rec(node)
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, TypeError):
         return None
 
 
