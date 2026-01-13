@@ -477,7 +477,7 @@ def filter_events_for(
 _ASSIGNING_EXPRESSIONS = (nodes.Assign, nodes.AnnAssign, nodes.AugAssign, nodes.NamedExpr)
 _ASSIGNING_ITERS = (nodes.For, nodes.Comprehension)
 _ASSIGNING_STATEMENTS = (nodes.Import, nodes.ImportFrom, nodes.FunctionDef, nodes.ClassDef)
-_ASSIGNING_PARENT_STATEMENTS = (nodes.Arguments, nodes.With, nodes.ExceptHandler)
+_ASSIGNING_PARENT_STATEMENTS = (nodes.Arguments, nodes.With, nodes.ExceptHandler, nodes.MatchAs)
 
 
 def get_assigned_expressions(
