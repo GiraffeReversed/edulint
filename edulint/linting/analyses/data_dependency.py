@@ -312,10 +312,19 @@ def collect_reaching_definitions(  # blocks fun gen kills
                 original_gens, original_kills = original_gens_kills[block_i]
 
                 for var_i, gen_events in original_gens.items():
-                    gens[-1][var_i].extend(gen_events)
+                    var_scope = variables[var_i].scope
+                    if var_scope != uncalled_fun and scope_is_nested(
+                        uncalled_fun, uncalled_fun.root()
+                    ):
+                        gens[-1][var_i].extend(gen_events)
 
                 for var_i, kill_events in original_kills.items():
-                    if len(kill_events) > 0:
+                    var_scope = variables[var_i].scope
+                    if (
+                        len(kill_events) > 0
+                        and var_scope != uncalled_fun
+                        and scope_is_nested(uncalled_fun, uncalled_fun.root())
+                    ):
                         kills[-1][var_i].extend(kill_events[0])
 
                 block_i += 1
@@ -702,3 +711,17 @@ def get_control_statements(core):
         if isinstance(loc.node, (nodes.Return, nodes.Break, nodes.Continue)):
             result.append(loc.node)
     return result
+
+
+def scope_is_nested(inner, outer):
+    if inner == outer:
+        return True
+    while inner.parent is not None:
+        inner = inner.parent.scope()
+        if inner == outer:
+            return True
+    return False
+
+
+def scopes_are_nested(s1, s2):
+    return scope_is_nested(s1, s2) or scope_is_nested(s2, s1)
