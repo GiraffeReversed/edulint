@@ -217,7 +217,11 @@ class Antiunify:
         some = to_aunify[0]
         assert all(isinstance(n, type(some)) for n in to_aunify)
 
-        attr_cores, avars = self._aunify_many_attrs(attrs, to_aunify, stop_on)
+        if isinstance(some, (nodes.Name, nodes.AssignName)):
+            core, avars = self._new_aunifier([n.name for n in to_aunify], stop_on, extra="NAME")
+            attr_cores = {"name": core}
+        else:
+            attr_cores, avars = self._aunify_many_attrs(attrs, to_aunify, stop_on)
 
         core = new_node(type(some), **attr_cores)
 
