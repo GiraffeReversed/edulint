@@ -973,27 +973,27 @@ def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
     for fix_attempt in (
         FixAttempt(
             ["identical-if-branches-part"],
-            structs.ends_with_else,
+            lambda: structs.ends_with_else,
             identical_before_after_branch,
-            (checker, structs.ifs, structs.branches),
+            lambda: (checker, structs.ifs, structs.branches),
             postprocess=lambda _symbols, result: result,
             check_message_enabled=False,
             check_first_body=True,
         ),
         FixAttempt(
             ["identical-seq-ifs", "identical-seq-elifs"],
-            True,
+            lambda: True,
             identical_seq_ifs,
-            (checker, structs.ends_with_else, structs.ifs, structs.seq_ifs),
+            lambda: (checker, structs.ends_with_else, structs.ifs, structs.seq_ifs),
             postprocess=lambda _symbols, result: result,
             check_message_enabled=False,
             check_first_body=True,
         ),
         FixAttempt(
             ["identical-if-branches"],
-            structs.shared_for_similar,
+            lambda: structs.shared_for_similar,
             lambda avars: len(avars) == 0,
-            (structs.avars,),
+            lambda: (structs.avars,),
             postprocess=lambda symbols, result: emit_message_if(
                 checker, symbols, structs.ifs[0], result
             ),
@@ -1002,9 +1002,9 @@ def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
         ),
         FixAttempt(
             ["similar-if-to-untwisted"],
-            structs.shared_for_similar and not structs.tvs_change,
+            lambda: structs.shared_for_similar and not structs.tvs_change,
             get_fixed_by_restructuring_twisted,
-            (structs.tests, structs.core, structs.avars),
+            lambda: (structs.tests, structs.core, structs.avars),
             lambda symbols, result: fixes_and_saves_enough_tokens(
                 checker,
                 structs.tokens_before,
@@ -1019,9 +1019,9 @@ def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
         ),
         FixAttempt(
             ["similar-if-to-use"],
-            structs.shared_for_similar and not structs.tvs_change,
+            lambda: structs.shared_for_similar and not structs.tvs_change,
             get_fixed_by_if_to_use,
-            (structs.tests, structs.core, structs.avars),
+            lambda: (structs.tests, structs.core, structs.avars),
             lambda symbols, result: fixes_and_saves_enough_tokens(
                 checker,
                 structs.tokens_before,
@@ -1036,9 +1036,9 @@ def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
         ),
         FixAttempt(
             ["similar-if-into-block"],
-            structs.shared_for_similar and not structs.tvs_change,
+            lambda: structs.shared_for_similar and not structs.tvs_change,
             get_fixed_by_moving_if,
-            (structs.tests, structs.core, structs.avars),
+            lambda: (structs.tests, structs.core, structs.avars),
             lambda symbols, result: fixes_and_saves_enough_tokens(
                 checker,
                 structs.tokens_before,
@@ -1054,19 +1054,21 @@ def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
         FixAttempt(
             ["similar-if-to-list", "similar-if-to-dict"],
             # not structs.is_one_of_parents_ifs and not structs.contains_other_duplication,
-            not structs.is_one_of_parents_ifs  # do not break up consistent ifs
+            lambda: not structs.is_one_of_parents_ifs  # do not break up consistent ifs
             and structs.seq_ifs is not None,
             get_fixed_by_container,
-            (checker, structs.seq_ifs, structs.ends_with_else),
+            lambda: (checker, structs.seq_ifs, structs.ends_with_else),
             lambda symbols, result: result,
             check_message_enabled=True,
             check_first_body=False,
         ),
         FixAttempt(
             ["similar-if-to-expr"],
-            structs.shared_for_similar and not structs.tvs_change and not structs.called_avar,
+            lambda: structs.shared_for_similar
+            and not structs.tvs_change
+            and not structs.called_avar,
             get_fixed_by_ternary,
-            (structs.tests, structs.core, structs.avars),
+            lambda: (structs.tests, structs.core, structs.avars),
             lambda symbols, result: fixes_and_saves_enough_tokens(
                 checker,
                 structs.tokens_before,
@@ -1081,9 +1083,9 @@ def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
         ),
         FixAttempt(
             ["similar-if-to-extracted"],
-            structs.shared_for_similar and not structs.called_avar,
+            lambda: structs.shared_for_similar and not structs.called_avar,
             get_fixed_by_vars,
-            (structs.tests, structs.core, structs.avars),
+            lambda: (structs.tests, structs.core, structs.avars),
             lambda symbols, result: fixes_and_saves_enough_tokens(
                 checker,
                 structs.tokens_before,
@@ -1102,9 +1104,9 @@ def duplicate_in_if(checker, node: nodes.If) -> Tuple[bool, bool]:
                 not fix_attempt.check_message_enabled
                 or any(checker.linter.is_message_enabled(symbol) for symbol in fix_attempt.symbols)
             )
-            and fix_attempt.should_run
+            and fix_attempt.should_run()
             and fix_attempt.postprocess(
-                fix_attempt.symbols, fix_attempt.fix_function(*fix_attempt.args)
+                fix_attempt.symbols, fix_attempt.fix_function(*fix_attempt.args())
             )
         ):
             return True, fix_attempt.check_first_body
