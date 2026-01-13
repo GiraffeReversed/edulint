@@ -428,9 +428,9 @@ def similar_to_loop(self, to_aunify: List[List[nodes.NodeNG]]) -> bool:
                 {nodes.Const, nodes.BinOp, t}
                 for t in (nodes.Name, nodes.Subscript, nodes.Attribute)
             ],
-        )
+        ),
+        stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars)
         or called_aunify_var(avars),
-        stop_on_after_renamed_identical=lambda avars: assignment_to_aunify_var(avars),
     )
     if result is None:
         return False
