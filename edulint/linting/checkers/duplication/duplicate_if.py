@@ -656,27 +656,30 @@ def vals_from_simple_test(
     if isinstance(test, nodes.BoolOp):
         if test.op not in ("and", "or"):
             return None
-        partitions = []
+        disjunctions = []
         for operand in test.values:
             vals = vals_from_simple_test(operand)
             if vals is None:
                 return None
-            partitions.append(vals)
+            disjunctions.append(vals)
         if test.op == "or":
-            return [part for partition in partitions for part in partition]
+            return [conjunction for disjunction in disjunctions for conjunction in disjunction]
         else:
             return [
-                sorted([pair for part in partition for pair in part], key=lambda pair: pair[0].name)
-                for partition in product(*partitions)
+                sorted(
+                    [literal for conjunction in disjunction for literal in conjunction],
+                    key=lambda literal: literal[0].name,
+                )
+                for disjunction in product(*disjunctions)
             ]
 
     return get_simple_val(test, toplevel)
 
 
-def get_node_fixed_by_container(core, avars, tests_propositions, has_else_block):
+def get_node_fixed_by_container(core, avars, test_disjunctions, has_else_block):
     container_values = []
-    for i in range(len(tests_propositions)):
-        for _ in tests_propositions[i]:
+    for i in range(len(test_disjunctions)):
+        for _ in test_disjunctions[i]:
             if len(avars) == 1:
                 new_item = new_node(nodes.Const, value=avars[0].subs[i])
             else:
@@ -686,27 +689,33 @@ def get_node_fixed_by_container(core, avars, tests_propositions, has_else_block)
                 )
             container_values.append(new_item)
 
-    if len(tests_propositions[0][0]) == 1 and sorted(
-        test_proposition[0][1].value
-        for test_propositions in tests_propositions
-        for test_proposition in test_propositions
-    ) == list(range(sum(len(test_propositions) for test_propositions in tests_propositions))):
+    if (
+        len(test_disjunctions[0][0]) == 1
+        and all(
+            isinstance(conjunction[0][1].value, int)
+            for disjunction in test_disjunctions
+            for conjunction in disjunction
+        )
+        and sorted(
+            conjunction[0][1].value
+            for disjunction in test_disjunctions
+            for conjunction in disjunction
+        )
+        == list(range(sum(len(disjunction) for disjunction in test_disjunctions)))
+    ):
         container = new_node(nodes.List, elts=container_values)
     else:
         dict_items = []
         value_index = 0
-        for test_propositions in tests_propositions:
-            for test_proposition in test_propositions:
-                test_propositions = tests_propositions[i]
+        for disjunction in test_disjunctions:
+            for conjunction in disjunction:
 
-                if len(test_proposition) == 1:
-                    key = new_node(nodes.Const, value=test_proposition[0][1].value)
+                if len(conjunction) == 1:
+                    key = new_node(nodes.Const, value=conjunction[0][1].value)
                 else:
                     key = new_node(
                         nodes.Tuple,
-                        elts=[
-                            new_node(nodes.Const, value=pair[1].value) for pair in test_proposition
-                        ],
+                        elts=[new_node(nodes.Const, value=pair[1].value) for pair in conjunction],
                     )
 
                 val = container_values[value_index]
@@ -719,7 +728,7 @@ def get_node_fixed_by_container(core, avars, tests_propositions, has_else_block)
     assignment = new_node(
         nodes.Assign, targets=[new_node(nodes.AssignName, name="CONTAINER")], value=container
     )
-    variables = [pair[0].name for pair in tests_propositions[0][0]]
+    variables = [pair[0].name for pair in test_disjunctions[0][0]]
     var_tuple = (
         new_node(nodes.Name, name=variables[0])
         if len(variables) == 1
@@ -752,36 +761,36 @@ def get_node_fixed_by_container(core, avars, tests_propositions, has_else_block)
 
 
 def get_fixed_by_container(checker, seq_ifs, has_else_block):
-    tests_propositions = [vals_from_simple_test(if_.test) for if_ in seq_ifs]
+    test_disjunctions = [vals_from_simple_test(if_.test) for if_ in seq_ifs]
     start_index = 0
     end_index = 0
     inc_start = True
-    for i in range(len(tests_propositions)):
+    for i in range(len(test_disjunctions)):
         if inc_start:
-            if tests_propositions[i] is None:
+            if test_disjunctions[i] is None:
                 start_index += 1
             else:
                 inc_start = False
                 end_index = start_index
         else:
-            if tests_propositions[i] is None:
+            if test_disjunctions[i] is None:
                 break
             else:
                 end_index += 1
 
     if end_index - start_index + 1 < 3 or (
-        start_index != 0 and end_index != len(tests_propositions) - 1
+        start_index != 0 and end_index != len(test_disjunctions) - 1
     ):
         return False
-    tests_propositions = tests_propositions[start_index : end_index + 1]
+    test_disjunctions = test_disjunctions[start_index : end_index + 1]
     ifs = seq_ifs[start_index : end_index + 1]
 
-    for test_propositions in tests_propositions:
-        for test_proposition in test_propositions:
-            if len(test_proposition) != len(tests_propositions[0][0]):
+    for disjunction in test_disjunctions:
+        for conjunction in disjunction:
+            if len(conjunction) != len(test_disjunctions[0][0]):
                 return False
-            for i in range(len(test_proposition)):
-                if test_proposition[i][0].name != tests_propositions[0][0][i][0].name:
+            for i in range(len(conjunction)):
+                if conjunction[i][0].name != test_disjunctions[0][0][i][0].name:
                     return False
 
     if_bodies = [if_.body for if_ in ifs] + ([ifs[-1].orelse] if has_else_block else [])
@@ -802,7 +811,14 @@ def get_fixed_by_container(checker, seq_ifs, has_else_block):
     ):
         return False
 
-    symbol, fixed = get_node_fixed_by_container(core, avars, tests_propositions, has_else_block)
+    if len(test_disjunctions[0]) > 1 and not all(
+        isinstance(avar.parent, nodes.Name)
+        or (isinstance(avar.parent, nodes.Const) and isinstance(avar.subs[0], int))
+        for avar in avars
+    ):
+        return False
+
+    symbol, fixed = get_node_fixed_by_container(core, avars, test_disjunctions, has_else_block)
 
     tokens_before = (
         sum(get_token_count(body) for body in if_bodies)
