@@ -652,7 +652,7 @@ def get_vars_defined_before_core(core) -> Dict[int, Dict[Variable, Set[nodes.Nod
 
 def get_vars_defined_before(ns: List[nodes.NodeNG]) -> Dict[Variable, Set[nodes.NodeNG]]:
     result = defaultdict(set)
-    check_parents = len(ns) == 1 and not hasattr(ns[0], "cfg_loc")
+    check_parents = not all(hasattr(n, "cfg_loc") for n in ns)
     block = ns if not check_parents else [get_cfg_loc(ns[0]).node]
     children_locs = set(syntactic_children_locs(block))
     for loc in children_locs:
@@ -682,7 +682,7 @@ def get_vars_used_after(ns: List[nodes.NodeNG]) -> Dict[Variable, Set[nodes.Node
     """DANGER: variables used in block are not returned, even if block is in a loop"""
     # TODO include only dominating uses
     result = defaultdict(set)
-    check_parents = len(ns) == 1 and not hasattr(ns[0], "cfg_loc")
+    check_parents = not all(hasattr(n, "cfg_loc") for n in ns)
     block = ns if not check_parents else [get_cfg_loc(ns[0]).node]
     children_locs = set(syntactic_children_locs(block))
     for loc in children_locs:
