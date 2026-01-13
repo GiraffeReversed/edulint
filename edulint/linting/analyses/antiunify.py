@@ -7,8 +7,8 @@ from astroid import nodes
 from edulint.linting.analyses.cfg.utils import syntactic_children_locs_from, get_cfg_loc
 from edulint.linting.analyses.data_dependency import (
     Variable,
-    get_vars_defined_before,
-    get_vars_used_after,
+    get_vars_defined_before_core,
+    get_vars_used_after_core,
     MODIFYING_EVENTS,
 )
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
@@ -350,9 +350,13 @@ def remove_renamed_identical_vars(core, avars: List[AunifyVar]):
     if not any(isinstance(avar.parent, nodes.AssignName) for avar in avars):
         return core, avars
 
-    vars_defined_before = get_vars_defined_before(core)
-    vars_used_after = get_vars_used_after(core)
-    irremovable_vars = set(vars_defined_before.keys()) | set(vars_used_after.keys())
+    vars_defined_before = {
+        v for vars_uses in get_vars_defined_before_core(core).values() for v in vars_uses.keys()
+    }
+    vars_used_after = {
+        v for vars_uses in get_vars_used_after_core(core).values() for v in vars_uses.keys()
+    }
+    irremovable_vars = vars_defined_before | vars_used_after
 
     for avar in avars:
         if not isinstance(avar.parent, nodes.AssignName) or any(

@@ -5,7 +5,8 @@ from astroid import nodes  # type: ignore
 from edulint.linting.analyses.antiunify import antiunify, cprint  # noqa: F401
 from edulint.linting.analyses.data_dependency import (
     get_vars_defined_before,
-    get_vars_used_after,
+    get_vars_defined_before_core,
+    get_vars_used_after_core,
     get_control_statements,
 )
 from edulint.linting.checkers.utils import (
@@ -40,8 +41,12 @@ def get_fixed_by_function(to_aunify, core, avars):
         seen[var_vals] = avar
 
     # compute extras
-    extra_args = get_vars_defined_before(core)
-    return_vals_needed = len(get_vars_used_after(core))
+    extra_args = {
+        v for vars_uses in get_vars_defined_before_core(core).values() for v in vars_uses.keys()
+    }
+    return_vals_needed = sum(
+        len(vars_uses) for vars_uses in get_vars_used_after_core(core).values()
+    )
     control_needed = len(get_control_statements(core))
 
     # generate calls in ifs
@@ -52,7 +57,7 @@ def get_fixed_by_function(to_aunify, core, avars):
             nodes.Call,
             func=new_node(nodes.Name, name="AUX"),
             args=[to_node(param) for param in params]
-            + [new_node(nodes.Name, name=var.name) for var in extra_args.keys()],
+            + [new_node(nodes.Name, name=var.name) for var in extra_args],
         )
         if return_vals_needed + control_needed == 0:
             calls.append(call)
@@ -87,7 +92,7 @@ def get_fixed_by_function(to_aunify, core, avars):
         args=new_node(
             nodes.Arguments,
             args=[new_node(nodes.AssignName, name=avar.name) for avar in seen.values()]
-            + [new_node(nodes.AssignName, name=var.name) for var in extra_args.keys()],
+            + [new_node(nodes.AssignName, name=var.name) for var in extra_args],
         ),
         body=core if isinstance(core, list) else [core],
     )
