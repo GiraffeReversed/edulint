@@ -1237,6 +1237,9 @@ class SimplifiableIf(BaseChecker):  # type: ignore
                 )
                 corresponding_index_unmodified = 0
 
+            if most_consecutive_converted_ifs_unmodified is None:
+                return
+
             mergeable_count_unmodified = self._count_of_mergeable_consecutive_ifs(
                 z3.BoolVal(True),
                 most_consecutive_converted_ifs_unmodified,
