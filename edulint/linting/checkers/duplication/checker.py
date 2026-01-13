@@ -154,6 +154,17 @@ def is_duplicate_in_if(checker, node: nodes.NodeNG) -> Tuple[bool, bool]:
     return duplicate_in_if(checker, node)
 
 
+NO_ONE_LINE_CANDIDATE_NODE = (
+    nodes.Assign,
+    nodes.AugAssign,
+    nodes.AnnAssign,
+    nodes.Expr,
+    nodes.Return,
+    nodes.Break,
+    nodes.Continue,
+)
+
+
 def get_similar_to_block_candidates(
     checker,
     stmt_nodes: List[nodes.NodeNG],
@@ -180,13 +191,14 @@ def get_similar_to_block_candidates(
                 break
 
         for length in range(max_length, 0, -1):
+            to_aunify = [tuple(fst_siblings[:length]), tuple(snd_siblings[:length])]
+
             if length == 1 and (
-                isinstance(fst, (nodes.Assign, nodes.Expr))
-                or isinstance(snd, (nodes.Assign, nodes.Expr))
+                isinstance(fst, NO_ONE_LINE_CANDIDATE_NODE)
+                or isinstance(snd, NO_ONE_LINE_CANDIDATE_NODE)
             ):
                 break
 
-            to_aunify = [tuple(fst_siblings[:length]), tuple(snd_siblings[:length])]
             ranges = [
                 get_stmt_range(stmt_to_index, to_aunify[0]),
                 get_stmt_range(stmt_to_index, to_aunify[1]),
