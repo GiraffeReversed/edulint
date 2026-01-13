@@ -161,14 +161,43 @@ class VarEventListener(BaseVisitor[None]):
     def visit_functiondef(self, node: nodes.FunctionDef):
         self.function_defs.append(node)
 
+        # args
+        for ann in node.args.annotations:
+            if ann is not None:
+                self.visit(ann)
+
         for arg in node.args.arguments:
             self._init_var_in_scope(arg.name, arg)
+
+        for default in node.args.defaults:
+            self.visit(default)
+
+        # posonly
+        for ann in node.args.posonlyargs_annotations:
+            if ann is not None:
+                self.visit(ann)
+
+        for arg in node.args.posonlyargs:
+            self._init_var_in_scope(arg.name, arg)
+
+        # kwonly
+        for ann in node.args.kwonlyargs_annotations:
+            if ann is not None:
+                self.visit(ann)
 
         for arg in node.args.kwonlyargs:
             self._init_var_in_scope(arg.name, arg)
 
+        # vararg
+        if node.args.varargannotation is not None:
+            self.visit(node.args.varargannotation)
+
         if node.args.vararg_node is not None:
             self._init_var_in_scope(node.args.vararg_node.name, node.args.vararg_node)
+
+        # kwarg
+        if node.args.kwargannotation is not None:
+            self.visit(node.args.kwargannotation)
 
         if node.args.kwarg_node is not None:
             self._init_var_in_scope(node.args.kwarg_node.name, node.args.kwarg_node)
@@ -266,6 +295,7 @@ class VarEventListener(BaseVisitor[None]):
         self._visit_assigned_to(node.target)
 
     def visit_annassign(self, node: nodes.AnnAssign):
+        self.visit(node.annotation)
         if node.value is not None:
             self.visit(node.value)
         self._visit_assigned_to(node.target)
