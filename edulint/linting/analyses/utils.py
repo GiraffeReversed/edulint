@@ -9,7 +9,9 @@ from edulint.linting.analyses.var_events import VarEventType, VarEvent
 IMMUTABLE_TYPES = [Type.BOOL, Type.FLOAT, Type.INT, Type.STRING, Type.TUPLE]
 
 
-def _can_be_mutable(node: nodes.NodeNG) -> bool:
+def _can_be_mutable(node: Optional[nodes.NodeNG]) -> bool:
+    if node is None:
+        return False
     t = guess_type(node)
     return t is None or not t.has_only(IMMUTABLE_TYPES)
 
@@ -50,11 +52,12 @@ def _get_body_of_called_function(definition: VarEvent) -> Optional[List[nodes.No
     if isinstance(definition.node, nodes.FunctionDef):
         return definition.node.body
 
+    parent = definition.node.parent
     if (
-        not isinstance(definition.node.parent, (nodes.AnnAssign, nodes.Assign))
-        or is_chained_assignment(definition.node.parent)
-        or has_more_assign_targets(definition.node.parent)
-        or not isinstance(definition.node.parent.value, nodes.Lambda)
+        not isinstance(parent, (nodes.AnnAssign, nodes.Assign))
+        or is_chained_assignment(parent)
+        or has_more_assign_targets(parent)
+        or not isinstance(parent.value, nodes.Lambda)
     ):
         return None
 

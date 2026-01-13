@@ -191,7 +191,7 @@ class Local(BaseChecker):
         start, stop, step = range_params
         start, stop, step = get_const(start), get_const(stop), get_const(step)
 
-        if start is not None and stop is not None and step is not None:
+        if all(v is not None and isinstance(v, int) for v in (start, stop, step)):
             if start >= stop:
                 self.add_message(
                     "at-most-one-iteration-for-loop", node=node, args=("no iterations",)
