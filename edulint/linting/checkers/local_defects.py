@@ -188,11 +188,11 @@ class Local(BaseChecker):
         start, stop, step = get_const_value(start), get_const_value(stop), get_const_value(step)
 
         if all(v is not None and isinstance(v, int) for v in (start, stop, step)):
-            if start >= stop:
+            if step > 0 and start >= stop or step < 0 and start <= stop:
                 self.add_message(
                     "at-most-one-iteration-for-loop", node=node, args=("no iterations",)
                 )
-            elif start + step >= stop:
+            elif step > 0 and start + step >= stop or step < 0 and start + step <= stop:
                 self.add_message(
                     "at-most-one-iteration-for-loop", node=node, args=("only one iteration",)
                 )
