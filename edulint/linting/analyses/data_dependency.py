@@ -96,7 +96,7 @@ def collect_reaching_definitions(  # blocks fun gen kills
         )
         return sorted_fun_unprocessed_callees[0][0]
 
-    def collect_called_functions(graph, node_values, start):
+    def collect_events_in_called(graph, node_values, start):
         """
         graph: dict[node, set[node]]
         node_values: dict[node, iterable]
@@ -159,27 +159,27 @@ def collect_reaching_definitions(  # blocks fun gen kills
                             continue
                         called_fun = possible_callees[0]
 
-                        for event in collect_called_functions(
+                        for in_call_event in collect_events_in_called(
                             call_graph, outside_scope_events, called_fun
                         ):
-                            in_call_var_i = var_to_index[event.var]
-                            if event.type in GENERATING_EVENTS:
+                            in_call_var_i = var_to_index[in_call_event.var]
+                            if in_call_event.type in GENERATING_EVENTS:
                                 if len(kill[in_call_var_i]) == 0:
-                                    gens[in_call_var_i].append(event)
+                                    gens[in_call_var_i].append(in_call_event)
                                 else:
                                     for kill_event in kill[in_call_var_i][-1]:
-                                        if kill_event not in event.definitions:
-                                            event.definitions.append(kill_event)
-                                            kill_event.uses.append(event)
-                            if event.type in KILLING_EVENTS:
+                                        if kill_event not in in_call_event.definitions:
+                                            in_call_event.definitions.append(kill_event)
+                                            kill_event.uses.append(in_call_event)
+                            if in_call_event.type in KILLING_EVENTS:
                                 if len(kill[in_call_var_i]) > 0:
                                     for kill_event in kill[in_call_var_i][-1]:
-                                        if kill_event not in event.redefines:
-                                            event.redefines.append(kill_event)
-                                            kill_event.redefined_by.append(event)
+                                        if kill_event not in in_call_event.redefines:
+                                            in_call_event.redefines.append(kill_event)
+                                            kill_event.redefined_by.append(in_call_event)
                                 else:
                                     kill[in_call_var_i].append([])
-                                kill[in_call_var_i][-1].append(event)
+                                kill[in_call_var_i][-1].append(in_call_event)
 
                     if event.type in KILLING_EVENTS:
                         if len(kill[var_i]) > 0:
