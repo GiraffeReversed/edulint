@@ -287,7 +287,12 @@ def collect_reaching_definitions(  # blocks fun gen kills
     def make_up_calls(blocks, computed_kills, original_gens_kills):
         uncalled_functions = {
             fun for fun in call_graph.keys() if isinstance(fun, nodes.FunctionDef)
-        } - {callee for callees in call_graph.values() for callee in callees}
+        } - {
+            callee
+            for caller, callees in call_graph.items()
+            for callee in callees
+            if callee != caller
+        }
         if len(uncalled_functions) == 0:
             return
 
