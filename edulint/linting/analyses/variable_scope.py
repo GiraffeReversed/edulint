@@ -101,6 +101,13 @@ class VarEventListener(BaseVisitor[None]):
             if not isinstance(name_node, nodes.FunctionDef)
             else name_node.parent.scope()
         )
+        if isinstance(name_node, nodes.FunctionDef):
+            read_scope = name_node.parent.scope()
+        else:
+            read_scope = name_node
+            while not isinstance(read_scope, ScopeNode):
+                read_scope = read_scope.parent
+
         while scope != read_scope:
             self.outside_scope_events[read_scope].append(event)
             read_scope = read_scope.parent
