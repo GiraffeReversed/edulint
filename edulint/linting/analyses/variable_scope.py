@@ -289,7 +289,7 @@ class VarEventListener(BaseVisitor[None]):
     def visit_augassign(self, node: nodes.AugAssign):
         stripped = strip_to_name(node.target)
         if stripped is not None:
-            self._add_var_event(stripped.name, node, VarEventType.READ)
+            self._add_var_event(stripped.name, stripped, VarEventType.READ)
 
         self.visit(node.value)
         self._visit_assigned_to(node.target)

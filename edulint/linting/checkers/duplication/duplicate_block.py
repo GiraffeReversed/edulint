@@ -168,8 +168,6 @@ def get_possible_callees(to_aunify):
 
 
 def returns_used_value(returned_values, i, j, avars, use):
-    if isinstance(use, nodes.AugAssign):
-        use = use.target  # a READ event of the assigned variable is created on whole AugAssign
     assert isinstance(use, (nodes.Name, nodes.AssignName))
 
     original_name = use.name
