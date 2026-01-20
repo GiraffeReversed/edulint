@@ -285,6 +285,35 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
             ) and not returns_used_values(returned_values, i, j, avars, uses):
                 return False
 
+    if (
+        # function called only for a side effect
+        all(
+            var_only_modified(var, vars_defined_before[j], [c.subs[j] for c in core])
+            for j, vars_uses in vars_used_after.items()
+            for var in vars_uses.keys()
+        )
+        # no value used later is actually returned
+        and not any(
+            returns_used_values(returned_values, i, j, avars, uses)
+            for j, vars_uses in vars_used_after.items()
+            for uses in vars_uses.values()
+        )
+        and not saves_enough_tokens(
+            sum(get_token_count(ns) for ns in to_aunify),
+            sum(
+                get_statements_count(ns, include_defs=False, include_name_main=False)
+                for ns in to_aunify
+            ),
+            get_token_count(to_aunify[i])
+            # 3 = function name + call + assign
+            + (len(to_aunify) - 1) * (3 + len(function.args.arguments) + len(returned_values)),
+            get_statements_count(to_aunify[i], include_defs=False, include_name_main=False)
+            + len(to_aunify)
+            - 1,
+        )
+    ):
+        return False
+
     other_body = to_aunify[0] if i != 0 else to_aunify[1]
     first = other_body[0]
     last = other_body[-1]
