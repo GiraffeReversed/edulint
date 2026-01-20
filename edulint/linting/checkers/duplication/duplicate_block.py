@@ -278,10 +278,9 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         vars_used_after.pop(i)
 
     for j, vars_uses in vars_used_after.items():
-        sub_vars_defined_before = vars_defined_before[j]
         for var, uses in vars_uses.items():
             if not var_only_modified(
-                var, sub_vars_defined_before, core
+                var, vars_defined_before[j], [c.subs[j] for c in core]
             ) and not returns_used_values(returned_values, i, j, avars, uses):
                 return False
 
