@@ -220,7 +220,8 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
     core, avars = result
 
     if not all(
-        (isinstance(avar.subs[i], str) and isinstance(avar.parent, (nodes.Name, nodes.AssignName)))
+        # avar is just a name
+        isinstance(avar.parent, (nodes.Name, nodes.AssignName))
         or isinstance(avar.subs[i], (nodes.Name, nodes.AssignName))
         for avar in avars
     ):
@@ -230,6 +231,8 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         j: [loc.node for loc in syntactic_children_locs([c.subs[j] for c in core])]
         for j in range(len(to_aunify))
     }
+
+    # expression in caller depends on a value defined inside the callee
     if any(
         node in syntactic_children[j]
         for avar in avars
