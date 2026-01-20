@@ -377,24 +377,31 @@ def get_merge_candidates(
     forced_groups = {}
 
     for avar in avars:
-        if not isinstance(avar.parent, (nodes.Name, nodes.AssignName)):
-            continue
-
         subs = tuple(avar.subs)
         if not require_name_consistency and all(s == subs[0] for s in subs):
             forced_groups.setdefault(subs, []).append(avar)
             continue
 
-        canonicals = {value_owner[(i, v)] for i, v in enumerate(subs) if (i, v) in value_owner}
+        if not isinstance(avar.parent, (nodes.Name, nodes.AssignName)):
+            canonicals = {
+                value_owner[(i, v.name)]
+                for i, v in enumerate(subs)
+                if isinstance(v, (nodes.Name, nodes.AssignName)) and (i, v.name) in value_owner
+            }
+            add_group = False
+        else:
+            canonicals = {value_owner[(i, v)] for i, v in enumerate(subs) if (i, v) in value_owner}
+            add_group = True
 
         if not canonicals:
-            groups.setdefault(subs, []).append(avar)
+            if add_group:
+                groups.setdefault(subs, []).append(avar)
             for i, v in enumerate(subs):
                 value_owner[(i, v)] = subs
 
         elif len(canonicals) == 1:
             (canon,) = canonicals
-            if canon == subs and canon in groups:
+            if add_group and canon == subs and canon in groups:
                 groups[canon].append(avar)
             else:
                 if require_name_consistency:
@@ -402,6 +409,8 @@ def get_merge_candidates(
                 groups.pop(canon, None)
 
         else:
+            if require_name_consistency:
+                return None
             for s in canonicals:
                 groups.pop(s, None)
 
