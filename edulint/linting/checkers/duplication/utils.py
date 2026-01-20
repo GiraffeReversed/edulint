@@ -41,6 +41,7 @@ def called_aunify_var(avars) -> bool:
             or (isinstance(node, nodes.BinOp) and avar == node.op)
             or (isinstance(node, nodes.AugAssign) and avar == node.op)
             or (isinstance(node, nodes.Attribute) and avar == node.attrname)
+            or (isinstance(node, nodes.Call) and avar == avar.parent.func)
             or (
                 node is not None
                 and isinstance(node.parent, nodes.Call)
