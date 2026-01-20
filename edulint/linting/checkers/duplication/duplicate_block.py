@@ -3,7 +3,7 @@ from typing import List
 from astroid import nodes  # type: ignore
 
 from edulint.linting.analyses.antiunify import antiunify, cprint, core_as_string  # noqa: F401
-from edulint.linting.analyses.cfg.utils import syntactic_children_locs
+from edulint.linting.analyses.cfg.utils import syntactic_children_locs, get_cfg_loc
 from edulint.linting.analyses.var_events import VarEventType
 from edulint.linting.analyses.data_dependency import (
     get_vars_defined_before,
@@ -11,6 +11,8 @@ from edulint.linting.analyses.data_dependency import (
     get_vars_used_after_core,
     get_control_statements,
     get_events_for,
+    node_to_var,
+    GENERATING_EVENTS,
 )
 from edulint.linting.checkers.utils import (
     get_statements_count,
@@ -227,7 +229,6 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
     syntactic_children = {
         j: [loc.node for loc in syntactic_children_locs([c.subs[j] for c in core])]
         for j in range(len(to_aunify))
-        if j != i
     }
     if any(
         node in syntactic_children[j]
@@ -252,6 +253,26 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         returned_values = return_.value.elts
 
     vars_defined_before = get_vars_defined_before_core(core)
+
+    # no avar outside scope
+    for avar in avars:
+        if isinstance(avar.parent, (nodes.Name, nodes.AssignName)):
+            avar = avar.parent
+
+        callee_node = avar.subs[i]
+        assert isinstance(callee_node, (nodes.Name, nodes.AssignName))
+        callee_var = node_to_var(callee_node)
+        if callee_var is None or any(
+            get_cfg_loc(def_.node).node not in syntactic_children[i]
+            and (
+                not isinstance(def_.node.parent, nodes.Arguments)
+                or def_.node.parent.parent != function
+            )
+            for event in get_events_for([callee_var], [callee_node], GENERATING_EVENTS)
+            for def_ in event.definitions
+        ):
+            return False
+
     vars_used_after = get_vars_used_after_core(core)
     if i in vars_used_after:
         vars_used_after.pop(i)
