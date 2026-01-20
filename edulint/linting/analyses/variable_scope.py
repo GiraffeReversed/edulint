@@ -166,6 +166,7 @@ class VarEventListener(BaseVisitor[None]):
 
     @in_new_scope
     def visit_functiondef(self, node: nodes.FunctionDef):
+        self.call_graph[node]
         self.function_defs.append(node)
 
         # args
