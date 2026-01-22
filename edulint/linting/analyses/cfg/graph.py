@@ -38,7 +38,7 @@ class ControlFlowGraph:
 
         If edge_label is specified, set the corresponding edge in the CFG with that label.
         """
-        new_block = CFGBlock(self.block_count)
+        new_block = CFGBlock(self.block_count, self)
         self.unreachable_blocks.add(new_block)
 
         self.block_count += 1
@@ -182,6 +182,8 @@ class CFGBlock:
 
     # A unique identifier
     id: int
+    # Parent control flow graph
+    cfg: ControlFlowGraph
     # The statements in this block.
     locs: List[CFGLoc]
     # This block's in-edges (from blocks that can execute immediately before this one).
@@ -191,9 +193,10 @@ class CFGBlock:
     # Whether there exists a path from the start block to this block.
     reachable: bool
 
-    def __init__(self, id_: int) -> None:
+    def __init__(self, id_: int, cfg: ControlFlowGraph) -> None:
         """Initialize a new CFGBlock."""
         self.id = id_
+        self.cfg = cfg
         self.locs = []
         self.predecessors = []
         self.successors = []
