@@ -103,6 +103,13 @@ class VarEvents:
                 for event in events:
                     yield var, event
 
+    def for_node(self, node: nodes.NodeNG) -> Iterator[Tuple[Variable, VarEvent]]:
+        """Helper method for iterating over events for an AST node."""
+        for var, events in self.var_events.items():
+            for event in events:
+                if event.node == node:
+                    yield var, event
+
     def add(self, var: Variable, event: VarEvent):
         self.var_events[var].append(event)
 
