@@ -706,6 +706,117 @@ def get_events_by_var(
     return result
 
 
+def get_defs_at(node: nodes.NodeNG, varname: VarName) -> List[VarEvent]:
+    return _get_defs_at_rec(node, varname, {node}, set())
+
+
+def _get_defs_at_rec(
+    node: nodes.NodeNG,
+    varname: VarName,
+    visited_nodes: Set[nodes.NodeNG],
+    explored_functions: Set[nodes.NodeNG],
+) -> List[VarEvent]:
+
+    result = []
+
+    root = node.root()
+    calls_to_explore = set()
+    loc = get_cfg_loc(node)
+    block_kills = False
+    # block_kills
+    for i in range(loc.pos - 1, -1, -1):
+        prev_loc = loc.block.locs[i]
+
+        functions_to_explore = set()
+        for var, event in prev_loc.var_events.all():
+            if var.name == varname and event.type in KILLING_EVENTS:
+                block_kills = True
+                result.append(event)
+            if isinstance(event.node.parent, nodes.Call) and event.node.parent.func == event.node:
+                for def_ in event.definitions:
+                    if isinstance(def_, nodes.FunctionDef):
+                        functions_to_explore.add(def_.node)
+
+        for call in get_calls(prev_loc.node):
+            if not isinstance(call, nodes.Name):
+                functions_to_explore.update(root.function_defs)
+
+        all_functions_kill = True
+        for function in functions_to_explore:
+            for edge in function.args.cfg_loc.block.cfg.end.predecessors:
+                predecessor = edge.source
+                edge_kills = False
+                for var, events in root.block_kills[predecessor].items():
+                    if var.name == varname and scope_is_nested(loc.node.scope(), var.scope):
+                        assert len(events) > 0
+                        result.extend(events)
+                        edge_kills = True
+                all_functions_kill &= edge_kills
+        block_kills |= len(functions_to_explore) > 0 and all_functions_kill
+
+        if block_kills:
+            break
+
+    # preds kill
+    all_preds_kill = True
+    if not block_kills:
+        for edge in loc.block.predecessors:
+            predecessor = edge.source
+            pred_kills = False
+            for var, events in root.block_kills[predecessor].items():
+                if var.name == varname:
+                    result.extend(events)
+                    pred_kills = True
+            all_preds_kill &= pred_kills
+
+    # calls kill
+    if not all_preds_kill:
+        while node is not None and not isinstance(node, nodes.FunctionDef):
+            node = node.parent
+        if node is not None:
+            calls_to_explore.add(node)
+
+    # unresolved calls
+    end_nodes = root.unresolved_calls.copy() if len(calls_to_explore) > 0 else []
+
+    for function in calls_to_explore:
+        if function in explored_functions:
+            continue
+
+        explored_functions.add(function)
+        # resolved calls
+        var_events = list(function.cfg_loc.var_events.all())
+        assert len(var_events) == 1 and var_events[0][0].name == function.name
+        event = var_events[0][1]
+        for use in event.uses:
+            end_nodes.append(use.node)
+
+        # made up calls
+        if len(event.uses) == 0 or has_just_recursive_calls(root.call_graph, function):
+            # make up consecutive calls
+            for uncalled_function in get_uncalled_functions(root.function_defs, root.call_graph):
+                for edge in uncalled_function.args.cfg_loc.block.cfg.end.predecessors:
+                    predecessor = edge.source
+                    for var, events in root.block_kills[predecessor].items():
+                        if var.name == varname and scope_is_nested(
+                            function.parent.scope(), var.scope
+                        ):
+                            assert len(events) > 0
+                            result.extend(events)
+
+            # prepare made up call at the end of scope
+            assert len(function.parent.scope().cfg_loc.block.cfg.end.locs) == 0
+            for edge in function.parent.scope().cfg_loc.block.cfg.end.predecessors:
+                end_nodes.append(edge.source.locs[-1].node)
+
+    for end_node in end_nodes:
+        if end_node not in visited_nodes:
+            visited_nodes.add(end_node)
+            result.extend(_get_defs_at_rec(end_node, varname, visited_nodes, explored_functions))
+
+    return result
+
+
 def modified_in(vars: List[Variable], nodes: List[nodes.NodeNG]) -> bool:
     """Returns true iff any of the given variables is modified in given nodes (including syntactic children)."""
     # just check whether there is such an event

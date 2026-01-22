@@ -53,6 +53,131 @@ def get_line(node: nodes.NodeNG, n: int) -> Iterator[nodes.NodeNG]:
 @pytest.mark.parametrize("lines,edges", [
     ([  # 0
         "a = 0",
+        "pass"
+    ], [("a", 2, {1})]),
+    ([  # 1
+        "A = 0",
+        "def foo():",  # 2
+        "    global A",
+        "    A = 1",
+        "",
+        "def bar(c):",  # 6
+        "    global A",
+        "    A = 2",
+        "    if c:",
+        "        foo()",
+        "",
+        "def car(c):",  # 12
+        "    bar()",
+        "    pass",
+    ], [("A", 13, {1, 4, 8}), ("A", 14, {4, 8})]),
+    ([  # 2
+        "def foo():",
+        "    A = 0",
+        "    def bar():",
+        "        pass",
+        "    pass"
+    ], [("A", 4, {2})]),
+    ([  # 3
+        "def foo(c):",
+        "    A = 0",
+        "    def bar():",
+        "        pass",
+        "    if c:",
+        "        A = 1",
+    ], [("A", 4, {2, 6})]),
+    ([  # 4
+        "A = 0",
+        "def foo():",
+        "    global A",
+        "    A = 1",
+        "",
+        "def bar():",
+        "    global A",
+        "    A = 2",
+        "",
+        "funs = [foo, bar]",
+        "funs[0]()",
+        "pass",
+    ], [("A", 12, {4, 8})]),
+    ([  # 5
+        "A = 0",
+        "def foo():",
+        "    pass",
+        "def bar():",
+        "    global A",
+        "    A = 1",
+        "(foo if True else bar)()",
+        "foo()",
+        "A = 2",
+    ], [("A", 3, {1, 6})]),
+    ([  # 6
+        "def foo(c, arr):",
+        "    A = 0",
+        "    (max if c else min)(arr)",
+        "    pass",
+    ], [("A", 4, {2})]),
+    ([  # 7
+        "A = 0",
+        "def foo(c, arr):",
+        "    (max if c else min)(arr)",
+        "    pass",
+    ], [("A", 4, {1})]),
+    ([  # 8
+        "A = 0",
+        "def foo():",
+        "    global A",
+        "    pass",
+        "    A = 1",
+        "    foo()"
+    ], [("A", 4, {1, 5})]),
+    ([  # 9
+        "A = 0",
+        "def foo():",  # 2
+        "    global A",
+        "    pass",
+        "    A = 1",
+        "    bar()",
+        "def bar():",  # 7
+        "    global A",
+        "    A = 2",
+        "    foo()",
+    ], [("A", 4, {1, 5, 9})]),
+    ([  # 10
+        "A = 0",
+        "def foo(c):",  # 2
+        "    global A",
+        "    pass",
+        "    A = 1",
+        "    if c:",
+        "        bar(c)",
+        "def bar(c):",  # 8
+        "    global A",
+        "    A = 2",
+        "    if c:",
+        "        foo(c)",
+    ], [("A", 4, {1, 5, 10})]),
+])
+def test_data_dependency_defs_at(lines: List[str], edges: List[Tuple[str, int, Set[int]]]) -> None:
+    code = "\n".join(lines)
+    ast = astroid.parse(code)
+    run_analyses(ast)
+
+    for varname, at_line, expected_def_lines in edges:
+        node = get_line(ast, at_line)
+        assert node is not None
+
+        received_def_lines = set()
+        for event in get_defs_at(node, varname):
+            if event.var.name == varname:
+                received_def_lines.add(event.node.fromlineno)
+
+        assert expected_def_lines == received_def_lines
+
+
+@pytest.mark.parametrize("lines,edges", [
+    ([  # 0
+        "a = 0",
         "print(a)"
     ], [("a", 1, {2})]),
     ([  # 1
