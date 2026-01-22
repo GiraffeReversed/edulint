@@ -14,27 +14,34 @@ from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from loguru import logger
 
 
+def run_analyses(ast: astroid.nodes.Module):
+    ast.accept(CFGVisitor())
+    if len(ast.cfg_loc.block.locs) == 0:
+        ast.cfg_loc.var_events.successful = False
+        return
+
+    try:
+        variables, function_defs, call_graph, outside_scope_events = VarEventsAnalysis().collect(
+            ast
+        )
+        collect_reaching_definitions(
+            ast, variables, function_defs, call_graph, outside_scope_events, None
+        )
+        ast.cfg_loc.var_events.successful = True
+    except UnknowableLocalsException as e:
+        ast.cfg_loc.var_events.successful = False
+        logger.warning(str(e))
+
+
 def patch_ast_transforms():
     old_get_ast = PyLinter.get_ast
 
     def new_get_ast(self, filepath, modname, data=None):
         ast = old_get_ast(self, filepath, modname, data)
-        if ast is not None:
-            ast.accept(CFGVisitor())
-            if len(ast.cfg_loc.block.locs) == 0:
-                ast.cfg_loc.var_events.successful = False
-            else:
-                try:
-                    variables, function_defs, call_graph, outside_scope_events = (
-                        VarEventsAnalysis().collect(ast)
-                    )
-                    collect_reaching_definitions(
-                        ast, variables, function_defs, call_graph, outside_scope_events, None
-                    )
-                    ast.cfg_loc.var_events.successful = True
-                except UnknowableLocalsException as e:
-                    ast.cfg_loc.var_events.successful = False
-                    logger.warning(str(e))
+        if ast is None:
+            return None
+
+        run_analyses(ast)
         return ast
 
     PyLinter.get_ast = new_get_ast
