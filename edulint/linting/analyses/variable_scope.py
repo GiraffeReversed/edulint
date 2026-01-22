@@ -126,6 +126,7 @@ class VarEventListener(BaseVisitor[None]):
 
     def _init_var_in_scope(self, name: VarName, name_node: nodes.NodeNG) -> None:
         was_defined = name in self.stack[-1]
+
         if name not in self.stack[-1]:
             scope = (
                 name_node.scope()
@@ -134,7 +135,12 @@ class VarEventListener(BaseVisitor[None]):
                 )
                 else name_node.parent.scope()
             )
-            self.stack[-1][name] = (name_node, scope)
+        else:
+            name_scope = self._get_var_node_scope(name)
+            assert name_scope is not None
+            _name, scope = name_scope
+
+        self.stack[-1][name] = (name_node, scope)
         self._add_var_event(
             name, name_node, VarEventType.ASSIGN if not was_defined else VarEventType.REASSIGN
         )
@@ -150,15 +156,14 @@ class VarEventListener(BaseVisitor[None]):
     def statements_before_definitions(
         self, node: Union[nodes.Module, nodes.FunctionDef, nodes.AsyncFunctionDef]
     ):
-        sooner = []
         later = []
         for child in node.body:
             if not isinstance(child, (nodes.FunctionDef, nodes.AsyncFunctionDef, nodes.ClassDef)):
-                sooner.append(child)
+                self.visit(child)
             else:
                 self._init_var_in_scope(child.name, child)
                 later.append(child)
-        return sooner + later
+        return later
 
     @in_new_scope
     def visit_module(self, node: nodes.Module):
@@ -166,7 +171,6 @@ class VarEventListener(BaseVisitor[None]):
 
     @in_new_scope
     def visit_functiondef(self, node: nodes.FunctionDef):
-        self.call_graph[node]
         self.function_defs.append(node)
 
         # args
