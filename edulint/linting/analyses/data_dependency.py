@@ -40,6 +40,60 @@ GENERATING_EVENTS = (VarEventType.READ, VarEventType.MODIFY)
 ### collectors
 
 
+def get_calls(node: nodes.NodeNG, toplevel=True) -> Iterator[nodes.Call]:
+    if not toplevel or isinstance(
+        node, (nodes.Expr, nodes.Assign, nodes.AugAssign, nodes.AnnAssign)
+    ):
+        if isinstance(node, nodes.Call):
+            yield node
+        for child in node.get_children():
+            yield from get_calls(child, toplevel=False)
+
+
+def has_just_recursive_calls(graph, node):
+    """
+    graph: dict[node, set[node]]
+    A: node
+    returns True if there exists B such that B ->* A but A -/>* B
+    """
+
+    def reachable_from(start, g):
+        visited = set()
+        stack = list(g.get(start, []))
+        while stack:
+            u = stack.pop()
+            if u in visited:
+                continue
+            visited.add(u)
+            stack.extend(g.get(u, []))
+        return visited
+
+    # Nodes reachable from A
+    from_node = reachable_from(node, graph)
+
+    # Build reverse graph
+    reverse_graph = defaultdict(set)
+    for u, neighbors in graph.items():
+        for v in neighbors:
+            reverse_graph[v].add(u)
+
+    # Nodes that can reach A
+    to_node = reachable_from(node, reverse_graph)
+
+    return from_node == to_node
+
+
+def get_uncalled_functions(function_defs, call_graph):
+    return set(function_defs) - {
+        callee
+        for caller, callees in call_graph.items()
+        if isinstance(caller, nodes.FunctionDef)
+        and not has_just_recursive_calls(call_graph, caller)
+        for callee in callees
+        if isinstance(callee, nodes.FunctionDef)
+    }
+
+
 def collect_gens_kill(
     block: CFGBlock,
 ) -> Tuple[Dict[Variable, List[VarEvent]], Dict[Variable, List[VarEvent]]]:
@@ -127,6 +181,7 @@ def collect_reaching_definitions(  # blocks fun gen kills
         index_to_block: List[CFGBlock],
         original_gens_kills,
         outside_scope_events,
+        unresolved_calls,
         start_loc: CFGLoc,
     ):
         blocks = {}
@@ -135,35 +190,33 @@ def collect_reaching_definitions(  # blocks fun gen kills
             index_to_block.append(block)
             gens, kill = defaultdict(list), defaultdict(list)
             for loc in block.locs:
-                for var, event in loc.var_events.all():
-                    var_i = var_to_index[var]
-                    if event.type in GENERATING_EVENTS:
-                        if len(kill[var_i]) == 0:
-                            gens[var_i].append(event)
-                        else:
-                            for kill_event in kill[var_i][-1]:
-                                if kill_event not in event.definitions:
-                                    event.definitions.append(kill_event)
-                                    kill_event.uses.append(event)
-
-                    if (
-                        event.type == VarEventType.READ
-                        and isinstance(event.node.parent, nodes.Call)
-                        and event.node == event.node.parent.func
-                    ):
+                for call in get_calls(loc.node):
+                    if isinstance(call.func, nodes.Name):
                         possible_callees = [
                             callee
+                            for var, event in get_cfg_loc(call).var_events.for_node(call.func)
                             for callee in call_graph[event.node.scope()]
                             if isinstance(callee, nodes.FunctionDef) and callee.name == var.name
                         ]
-                        assert len(possible_callees) <= 1
-                        if len(possible_callees) == 0:
+                        if is_builtin(call.func):
                             continue
-                        called_fun = possible_callees[0]
+                    else:
+                        possible_callees = []
 
+                    if len(possible_callees) == 0:
+                        unresolved_calls.append(call)
+                        possible_callees = function_defs
+
+                    for called_fun in possible_callees:
                         for in_call_event in collect_events_in_called(
                             call_graph, outside_scope_events, called_fun
                         ):
+                            if (
+                                in_call_event.node.parent == call
+                                and in_call_event.node.parent.func == in_call_event.node
+                            ):
+                                continue
+
                             in_call_var_i = var_to_index[in_call_event.var]
                             if in_call_event.type in GENERATING_EVENTS:
                                 if len(kill[in_call_var_i]) == 0:
@@ -175,6 +228,7 @@ def collect_reaching_definitions(  # blocks fun gen kills
                                             kill_event.uses.append(in_call_event)
                             if in_call_event.type in KILLING_EVENTS:
                                 if len(kill[in_call_var_i]) > 0:
+                                    # TODO fix
                                     for kill_event in kill[in_call_var_i][-1]:
                                         if kill_event not in in_call_event.redefines:
                                             in_call_event.redefines.append(kill_event)
@@ -182,6 +236,17 @@ def collect_reaching_definitions(  # blocks fun gen kills
                                 else:
                                     kill[in_call_var_i].append([])
                                 kill[in_call_var_i][-1].append(in_call_event)
+
+                for var, event in loc.var_events.all():
+                    var_i = var_to_index[var]
+                    if event.type in GENERATING_EVENTS:
+                        if len(kill[var_i]) == 0:
+                            gens[var_i].append(event)
+                        else:
+                            for kill_event in kill[var_i][-1]:
+                                if kill_event not in event.definitions:
+                                    event.definitions.append(kill_event)
+                                    kill_event.uses.append(event)
 
                     if event.type in KILLING_EVENTS:
                         if len(kill[var_i]) > 0:
@@ -217,7 +282,7 @@ def collect_reaching_definitions(  # blocks fun gen kills
                 )
             )
 
-    def collect_kills_from_parents(computed_kills, all_parent_kills, blocks):
+    def collect_kills_from_parents(computed_kills, all_parent_kills, blocks, init_occupied_blocks):
         for block in blocks:
             if len(block.predecessors) == 0:
                 all_parent_kills.append(
@@ -233,7 +298,7 @@ def collect_reaching_definitions(  # blocks fun gen kills
                 if not parent.reachable:
                     continue
 
-                for var_i, val in computed_kills[blocks[parent]].items():
+                for var_i, val in computed_kills[init_occupied_blocks + blocks[parent]].items():
                     result[var_i] |= val
 
             all_parent_kills.append(result)
@@ -246,7 +311,7 @@ def collect_reaching_definitions(  # blocks fun gen kills
             i, block = to_process.popleft()
             parent_kills = all_parent_kills[init_occupied_blocks + i]
             _gens, original_kill = original_gens_kills[init_occupied_blocks + i]
-            computed_kill = computed_kills[i]
+            computed_kill = computed_kills[init_occupied_blocks + i]
 
             updated = []
             for var_i, val in parent_kills.items():
@@ -286,28 +351,22 @@ def collect_reaching_definitions(  # blocks fun gen kills
                             gen_event.definitions.append(kill_event)
                             kill_event.uses.append(gen_event)
 
-    def make_up_calls(blocks, computed_kills, original_gens_kills):
-        uncalled_functions = {
-            fun for fun in call_graph.keys() if isinstance(fun, nodes.FunctionDef)
-        } - {
-            callee
-            for caller, callees in call_graph.items()
-            for callee in callees
-            if callee != caller
-        }
+    def make_up_calls(blocks, computed_kills, original_gens_kills, init_occupied_blocks):
+        uncalled_functions = get_uncalled_functions(function_defs, call_graph)
         if len(uncalled_functions) == 0:
             return
 
         module_kills = defaultdict(list)
         for block, block_i in blocks.items():
             if any(len(edge.target.locs) == 0 for edge in block.successors):
-                for var_i, val in computed_kills[block_i].items():
+                for var_i, val in computed_kills[init_occupied_blocks + block_i].items():
                     for index in ones_indices(val):
                         for kill_event in original_gens_kills[index][1][var_i][-1]:
                             module_kills[var_i].append(kill_event)
 
         gens = []
         kills = []
+        # TODO use collect_events_in_called(call_graph, outside_scope_events, uncalled_fun)
         for uncalled_fun in uncalled_functions:
             gens.append(defaultdict(list))
             kills.append(defaultdict(list))
@@ -357,22 +416,45 @@ def collect_reaching_definitions(  # blocks fun gen kills
     var_to_index = {var: var_i for var_i, var in enumerate(variables)}
     index_to_block = []
     original_gens_kills = []
+    computed_kills = []
     all_parent_kills = []
+    unresolved_calls = []
 
     for loc in [fun_def.args.cfg_loc for fun_def in function_defs] + [node.body[0].cfg_loc]:
         init_occupied_blocks = len(index_to_block)
         blocks = collect_original_kills(
-            var_to_index, index_to_block, original_gens_kills, outside_scope_events, loc
+            var_to_index,
+            index_to_block,
+            original_gens_kills,
+            outside_scope_events,
+            unresolved_calls,
+            loc,
         )
-        computed_kills = []
         collect_computed_kills(original_gens_kills, computed_kills, blocks, init_occupied_blocks)
-        collect_kills_from_parents(computed_kills, all_parent_kills, blocks)
+        collect_kills_from_parents(computed_kills, all_parent_kills, blocks, init_occupied_blocks)
         fixpoint(
             original_gens_kills, computed_kills, all_parent_kills, blocks, init_occupied_blocks
         )
     connect_events(index_to_block, all_parent_kills, original_gens_kills)
     # DANGER call relies on node.body[0].cfg_loc being the last processed
-    make_up_calls(blocks, computed_kills, original_gens_kills)
+    make_up_calls(blocks, computed_kills, original_gens_kills, init_occupied_blocks)
+    node.function_defs = function_defs
+    node.call_graph = call_graph
+    node.unresolved_calls = unresolved_calls
+
+    node.block_kills = {
+        index_to_block[block_i]: {
+            # variables[var_i]: [index_to_block[block_i] for block_i in ones_indices(val)]
+            variables[var_i]: [
+                event
+                for block_i in ones_indices(val)
+                for event in original_gens_kills[block_i][1][var_i][-1]
+            ]
+            for var_i, val in vars_events.items()
+            if val > 0
+        }
+        for block_i, vars_events in enumerate(computed_kills)
+    }
 
 
 ### var getters
