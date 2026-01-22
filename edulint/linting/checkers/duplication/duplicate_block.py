@@ -12,6 +12,8 @@ from edulint.linting.analyses.data_dependency import (
     get_control_statements,
     get_events_for,
     GENERATING_EVENTS,
+    scope_is_nested,
+    get_defs_at,
 )
 from edulint.linting.analyses.utils import (
     get_statements_count,
@@ -207,6 +209,17 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
         return False
 
     i, function = possible_callees[0]
+    if not any(
+        scope_is_nested(core[0].subs[j], function.parent.scope())
+        for j in range(len(to_aunify))
+        if j != i
+    ) or any(
+        def_.node != function
+        for j in range(len(to_aunify))
+        for def_ in get_defs_at(to_aunify[j][0], function.name)
+        if j != i
+    ):
+        return False
 
     result = antiunify(
         to_aunify,
