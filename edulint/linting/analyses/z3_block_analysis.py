@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 else:
     from edulint.linting.analyses._z3 import z3
 
-from edulint.linting.checkers.utils import (
+from edulint.linting.analyses.utils import (
     is_pure_expression,
     is_chained_assignment,
     has_more_assign_targets,
@@ -16,7 +16,7 @@ from edulint.linting.checkers.utils import (
 )
 
 from edulint.linting.analyses.data_dependency import vars_in, modified_in
-from edulint.linting.analyses.utils import may_contain_mutable_var
+from edulint.linting.analyses.mutability import may_contain_mutable_var
 
 from edulint.linting.analyses.z3_analysis import (
     implies,

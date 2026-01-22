@@ -5,7 +5,7 @@ from typing import Dict, List, Union, Optional, Iterator, Tuple, Set
 from astroid import nodes
 
 from edulint.linting.analyses.cfg.utils import get_cfg_loc
-from edulint.linting.checkers.utils import BaseVisitor, is_builtin
+from edulint.linting.analyses.utils import BaseVisitor, is_builtin
 from edulint.linting.analyses.var_events import (
     VarEventType,
     VarName,

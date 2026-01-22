@@ -29,7 +29,7 @@ from edulint.linting.analyses.z3_block_analysis import (
     convert_conditions_with_blocks_after_each_to_Z3,
 )
 
-from edulint.linting.checkers.utils import (
+from edulint.linting.analyses.utils import (
     get_name,
     get_assigned_to,
     is_any_assign,
@@ -42,9 +42,7 @@ from edulint.linting.checkers.utils import (
     contains_node_of_type,
 )
 
-from edulint.linting.analyses.utils import (
-    vars_from_node_may_be_modified_in,
-)
+from edulint.linting.analyses.mutability import vars_from_node_may_be_modified_in
 
 ExprRepresentation = str
 Comparison = str

@@ -8,25 +8,25 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import (
+from edulint.linting.analyses.utils import (
     get_range_params,
     get_const_value,
     is_builtin,
     requires_data_dependency_analysis,
     is_in_try_block,
     contains_node_of_type_or_exit,
+    node_to_var,
 )
 from edulint.linting.analyses.cfg.utils import successors_from_loc, get_cfg_loc, CFGLoc
 from edulint.linting.analyses.var_events import VarEventType, Variable, VarEvent, strip_to_name
 from edulint.linting.analyses.data_dependency import (
     vars_in,
-    node_to_var,
     MODIFYING_EVENTS,
     get_events_for,
     get_events_by_var,
     filter_events_for,
 )
-from edulint.linting.analyses.utils import vars_from_node_may_be_modified_in
+from edulint.linting.analyses.mutability import vars_from_node_may_be_modified_in
 from edulint.linting.analyses.z3_block_analysis import (
     END_NODES,
     condition_implies_another_with_block_in_between,

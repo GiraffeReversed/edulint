@@ -12,7 +12,7 @@ from edulint.linting.analyses.cfg.utils import (
     syntactic_children_locs,
     successors_from_loc,
 )
-from edulint.linting.checkers.utils import is_block_comment, requires_data_dependency_analysis
+from edulint.linting.analyses.utils import is_block_comment, requires_data_dependency_analysis
 from edulint.linting.checkers.duplication.duplicate_if import duplicate_in_if
 from edulint.linting.checkers.duplication.duplicate_sequence import similar_to_loop
 from edulint.linting.checkers.duplication.duplicate_block import similar_to_block

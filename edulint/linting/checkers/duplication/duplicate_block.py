@@ -11,15 +11,15 @@ from edulint.linting.analyses.data_dependency import (
     get_vars_used_after_core,
     get_control_statements,
     get_events_for,
-    node_to_var,
     GENERATING_EVENTS,
 )
-from edulint.linting.checkers.utils import (
+from edulint.linting.analyses.utils import (
     get_statements_count,
     get_token_count,
     EXPRESSION_TYPES,
     new_node,
     are_identical,
+    node_to_var,
 )
 from edulint.linting.checkers.duplication.utils import (
     Fixed,

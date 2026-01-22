@@ -16,7 +16,7 @@ from edulint.linting.analyses.antiunify import (
 from edulint.linting.analyses.var_events import VarEventType
 from edulint.linting.analyses.data_dependency import vars_in, is_changed_between
 from edulint.linting.analyses.cfg.utils import get_cfg_loc
-from edulint.linting.checkers.utils import (
+from edulint.linting.analyses.utils import (
     is_parents_elif,
     get_lines_between,
     get_statements_count,

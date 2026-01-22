@@ -7,7 +7,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import (
+from edulint.linting.analyses.utils import (
     is_parents_elif,
     BaseVisitor,
     is_any_assign,

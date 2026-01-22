@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List, Optional, Dict, Tuple, TYPE_CHECKING
 
 from astroid import nodes
-from edulint.linting.checkers.utils import get_const_value, is_integer, is_number, is_float
+from edulint.linting.analyses.utils import get_const_value, is_integer, is_number, is_float
 from edulint.linting.analyses.types import guess_type, Type
 
 if TYPE_CHECKING:

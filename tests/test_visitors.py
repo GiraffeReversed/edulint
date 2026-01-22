@@ -1,7 +1,8 @@
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
 from edulint.linting.analyses.cfg.utils import successors_from_loc
 from edulint.linting.analyses.variable_scope import VarEventsAnalysis, VarEventType
-from edulint.linting.analyses.data_dependency import name_to_var, modified_in, node_to_var
+from edulint.linting.analyses.data_dependency import name_to_var, modified_in
+from edulint.linting.analyses.utils import node_to_var
 
 from typing import List, Tuple, Dict
 import astroid  # type: ignore

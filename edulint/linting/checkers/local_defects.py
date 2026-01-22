@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from pylint.lint import PyLinter
 
 from edulint.linting.analyses.types import guess_type, Type
-from edulint.linting.checkers.utils import (
+from edulint.linting.analyses.utils import (
     get_range_params,
     get_const_value,
     is_parents_elif,

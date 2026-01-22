@@ -11,7 +11,7 @@ from edulint.linting.analyses.data_dependency import (
     scopes_are_nested,
 )
 from edulint.linting.analyses.cfg.visitor import CFGVisitor
-from edulint.linting.checkers.utils import new_node, eprint
+from edulint.linting.analyses.utils import new_node, eprint
 
 
 class AunifyVar(nodes.Name):

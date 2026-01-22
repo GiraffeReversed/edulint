@@ -16,10 +16,12 @@ from edulint.linting.analyses.cfg.utils import (
 from edulint.linting.analyses.var_events import (
     VarEventType,
     Variable,
+    VarName,
     VarEvent,
     strip_to_name,
     ScopeNode,
 )
+from edulint.linting.analyses.utils import is_builtin, node_to_event
 
 
 MODIFYING_EVENTS = (VarEventType.ASSIGN, VarEventType.REASSIGN, VarEventType.MODIFY)
@@ -411,21 +413,6 @@ def name_to_var(name: str, node: nodes.NodeNG) -> Optional[Variable]:
             if var.name == name and event_scope == node.scope():
                 return var
     return None
-
-
-def node_to_event(node: nodes.NodeNG) -> Optional[VarEvent]:
-    """Returns event related to given node, if such exists."""
-    loc = get_cfg_loc(node)
-    for var, event in loc.var_events.all():
-        if event.node == node:
-            return event
-    return None
-
-
-def node_to_var(node: nodes.NodeNG):
-    """Returns variable related to given node, if such exists."""
-    event = node_to_event(node)
-    return event.var if event is not None else None
 
 
 def _get_matching_superpart(var_node: nodes.NodeNG, super_node: nodes.NodeNG):

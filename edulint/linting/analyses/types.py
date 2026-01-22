@@ -7,7 +7,7 @@ import operator
 from astroid import nodes
 
 from edulint.linting.analyses.data_dependency import get_assigned_expressions
-from edulint.linting.checkers.utils import is_builtin, BaseVisitor, get_range_params
+from edulint.linting.analyses.utils import is_builtin, BaseVisitor, get_range_params
 
 
 class Type(Enum):
@@ -30,6 +30,9 @@ class Type(Enum):
 
     def __int__(self):
         return self.value
+
+
+IMMUTABLE_TYPES = [Type.BOOL, Type.FLOAT, Type.INT, Type.STRING, Type.TUPLE]
 
 
 class MetaTypes(type):

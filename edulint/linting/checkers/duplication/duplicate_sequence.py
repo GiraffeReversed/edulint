@@ -9,7 +9,7 @@ from edulint.linting.analyses.antiunify import (
     cprint,  # noqa: F401
 )
 from edulint.linting.analyses.data_dependency import vars_in
-from edulint.linting.checkers.utils import (
+from edulint.linting.analyses.utils import (
     get_statements_count,
     get_token_count,
     get_range_params,

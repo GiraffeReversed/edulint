@@ -17,7 +17,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter
 
-from edulint.linting.checkers.utils import is_main_block
+from edulint.linting.analyses.utils import is_main_block
 
 
 class InvalidForTargetChecker(BaseChecker):

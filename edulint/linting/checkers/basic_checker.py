@@ -7,7 +7,7 @@ from pylint.checkers.utils import only_required_for_messages
 if TYPE_CHECKING:
     from pylint.lint import PyLinter  # type: ignore
 
-from edulint.linting.checkers.utils import get_statements_count
+from edulint.linting.analyses.utils import get_statements_count
 from edulint.linting.analyses.cfg.utils import successors_from_loc
 from edulint.linting.analyses.var_events import VarEventType
 
