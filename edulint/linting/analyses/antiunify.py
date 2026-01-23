@@ -378,6 +378,9 @@ def get_merge_candidates(
 
     for avar in avars:
         subs = tuple(avar.subs)
+        if isinstance(subs[0], list):
+            continue
+
         if not require_name_consistency and all(s == subs[0] for s in subs):
             forced_groups.setdefault(subs, []).append(avar)
             continue
