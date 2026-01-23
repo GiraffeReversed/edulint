@@ -79,6 +79,14 @@ class VarEventListener(BaseVisitor[None]):
 
     def _add_var_event(self, name: VarName, name_node: nodes.NodeNG, action: VarEventType):
         loc = get_cfg_loc(name_node)
+        # fixes a bug in astroid, where vararg AssignName has the FunctionDef as parent, not Arguments
+        if (
+            isinstance(name_node, nodes.AssignName)
+            and isinstance(loc.node, nodes.FunctionDef)
+            and name != loc.node.name
+        ):
+            loc = loc.node.args.cfg_loc
+
         name_scope = self._get_var_node_scope(name)
         # assert scope is not None or VarEventListener.may_be_unscoped(
         #     name, name_node, loc.node
