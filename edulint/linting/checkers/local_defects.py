@@ -15,6 +15,7 @@ from edulint.linting.analyses.utils import (
     get_statements_count,
     is_negation,
     is_pure_expression,
+    requires_data_dependency_analysis,
 )
 
 
@@ -270,6 +271,7 @@ class Local(BaseChecker):
         ):
             self.add_message("redundant-arithmetic", node=node, args=(node.as_string(),))
 
+    @requires_data_dependency_analysis()
     def _check_augmentable(self, node: Union[nodes.Assign, nodes.AnnAssign]) -> None:
         def add_message(target: str, param: nodes.BinOp) -> None:
             self.add_message(
@@ -496,6 +498,7 @@ class Local(BaseChecker):
         ):
             self.add_message("use-early-return", node=node)
 
+    @requires_data_dependency_analysis()
     def _check_in_range_instead_of_compare(self, node: nodes.Compare) -> None:
         def is_integer(value: Any) -> bool:
             return isinstance(value, int) and not isinstance(value, bool)

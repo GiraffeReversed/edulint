@@ -31,13 +31,16 @@ POSTINIT_ARGS = {
 }
 
 
-def requires_data_dependency_analysis(func):
-    def inner(self, node: nodes.NodeNG, *args, **kwargs):
-        if not node.root().cfg_loc.var_events.successful:
-            return
-        func(self, node, *args, **kwargs)
+def requires_data_dependency_analysis(default_return=None):
+    def middle(func):
+        def inner(self, node: nodes.NodeNG, *args, **kwargs):
+            if not node.root().cfg_loc.var_events.successful:
+                return default_return
+            return func(self, node, *args, **kwargs)
 
-    return inner
+        return inner
+
+    return middle
 
 
 def new_node(node_type, **attr_vals):

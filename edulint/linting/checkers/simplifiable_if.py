@@ -40,6 +40,7 @@ from edulint.linting.analyses.utils import (
     is_parents_elif,
     if_elif_has_else_block,
     contains_node_of_type,
+    requires_data_dependency_analysis,
 )
 
 from edulint.linting.analyses.mutability import vars_from_node_may_be_modified_in
@@ -1037,6 +1038,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return False
 
+    @requires_data_dependency_analysis()
     def _check_for_redundant_condition_part_in_if(
         self, node: nodes.If, skip_reordering: bool
     ) -> None:
@@ -1327,6 +1329,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return False
 
+    @requires_data_dependency_analysis()
     def _check_for_use_if_elif_else(self, node: nodes.If) -> None:
         if isinstance(node.previous_sibling(), nodes.If):
             return
@@ -2120,6 +2123,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return removed_condition
 
+    @requires_data_dependency_analysis(default_return=False)
     def _check_always_true_or_false(self, node: nodes.NodeNG, condition: z3.ExprRef) -> bool:
         if unsatisfiable(condition):
             self.add_message(
@@ -2139,6 +2143,7 @@ class SimplifiableIf(BaseChecker):  # type: ignore
 
         return False
 
+    @requires_data_dependency_analysis()
     def _make_suggestion_for_redundant_condition_part(self, node: nodes.BoolOp) -> None:
         initialized_variables: Dict[str, z3.ArithRef] = {}
         if not initialize_variables(node, initialized_variables, False, None):

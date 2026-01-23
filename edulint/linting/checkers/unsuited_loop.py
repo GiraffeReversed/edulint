@@ -107,7 +107,7 @@ class UnsuitedLoop(BaseChecker):
         if isinstance(first, nodes.If) and isinstance(first.body[-1], nodes.Break):
             self.add_message("no-while-true", node=node, args=(first.test.as_string(),))
 
-    @requires_data_dependency_analysis
+    @requires_data_dependency_analysis()
     def _check_use_for_loop(self, node: nodes.While) -> None:
         # TODO allow different increments?
         def get_change_value(node: nodes.NodeNG) -> Optional[int]:
@@ -233,6 +233,7 @@ class UnsuitedLoop(BaseChecker):
         ):
             self.add_message("use-for-loop", node=node)
 
+    @requires_data_dependency_analysis()
     def _check_infinite_loop(self, node: nodes.While) -> None:
         if is_in_try_block(node) or contains_node_of_type_or_exit(
             node, (*END_NODES, nodes.Assert, nodes.Yield, nodes.YieldFrom)
@@ -342,7 +343,7 @@ class UnsuitedLoop(BaseChecker):
             node = node.next_sibling()
         return node
 
-    @requires_data_dependency_analysis
+    @requires_data_dependency_analysis()
     def _check_modifying_iterable(self, node: nodes.For) -> None:
         iterated = node.iter
         if not isinstance(iterated, nodes.Name):  # TODO allow any node type
@@ -370,7 +371,7 @@ class UnsuitedLoop(BaseChecker):
                     "modifying-iterated-structure", node=event.node.parent, args=iterated_var.name
                 )
 
-    @requires_data_dependency_analysis
+    @requires_data_dependency_analysis()
     def _check_control_variable_changes(self, node: nodes.For) -> None:
         range_params = get_range_params(node.iter)
         if range_params is None or not isinstance(node.target, nodes.AssignName):
@@ -393,7 +394,7 @@ class UnsuitedLoop(BaseChecker):
                     "changing-control-variable", node=event.node.parent, args=(control_var.name)
                 )
 
-    @requires_data_dependency_analysis
+    @requires_data_dependency_analysis()
     def _check_improve_for_loop(self, node: nodes.For) -> None:
         def is_for_range_len(node: nodes.For) -> Tuple[bool, nodes.NodeNG]:
             range_params = get_range_params(node.iter)

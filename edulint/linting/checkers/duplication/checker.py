@@ -370,7 +370,7 @@ class NoDuplicateCode(BaseChecker):  # type: ignore
         ),
     }
 
-    @requires_data_dependency_analysis
+    @requires_data_dependency_analysis()
     def visit_module(self, node: nodes.Module):
         if len(node.body) == 0:
             return
