@@ -707,7 +707,7 @@ def get_events_by_var(
 
 
 def get_defs_at(node: nodes.NodeNG, varname: VarName) -> List[VarEvent]:
-    return _get_defs_at_rec(node, varname, {node}, set())
+    return _get_defs_at_rec(node, varname, {node}, set(), toplevel=True)
 
 
 def _get_defs_at_rec(
@@ -715,6 +715,7 @@ def _get_defs_at_rec(
     varname: VarName,
     visited_nodes: Set[nodes.NodeNG],
     explored_functions: Set[nodes.NodeNG],
+    toplevel: bool,
 ) -> List[VarEvent]:
 
     result = []
@@ -724,7 +725,7 @@ def _get_defs_at_rec(
     loc = get_cfg_loc(node)
     block_kills = False
     # block_kills
-    for i in range(loc.pos - 1, -1, -1):
+    for i in range(loc.pos - (1 if toplevel else 0), -1, -1):
         prev_loc = loc.block.locs[i]
 
         functions_to_explore = set()
@@ -818,7 +819,11 @@ def _get_defs_at_rec(
     for end_node in end_nodes:
         if end_node not in visited_nodes:
             visited_nodes.add(end_node)
-            result.extend(_get_defs_at_rec(end_node, varname, visited_nodes, explored_functions))
+            result.extend(
+                _get_defs_at_rec(
+                    end_node, varname, visited_nodes, explored_functions, toplevel=False
+                )
+            )
 
     return result
 
