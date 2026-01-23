@@ -746,6 +746,8 @@ def _get_defs_at_rec(
             for edge in function.args.cfg_loc.block.cfg.end.predecessors:
                 predecessor = edge.source
                 edge_kills = False
+                if not predecessor.reachable:
+                    continue
                 for var, events in root.block_kills[predecessor].items():
                     if var.name == varname and scope_is_nested(loc.node.scope(), var.scope):
                         assert len(events) > 0
@@ -763,6 +765,8 @@ def _get_defs_at_rec(
         for edge in loc.block.predecessors:
             predecessor = edge.source
             pred_kills = False
+            if not predecessor.reachable:
+                continue
             for var, events in root.block_kills[predecessor].items():
                 if var.name == varname:
                     result.extend(events)
@@ -797,6 +801,8 @@ def _get_defs_at_rec(
             for uncalled_function in get_uncalled_functions(root.function_defs, root.call_graph):
                 for edge in uncalled_function.args.cfg_loc.block.cfg.end.predecessors:
                     predecessor = edge.source
+                    if not predecessor.reachable:
+                        continue
                     for var, events in root.block_kills[predecessor].items():
                         if var.name == varname and scope_is_nested(
                             function.parent.scope(), var.scope
