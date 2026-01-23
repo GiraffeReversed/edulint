@@ -216,8 +216,8 @@ def similar_to_call(self, to_aunify: List[List[nodes.NodeNG]], core, avars) -> b
     ) or any(
         def_.node != function
         for j in range(len(to_aunify))
-        for def_ in get_defs_at(to_aunify[j][0], function.name)
         if j != i
+        for def_ in get_defs_at(to_aunify[j][0], function.name)
     ):
         return False
 
