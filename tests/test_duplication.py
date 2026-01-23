@@ -661,6 +661,7 @@ def test_similar_block_into_call_custom(lines: List[str], expected_output: List[
     ("web_f73b15.py", []),
     ("cf_b_1163_30.py", []),
     ("ut_156_37_37-20.py", []),
+    ("uc_43_24_21.py", []),
 ])
 def test_similar_block_to_call(filename: str, expected_output: List[Problem]) -> None:
     apply_and_lint(
