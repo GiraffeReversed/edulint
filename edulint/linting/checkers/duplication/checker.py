@@ -73,10 +73,10 @@ def get_memoized_siblings(
 
 
 def get_stmt_range(
-    stmt_to_index: Dict[nodes.NodeNG, int], nodes: List[nodes.NodeNG]
+    stmt_to_index: Dict[nodes.NodeNG, int], ns: List[nodes.NodeNG]
 ) -> Optional[Tuple[int, int]]:
-    last_i = stmt_to_index.get(nodes[-1])
-    return stmt_to_index[nodes[0]], last_i + 1 if last_i is not None else None
+    last_i = stmt_to_index.get(ns[-1])
+    return stmt_to_index[ns[0]], last_i + 1 if last_i is not None else None
 
 
 def overlap(
