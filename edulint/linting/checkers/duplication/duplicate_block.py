@@ -357,9 +357,6 @@ def similar_to_block(checker, to_aunify: List[List[nodes.NodeNG]]) -> bool:
         return False
     core, avars = result
 
-    if all(isinstance(vals[0], nodes.FunctionDef) for vals in to_aunify):
-        return False  # TODO hint use common helper function
-
     if similar_to_call(checker, to_aunify, core, avars):
         return True
     return similar_to_function(checker, to_aunify, core, avars)

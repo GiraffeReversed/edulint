@@ -93,7 +93,7 @@ def overlap(
 
 
 def break_on_stmt(node: nodes.NodeNG) -> bool:
-    return isinstance(node, (nodes.Assert, nodes.ClassDef))
+    return isinstance(node, (nodes.Assert, nodes.ClassDef, nodes.FunctionDef))
 
 
 def skip_stmt(node: nodes.NodeNG) -> bool:
@@ -137,7 +137,7 @@ def get_duplicate_nodes(ns: List[nodes.NodeNG]) -> Set[nodes.NodeNG]:
 
 
 def is_similar_to_loop(checker, siblings: List[nodes.NodeNG]) -> bool:
-    if len(siblings) < 3 or any(isinstance(node, nodes.FunctionDef) for node in siblings):
+    if len(siblings) < 3:
         return False
 
     for end, to_aunify in get_loop_repetitions(siblings):
@@ -212,8 +212,8 @@ def get_similar_to_block_candidates(
 
 
 def is_any_similar_to_block(checker, duplicate: Set[nodes.NodeNG], candidates):
-    def may_be_similar_to_loop(ranges):
-        return all(last == first for ((_, last), (first, _)) in zip(ranges, ranges[1:]))
+    def may_be_similar_to_loop(candidates):
+        return all(c1[-1].next_sibling() == c2[0] for (c1, c2) in zip(candidates, candidates[1:]))
 
     def get_ordered_candidates(candidates):
         filpped_candidates = {}
@@ -250,7 +250,7 @@ def is_any_similar_to_block(checker, duplicate: Set[nodes.NodeNG], candidates):
         return False
 
     for candidate in get_ordered_candidates(candidates):
-        if may_be_similar_to_loop([r for r, _ in candidate]):
+        if may_be_similar_to_loop([c for _, c in candidate]):
             continue
 
         to_aunify = [list(sub_aunify) for _, sub_aunify in candidate]
