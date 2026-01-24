@@ -1,8 +1,40 @@
 ## WIP
 
+## v4.3.0
+
+### Features
+
+- new Package API (see [docs](https://edulint.readthedocs.io/en/latest/package_api.html) for more info)
+- new checker: detect overcomplicated conditions and infinite loops using Z3 (optional dependency) by @danielczinege in #12 and #14 
+- new checker: detect inefficient ifs which use `range(..)` and could be simplified @danielczinege in #13
+- new checker: detect multiple ifs which could be combined by `if x in [...]` or `if x in {...}`
+- improved data dependency analysis
+- added packaged configurations `full` and `cs1`
+- search for implicit edulint configuration (`edulint.toml` or `.edulint.toml`) in parent folders
+
+### Changes
+
+- generalized `similar-if-to-untwisted` to cover more cases
+- improved `similar-block-to-call`
+- run flake8 through its (undocumented) API instead of as subprocess
+- generate parts of docs based on docstrings
+- add pipx and docker installation guides to readme and docs
+- work on performance (significant speed up in some checks to partially ofset the slowdown from new checks)
+- add support for Python 3.14
+- use Python 3.14 as default for Docker image
+- build ARM64 Docker image
+- build Docker image including optional dependencies
+- update CICD actions
+- relax tomli and tqdm dependency version requirements
+- refactor: removed 'print' from PURE_FUNCTIONS #17 by @danielczinege
+
 ## v4.2.2
 
 - fix bug in overriders, which caused overriden message to be removed, even if it was in a different file
+
+## v4.2.1
+
+- require pylint < 3.3 to hotfix error msgs which would be confusing for users
 
 ## v4.2.0
 
