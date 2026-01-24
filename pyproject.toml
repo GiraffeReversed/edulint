@@ -1,6 +1,7 @@
 [project]
 name = "edulint"
 dynamic = ["readme", "requires-python", "license", "classifiers", "dependencies", "version"]
+description = "Python linter aimed at helping novice programmers improve their coding style."
 
 [build-system]
 requires = ["setuptools>=62.6"]  # required for: "install_requires = file: requirements.txt"
