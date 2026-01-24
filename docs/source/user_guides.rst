@@ -17,6 +17,8 @@ Teacher
 
 EduLint can provide basic code quality feedback to your students. You have a large degree of control over which defects get reported by choosing a specific configuration. You can also integrate EduLint into a submission system or host your own instance of the web interface.
 
+.. _choosing-configuration:
+
 Choosing configuration
 """"""""""""""""""""""
 
