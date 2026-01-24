@@ -20,36 +20,27 @@ Are you just starting with programming in Python? Then the web UI ([website](htt
 
 ### Python package
 
-You can install the latest release with pip:
+For ease of use there are multiple ways how to install and run EduLint locally. You can find more examples, options and configurations details in the [documentation](https://edulint.readthedocs.io/).
+
+#### Using pipx
 
 ```sh
-python3 -m pip install --user edulint
+pipx install edulint        # Installation
+edulint check some_file.py  # Usage example
 ```
 
-Once installed, you can run it as a Python module:
+#### Using pip
 
 ```sh
-python3 -m edulint check <file-to-lint>
+python3 -m pip install --user edulint  # Installation
+python3 -m edulint check some_file.py  # Usage example
 ```
 
-Read the [documentation](https://edulint.readthedocs.io/) for more options and configuration details.
-
-### Docker container
-
-Don't want to install Python and Edulint as a Python package? You can also run it using Docker.
+#### Docker container
 
 ```sh
-docker pull edulint/edulint-cli  # Optional
-
 docker run -v ${PWD}:/app edulint/edulint-cli check some_file.py
-
-# Additional example that lints a file with absolute path /tmp/some_file.py
-docker run -v /tmp:/app edulint/edulint-cli check /app/some_file.py
 ```
-
-<!-- TODO: volume mapping can be :ro, though it's not necessary -->
-
-It supports the same configuration options as the native Python package.
 
 ## Road map (long-term)
 
