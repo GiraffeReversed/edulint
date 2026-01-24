@@ -12,7 +12,7 @@ As of now, it is possible to configure the tool in three ways:
 
 - by augmenting the checked source code with lines beginning with :python:`# edulint:`, with the configuration applying to that file only
 - by passing arguments through the CLI, applying to all files linted by that command
-- by setting a config file, specified by one of the two means above
+- by setting a config file, specified by one of the two means above, or by placing a file named :code:`edulint.toml` or :code:`.edulint.toml` in the directory of the checked file or any of its parent directories
 
 Edulint takes arguments in one of the following forms: ``<option-name>`` for options that do not take an argument and either ``<option-name>=<value-without-spaces>`` or ``<option-name>="<value-with-spaces>"`` for options that do take an argument.
 

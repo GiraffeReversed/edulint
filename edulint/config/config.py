@@ -33,6 +33,9 @@ from loguru import logger
 import os
 
 
+IMPLICIT_CONFIG_FILENAMES = ("edulint.toml", ".edulint.toml")
+
+
 class Config:
     config: List[Optional[ProcessedArg]]
 
@@ -334,9 +337,25 @@ def resolve_ignore_infile_config(parsed: List[UnprocessedArg], config: Config) -
     return Config("in-file", parsed, config.option_parses)
 
 
+def search_for_config_in_parents(path):
+    path = Path(path)
+    path = (path.parent if path.is_file() else path).absolute()
+    while path.parent != path:
+        for elem in path.iterdir():
+            if elem.name == IMPLICIT_CONFIG_FILENAMES:
+                return str(path / elem)
+        path = path.parent
+    return None
+
+
 def parse_infile_config(path: str, option_parses: Dict[Option, OptionParse]) -> Config:
     extracted = extract_args(path)
     parsed = parse_args(extracted, option_parses)
+
+    config_from_parent = search_for_config_in_parents(path)
+    if config_from_parent is not None:
+        parsed.insert(0, UnprocessedArg(Option.CONFIG_FILE, config_from_parent))
+
     infile_config = Config("in-file", parsed, option_parses)
 
     resolve_relative_option_path(path, infile_config, Option.CONFIG_FILE)
