@@ -202,13 +202,15 @@ Currently available options are as follows:
 Packaged configurations
 =======================
 
-EduLint offers two configurations that are directly packaged with the tool: :code:`empty` and :code:`default`. The :code:`empty` configuration runs no checks. The :code:`default` configuration provides a reasonable default set of checks. On top of these, additional three convenience extension groups of checks can be enabled: :code:`python-specific`, :code:`enhancement` and :code:`complexity`. The check in these extensions groups are not necessarily essential for a novice programmer, but addressing them can improve the code further.
+EduLint offers several configuration files that are directly packaged with the tool: :code:`empty`, :code:`default`, :code:`full`, :code:`cs0` and :code:`cs1`. The :code:`empty` configuration runs no checks. The :code:`default` configuration provides a reasonable default set of checks. The :code:`full` configuration enables all available checks from both linters. The :code:`cs0` and :code:`cs1` provide selection of defects relevant for students at the respective levels of programming.
+
+On top of these, additional three convenience extension groups of checks can be enabled: :code:`python-specific`, :code:`enhancement` and :code:`complexity`. The check in these extensions groups are not necessarily essential for a novice programmer, but addressing them can improve the code further.
 
 The TOML files for these configuration can be found `here <https://github.com/GiraffeReversed/edulint/tree/main/edulint/config/files>`_.
 
 EduLint filters out or tweaks emitted messages to make them more comprehensible to a beginning programmer (currently there is no way to turn these tweakers off).
 
-EduLint provides explanations for why and how can a reported problem be fixed (at present, available in web version only).
+EduLint provides explanations for why and how can a reported problem be fixed :ref:`explanations`.
 
 .. note::
 

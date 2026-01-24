@@ -1,0 +1,15 @@
+[pylint]
+enable = "all"
+disable = "R0801" # pylint's duplicate code detector
+load-plugins = [
+    "edulint.linting.analyses.patcher",
+    "edulint.linting.checkers.basic_checker",
+    "edulint.linting.checkers.local_defects",
+    "edulint.linting.checkers.unsuited_loop",
+    "edulint.linting.checkers.simplifiable_if",
+    "edulint.linting.checkers.python_ta_checkers",
+    "edulint.linting.checkers.duplication.checker",
+]
+
+[flake8]
+ignore = ""
