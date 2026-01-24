@@ -33,6 +33,7 @@ Do you have any problem or could use a new feature? See `project's GitHub issues
 
    user_guides
    running
+   faq
    configuration
    checkers
    translations
