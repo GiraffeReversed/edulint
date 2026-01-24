@@ -1,3 +1,5 @@
+.. _user guides:
+
 User guides
 -----------
 
@@ -19,6 +21,8 @@ Choosing configuration
 """"""""""""""""""""""
 
 You can either just skip this step and stick with :ref:`the default configuration <default>`, pick another one of :ref:`the packaged configurations <packaged configurations>` or :ref:`create your own <create config file>`. Packaged configurations are easier to use (no need to deliver a custom configuration to the students), but less flexible. Custom configuration is very flexible (there are hundreds of detectors), but can take substantial time to create and needs to be distributed to students separately.
+
+If you are unsure where to start, try experimenting with the default configuration first. If you want to create you own configuration, start with the full one and remove detectors from it.
 
 Distributing the configuration
 """"""""""""""""""""""""""""""
