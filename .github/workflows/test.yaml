@@ -7,7 +7,7 @@ on:
     inputs:
       python_matrix:
         type: string
-        default: '["3.11"]'
+        default: '["3.14"]'
       pylint_matrix:
         type: string
         default: '["default"]'
@@ -25,7 +25,7 @@ on:
     inputs:
       python_matrix:
         type: string
-        default: '["3.11"]'
+        default: '["3.14"]'
       pylint_matrix:
         type: string
         default: '["default"]'
